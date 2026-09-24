@@ -1,40 +1,34 @@
-# bdnix — Coming Soon
+# bdnix — Check back soon
 
-Professional services — launching soon.
+A static "under construction" page for [www.bdnix.com](https://www.bdnix.com), plus a small Tetris game to play while you wait. Hosted on GitHub Pages; no build step.
 
-This repository contains a small, static "coming soon" site built for deployment to GitHub Pages (or any static host).
-
-## Quick Start
-
-Preview locally:
+## Preview locally
 
 ```bash
-cd /workspaces/bdnix
 python3 -m http.server 8000
-# Open http://localhost:8000 in your browser
+# Open http://localhost:8000
 ```
 
-## Configure
+## Files
 
-- Set the launch date in `index.html` by editing `window.LAUNCH_DATE`.
-- To enable real signups, set `window.FORM_ENDPOINT` in `index.html` to your Formspree (or other) endpoint.
-- Contact email is set to `root@bdnix.com` (see `_config.yml` and the site footer).
+- [index.html](index.html): landing page (animated logo, typewriter status, visit counter, falling-block background)
+- [assets/css/style.css](assets/css/style.css) and [assets/js/main.js](assets/js/main.js): landing page styles and script
+- [play/index.html](play/index.html): Tetris, served at `/play/`
+- [assets/css/tetris.css](assets/css/tetris.css) and [assets/js/tetris.js](assets/js/tetris.js): game styles and logic
 
-## Files of note
+## Tetris controls
 
-- [index.html](index.html) — main page (logo, countdown, signup)
-- [assets/css/style.css](assets/css/style.css) — styles
-- [assets/js/main.js](assets/js/main.js) — countdown + signup handling (supports `window.FORM_ENDPOINT`)
-- [assets/img/favicon.svg](assets/img/favicon.svg) — favicon
+| Action     | Keyboard            | Touch      |
+|------------|---------------------|------------|
+| Move       | ← → (or A / D)      | ◀ ▶        |
+| Rotate     | ↑ / X (Z for CCW)   | ⟳ or tap the board |
+| Soft drop  | ↓                   | ▼          |
+| Hard drop  | Space               | ⤓          |
+| Hold       | C / Shift           | HOLD       |
+| Pause      | P / Esc             | ❚❚         |
 
-## Deploy
-
-Push to the `master` branch and enable GitHub Pages in the repository settings, or deploy the folder to any static host.
+The best score is saved in the browser's localStorage.
 
 ## Contact
 
-Email: root@bdnix.com
-
-## License
-
-This project contains minimal assets for a coming-soon site. Use and adapt as you like.
+root@bdnix.com

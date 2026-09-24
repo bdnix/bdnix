@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>bdnix — Tetris</title>
+  <meta name="description" content="A tiny Tetris to play while bdnix is under construction.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/tetris.css">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#07090f">
+</head>
+<body>
+  <header class="top">
+    <a class="back" href="/">← bdnix</a>
+    <span class="title">TETRIS</span>
+    <button id="pauseBtn" class="icon-btn" aria-label="Pause">❚❚</button>
+  </header>
+
+  <main class="game">
+    <aside class="panel left">
+      <div class="box">
+        <h2>Hold</h2>
+        <canvas id="hold" width="96" height="96"></canvas>
+      </div>
+      <div class="box stats">
+        <div><h2>Score</h2><span id="score">0</span></div>
+        <div><h2>Best</h2><span id="best">0</span></div>
+        <div><h2>Level</h2><span id="level">1</span></div>
+        <div><h2>Lines</h2><span id="lines">0</span></div>
+      </div>
+    </aside>
+
+    <div class="board-wrap">
+      <canvas id="board"></canvas>
+      <div id="overlay" class="overlay">
+        <h1 id="ovTitle">TETRIS</h1>
+        <p id="ovText">Clear lines. Don't hit the top.</p>
+        <button id="startBtn" class="btn">Start</button>
+        <p class="keys">
+          ← → move · ↑ rotate · ↓ soft drop<br>
+          Space hard drop · C hold · P pause
+        </p>
+      </div>
+    </div>
+
+    <aside class="panel right">
+      <div class="box">
+        <h2>Next</h2>
+        <canvas id="next" width="96" height="240"></canvas>
+      </div>
+    </aside>
+  </main>
+
+  <nav class="touch" aria-label="Touch controls">
+    <button data-act="hold">HOLD</button>
+    <button data-act="left">◀</button>
+    <button data-act="rotate">⟳</button>
+    <button data-act="right">▶</button>
+    <button data-act="down">▼</button>
+    <button data-act="drop">⤓</button>
+  </nav>
+
+  <script src="/assets/js/tetris.js"></script>
+</body>
+</html>
