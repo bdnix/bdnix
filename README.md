@@ -18,6 +18,10 @@ Both pages share one design system, so they look like the same site:
 - [index.html](index.html), [assets/css/style.css](assets/css/style.css), [assets/js/main.js](assets/js/main.js): landing page
 - [play/index.html](play/index.html), [assets/css/tetris.css](assets/css/tetris.css), [assets/js/tetris.js](assets/js/tetris.js): Tetris, served at `/play/`
 
+## Deploying changes
+
+GitHub Pages lets browsers cache CSS and JS for a while. When you change any file in `assets/css` or `assets/js`, bump the `?v=` number on its `<link>` / `<script>` tags in `index.html` and `play/index.html`. Otherwise visitors can get the new HTML with old styles.
+
 ## Tetris controls
 
 | Action     | Keyboard            | Touch      |
