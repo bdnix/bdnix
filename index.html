@@ -3,64 +3,45 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>bdnix — Coming Soon</title>
-  <meta name="description" content="bdnix is launching soon. Join our waitlist for updates and early access.">
-  <meta property="og:title" content="bdnix — Coming Soon">
-  <meta property="og:description" content="bdnix is launching soon. Join our waitlist for updates and early access.">
+  <title>bdnix — Check back soon</title>
+  <meta name="description" content="Something is being built at bdnix. Check back soon — or play a game while you wait.">
+  <meta property="og:title" content="bdnix — Check back soon">
+  <meta property="og:description" content="Something is being built at bdnix. Check back soon — or play a game while you wait.">
   <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/style.css">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#07090f">
 </head>
 <body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+
   <main class="site">
-    <header class="brand">
-      <svg width="48" height="48" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
-        <rect x="10" y="10" width="80" height="80" rx="16" fill="#0f172a"></rect>
-        <text x="50" y="60" text-anchor="middle" fill="#fff" font-family="Inter, system-ui, sans-serif" font-size="40" font-weight="700">B</text>
-      </svg>
-      <div class="brand-text">
-        <h1>bdnix</h1>
-        <p>Professional services — launching soon</p>
-      </div>
-    </header>
+    <div class="status"><span class="dot"></span> Under construction</div>
 
-    <section class="hero">
-      <div class="hero-inner">
-        <h2>We're launching something great.</h2>
-        <p class="lead">A refined experience for professionals. Subscribe below to get notified when we go live.</p>
+    <h1 class="logo" data-text="bdnix">bdnix</h1>
 
-        <div class="countdown" aria-live="polite">
-          <div><span id="days">0</span><small>Days</small></div>
-          <div><span id="hours">0</span><small>Hours</small></div>
-          <div><span id="minutes">0</span><small>Minutes</small></div>
-          <div><span id="seconds">0</span><small>Seconds</small></div>
-        </div>
+    <p class="terminal" aria-live="polite">
+      <span class="prompt">$</span>
+      <span id="typed"></span><span class="cursor">▋</span>
+    </p>
 
-        <form id="signup" class="signup" action="#" novalidate>
-          <label for="email" class="sr-only">Email address</label>
-          <input id="email" name="email" type="email" placeholder="Your email address" required>
-          <button type="submit" class="btn">Notify me</button>
-        </form>
+    <p id="visit" class="visit"></p>
 
-        <p class="note">We respect your privacy. No spam, unsubscribe anytime.</p>
-      </div>
-    </section>
-
-    <footer class="foot">
-      <p>In the meantime, you can reach us at <a href="mailto:root@bdnix.com">root@bdnix.com</a></p>
-    </footer>
+    <div class="actions">
+      <a class="btn btn-primary" href="/play/">▶ Play Tetris while you wait</a>
+      <a class="btn btn-ghost" href="mailto:root@bdnix.com">Say hello</a>
+    </div>
   </main>
 
-  <script>
-    // Configuration: adjust the ISO date below to your launch date/time in UTC
-    window.LAUNCH_DATE = '2026-05-01T00:00:00Z';
-    // Optional: set your Formspree (or other) endpoint URL here to enable real signups.
-    // Example: window.FORM_ENDPOINT = 'https://formspree.io/f/your-id';
-    window.FORM_ENDPOINT = '';
-  </script>
+  <footer class="foot">
+    <span>© <span id="year"></span> bdnix</span>
+    <span class="sep">·</span>
+    <a href="mailto:root@bdnix.com">root@bdnix.com</a>
+  </footer>
+
   <script src="/assets/js/main.js"></script>
 </body>
 </html>
