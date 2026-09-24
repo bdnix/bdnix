@@ -11,10 +11,12 @@ python3 -m http.server 8000
 
 ## Files
 
-- [index.html](index.html): landing page (animated logo, typewriter status, visit counter, falling-block background)
-- [assets/css/style.css](assets/css/style.css) and [assets/js/main.js](assets/js/main.js): landing page styles and script
-- [play/index.html](play/index.html): Tetris, served at `/play/`
-- [assets/css/tetris.css](assets/css/tetris.css) and [assets/js/tetris.js](assets/js/tetris.js): game styles and logic
+Both pages share one design system, so they look like the same site:
+
+- [assets/css/base.css](assets/css/base.css): colours, type, header, buttons and panels used by every page
+- [assets/js/blocks.js](assets/js/blocks.js): the shared block palette, block renderer and falling-block backdrop
+- [index.html](index.html), [assets/css/style.css](assets/css/style.css), [assets/js/main.js](assets/js/main.js): landing page
+- [play/index.html](play/index.html), [assets/css/tetris.css](assets/css/tetris.css), [assets/js/tetris.js](assets/js/tetris.js): Tetris, served at `/play/`
 
 ## Tetris controls
 

@@ -1,26 +1,23 @@
 (function(){
   var COLS = 10, ROWS = 20;
-  var COLORS = {
-    I:'#22d3ee', O:'#facc15', T:'#a855f7', J:'#3b82f6',
-    L:'#f97316', S:'#22c55e', Z:'#ef4444'
-  };
-  var SHAPES = {
-    I:[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
-    O:[[1,1],[1,1]],
-    T:[[0,1,0],[1,1,1],[0,0,0]],
-    J:[[1,0,0],[1,1,1],[0,0,0]],
-    L:[[0,0,1],[1,1,1],[0,0,0]],
-    S:[[0,1,1],[1,1,0],[0,0,0]],
-    Z:[[1,1,0],[0,1,1],[0,0,0]]
-  };
+  var COLORS = window.bdnix.PALETTE;
+  var SHAPES = window.bdnix.SHAPES;
   var LINE_SCORES = [0, 100, 300, 500, 800];
   var LOCK_DELAY = 500, MAX_LOCK_RESETS = 15;
   var DAS = 160, ARR = 45;
 
   var board = document.getElementById('board');
   var ctx = board.getContext('2d');
-  var nextCtx = document.getElementById('next').getContext('2d');
-  var holdCtx = document.getElementById('hold').getContext('2d');
+  var nextCanvas = document.getElementById('next');
+  var holdCanvas = document.getElementById('hold');
+  var nextCtx = nextCanvas.getContext('2d');
+  var holdCtx = holdCanvas.getContext('2d');
+  var gameEl = document.getElementById('game');
+  var compactMQ = window.matchMedia('(max-width:700px),(pointer:coarse)');
+  var landscapeMQ = window.matchMedia('(orientation:landscape) and (max-height:520px)');
+  var ICON_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2h3v12H4zM9 2h3v12H9z"/></svg>';
+  var ICON_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2.5v11a.5.5 0 0 0 .77.42l8.5-5.5a.5.5 0 0 0 0-.84l-8.5-5.5A.5.5 0 0 0 4 2.5z"/></svg>';
+  var PREVIEW = { cell: 16, slot: 64, count: 3 };
   var overlay = document.getElementById('overlay');
   var ovTitle = document.getElementById('ovTitle');
   var ovText = document.getElementById('ovText');
@@ -44,18 +41,45 @@
   el.best.textContent = best;
 
   // ---------- Sizing ----------
-  function resize(){
-    var touch = window.matchMedia('(max-width:640px),(pointer:coarse)').matches;
-    var sideW = touch ? 64 * 2 + 16 + 16 : 112 * 2 + 28 + 32;
-    var availW = window.innerWidth - sideW;
-    var availH = window.innerHeight - 56 - (touch ? 84 : 24);
-    CELL = Math.max(12, Math.min(32, Math.floor(Math.min(availW / COLS, availH / ROWS))));
+  function sizeCanvas(c, cx, w, h){
     var dpr = window.devicePixelRatio || 1;
-    board.width = COLS * CELL * dpr;
-    board.height = ROWS * CELL * dpr;
-    board.style.width = COLS * CELL + 'px';
-    board.style.height = ROWS * CELL + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+    c.style.width = w + 'px'; c.style.height = h + 'px';
+    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function resize(){
+    var compact = compactMQ.matches;
+    var cs = getComputedStyle(gameEl);
+    var padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    var padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    var gap = parseFloat(cs.columnGap) || 0;
+    var availW, availH;
+
+    if (landscapeMQ.matches) {
+      PREVIEW = { cell: 11, slot: 30, count: 1 };
+      sizeCanvas(holdCanvas, holdCtx, 48, 30);
+      sizeCanvas(nextCanvas, nextCtx, 48, 30);
+      var bs = getComputedStyle(document.body);
+      availH = document.body.clientHeight - parseFloat(bs.paddingTop) - parseFloat(bs.paddingBottom);
+      availW = window.innerWidth - 2 * 190;
+    } else if (compact) {
+      PREVIEW = { cell: 11, slot: 30, count: 1 };
+      sizeCanvas(holdCanvas, holdCtx, 48, 30);
+      sizeCanvas(nextCanvas, nextCtx, 48, 30);
+      var strip = document.querySelector('.stats').offsetHeight;
+      strip = Math.max(strip, holdCanvas.parentNode.offsetHeight);
+      availW = gameEl.clientWidth - padX;
+      availH = gameEl.clientHeight - padY - strip - gap;
+    } else {
+      PREVIEW = { cell: 18, slot: 72, count: 3 };
+      sizeCanvas(holdCanvas, holdCtx, 96, 72);
+      sizeCanvas(nextCanvas, nextCtx, 96, 72 * 3);
+      availW = gameEl.clientWidth - padX - 128 * 2 - gap * 2;
+      availH = gameEl.clientHeight - padY;
+    }
+    CELL = Math.max(12, Math.min(40, Math.floor(Math.min((availW - 2) / COLS, (availH - 2) / ROWS))));
+    sizeCanvas(board, ctx, COLS * CELL, ROWS * CELL);
+    board.parentNode.style.setProperty('--cell', CELL + 'px');
     render();
   }
 
@@ -211,7 +235,8 @@
     updateHud();
     state = 'playing';
     overlay.hidden = true;
-    pauseBtn.textContent = '❚❚';
+    startBtn.blur();
+    pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.setAttribute('aria-label', 'Pause');
     lastTime = performance.now();
   }
   function gameOver(){
@@ -222,24 +247,25 @@
       try { localStorage.setItem('bdnix_tetris_best', best); } catch (e) {}
     }
     updateHud();
-    ovTitle.textContent = 'GAME OVER';
+    ovTitle.textContent = 'Game over';
     ovText.textContent = 'Score ' + score + (score >= best && score > 0 ? ' — new best!' : ' · Best ' + best);
     startBtn.textContent = 'Play again';
+    startBtn.blur();
     overlay.hidden = false;
     startBtn.focus();
   }
   function togglePause(){
     if (state === 'playing') {
       state = 'paused';
-      ovTitle.textContent = 'PAUSED';
+      ovTitle.textContent = 'Paused';
       ovText.textContent = 'Take a breather.';
       startBtn.textContent = 'Resume';
       overlay.hidden = false;
-      pauseBtn.textContent = '▶';
+      pauseBtn.innerHTML = ICON_PLAY; pauseBtn.setAttribute('aria-label', 'Resume');
     } else if (state === 'paused') {
       state = 'playing';
       overlay.hidden = true;
-      pauseBtn.textContent = '❚❚';
+      pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.setAttribute('aria-label', 'Pause');
       lastTime = performance.now();
     }
   }
@@ -276,21 +302,12 @@
   }
 
   // ---------- Rendering ----------
-  function cell(c, x, y, size, color, alpha){
-    c.globalAlpha = alpha == null ? 1 : alpha;
-    c.fillStyle = color;
-    c.fillRect(x + 1, y + 1, size - 2, size - 2);
-    c.fillStyle = 'rgba(255,255,255,.22)';
-    c.fillRect(x + 1, y + 1, size - 2, Math.max(2, size * 0.14));
-    c.fillStyle = 'rgba(0,0,0,.22)';
-    c.fillRect(x + 1, y + size - 1 - Math.max(2, size * 0.14), size - 2, Math.max(2, size * 0.14));
-    c.globalAlpha = 1;
-  }
+  function cell(c, x, y, size, color, alpha){ window.bdnix.block(c, x, y, size, color, alpha); }
   function render(){
     var W = COLS * CELL, H = ROWS * CELL;
     ctx.clearRect(0, 0, W, H);
 
-    ctx.strokeStyle = 'rgba(255,255,255,.04)';
+    ctx.strokeStyle = 'rgba(255,255,255,.035)';
     ctx.lineWidth = 1;
     for (var gx = 1; gx < COLS; gx++) { ctx.beginPath(); ctx.moveTo(gx * CELL + .5, 0); ctx.lineTo(gx * CELL + .5, H); ctx.stroke(); }
     for (var gy = 1; gy < ROWS; gy++) { ctx.beginPath(); ctx.moveTo(0, gy * CELL + .5); ctx.lineTo(W, gy * CELL + .5); ctx.stroke(); }
@@ -311,12 +328,12 @@
 
     if (piece) {
       var gyy = ghostY();
-      drawMatrix(ctx, piece.m, piece.x, gyy, CELL, COLORS[piece.type], 0.18);
+      drawMatrix(ctx, piece.m, piece.x, gyy, CELL, COLORS[piece.type], 0.2);
       drawMatrix(ctx, piece.m, piece.x, piece.y, CELL, COLORS[piece.type], 1);
     }
 
-    renderPreview(nextCtx, queue ? queue.slice(0, 3) : [], 80);
-    renderPreview(holdCtx, held ? [held] : [], 96, !canHold);
+    renderPreview(nextCtx, queue ? queue.slice(0, PREVIEW.count) : [], false);
+    renderPreview(holdCtx, held ? [held] : [], state === 'playing' && !canHold);
   }
   function drawMatrix(c, m, px, py, size, color, alpha){
     for (var r = 0; r < m.length; r++) {
@@ -325,15 +342,16 @@
       }
     }
   }
-  function renderPreview(c, types, slot, dim){
-    var cw = c.canvas.width, ch = c.canvas.height;
+  function renderPreview(c, types, dim){
+    var cw = parseFloat(c.canvas.style.width), ch = parseFloat(c.canvas.style.height);
+    var slot = PREVIEW.slot;
     c.clearRect(0, 0, cw, ch);
     types.forEach(function(t, i){
       var m = SHAPES[t];
       // trim empty rows/cols
       var rows = m.map(function(r, ri){ return r.some(Boolean) ? ri : -1; }).filter(function(v){ return v >= 0; });
       var cols = m[0].map(function(_, ci){ return m.some(function(r){ return r[ci]; }) ? ci : -1; }).filter(function(v){ return v >= 0; });
-      var size = 18;
+      var size = PREVIEW.cell;
       var w = cols.length * size, h = rows.length * size;
       var ox = (cw - w) / 2, oy = i * slot + (slot - h) / 2;
       rows.forEach(function(r, ri){
@@ -425,6 +443,11 @@
   });
 
   window.addEventListener('resize', resize);
+  if (compactMQ.addEventListener) {
+    compactMQ.addEventListener('change', resize);
+    landscapeMQ.addEventListener('change', resize);
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(resize);
   resize();
   lastTime = performance.now();
   requestAnimationFrame(loop);

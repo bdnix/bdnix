@@ -2,46 +2,51 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>bdnix — Check back soon</title>
-  <meta name="description" content="Something is being built at bdnix. Check back soon — or play a game while you wait.">
+  <meta name="description" content="Something is being built at bdnix. Check back soon, or play a game while you wait.">
   <meta property="og:title" content="bdnix — Check back soon">
-  <meta property="og:description" content="Something is being built at bdnix. Check back soon — or play a game while you wait.">
+  <meta property="og:description" content="Something is being built at bdnix. Check back soon, or play a game while you wait.">
   <meta property="og:type" content="website">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/base.css">
   <link rel="stylesheet" href="/assets/css/style.css">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
-  <meta name="theme-color" content="#07090f">
+  <meta name="theme-color" content="#080a12">
 </head>
 <body>
   <canvas id="bg" aria-hidden="true"></canvas>
 
-  <main class="site">
-    <div class="status"><span class="dot"></span> Under construction</div>
+  <header class="bar">
+    <a class="wordmark" href="/"><b>bdnix</b></a>
+    <span class="badge"><i></i>Under construction</span>
+  </header>
 
-    <h1 class="logo" data-text="bdnix">bdnix</h1>
+  <main class="hero">
+    <p class="kicker">// status: work in progress</p>
+    <h1>Something good<br><em>is being built here.</em></h1>
 
-    <p class="terminal" aria-live="polite">
-      <span class="prompt">$</span>
-      <span id="typed"></span><span class="cursor">▋</span>
-    </p>
-
-    <p id="visit" class="visit"></p>
+    <p class="terminal" aria-live="polite"><span class="prompt">$</span> <span id="typed">come back again to check.</span><span class="cursor"></span></p>
 
     <div class="actions">
-      <a class="btn btn-primary" href="/play/">▶ Play Tetris while you wait</a>
+      <a class="btn btn-primary" href="/play/">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2.5v11a.5.5 0 0 0 .77.42l8.5-5.5a.5.5 0 0 0 0-.84l-8.5-5.5A.5.5 0 0 0 4 2.5z"/></svg>
+        Play Tetris while you wait
+      </a>
       <a class="btn btn-ghost" href="mailto:root@bdnix.com">Say hello</a>
     </div>
+
+    <p id="visit" class="visit"></p>
   </main>
 
   <footer class="foot">
-    <span>© <span id="year"></span> bdnix</span>
-    <span class="sep">·</span>
+    <span>© <span id="year">2026</span> bdnix</span>
     <a href="mailto:root@bdnix.com">root@bdnix.com</a>
   </footer>
 
+  <script src="/assets/js/blocks.js"></script>
   <script src="/assets/js/main.js"></script>
 </body>
 </html>
