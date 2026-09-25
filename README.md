@@ -23,6 +23,7 @@ Both pages share one design system, so they look like the same site:
 - [watermark-pdf/index.html](watermark-pdf/index.html), [assets/css/watermark.css](assets/css/watermark.css), [assets/js/watermark.js](assets/js/watermark.js): PDF watermark tool, served at `/watermark-pdf/`
 - [assets/css/tool.css](assets/css/tool.css), [assets/js/pdftools.js](assets/js/pdftools.js): page layout and helpers (page-range parsing, file reading) shared by the PDF tools
 - [assets/vendor/pdf-lib.min.js](assets/vendor/pdf-lib.min.js): [pdf-lib](https://pdf-lib.js.org/) 1.17.1 (MIT, see [its licence](assets/vendor/pdf-lib.LICENSE.md)), used by both PDF tools to edit files
+- [assets/vendor/fontkit.umd.min.js](assets/vendor/fontkit.umd.min.js): [@pdf-lib/fontkit](https://github.com/Hopding/fontkit) 1.1.1 (MIT, see [its licence](assets/vendor/fontkit.LICENSE.md)), lets pdf-lib embed a font file someone uploads. Only downloaded when they pick "Your own font file".
 - [assets/vendor/pdfjs/](assets/vendor/pdfjs/): [PDF.js](https://mozilla.github.io/pdf.js/) 6.3.289 legacy build (Apache 2.0, see [its licence](assets/vendor/pdfjs/LICENSE)), used by the watermark tool to draw its preview. It's only downloaded once someone opens a file there.
 
 ## Deploying changes
@@ -57,10 +58,13 @@ Add PDFs by dropping them on the page or choosing them. Reorder them by dragging
 
 Open one PDF, then set up the watermark while a live preview shows it on your pages (use the arrows to flip through them):
 
-- **Text or image.** Text uses bold Helvetica in the colour you pick. Letters Helvetica can't show (non-Latin scripts, emoji) are drawn as an image instead, so any language works. Images can be PNG, JPG, WebP or GIF, and transparency is kept.
+- **Text or image.** Text can use Helvetica, Times or Courier (each with bold and italic), or your own `.ttf` / `.otf` font file, in any colour. Text the chosen font can't show properly (non-Latin letters in the built-in fonts, or scripts like Bangla and Arabic that need their letters joined) is drawn as an image instead, so any language works. Your own font is embedded in full, which adds its file size to the PDF. Images can be PNG, JPG, WebP or GIF, and transparency is kept.
 - **Size** is the watermark's width as a share of the page's shorter side, so it looks the same on A4, Letter or landscape pages.
 - **Opacity**, **rotation** (−90° to 90°, with quick buttons), and **position** on a 3×3 grid, or **Repeat across the page** to tile it.
+- **Layer:** on top of the page, or behind its content so text stays readable over the watermark. Behind only shows through blank parts of the page, so it won't show on scanned pages (which are one big picture) or pages with a solid background.
 - **Pages** takes the same ranges as the merger (`1-3, 5, 8-`). Empty means every page.
+
+Settings are remembered in the browser for next time: the options in `localStorage`, and the chosen image and font file in IndexedDB. The page list isn't remembered, since it belongs to one file. "Reset to defaults" clears it all.
 
 Rotated pages are handled, so the watermark sits the same way on every page as the reader sees it. The download is named after the original, e.g. `report-watermarked.pdf`. Like the merger, it all runs in the browser.
 

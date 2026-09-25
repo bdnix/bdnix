@@ -14,14 +14,18 @@
   var downloadBtn = $('downloadBtn'), downloadLabel = $('downloadLabel');
   var imagePicker = $('imagePicker'), imageName = $('imageName');
   var posGrid = $('posGrid'), pagesHint = $('pagesHint'), chips = $('rotationChips');
+  var fontPick = $('fontPick'), fontPicker = $('fontPicker'), fontName = $('fontName');
+  var layerHint = $('layerHint'), resetBtn = $('resetBtn');
   var F = form.elements;
 
   $('year').textContent = new Date().getFullYear();
 
   // src: { name, size, bytes, pages, doc (pdf-lib, read only), view (pdf.js) and its viewTask }
   var src = null;
-  // image: { bytes, type: 'png' | 'jpg' }
+  // image: { bytes, type: 'png' | 'jpg', name }
   var image = null;
+  // customFont: { bytes, name }, an uploaded .ttf/.otf
+  var customFont = null;
   var busy = false;
   var resultUrl = null;
   var previewIndex = 0;
@@ -45,10 +49,102 @@
       rotation: +F.rotation.value,
       pos: F.pos.value,
       tile: F.tile.checked,
+      font: F.font.value,
+      bold: F.bold.checked,
+      italic: F.italic.checked,
+      layer: F.layer.value,
       pages: F.pages.value
     };
   }
 
+  // ---- Remembering settings ----
+  // Settings go in localStorage; the image and font files go in IndexedDB,
+  // which handles binary data and has room for them. All of it is optional:
+  // private windows or blocked storage just mean nothing is remembered.
+  var STORE_KEY = 'bdnix_watermark_v1';
+  var REMEMBERED = ['kind', 'text', 'color', 'size', 'opacity', 'rotation', 'pos', 'tile', 'font', 'bold', 'italic', 'layer'];
+
+  var files = (function(){
+    var dbPromise = null;
+    function open(){
+      if (!dbPromise) dbPromise = new Promise(function(resolve, reject){
+        var req = indexedDB.open('bdnix-tools', 1);
+        req.onupgradeneeded = function(){ req.result.createObjectStore('files'); };
+        req.onsuccess = function(){ resolve(req.result); };
+        req.onerror = function(){ reject(req.error); };
+      });
+      return dbPromise;
+    }
+    function run(mode, fn){
+      return open().then(function(db){
+        return new Promise(function(resolve, reject){
+          var tx = db.transaction('files', mode);
+          var req = fn(tx.objectStore('files'));
+          tx.oncomplete = function(){ resolve(req.result); };
+          tx.onerror = tx.onabort = function(){ reject(tx.error); };
+        });
+      }).catch(function(){ return undefined; });
+    }
+    return {
+      get: function(key){ return run('readonly', function(st){ return st.get(key); }); },
+      set: function(key, value){ return run('readwrite', function(st){ return st.put(value, key); }); },
+      remove: function(key){ return run('readwrite', function(st){ return st.delete(key); }); }
+    };
+  })();
+
+  function saveSettings(){
+    var s = settings(), out = { sizes: sizes };
+    sizes[s.kind] = s.size;
+    REMEMBERED.forEach(function(k){ out[k] = s[k]; });
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(out)); } catch (e) {}
+  }
+
+  function restoreSettings(){
+    var saved;
+    try { saved = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) {}
+    if (!saved || typeof saved !== 'object') return;
+    function setRadio(name, value){
+      Array.prototype.forEach.call(form.querySelectorAll('input[name=' + name + ']'), function(r){
+        if (r.value === value) r.checked = true;
+      });
+    }
+    function setRange(name, value){
+      var el = F[name], n = +value;
+      if (isFinite(n)) el.value = Math.min(+el.max, Math.max(+el.min, n));
+    }
+    if (typeof saved.kind === 'string') setRadio('kind', saved.kind);
+    if (typeof saved.text === 'string') F.text.value = saved.text.slice(0, 200);
+    if (/^#[0-9a-f]{6}$/i.test(saved.color)) F.color.value = saved.color;
+    if (saved.sizes) {
+      if (isFinite(saved.sizes.text)) sizes.text = +saved.sizes.text;
+      if (isFinite(saved.sizes.image)) sizes.image = +saved.sizes.image;
+    }
+    setRange('size', saved.size);
+    setRange('opacity', saved.opacity * 100);
+    setRange('rotation', saved.rotation);
+    if (typeof saved.pos === 'string') setRadio('pos', saved.pos);
+    F.tile.checked = !!saved.tile;
+    if (F.font.querySelector('option[value="' + saved.font + '"]')) F.font.value = saved.font;
+    if (typeof saved.bold === 'boolean') F.bold.checked = saved.bold;
+    if (typeof saved.italic === 'boolean') F.italic.checked = saved.italic;
+    if (typeof saved.layer === 'string') setRadio('layer', saved.layer);
+    lastKind = F.kind.value;
+  }
+
+  function restoreFiles(){
+    files.get('image').then(function(v){
+      if (!v || image || !v.bytes) return;
+      image = { bytes: v.bytes, type: v.type === 'jpg' ? 'jpg' : 'png', name: v.name };
+      imageName.textContent = v.name;
+      imageName.title = v.name;
+      syncForm();
+      schedulePreview();
+    });
+    files.get('font').then(function(v){
+      if (!v || customFont || !v.bytes) return;
+      useFont(v.bytes, v.name).catch(function(){ files.remove('font'); });
+    });
+  }
   // ---- pdf.js, only fetched once a file is chosen ----
   var pdfjsPromise = null;
   function loadPdfjs(){
@@ -61,7 +157,39 @@
     return pdfjsPromise;
   }
 
+  // ---- fontkit, only fetched when someone uses their own font ----
+  var fontkitPromise = null;
+  function loadFontkit(){
+    if (!fontkitPromise) {
+      fontkitPromise = new Promise(function(resolve, reject){
+        var tag = document.createElement('script');
+        tag.src = '/assets/vendor/fontkit.umd.min.js?v=1.1.1';
+        tag.onload = function(){ window.fontkit ? resolve(window.fontkit) : reject(new Error('fontkit did not load')); };
+        tag.onerror = function(){ fontkitPromise = null; reject(new Error('Couldn’t load the font tools. Check your connection.')); };
+        document.head.appendChild(tag);
+      });
+    }
+    return fontkitPromise;
+  }
+
   // ---- Stamping (shared by the preview and the real output) ----
+  // The 14 standard PDF fonts need no embedding. Index: bold + 2 * italic.
+  var STANDARD = {
+    helvetica: ['Helvetica', 'HelveticaBold', 'HelveticaOblique', 'HelveticaBoldOblique'],
+    times: ['TimesRoman', 'TimesRomanBold', 'TimesRomanItalic', 'TimesRomanBoldItalic'],
+    courier: ['Courier', 'CourierBold', 'CourierOblique', 'CourierBoldOblique']
+  };
+  // Closest browser fonts, for text drawn on a canvas instead (see textToPng).
+  var CSS_FAMILY = {
+    helvetica: 'Helvetica, Arial, "Liberation Sans", "Noto Sans", sans-serif',
+    times: '"Times New Roman", Times, "Liberation Serif", "Noto Serif", serif',
+    courier: '"Courier New", Courier, "Liberation Mono", "Noto Sans Mono", monospace',
+    custom: '"bdnix-wm-custom", sans-serif'
+  };
+  // pdf-lib places glyphs one after another without shaping, which is fine
+  // for Latin, Greek, Cyrillic and CJK but garbles scripts like Bangla or
+  // Arabic. Text with anything outside these ranges goes through the canvas.
+  var NO_SHAPING = /^[\u0000-\u052F\u1E00-\u1FFF\u2000-\u206F\u20A0-\u20CF\u2100-\u214F\u3000-\u9FFF\uAC00-\uD7AF\uFF00-\uFFEF]*$/;
   function rotationOf(page){
     return ((page.getRotation().angle % 360) + 360) % 360;
   }
@@ -74,13 +202,15 @@
   // Draws text the built-in PDF fonts can't encode (e.g. non-Latin scripts)
   // onto a canvas, so it can be embedded as an image instead.
   var textImageCache = {};
-  function textToPng(text, color){
-    var key = color + '|' + text;
+  function textToPng(text, color, s){
+    var custom = s.font === 'custom';
+    var style = (s.italic && !custom ? 'italic ' : '') + (s.bold && !custom ? '700 ' : '400 ');
+    var key = [color, s.font, style, text].join('|');
     if (textImageCache[key]) return Promise.resolve(textImageCache[key]);
     var c = document.createElement('canvas');
     var ctx = c.getContext('2d');
     var px = 160;
-    var fontFor = function(size){ return '800 ' + size + 'px Inter, "Noto Sans", Arial, sans-serif'; };
+    var fontFor = function(size){ return style + size + 'px ' + CSS_FAMILY[s.font]; };
     ctx.font = fontFor(px);
     var m = ctx.measureText(text);
     if (m.width > 8000) { px = Math.floor(px * 8000 / m.width); ctx.font = fontFor(px); m = ctx.measureText(text); }
@@ -113,14 +243,30 @@
       });
     }
     if (!s.text) return Promise.resolve(null);
-    return doc.embedFont(L.StandardFonts.HelveticaBold).then(function(font){
+    function asImage(){
+      return textToPng(s.text, s.color, s).then(function(png){ return doc.embedPng(png); }).then(function(img){
+        return { image: img, aspect: img.height / img.width };
+      });
+    }
+    if (s.font === 'custom') {
+      if (!customFont) return Promise.resolve(null);
+      if (!NO_SHAPING.test(s.text)) return asImage();
+      return loadFontkit().then(function(fontkit){
+        doc.registerFontkit(fontkit);
+        // Embed the whole font: pdf-lib's subsetting breaks some fonts.
+        return doc.embedFont(customFont.bytes, { subset: false });
+      }).then(function(font){
+        return { font: font, text: s.text, color: hexToRgb(s.color) };
+      });
+    }
+    var name = STANDARD[s.font][(s.bold ? 1 : 0) + (s.italic ? 2 : 0)];
+    return doc.embedFont(L.StandardFonts[name]).then(function(font){
       try {
         font.encodeText(s.text);
         return { font: font, text: s.text, color: hexToRgb(s.color) };
       } catch (e) {
-        return textToPng(s.text, s.color).then(function(png){ return doc.embedPng(png); }).then(function(img){
-          return { image: img, aspect: img.height / img.width };
-        });
+        // Standard fonts only cover Western European letters.
+        return asImage();
       }
     });
   }
@@ -194,6 +340,20 @@
         page.drawImage(mark.image, opts);
       }
     });
+    if (s.layer === 'back') sendToBack(page);
+  }
+
+  // pdf-lib appends what it draws as the page's last content stream. Moving
+  // that stream to the front makes the page's own content paint over it.
+  // pdf-lib wraps both its drawing and the original content in q/Q, so
+  // neither can leak graphics state into the other.
+  function sendToBack(page){
+    var contents = page.node.Contents();
+    if (!(contents instanceof L.PDFArray) || contents.size() < 2) return;
+    var last = contents.size() - 1;
+    var ours = contents.get(last);
+    contents.remove(last);
+    contents.insert(0, ours);
   }
 
   function uniquePages(sel){
@@ -254,6 +414,40 @@
     });
   }
 
+  // A one-page copy of page `index`, so a "behind" preview can stamp the real
+  // page without reloading the whole file each time.
+  var pageCopies = {};
+  function pageCopy(index){
+    if (!pageCopies[index]) {
+      pageCopies[index] = L.PDFDocument.create().then(function(doc){
+        return doc.copyPages(src.doc, [index]).then(function(pages){
+          doc.addPage(pages[0]);
+          return doc.save();
+        });
+      });
+    }
+    return pageCopies[index];
+  }
+
+  // Behind the content can't be faked with an overlay, so stamp a copy of
+  // the real page and render that instead. Resolves to null with no watermark.
+  function behindPage(index, s, fit, lib){
+    return pageCopy(index).then(function(bytes){
+      return L.PDFDocument.load(bytes);
+    }).then(function(doc){
+      return prepareMark(doc, s).then(function(mark){
+        if (!mark) return null;
+        stamp(doc.getPage(0), mark, s);
+        return doc.save();
+      });
+    }).then(function(bytes){
+      if (!bytes) return null;
+      var task = lib.getDocument({ data: bytes, isEvalSupported: false });
+      return task.promise.then(function(d){ return renderPage(d, 1, fit, false); })
+        .finally(function(){ task.destroy(); });
+    });
+  }
+
   function setNote(text){
     note.textContent = text || '';
     note.hidden = !text;
@@ -285,6 +479,11 @@
     var fit = stageSize();
 
     loadPdfjs().then(function(lib){
+      if (included && s.layer === 'back') {
+        return behindPage(i, s, fit, lib).then(function(c){
+          return c ? [c, null] : Promise.all([basePage(i, fit), null]);
+        });
+      }
       return Promise.all([basePage(i, fit), included ? overlayPage(i, s, fit, lib) : null]);
     }).then(function(r){
       if (seq !== previewSeq) return;
@@ -300,6 +499,7 @@
         sel.error ? 'Fix the page list to see the watermark.' :
         !included ? 'Page ' + (i + 1) + ' isn’t in your page list, so it stays as it is.' :
         s.kind === 'image' && !image ? 'Choose an image to see it here.' :
+        s.kind === 'text' && s.font === 'custom' && !customFont ? 'Choose a font file to see it here.' :
         s.kind === 'text' && !s.text ? 'Type some text to see it here.' : ''
       );
     }).catch(function(err){
@@ -326,6 +526,9 @@
     }
     form.querySelector('.for-text').hidden = s.kind !== 'text';
     form.querySelector('.for-image').hidden = s.kind !== 'image';
+    fontPick.hidden = s.font !== 'custom';
+    F.bold.disabled = F.italic.disabled = s.font === 'custom';
+    layerHint.hidden = s.layer !== 'back';
     $('sizeOut').textContent = s.size + '%';
     $('opacityOut').textContent = Math.round(s.opacity * 100) + '%';
     $('rotationOut').textContent = s.rotation + '°';
@@ -343,7 +546,7 @@
       pagesHint.textContent = sel.error ? sel.error :
         s.pages.trim() ? T.plural(uniquePages(sel).length, 'page') + ' of ' + src.pages + ' will be watermarked' :
         'All ' + T.plural(src.pages, 'page') + ' will be watermarked';
-      ok = !sel.error && (s.kind === 'image' ? !!image : !!s.text);
+      ok = !sel.error && (s.kind === 'image' ? !!image : !!s.text && (s.font !== 'custom' || !!customFont));
     }
     applyBtn.disabled = busy || !ok;
   }
@@ -354,6 +557,7 @@
     syncForm();
     clearResult();
     schedulePreview();
+    saveSettings();
   }
   form.addEventListener('input', onChange);
   form.addEventListener('change', onChange);
@@ -394,6 +598,7 @@
       src = { name: file.name, size: file.size, bytes: bytes, pages: doc.getPageCount(), doc: doc, view: null, viewTask: null };
       previewIndex = 0;
       baseCache = {};
+      pageCopies = {};
       clearResult();
       drop.hidden = true;
       fileBar.hidden = false;
@@ -482,6 +687,8 @@
       }).then(function(){ return img; });
     }).then(function(img){
       image = img;
+      image.name = file.name;
+      files.set('image', { bytes: img.bytes, type: img.type, name: file.name });
       imageName.textContent = file.name;
       imageName.title = file.name;
       say('');
@@ -494,6 +701,65 @@
     e.stopPropagation();
     openImage(imagePicker.files[0]);
     imagePicker.value = '';
+  });
+
+  // Checks a font file with fontkit, then registers it with the browser too,
+  // so text that has to go through the canvas uses the same font.
+  var fontFace = null;
+  function useFont(bytes, name){
+    return loadFontkit().then(function(fontkit){
+      var parsed = fontkit.create(new Uint8Array(bytes));
+      if (!parsed || typeof parsed.layout !== 'function') throw new Error('not a single font');
+      var face = new FontFace('bdnix-wm-custom', bytes);
+      return face.load().then(function(loaded){
+        if (fontFace) document.fonts.delete(fontFace);
+        document.fonts.add(loaded);
+        fontFace = loaded;
+      }, function(){ /* The PDF can still use it; only the canvas fallback loses it. */ });
+    }).then(function(){
+      customFont = { bytes: bytes, name: name };
+      textImageCache = {};
+      fontName.textContent = name;
+      fontName.title = name;
+      syncForm();
+      clearResult();
+      schedulePreview();
+    });
+  }
+
+  fontPicker.addEventListener('change', function(e){
+    e.stopPropagation();
+    var file = fontPicker.files[0];
+    fontPicker.value = '';
+    if (!file) return;
+    T.readBytes(file).then(function(bytes){
+      return useFont(bytes, file.name).then(function(){
+        files.set('font', { bytes: bytes, name: file.name });
+        say('');
+      });
+    }).catch(function(){
+      say('Couldn’t use ' + file.name + '. Choose a .ttf or .otf font file.', true);
+    });
+  });
+
+  resetBtn.addEventListener('click', function(){
+    try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+    files.remove('image');
+    files.remove('font');
+    var pages = F.pages.value;
+    form.reset();
+    // The page list belongs to this file, not the settings, so keep it.
+    F.pages.value = pages;
+    image = null;
+    customFont = null;
+    if (fontFace) { document.fonts.delete(fontFace); fontFace = null; }
+    imageName.textContent = 'PNG or JPG, e.g. a logo';
+    fontName.textContent = 'A .ttf or .otf file';
+    sizes = { text: 80, image: 40 };
+    lastKind = 'text';
+    onChange();
+    try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+    say('Settings reset to the defaults.');
   });
 
   // ---- Making the file ----
@@ -538,5 +804,7 @@
     });
   });
 
+  restoreSettings();
   syncForm();
+  restoreFiles();
 })();
