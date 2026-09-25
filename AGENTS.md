@@ -9,7 +9,7 @@ The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub 
 | Page | Files |
 |---|---|
 | Landing `/` | `index.html`, `assets/css/style.css`, `assets/js/main.js` |
-| Tetris `/play/` | `play/index.html`, `assets/css/tetris.css`, `assets/js/tetris.js` |
+| Tetris `/tetris/` | `tetris/index.html`, `assets/css/tetris.css`, `assets/js/tetris.js` |
 | Pac-Man `/pacman/` | `pacman/index.html`, `assets/css/pacman.css`, `assets/js/pacman.js` |
 | Merge PDFs `/merge-pdf/` | `merge-pdf/index.html`, `assets/css/merge.css`, `assets/js/merge.js` |
 | Watermark `/watermark-pdf/` | `watermark-pdf/index.html`, `assets/css/watermark.css`, `assets/js/watermark.js`, `assets/js/watermark-layout.js` |

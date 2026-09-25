@@ -7,7 +7,7 @@
 
   // Keys written by the games (see tetris.js and pacman.js) and main.js.
   var GAMES = [
-    { id: 'tetris', name: 'Tetris', key: 'bdnix_tetris_best', href: '/play/' },
+    { id: 'tetris', name: 'Tetris', key: 'bdnix_tetris_best', href: '/tetris/' },
     { id: 'pacman', name: 'Pac-Man', key: 'bdnix_pacman_best', href: '/pacman/' }
   ];
 

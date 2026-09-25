@@ -12,7 +12,7 @@ const hud = (page) => page.evaluate(() => ({
 }));
 
 test.beforeEach(async ({ page }) => {
-  await openGame(page, '/play/');
+  await openGame(page, '/tetris/');
   await expect(page.locator('#ovTitle')).toHaveText('Tetris');
   await page.getByRole('button', { name: 'Start game' }).click();
   await expect(page.locator('#overlay')).toBeHidden();
