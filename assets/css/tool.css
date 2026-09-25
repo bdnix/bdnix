@@ -109,6 +109,22 @@
 .settings .hint{font-size:13px;color:var(--faint);min-height:1.3em}
 .settings .hint.error{color:var(--pink)}
 
+/* Segmented switch (watermark Text / Image, audio MP3 / WAV) */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.seg legend{grid-column:1/-1}
+.seg label{position:relative}
+.seg input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.seg span{
+  display:block;padding:10px;text-align:center;cursor:pointer;
+  border:1px solid var(--line);background:rgba(8,10,18,.4);
+  font-weight:600;font-size:14px;color:var(--muted);
+  transition:background .2s ease,color .2s ease;
+}
+.seg label:first-of-type span{border-radius:10px 0 0 10px}
+.seg label:last-of-type span{border-radius:0 10px 10px 0;border-left:0}
+.seg input:checked + span{background:rgba(168,85,247,.22);color:var(--fg);border-color:rgba(168,85,247,.55)}
+.seg input:focus-visible + span{outline:2px solid var(--cyan);outline-offset:2px}
+
 @media (max-width:860px){
   .editor{grid-template-columns:1fr}
   .preview{position:static}

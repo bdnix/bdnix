@@ -1,6 +1,6 @@
 # bdnix
 
-The static site behind [www.bdnix.com](https://www.bdnix.com): Tetris and Pac-Man, three PDF tools (merge, watermark and redact), and a profile page for your name and best scores. Everything runs in the browser. Hosted on GitHub Pages; no build step.
+The static site behind [www.bdnix.com](https://www.bdnix.com): Tetris and Pac-Man, three PDF tools (merge, watermark and redact), an MP4 to MP3 converter, and a profile page for your name and best scores. Everything runs in the browser. Hosted on GitHub Pages; no build step.
 
 ## Preview locally
 
@@ -26,10 +26,12 @@ Both pages share one design system, so they look like the same site:
 - [assets/js/profile.js](assets/js/profile.js): reads and saves the display name and reads the game scores; fills in the profile chip in the top bar of the landing and tool pages
 - [watermark-pdf/index.html](watermark-pdf/index.html), [assets/css/watermark.css](assets/css/watermark.css), [assets/js/watermark.js](assets/js/watermark.js), [assets/js/watermark-layout.js](assets/js/watermark-layout.js): PDF watermark tool, served at `/watermark-pdf/`. The layout file holds the placement maths, kept separate so it can be unit tested.
 - [redact-pdf/index.html](redact-pdf/index.html), [assets/css/redact.css](assets/css/redact.css), [assets/js/redact.js](assets/js/redact.js), [assets/js/redact-core.js](assets/js/redact-core.js): PDF redaction tool, served at `/redact-pdf/`. The core file holds the text search and box geometry, kept separate so it can be unit tested.
-- [assets/css/tool.css](assets/css/tool.css), [assets/js/pdftools.js](assets/js/pdftools.js): page layout (including the preview-and-settings editor) and helpers (page-range parsing, file reading, dropping files on the page, loading PDF.js) shared by the PDF tools
+- [mp4-to-mp3/index.html](mp4-to-mp3/index.html), [assets/css/audio.css](assets/css/audio.css), [assets/js/audio.js](assets/js/audio.js), [assets/js/audio-core.js](assets/js/audio-core.js): audio converter, served at `/mp4-to-mp3/`. The core file holds the channel mixing and the MP3 and WAV encoding, kept separate so it can be unit tested.
+- [assets/css/tool.css](assets/css/tool.css), [assets/js/pdftools.js](assets/js/pdftools.js): page layout (including the preview-and-settings editor) and helpers (page-range parsing, file reading, dropping files on the page, loading PDF.js) shared by the tools
 - [assets/vendor/pdf-lib.min.js](assets/vendor/pdf-lib.min.js): [pdf-lib](https://pdf-lib.js.org/) 1.17.1 (MIT, see [its licence](assets/vendor/pdf-lib.LICENSE.md)), used by the PDF tools to edit files
 - [assets/vendor/fontkit.umd.min.js](assets/vendor/fontkit.umd.min.js): [@pdf-lib/fontkit](https://github.com/Hopding/fontkit) 1.1.1 (MIT, see [its licence](assets/vendor/fontkit.LICENSE.md)), lets pdf-lib embed a font file someone uploads. Only downloaded when they pick "Your own font file".
 - [assets/vendor/pdfjs/](assets/vendor/pdfjs/): [PDF.js](https://mozilla.github.io/pdf.js/) 6.3.289 legacy build (Apache 2.0, see [its licence](assets/vendor/pdfjs/LICENSE)), used by the watermark tool to draw its preview, and by the redact tool to show pages, search their text and redraw redacted pages. It's only downloaded once someone opens a file.
+- [assets/vendor/lame.min.js](assets/vendor/lame.min.js): [lamejs](https://github.com/zhuker/lamejs) 1.2.1, a JavaScript port of [LAME](https://lame.sourceforge.io/) (LGPL, see [its licence](assets/vendor/lame.LICENSE.md)), used by the audio converter to encode MP3. Included unmodified as its own file.
 
 ## Tests
 
@@ -44,8 +46,8 @@ npx playwright install chromium   # first time only
 npm test                          # unit tests, then UI tests
 ```
 
-- **Unit tests** (`npm run test:unit`, [tests/unit/](tests/unit/)) use Node's built-in test runner. They load the site's scripts in a sandbox and check the page-range parser, file-size formatting, the profile (name rules, reading the game scores, blocked storage), the watermark placement maths for every page rotation, and the redact tool's text search and box geometry.
-- **UI tests** (`npm run test:ui`, [tests/ui/](tests/ui/)) use Playwright to drive the real pages in Chromium, at desktop and phone size. They cover the landing page, profile, merging (order, page ranges, errors), watermarking (preview, layers, fonts, images, remembered settings; the downloaded PDFs are opened and checked), redacting (search, drawing, undo; the downloaded PDFs are read back to check the text is gone and the areas are black), gameplay in both games (Tetris: moving, rotating, holding, clearing a line, pausing, touch buttons and game over; Pac-Man: steering a route to a power pellet, pausing, touch buttons and swipes, and losing every life), run on a frozen clock with fixed randomness so the scores are exact, and that no page scrolls sideways on a phone. Any uncaught JavaScript error fails the test. Test PDFs are generated on the fly, so no binary fixtures are committed.
+- **Unit tests** (`npm run test:unit`, [tests/unit/](tests/unit/)) use Node's built-in test runner. They load the site's scripts in a sandbox and check the page-range parser, file-size formatting, the profile (name rules, reading the game scores, blocked storage), the watermark placement maths for every page rotation, the redact tool's text search and box geometry, and the audio converter's channel mixing and MP3 and WAV encoding (the MP3 frames are read back to check bitrate and channels).
+- **UI tests** (`npm run test:ui`, [tests/ui/](tests/ui/)) use Playwright to drive the real pages in Chromium, at desktop and phone size. They cover the landing page, profile, merging (order, page ranges, errors), watermarking (preview, layers, fonts, images, remembered settings; the downloaded PDFs are opened and checked), redacting (search, drawing, undo; the downloaded PDFs are read back to check the text is gone and the areas are black), converting video and audio to MP3 and WAV (the downloads are decoded to check their length, channels and pitch), gameplay in both games (Tetris: moving, rotating, holding, clearing a line, pausing, touch buttons and game over; Pac-Man: steering a route to a power pellet, pausing, touch buttons and swipes, and losing every life), run on a frozen clock with fixed randomness so the scores are exact, and that no page scrolls sideways on a phone. Any uncaught JavaScript error fails the test. Test PDFs, MP4s and WAVs are generated on the fly, so no binary fixtures are committed. The test MP4s carry FLAC audio, because the Chromium that Playwright runs can't decode AAC, the usual MP4 audio; real Chrome, Edge, Firefox and Safari can.
 - `npm run serve` serves the site at http://localhost:4173 with the same small server the UI tests use.
 
 If a UI test fails on GitHub, the run's **playwright-report** artifact has the HTML report and a trace of each failed test (`npx playwright show-trace trace.zip`).
@@ -126,6 +128,18 @@ Open one PDF, then mark what to black out:
 **Redact PDF** makes the file. Every page with a mark is redrawn as an image (144 dpi) with the marked areas filled solid black, so the text under them is really gone: it can't be selected, copied, or uncovered by moving the box. The rest of the text on those pages can't be selected any more either. Pages with no marks are copied as they are. The result is a new file, so the original's title, author, bookmarks and attachments aren't carried over. The download is named after the original, e.g. `report-redacted.pdf`. Like the other tools, it all runs in the browser.
 
 Search places boxes using the PDF's own text, estimating where each letter sits, so the boxes are padded slightly. Check the marks in the preview before redacting, and draw extra boxes if anything peeks out.
+
+## MP4 to MP3
+
+Drop in videos or audio files (MP4, MOV, WebM, M4A, MKV, WAV, FLAC, Ogg, MP3 and the like), pick the output, and convert:
+
+- **Convert to** MP3 or WAV (16-bit, uncompressed).
+- **Quality** for MP3: 320, 256, 192 (the default), 128, 96 or 64 kbps. At 96 kbps and below, the encoder lowers a stereo file's sample rate, as LAME always does, to keep the sound clean.
+- **Channels:** stereo keeps the left and right channels (the front pair of a surround file); mono mixes every channel into one. A mono file stays mono.
+
+Several files can be converted at once, and each gets its own download, named after the original (`clip.mp4` becomes `clip.mp3`). Changing a setting clears earlier results so they can be converted again.
+
+The browser decodes the audio itself (at 44.1 kHz), and [lamejs](https://github.com/zhuker/lamejs) encodes the MP3, so nothing is uploaded. That means the formats it can read depend on the browser: a file whose audio the browser can't decode is marked on the list with a message. Each file is decoded whole in memory, so very long videos (hours) may be too big for a phone.
 
 ## Contact
 

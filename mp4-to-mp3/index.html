@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>bdnix — MP4 to MP3</title>
+  <meta name="description" content="Convert videos and audio files to MP3 or WAV. Runs in your browser; your files are never uploaded.">
+  <meta property="og:title" content="bdnix — MP4 to MP3">
+  <meta property="og:description" content="Convert videos and audio files to MP3 or WAV. Runs in your browser; your files are never uploaded.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/base.css?v=8e1870e4c0">
+  <link rel="stylesheet" href="/assets/css/tool.css?v=f886c8a478">
+  <link rel="stylesheet" href="/assets/css/audio.css?v=b6a0b634c7">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#080a12">
+</head>
+<body>
+  <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
+
+  <header class="bar">
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ mp4-to-mp3</span></a>
+    <a class="profile-chip" href="/profile/" title="Your profile"><span class="avatar" data-profile-initial aria-hidden="true">U</span><span data-profile-name>User</span></a>
+  </header>
+
+  <main class="tool">
+    <p class="kicker">// tools</p>
+    <h1>MP4 to MP3</h1>
+    <p class="lede">Pull the soundtrack out of a video, or convert audio files, to MP3 or WAV. Everything happens in your browser. Your files are never uploaded.</p>
+
+    <label class="drop panel" id="drop">
+      <input type="file" id="picker" accept="video/*,audio/*,.mp4,.m4a,.m4v,.mov,.webm,.mkv,.ogg,.opus,.mp3,.wav,.flac,.aac" multiple>
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <b>Drop videos or audio files here</b>
+      <span>MP4, MOV, WebM, M4A, WAV and more, or <u>choose files</u></span>
+    </label>
+
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+    <section class="files" id="filesWrap" hidden>
+      <form class="settings panel" id="settings">
+        <fieldset class="seg">
+          <legend class="label">Convert to</legend>
+          <label><input type="radio" name="format" value="mp3" checked><span>MP3</span></label>
+          <label><input type="radio" name="format" value="wav"><span>WAV</span></label>
+        </fieldset>
+        <label class="field" id="qualityField">
+          <span class="label">Quality</span>
+          <select name="kbps" id="kbps">
+            <option value="320">Best · 320 kbps</option>
+            <option value="256">Very high · 256 kbps</option>
+            <option value="192" selected>High · 192 kbps</option>
+            <option value="128">Standard · 128 kbps</option>
+            <option value="96">Small file · 96 kbps</option>
+            <option value="64">Voice · 64 kbps</option>
+          </select>
+        </label>
+        <fieldset class="seg">
+          <legend class="label">Channels</legend>
+          <label><input type="radio" name="channels" value="stereo" checked><span>Stereo</span></label>
+          <label><input type="radio" name="channels" value="mono"><span>Mono</span></label>
+        </fieldset>
+      </form>
+
+      <div class="files-head">
+        <span class="label" id="summary"></span>
+        <button class="link-btn" id="clearBtn" type="button">Clear all</button>
+      </div>
+      <ol class="track-list" id="list"></ol>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="convertBtn" type="button">
+          <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12V3l7-1.5V11M6 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM13 11a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg>
+          <span id="convertLabel">Convert</span>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>© <span id="year">2026</span> bdnix</span>
+    <a href="mailto:root@bdnix.com">root@bdnix.com</a>
+  </footer>
+
+  <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
+  <script src="/assets/js/profile.js?v=a7c7071653"></script>
+  <script src="/assets/vendor/lame.min.js?v=1.2.1"></script>
+  <script src="/assets/js/pdftools.js?v=7636774cf2"></script>
+  <script src="/assets/js/audio-core.js?v=009fa31171"></script>
+  <script src="/assets/js/audio.js?v=5900306a44"></script>
+</body>
+</html>

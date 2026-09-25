@@ -25,6 +25,7 @@
     'chase ghosts in pac-man.',
     'merge a stack of pdfs.',
     'watermark a report.',
+    'turn a video into an mp3.',
     'nothing to install. nothing uploaded.'
   ];
   var typed = document.getElementById('typed');

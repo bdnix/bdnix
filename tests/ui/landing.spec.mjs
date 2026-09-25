@@ -7,11 +7,11 @@ test('shows the games and tools, with no under-construction wording', async ({ p
   await expect(page.locator('body')).not.toContainText(/under construction|check back soon|being built/i);
 
   const cards = page.locator('.game-card');
-  await expect(cards).toHaveCount(5);
+  await expect(cards).toHaveCount(6);
   const links = await cards.evaluateAll((els) => els.map((a) => [a.querySelector('b').textContent, a.getAttribute('href')]));
   expect(links).toEqual([
     ['Tetris', '/play/'], ['Pac-Man', '/pacman/'],
-    ['Merge PDFs', '/merge-pdf/'], ['Watermark a PDF', '/watermark-pdf/'], ['Redact a PDF', '/redact-pdf/']
+    ['Merge PDFs', '/merge-pdf/'], ['Watermark a PDF', '/watermark-pdf/'], ['Redact a PDF', '/redact-pdf/'], ['MP4 to MP3', '/mp4-to-mp3/']
   ]);
   await expectNoSideScroll(page);
 });
@@ -39,7 +39,7 @@ test('welcome line greets first-time and returning visitors', async ({ page }) =
   await expect(page.locator('#visit')).toHaveText('Welcome back, Musa. Visit #9, you’re a regular now.');
 });
 
-for (const path of ['/', '/play/', '/pacman/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/profile/']) {
+for (const path of ['/', '/play/', '/pacman/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/mp4-to-mp3/', '/profile/']) {
   test(`${path} fits the screen without scrolling sideways`, async ({ page }) => {
     await page.goto(path);
     await expectNoSideScroll(page);
@@ -47,7 +47,7 @@ for (const path of ['/', '/play/', '/pacman/', '/merge-pdf/', '/watermark-pdf/',
 }
 
 test('every page links its own scripts and styles with a content hash, and they load', async ({ page }) => {
-  for (const path of ['/', '/play/', '/pacman/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/profile/']) {
+  for (const path of ['/', '/play/', '/pacman/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/mp4-to-mp3/', '/profile/']) {
     const failed = [];
     page.on('response', (r) => { if (r.url().includes('/assets/') && r.status() >= 400) failed.push(r.url()); });
     await page.goto(path);
