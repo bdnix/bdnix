@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>bdnix — Watermark a PDF</title>
+  <meta name="description" content="Add a text or image watermark to a PDF. Runs in your browser; your file is never uploaded.">
+  <meta property="og:title" content="bdnix — Watermark a PDF">
+  <meta property="og:description" content="Add a text or image watermark to a PDF. Runs in your browser; your file is never uploaded.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/base.css?v=4">
+  <link rel="stylesheet" href="/assets/css/tool.css?v=1">
+  <link rel="stylesheet" href="/assets/css/watermark.css?v=1">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#080a12">
+</head>
+<body>
+  <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
+
+  <header class="bar">
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ watermark-pdf</span></a>
+  </header>
+
+  <main class="tool wide">
+    <p class="kicker">// tools</p>
+    <h1>Watermark a PDF</h1>
+    <p class="lede">Stamp text or a logo on your pages, check it in the preview, and download the result. Everything happens in your browser. Your file is never uploaded.</p>
+
+    <label class="drop panel" id="drop">
+      <input type="file" id="picker" accept="application/pdf,.pdf">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <b>Drop a PDF file here</b>
+      <span>or <u>choose a file</u></span>
+    </label>
+
+    <div class="file-bar panel" id="fileBar" hidden>
+      <div class="file-info">
+        <span class="file-name" id="fileName"></span>
+        <span class="file-meta" id="fileMeta"></span>
+      </div>
+      <button class="link-btn" id="changeBtn" type="button">Change file</button>
+    </div>
+
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+    <section class="editor" id="editor" hidden>
+      <div class="preview panel">
+        <div class="preview-stage" id="stage">
+          <canvas id="previewCanvas" aria-label="Preview of the watermarked page"></canvas>
+          <p class="preview-note" id="previewNote" hidden></p>
+        </div>
+        <div class="preview-nav">
+          <button class="icon-btn" id="prevPage" type="button" aria-label="Previous page"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg></button>
+          <span class="label" id="pageLabel">Page 1 of 1</span>
+          <button class="icon-btn" id="nextPage" type="button" aria-label="Next page"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg></button>
+        </div>
+      </div>
+
+      <form class="settings panel" id="settings" autocomplete="off">
+        <fieldset class="seg">
+          <legend class="label">Watermark</legend>
+          <label><input type="radio" name="kind" value="text" checked><span>Text</span></label>
+          <label><input type="radio" name="kind" value="image"><span>Image</span></label>
+        </fieldset>
+
+        <div class="for-text">
+          <label class="field">
+            <span class="label">Text</span>
+            <input type="text" name="text" value="CONFIDENTIAL" maxlength="200">
+          </label>
+          <label class="field field-color">
+            <span class="label">Colour</span>
+            <input type="color" name="color" value="#e11d48">
+          </label>
+        </div>
+
+        <div class="for-image" hidden>
+          <div class="field">
+            <span class="label">Image</span>
+            <div class="image-pick">
+              <label class="btn btn-ghost btn-sm">
+                <input type="file" id="imagePicker" accept="image/png,image/jpeg,image/webp,image/gif">
+                Choose image
+              </label>
+              <span class="image-name" id="imageName">PNG or JPG, e.g. a logo</span>
+            </div>
+          </div>
+        </div>
+
+        <label class="field">
+          <span class="label">Size <output id="sizeOut"></output></span>
+          <input type="range" name="size" min="5" max="150" step="1" value="80">
+        </label>
+        <label class="field">
+          <span class="label">Opacity <output id="opacityOut"></output></span>
+          <input type="range" name="opacity" min="5" max="100" step="1" value="25">
+        </label>
+        <div class="field">
+          <label class="label" for="rotation">Rotation <output id="rotationOut"></output></label>
+          <input type="range" id="rotation" name="rotation" min="-90" max="90" step="1" value="45">
+          <div class="chips" id="rotationChips">
+            <button type="button" data-rot="-45">−45°</button>
+            <button type="button" data-rot="0">0°</button>
+            <button type="button" data-rot="45">45°</button>
+            <button type="button" data-rot="90">90°</button>
+          </div>
+        </div>
+
+        <fieldset class="field">
+          <legend class="label">Position</legend>
+          <div class="pos-row">
+            <div class="pos-grid" id="posGrid" role="radiogroup" aria-label="Position on the page">
+              <label title="Top left"><input type="radio" name="pos" value="tl" aria-label="Top left"><i></i></label>
+              <label title="Top"><input type="radio" name="pos" value="tc" aria-label="Top"><i></i></label>
+              <label title="Top right"><input type="radio" name="pos" value="tr" aria-label="Top right"><i></i></label>
+              <label title="Left"><input type="radio" name="pos" value="ml" aria-label="Left"><i></i></label>
+              <label title="Centre"><input type="radio" name="pos" value="mc" aria-label="Centre" checked><i></i></label>
+              <label title="Right"><input type="radio" name="pos" value="mr" aria-label="Right"><i></i></label>
+              <label title="Bottom left"><input type="radio" name="pos" value="bl" aria-label="Bottom left"><i></i></label>
+              <label title="Bottom"><input type="radio" name="pos" value="bc" aria-label="Bottom"><i></i></label>
+              <label title="Bottom right"><input type="radio" name="pos" value="br" aria-label="Bottom right"><i></i></label>
+            </div>
+            <label class="check"><input type="checkbox" name="tile"> Repeat across the page</label>
+          </div>
+        </fieldset>
+
+        <label class="field">
+          <span class="label">Pages</span>
+          <input type="text" name="pages" inputmode="numeric" spellcheck="false" placeholder="all, or e.g. 1-3, 5">
+          <span class="hint" id="pagesHint"></span>
+        </label>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="applyBtn" type="submit">
+            <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h10M5 10l6-6M9 4h2v2"/></svg>
+            <span id="applyLabel">Add watermark</span>
+          </button>
+          <a class="btn btn-ghost" id="downloadBtn" hidden>
+            <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4 7l4 4 4-4M2 14h12"/></svg>
+            <span id="downloadLabel">Download</span>
+          </a>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>© <span id="year">2026</span> bdnix</span>
+    <a href="mailto:root@bdnix.com">root@bdnix.com</a>
+  </footer>
+
+  <script src="/assets/js/blocks.js?v=4"></script>
+  <script src="/assets/vendor/pdf-lib.min.js?v=1.17.1"></script>
+  <script src="/assets/js/pdftools.js?v=1"></script>
+  <script src="/assets/js/watermark.js?v=1"></script>
+</body>
+</html>
