@@ -1,0 +1,25 @@
+{
+  "name": "bdnix",
+  "private": true,
+  "description": "Build and test tooling for www.bdnix.com. The site is static files; `npm run build` updates their cache-busting hashes.",
+  "scripts": {
+    "serve": "node tests/server.mjs",
+    "build": "node scripts/build.mjs",
+    "build:check": "node scripts/build.mjs --check",
+    "test": "npm run test:unit && npm run test:ui",
+    "test:unit": "node --test \"tests/unit/*.test.mjs\"",
+    "test:ui": "playwright test",
+    "coverage": "npm run coverage:unit && npm run coverage:ui && npm run coverage:check",
+    "coverage:unit": "mcr -c tests/coverage/unit.config.mjs node --test \"tests/unit/*.test.mjs\"",
+    "coverage:ui": "COVERAGE=1 playwright test",
+    "coverage:check": "node scripts/coverage-check.mjs",
+    "coverage:baseline": "node scripts/coverage-check.mjs --update"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "monocart-coverage-reports": "2.13.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

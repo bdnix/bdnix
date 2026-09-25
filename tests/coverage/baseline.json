@@ -1,0 +1,14 @@
+{
+  "unit": {
+    "lines": 95.36,
+    "statements": 92.74,
+    "branches": 93.67,
+    "functions": 87.1
+  },
+  "ui": {
+    "lines": 66.38,
+    "statements": 66.05,
+    "branches": 43.08,
+    "functions": 69.97
+  }
+}

@@ -9,6 +9,8 @@ python3 -m http.server 8000
 # Open http://localhost:8000
 ```
 
+Or, with Node installed, `npm run serve` and open http://localhost:4173.
+
 ## Files
 
 Both pages share one design system, so they look like the same site:
@@ -22,15 +24,57 @@ Both pages share one design system, so they look like the same site:
 - [merge-pdf/index.html](merge-pdf/index.html), [assets/css/merge.css](assets/css/merge.css), [assets/js/merge.js](assets/js/merge.js): PDF merger, served at `/merge-pdf/`
 - [profile/index.html](profile/index.html), [assets/css/profile.css](assets/css/profile.css), [assets/js/profile-page.js](assets/js/profile-page.js): the visitor's profile, served at `/profile/`
 - [assets/js/profile.js](assets/js/profile.js): reads and saves the display name and reads the game scores; fills in the profile chip in the top bar of the landing and tool pages
-- [watermark-pdf/index.html](watermark-pdf/index.html), [assets/css/watermark.css](assets/css/watermark.css), [assets/js/watermark.js](assets/js/watermark.js): PDF watermark tool, served at `/watermark-pdf/`
+- [watermark-pdf/index.html](watermark-pdf/index.html), [assets/css/watermark.css](assets/css/watermark.css), [assets/js/watermark.js](assets/js/watermark.js), [assets/js/watermark-layout.js](assets/js/watermark-layout.js): PDF watermark tool, served at `/watermark-pdf/`. The layout file holds the placement maths, kept separate so it can be unit tested.
 - [assets/css/tool.css](assets/css/tool.css), [assets/js/pdftools.js](assets/js/pdftools.js): page layout and helpers (page-range parsing, file reading) shared by the PDF tools
 - [assets/vendor/pdf-lib.min.js](assets/vendor/pdf-lib.min.js): [pdf-lib](https://pdf-lib.js.org/) 1.17.1 (MIT, see [its licence](assets/vendor/pdf-lib.LICENSE.md)), used by both PDF tools to edit files
 - [assets/vendor/fontkit.umd.min.js](assets/vendor/fontkit.umd.min.js): [@pdf-lib/fontkit](https://github.com/Hopding/fontkit) 1.1.1 (MIT, see [its licence](assets/vendor/fontkit.LICENSE.md)), lets pdf-lib embed a font file someone uploads. Only downloaded when they pick "Your own font file".
 - [assets/vendor/pdfjs/](assets/vendor/pdfjs/): [PDF.js](https://mozilla.github.io/pdf.js/) 6.3.289 legacy build (Apache 2.0, see [its licence](assets/vendor/pdfjs/LICENSE)), used by the watermark tool to draw its preview. It's only downloaded once someone opens a file there.
 
+## Tests
+
+Every new feature and bug fix needs tests, and coverage must not drop below the committed baseline. [AGENTS.md](AGENTS.md) has the full rules and conventions for working on this repo.
+
+
+Tests run on GitHub Actions ([.github/workflows/tests.yml](.github/workflows/tests.yml)) for every pull request and every push to `master`. A pull request also fails if its cache-busting hashes are out of date (see [Deploying changes](#deploying-changes)). To run them locally (Node 22+):
+
+```bash
+npm install
+npx playwright install chromium   # first time only
+npm test                          # unit tests, then UI tests
+```
+
+- **Unit tests** (`npm run test:unit`, [tests/unit/](tests/unit/)) use Node's built-in test runner. They load the site's scripts in a sandbox and check the page-range parser, file-size formatting, the profile (name rules, reading the game scores, blocked storage), and the watermark placement maths for every page rotation.
+- **UI tests** (`npm run test:ui`, [tests/ui/](tests/ui/)) use Playwright to drive the real pages in Chromium, at desktop and phone size. They cover the landing page, profile, merging (order, page ranges, errors), watermarking (preview, layers, fonts, images, remembered settings; the downloaded PDFs are opened and checked), a start-up check for each game, and that no page scrolls sideways on a phone. Any uncaught JavaScript error fails the test. Test PDFs are generated on the fly, so no binary fixtures are committed.
+- `npm run serve` serves the site at http://localhost:4173 with the same small server the UI tests use.
+
+If a UI test fails on GitHub, the run's **playwright-report** artifact has the HTML report and a trace of each failed test (`npx playwright show-trace trace.zip`).
+
+### Coverage
+
+CI measures how much of `assets/js/*.js` each suite runs. Each test job adds a coverage table to the run's summary page (open the workflow run on GitHub, then **Summary**), and uploads the full report as an artifact, **coverage-unit** or **coverage-ui**. The artifact has `index.html`, a browsable report that highlights every line, and `lcov.info` for other tools. Locally:
+
+```bash
+npm run coverage        # both suites with coverage, then the baseline check
+# open coverage/unit/index.html and coverage/ui/index.html
+```
+
+- **Unit coverage** counts the files the unit tests load (the page-range parser, profile and watermark layout).
+- **UI coverage** counts everything the pages run in Chromium.
+- The two stay separate reports, so each shows what its own suite exercises.
+
+### Caching
+
+The workflow caches what it can between runs:
+- **`node_modules`:** keyed on `package-lock.json` and the Node version, so `npm ci` only runs after a dependency change. This is set up once in [.github/actions/setup](.github/actions/setup/action.yml) and shared by every job.
+- **Playwright's Chromium:** keyed on the Playwright version. On a cache hit, only Chromium's Linux system libraries are installed, since they're apt packages and can't be cached.
+
 ## Deploying changes
 
-GitHub Pages lets browsers cache CSS and JS for a while. When you change any file in `assets/css` or `assets/js`, bump the `?v=` number on its `<link>` / `<script>` tags in every page that loads it (`index.html`, `play/index.html`, `pacman/index.html`, `merge-pdf/index.html`, `watermark-pdf/index.html`, `profile/index.html`). Otherwise visitors can get the new HTML with old styles.
+Anything pushed to `master` is live once GitHub Pages rebuilds; there's nothing to compile. The one thing to remember is cache-busting.
+
+GitHub Pages lets browsers cache scripts and stylesheets for a while. So every page links the site's own files with a `?v=` taken from a hash of the file's contents, e.g. `/assets/js/merge.js?v=d07a831b04`, and the URL changes whenever the file does. **After editing anything in `assets/js` or `assets/css`, run `npm run build`** to update those hashes in every page, and commit the result. If you forget, the pull request's tests fail and say so. `npm run build:check` runs the same check locally without changing anything.
+
+The vendored libraries in `assets/vendor` keep their version number as `?v=`; bump it by hand if you ever upgrade one.
 
 ## Tetris controls
 

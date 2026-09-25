@@ -1,0 +1,21 @@
+name: Set up Node and dependencies
+description: >
+  Node 22, with node_modules restored from the cache. npm ci runs only when
+  package-lock.json (or the Node version) has changed since the last cache.
+runs:
+  using: composite
+  steps:
+    - id: node
+      uses: actions/setup-node@v7
+      with:
+        node-version: 22
+        # node_modules itself is cached below, which skips npm ci entirely.
+        package-manager-cache: false
+    - id: modules
+      uses: actions/cache@v6
+      with:
+        path: node_modules
+        key: node-modules-${{ runner.os }}-${{ steps.node.outputs.node-version }}-${{ hashFiles('package-lock.json') }}
+    - if: steps.modules.outputs.cache-hit != 'true'
+      shell: bash
+      run: npm ci

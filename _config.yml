@@ -4,3 +4,15 @@ url: "https://www.bdnix.com"
 email: "root@bdnix.com"
 baseurl: ""
 theme: jekyll-theme-minimal
+
+# Test tooling isn't part of the site.
+exclude:
+  - node_modules
+  - tests
+  - scripts
+  - package.json
+  - package-lock.json
+  - playwright.config.mjs
+  - coverage
+  - AGENTS.md
+  - CLAUDE.md
