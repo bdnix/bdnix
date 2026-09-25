@@ -46,7 +46,7 @@ Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit
 
 ## Coverage must not drop
 
-CI measures coverage of `assets/js/*.js` for each suite and compares it with the committed baseline in `tests/coverage/baseline.json`. **If total lines, statements, branches or functions for either suite fall more than 0.5 points below the baseline, CI fails.** The 0.5-point tolerance only absorbs run-to-run noise from the games' random pieces. It is not an allowance for untested code: new code still needs tests, however small.
+CI measures coverage of `assets/js/*.js` for each suite and compares it with the committed baseline in `tests/coverage/baseline.json`. **If total lines, statements or functions for either suite fall more than 0.5 points below the baseline, or branches more than 1 point, CI fails.** The tolerance only absorbs run-to-run noise: the games' random pieces and a few timing-dependent preview paths shift coverage slightly between runs and machines. It is not an allowance for untested code: new code still needs tests, however small.
 
 - If your change raises coverage, CI passes with a warning. Lock the gain in: run `npm run coverage`, then `npm run coverage:baseline`, and commit `tests/coverage/baseline.json` in the same pull request.
 - Never lower the baseline to make CI pass. If coverage fell, add the missing tests. If code was deliberately removed and coverage fell as a side effect, say so in the pull request and update the baseline there, where a reviewer can see it.
