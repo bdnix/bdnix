@@ -16,7 +16,8 @@
 
   document.getElementById('year').textContent = new Date().getFullYear();
 
-  // Each entry: { id, name, size, pages, doc }
+  // Each entry: { id, name, size, pages, doc, range, sel }
+  // range is what the user typed; sel is the parsed 0-based page list, or an error.
   var files = [];
   var nextId = 1;
   var busy = false;
@@ -33,6 +34,32 @@
     return (n / 1048576).toFixed(1) + ' MB';
   }
   function plural(n, word){ return n + ' ' + word + (n === 1 ? '' : 's'); }
+
+  // Parses "1-3, 5, 8-" into 0-based page indices, in the order written.
+  // Empty means every page. "8-" runs to the last page, "-3" from the first,
+  // and "5-3" runs backwards.
+  function parseRange(text, max){
+    var t = text.replace(/[\u2012-\u2015]/g, '-').replace(/\s*-\s*/g, '-').trim();
+    if (!t) return { pages: all(max) };
+    var parts = t.split(/[\s,;]+/).filter(Boolean);
+    var pages = [];
+    for (var i = 0; i < parts.length; i++) {
+      var m = /^(\d*)-(\d*)$/.exec(parts[i]) || /^(\d+)$/.exec(parts[i]);
+      if (!m || (m[1] === '' && m[2] === '')) return { error: '“' + parts[i] + '” isn’t a page or range' };
+      var a = m[1] === '' ? 1 : +m[1];
+      var b = m[2] === undefined ? a : m[2] === '' ? max : +m[2];
+      var bad = [a, b].filter(function(n){ return n < 1 || n > max; })[0];
+      if (bad !== undefined) return { error: 'No page ' + bad + ' (this file has ' + plural(max, 'page') + ')' };
+      var step = a <= b ? 1 : -1;
+      for (var n = a; n !== b + step; n += step) pages.push(n - 1);
+    }
+    return { pages: pages };
+  }
+  function all(max){
+    var out = [];
+    for (var i = 0; i < max; i++) out.push(i);
+    return out;
+  }
 
   function isPdf(file){
     return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
@@ -76,7 +103,8 @@
         return readBytes(file)
           .then(function(buf){ return PDFDocument.load(buf, { updateMetadata: false }); })
           .then(function(doc){
-            files.push({ id: nextId++, name: file.name, size: file.size, pages: doc.getPageCount(), doc: doc });
+            var n = doc.getPageCount();
+            files.push({ id: nextId++, name: file.name, size: file.size, pages: n, doc: doc, range: '', sel: parseRange('', n) });
           })
           .catch(function(err){
             var encrypted = err && /encrypt/i.test(err.message || String(err));
@@ -114,10 +142,8 @@
   function render(){
     wrap.hidden = files.length === 0;
     list.textContent = '';
-    var totalPages = 0;
 
     files.forEach(function(f, i){
-      totalPages += f.pages;
       var li = document.createElement('li');
       li.className = 'file panel';
       li.draggable = !busy;
@@ -131,9 +157,37 @@
       name.title = f.name;
       var meta = document.createElement('span');
       meta.className = 'file-meta';
-      meta.textContent = plural(f.pages, 'page') + ' · ' + fmtSize(f.size);
       info.appendChild(name);
       info.appendChild(meta);
+
+      var field = document.createElement('label');
+      field.className = 'file-range';
+      var cap = document.createElement('span');
+      cap.textContent = 'Pages';
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.inputMode = 'numeric';
+      input.autocomplete = 'off';
+      input.spellcheck = false;
+      input.value = f.range;
+      input.placeholder = f.pages === 1 ? 'all' : 'all, or e.g. 1-' + Math.min(3, f.pages) + (f.pages > 4 ? ', ' + f.pages : '');
+      input.disabled = busy;
+      input.setAttribute('aria-label', 'Pages to include from ' + f.name);
+      // Typing only updates this row and the totals, so the input keeps focus.
+      input.addEventListener('input', function(){
+        f.range = input.value;
+        f.sel = parseRange(f.range, f.pages);
+        clearResult();
+        showMeta(f, meta, input);
+        updateTotals();
+      });
+      // A draggable row stops the mouse from selecting text in the input.
+      input.addEventListener('focus', function(){ li.draggable = false; });
+      input.addEventListener('blur', function(){ li.draggable = !busy; });
+      field.appendChild(cap);
+      field.appendChild(input);
+      info.appendChild(field);
+      showMeta(f, meta, input);
 
       var btns = document.createElement('div');
       btns.className = 'file-btns';
@@ -151,10 +205,30 @@
       list.appendChild(li);
     });
 
-    summary.textContent = plural(files.length, 'file') + ' · ' + plural(totalPages, 'page');
     clearBtn.disabled = busy;
-    mergeBtn.disabled = busy || files.length === 0;
     picker.disabled = busy;
+    updateTotals();
+  }
+
+  function showMeta(f, meta, input){
+    var err = f.sel.error;
+    meta.classList.toggle('error', !!err);
+    input.classList.toggle('invalid', !!err);
+    input.setAttribute('aria-invalid', err ? 'true' : 'false');
+    if (err) meta.textContent = err;
+    else if (f.range.trim()) meta.textContent = f.sel.pages.length + ' of ' + plural(f.pages, 'page') + ' · ' + fmtSize(f.size);
+    else meta.textContent = plural(f.pages, 'page') + ' · ' + fmtSize(f.size);
+  }
+
+  function updateTotals(){
+    var total = 0, errors = 0;
+    files.forEach(function(f){
+      if (f.sel.error) errors++;
+      else total += f.sel.pages.length;
+    });
+    summary.textContent = plural(files.length, 'file') + ' · ' + plural(total, 'page') + ' selected';
+    mergeBtn.disabled = busy || files.length === 0 || errors > 0;
+    mergeBtn.title = errors ? 'Fix the page ranges marked in red first' : '';
   }
 
   // Drag to reorder (mouse). The arrow buttons cover touch and keyboard.
@@ -241,7 +315,7 @@
   });
 
   mergeBtn.addEventListener('click', function(){
-    if (busy || !files.length) return;
+    if (busy || !files.length || files.some(function(f){ return f.sel.error; })) return;
     busy = true;
     clearResult();
     render();
@@ -253,7 +327,7 @@
       return files.reduce(function(chain, f, i){
         return chain.then(function(){
           mergeLabel.textContent = 'Merging ' + (i + 1) + ' of ' + total + '…';
-          return out.copyPages(f.doc, f.doc.getPageIndices()).then(function(pages){
+          return out.copyPages(f.doc, f.sel.pages).then(function(pages){
             pages.forEach(function(p){ out.addPage(p); });
           });
         });

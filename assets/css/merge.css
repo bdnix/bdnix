@@ -1,4 +1,6 @@
 /* PDF merger. Shared tokens and components live in base.css. */
+/* .btn sets display, which would otherwise override the hidden attribute. */
+.tool [hidden]{display:none!important}
 .tool{
   position:relative;z-index:1;
   flex:1;
@@ -61,6 +63,19 @@
 .file-info{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
 .file-name{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .file-meta{font:400 12px var(--mono);color:var(--faint)}
+.file-meta.error{color:var(--pink)}
+.file-range{display:flex;align-items:center;gap:8px;margin-top:6px}
+.file-range span{font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.file-range input{
+  flex:1;min-width:0;max-width:240px;
+  padding:7px 10px;border-radius:8px;
+  border:1px solid var(--line);background:rgba(8,10,18,.6);color:var(--fg);
+  font:400 13px var(--mono);
+}
+.file-range input::placeholder{color:var(--faint)}
+.file-range input:focus{outline:none;border-color:var(--cyan)}
+.file-range input.invalid{border-color:var(--pink)}
+.file-range input:disabled{opacity:.5}
 .file-btns{display:flex;gap:4px;flex:0 0 auto}
 .file-btns .icon-btn{width:34px;height:34px}
 .file-btns .icon-btn:disabled{opacity:.3;cursor:default}
