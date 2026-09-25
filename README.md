@@ -1,6 +1,6 @@
 # bdnix — Check back soon
 
-A static "under construction" page for [www.bdnix.com](https://www.bdnix.com), plus Tetris and Pac-Man to play while you wait and a PDF merger tool. Hosted on GitHub Pages; no build step.
+A static "under construction" page for [www.bdnix.com](https://www.bdnix.com), plus Tetris and Pac-Man to play while you wait, and two PDF tools (merge and watermark). Hosted on GitHub Pages; no build step.
 
 ## Preview locally
 
@@ -20,11 +20,15 @@ Both pages share one design system, so they look like the same site:
 - [play/index.html](play/index.html), [assets/css/tetris.css](assets/css/tetris.css), [assets/js/tetris.js](assets/js/tetris.js): Tetris, served at `/play/`
 - [pacman/index.html](pacman/index.html), [assets/css/pacman.css](assets/css/pacman.css), [assets/js/pacman.js](assets/js/pacman.js): Pac-Man, served at `/pacman/`
 - [merge-pdf/index.html](merge-pdf/index.html), [assets/css/merge.css](assets/css/merge.css), [assets/js/merge.js](assets/js/merge.js): PDF merger, served at `/merge-pdf/`
-- [assets/vendor/pdf-lib.min.js](assets/vendor/pdf-lib.min.js): [pdf-lib](https://pdf-lib.js.org/) 1.17.1 (MIT, see [its licence](assets/vendor/pdf-lib.LICENSE.md)), used by the PDF merger
+- [watermark-pdf/index.html](watermark-pdf/index.html), [assets/css/watermark.css](assets/css/watermark.css), [assets/js/watermark.js](assets/js/watermark.js): PDF watermark tool, served at `/watermark-pdf/`
+- [assets/css/tool.css](assets/css/tool.css), [assets/js/pdftools.js](assets/js/pdftools.js): page layout and helpers (page-range parsing, file reading) shared by the PDF tools
+- [assets/vendor/pdf-lib.min.js](assets/vendor/pdf-lib.min.js): [pdf-lib](https://pdf-lib.js.org/) 1.17.1 (MIT, see [its licence](assets/vendor/pdf-lib.LICENSE.md)), used by both PDF tools to edit files
+- [assets/vendor/fontkit.umd.min.js](assets/vendor/fontkit.umd.min.js): [@pdf-lib/fontkit](https://github.com/Hopding/fontkit) 1.1.1 (MIT, see [its licence](assets/vendor/fontkit.LICENSE.md)), lets pdf-lib embed a font file someone uploads. Only downloaded when they pick "Your own font file".
+- [assets/vendor/pdfjs/](assets/vendor/pdfjs/): [PDF.js](https://mozilla.github.io/pdf.js/) 6.3.289 legacy build (Apache 2.0, see [its licence](assets/vendor/pdfjs/LICENSE)), used by the watermark tool to draw its preview. It's only downloaded once someone opens a file there.
 
 ## Deploying changes
 
-GitHub Pages lets browsers cache CSS and JS for a while. When you change any file in `assets/css` or `assets/js`, bump the `?v=` number on its `<link>` / `<script>` tags in every page that loads it (`index.html`, `play/index.html`, `pacman/index.html`, `merge-pdf/index.html`). Otherwise visitors can get the new HTML with old styles.
+GitHub Pages lets browsers cache CSS and JS for a while. When you change any file in `assets/css` or `assets/js`, bump the `?v=` number on its `<link>` / `<script>` tags in every page that loads it (`index.html`, `play/index.html`, `pacman/index.html`, `merge-pdf/index.html`, `watermark-pdf/index.html`). Otherwise visitors can get the new HTML with old styles.
 
 ## Tetris controls
 
@@ -49,6 +53,20 @@ Both games save their best score in the browser's localStorage.
 ## PDF merger
 
 Add PDFs by dropping them on the page or choosing them. Reorder them by dragging or with the arrow buttons, then merge and download `merged.pdf`. Each file has a **Pages** box: leave it empty to include every page, or list pages and ranges separated by commas, e.g. `1-3, 5, 8-` (`8-` means page 8 to the end, `-3` means pages 1 to 3, and `5-3` adds pages 5, 4, 3 in that order). Pages come out in the order you list them. The merge runs in the browser with pdf-lib, so files are never uploaded anywhere. Password-protected PDFs are skipped with a message.
+
+## PDF watermark
+
+Open one PDF, then set up the watermark while a live preview shows it on your pages (use the arrows to flip through them):
+
+- **Text or image.** Text can use Helvetica, Times or Courier (each with bold and italic), or your own `.ttf` / `.otf` font file, in any colour. Text the chosen font can't show properly (non-Latin letters in the built-in fonts, or scripts like Bangla and Arabic that need their letters joined) is drawn as an image instead, so any language works. Your own font is embedded in full, which adds its file size to the PDF. Images can be PNG, JPG, WebP or GIF, and transparency is kept.
+- **Size** is the watermark's width as a share of the page's shorter side, so it looks the same on A4, Letter or landscape pages.
+- **Opacity**, **rotation** (−90° to 90°, with quick buttons), and **position** on a 3×3 grid, or **Repeat across the page** to tile it.
+- **Layer:** on top of the page, or behind its content so text stays readable over the watermark. Behind only shows through blank parts of the page, so it won't show on scanned pages (which are one big picture) or pages with a solid background.
+- **Pages** takes the same ranges as the merger (`1-3, 5, 8-`). Empty means every page.
+
+Settings are remembered in the browser for next time: the options in `localStorage`, and the chosen image and font file in IndexedDB. The page list isn't remembered, since it belongs to one file. "Reset to defaults" clears it all.
+
+Rotated pages are handled, so the watermark sits the same way on every page as the reader sees it. The download is named after the original, e.g. `report-watermarked.pdf`. Like the merger, it all runs in the browser.
 
 ## Contact
 
