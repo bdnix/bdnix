@@ -13,7 +13,9 @@ export function load(files, globals = {}){
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   for (const file of [].concat(files)) {
-    vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), sandbox, { filename: file });
+    // An absolute filename lets coverage tools attribute the code to the file.
+    const abs = path.join(root, file);
+    vm.runInContext(fs.readFileSync(abs, 'utf8'), sandbox, { filename: abs });
   }
   return sandbox;
 }

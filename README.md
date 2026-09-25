@@ -46,6 +46,25 @@ npm test                          # unit tests, then UI tests
 
 If a UI test fails on GitHub, the run's **playwright-report** artifact has the HTML report and a trace of each failed test (`npx playwright show-trace trace.zip`).
 
+### Coverage
+
+CI measures how much of `assets/js/*.js` each suite runs. Each test job adds a coverage table to the run's summary page (open the workflow run on GitHub, then **Summary**), and uploads the full report as an artifact, **coverage-unit** or **coverage-ui**. The artifact has `index.html`, a browsable report that highlights every line, and `lcov.info` for other tools. Locally:
+
+```bash
+npm run coverage        # build, then both suites with coverage
+# open coverage/unit/index.html and coverage/ui/index.html
+```
+
+- **Unit coverage** counts the files the unit tests load (the page-range parser, profile and watermark layout).
+- **UI coverage** counts everything the pages run in Chromium. The pages load the minified scripts, and their source maps put the numbers back on the readable files. This is also why the build doesn't use terser's `compress` step: it would blur those line mappings, and it only saves about 2% once gzipped.
+- The two stay separate reports. The coverage tool can't reliably merge source-mapped UI data with the unit data, and a merged report would under-count lines only one suite runs.
+
+### Caching
+
+The workflow caches what it can between runs:
+- **`node_modules`:** keyed on `package-lock.json` and the Node version, so `npm ci` only runs after a dependency change. This is set up once in [.github/actions/setup](.github/actions/setup/action.yml) and shared by every job.
+- **Playwright's Chromium:** keyed on the Playwright version. On a cache hit, only Chromium's Linux system libraries are installed, since they're apt packages and can't be cached.
+
 ## Deploying changes
 
 Pages load minified scripts (`assets/js/*.min.js`), which are generated from the readable `assets/js/*.js` files. Edit the readable files, never the `.min.js` ones.

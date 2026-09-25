@@ -34,9 +34,12 @@ for (const file of sources) {
   const code = fs.readFileSync(path.join(jsDir, file), 'utf8');
   // Every script is wrapped in its own function, so local names can be
   // shortened safely; anything shared goes through window.* properties.
+  // No `compress`: rewriting the code saves only ~2% once gzipped, but it
+  // blurs the source maps, which the UI test coverage relies on to map
+  // lines back to the readable files. It's also fewer transforms to trust.
   const out = await minify({ [file]: code }, {
     ecma: 2017,
-    compress: { passes: 2 },
+    compress: false,
     mangle: true,
     format: { comments: false },
     sourceMap: { filename: `${name}.min.js`, url: `${name}.min.js.map` }

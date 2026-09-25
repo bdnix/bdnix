@@ -6,6 +6,9 @@ const PORT = 4173;
 
 export default defineConfig({
   testDir: 'tests/ui',
+  // Coverage (COVERAGE=1): clear the last run first, write the raw report after.
+  globalSetup: './tests/coverage/ui-setup.mjs',
+  globalTeardown: './tests/coverage/ui-teardown.mjs',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',

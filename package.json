@@ -8,10 +8,14 @@
     "build:check": "node scripts/build.mjs --check",
     "test": "npm run build && npm run test:unit && playwright test",
     "test:unit": "node --test \"tests/unit/*.test.mjs\"",
-    "test:ui": "npm run build && playwright test"
+    "test:ui": "npm run build && playwright test",
+    "coverage": "npm run build && npm run coverage:unit && npm run coverage:ui",
+    "coverage:unit": "mcr -c tests/coverage/unit.config.mjs node --test \"tests/unit/*.test.mjs\"",
+    "coverage:ui": "COVERAGE=1 playwright test"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",
+    "monocart-coverage-reports": "2.13.0",
     "terser": "5.51.2"
   },
   "engines": {
