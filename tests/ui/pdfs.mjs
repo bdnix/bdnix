@@ -52,6 +52,18 @@ export async function secretPdf(){
   return { bytes: await doc.save(), name };
 }
 
+// A ticket like a printed web page: real text on page 1, and page 2 a
+// picture (the ticket itself) with only a real-text footer.
+export async function picturePdf(){
+  const doc = await L.PDFDocument.create();
+  const font = await doc.embedFont(L.StandardFonts.Helvetica);
+  doc.addPage([595, 842]).drawText('Print Tickets', { x: 40, y: 760, size: 14, font });
+  const two = doc.addPage([595, 842]);
+  two.drawImage(await doc.embedPng(logoPng()), { x: 40, y: 400, width: 480, height: 240 });
+  two.drawText('2/2', { x: 40, y: 30, size: 10, font });
+  return doc.save();
+}
+
 // A 120x60 blue PNG with transparent edges, built by hand to avoid dependencies.
 export function logoPng(){
   const W = 120, H = 60, raw = Buffer.alloc((W * 4 + 1) * H);

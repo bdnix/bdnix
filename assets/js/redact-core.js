@@ -120,9 +120,32 @@
     return out;
   }
 
+  // Whether a page draws a picture, from its pdf.js operator list and
+  // pdf.js's OPS table. Words inside pictures can't be searched.
+  var PICTURE_OPS = ['paintImageXObject', 'paintImageXObjectRepeat', 'paintInlineImageXObject', 'paintInlineImageXObjectGroup'];
+  function hasPicture(fnArray, ops){
+    var codes = PICTURE_OPS.map(function(name){ return ops[name]; });
+    return fnArray.some(function(fn){ return codes.indexOf(fn) >= 0; });
+  }
+
+  // 0-based page indices (at least one) as the reader counts them: "page 2",
+  // "pages 1–5", "pages 1, 3 and 5–7".
+  function pageList(indices){
+    var runs = [];
+    indices.slice().sort(function(a, b){ return a - b; }).forEach(function(i){
+      var last = runs[runs.length - 1];
+      if (last && i === last[1] + 1) last[1] = i;
+      else if (!last || i > last[1]) runs.push([i, i]);
+    });
+    var parts = runs.map(function(r){ return r[0] === r[1] ? String(r[0] + 1) : (r[0] + 1) + '–' + (r[1] + 1); });
+    var one = runs.length === 1 && runs[0][0] === runs[0][1];
+    var text = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : parts[0];
+    return (one ? 'page ' : 'pages ') + text;
+  }
+
   window.bdnixRedact = {
     boxFrom: boxFrom, sameBox: sameBox, addBoxes: addBoxes, pixelRect: pixelRect,
     outputScale: outputScale, pattern: pattern, findMatches: findMatches,
-    textBox: textBox, matchBoxes: matchBoxes
+    textBox: textBox, matchBoxes: matchBoxes, hasPicture: hasPicture, pageList: pageList
   };
 })();

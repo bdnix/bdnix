@@ -121,7 +121,7 @@ Rotated pages are handled, so the watermark sits the same way on every page as t
 
 Open one PDF, then mark what to black out:
 
-- **Find text** marks every place a word or phrase appears, on every page. Capitals don't matter, and neither does the spacing between words, so `jane doe` also finds `Jane  Doe`. If there's no match on the page you're looking at, it jumps to the first one.
+- **Find text** marks every place a word or phrase appears, on every page. Capitals don't matter, and neither does the spacing between words, so `jane doe` also finds `Jane  Doe`. If there's no match on the page you're looking at, it jumps to the first one. Search only reads real text, so it also names the pages that have pictures, where any words need a box drawn over them.
 - **Draw** by dragging across the page (mouse, pen or finger) to cover anything else: signatures, photos, or text on scanned pages, which have no text to search.
 - Each box has a × to remove it. **Undo** takes back the last search or box, and **Clear all** starts over.
 

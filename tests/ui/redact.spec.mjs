@@ -1,5 +1,5 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
-import { upload, secretPdf, download, widths, contentStreams, hexText, imageCount } from './pdfs.mjs';
+import { upload, secretPdf, picturePdf, download, widths, contentStreams, hexText, imageCount } from './pdfs.mjs';
 
 async function openSecret(page){
   const pdf = await secretPdf();
@@ -165,10 +165,27 @@ test('explains an empty search and one with no matches', async ({ page }) => {
   await page.getByRole('button', { name: 'Mark all' }).click();
   await expect(page.locator('#findHint')).toHaveText('Type the text you want to black out.');
   await find(page, 'John Smith');
-  await expect(page.locator('#findHint')).toHaveText(/^“John Smith” isn’t in this file’s text\./);
+  await expect(page.locator('#findHint')).toHaveText('“John Smith” isn’t in this file’s text. Scanned pages are pictures with no text to search, so draw boxes over those instead.');
   await expect(page.locator('#summary')).toHaveText('Nothing marked yet');
   await page.locator('#query').fill('J');
   await expect(page.locator('#findHint')).toHaveText(/^Marks every place it appears/);
+});
+
+test('a search says which pages have pictures, since words in them can’t be found', async ({ page }) => {
+  await page.goto('/redact-pdf/');
+  await page.locator('#picker').setInputFiles(upload('ticket.pdf', await picturePdf()));
+  await expect(page.locator('#pageCanvas')).toBeVisible({ timeout: 20_000 });
+  const note = 'Search can’t read words inside pictures, so drag boxes over any on page 2.';
+  await find(page, 'ticket');
+  await expect(page.locator('#findHint')).toHaveText('Marked 1 match on 1 page. Check them before you redact. ' + note);
+  await expect(page.locator('#findHint')).not.toHaveClass(/error/);
+  await find(page, 'Ticket');
+  await expect(page.locator('#findHint')).toHaveText('Every “Ticket” is already marked. ' + note);
+  await find(page, 'admission');
+  await expect(page.locator('#findHint')).toHaveText('“admission” isn’t in this file’s text. ' + note);
+  await expect(page.locator('#findHint')).toHaveClass(/error/);
+  await expect(page.locator('#summary')).toHaveText('1 area on 1 page');
+  await expectNoSideScroll(page);
 });
 
 test('opening another file starts over', async ({ page }) => {
