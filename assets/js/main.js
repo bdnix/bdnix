@@ -26,6 +26,7 @@
     'merge a stack of pdfs.',
     'watermark a report.',
     'turn a video into an mp3.',
+    'shrink a photo to send.',
     'nothing to install. nothing uploaded.'
   ];
   var typed = document.getElementById('typed');

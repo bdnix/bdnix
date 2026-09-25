@@ -15,6 +15,14 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/mp4-to-mp3/');
 });
 
+test('keeps its title, and describes what it does', async ({ page }) => {
+  await expect(page).toHaveTitle('bdnix — MP4 to MP3');
+  await expect(page.locator('h1')).toHaveText('MP4 to MP3');
+  await expect(page.locator('.features li b')).toHaveText(['Any video or audio in.', 'MP3 or WAV out.', 'Stereo or mono.', 'Several files at once.', 'Long phone videos.']);
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /MP3 \(64 to 320 kbps\) or WAV, in stereo or mono/);
+  await expectNoSideScroll(page);
+});
+
 test('converts an MP4 to a stereo MP3 of the same sound', async ({ page }) => {
   await expect(page.locator('#filesWrap')).toBeHidden();
   await page.locator('#picker').setInputFiles([clip()]);
