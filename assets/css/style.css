@@ -30,7 +30,21 @@
 }
 @keyframes blink{50%{opacity:0}}
 
-.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:40px}
+.games{margin-top:40px}
+.game-cards{display:grid;grid-template-columns:repeat(2,minmax(0,300px));gap:12px;margin-top:12px}
+.game-card{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 16px;text-decoration:none;
+  transition:transform .15s ease,border-color .2s ease,box-shadow .2s ease;
+}
+.game-card:hover{transform:translateY(-2px);border-color:rgba(168,85,247,.45);box-shadow:0 14px 40px -16px rgba(168,85,247,.55)}
+.game-card:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.gc-icon{width:40px;height:40px;flex:0 0 auto}
+.gc-text{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.gc-text b{font-size:16px;font-weight:700}
+.gc-text span{font-size:13px;color:var(--muted)}
+.gc-arrow{width:16px;height:16px;color:var(--faint);transition:transform .15s ease,color .2s ease}
+.game-card:hover .gc-arrow{transform:translateX(3px);color:var(--fg)}
 .visit{margin:22px 0 0;font-size:14px;color:var(--faint);min-height:1.4em}
 
 .foot{
@@ -42,7 +56,6 @@
 .foot a{text-decoration:none}
 .foot a:hover{color:var(--fg)}
 
-@media (max-width:520px){
-  .actions{flex-direction:column}
-  .actions .btn{width:100%}
+@media (max-width:560px){
+  .game-cards{grid-template-columns:1fr}
 }
