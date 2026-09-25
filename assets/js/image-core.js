@@ -68,6 +68,13 @@
     };
   }
 
+  // The middle square of a width x height image, for a thumbnail that
+  // fills its tile: { x, y, size } in the image's pixels.
+  function cover(width, height){
+    var size = Math.min(width, height);
+    return { x: Math.floor((width - size) / 2), y: Math.floor((height - size) / 2), size: size };
+  }
+
   // Whether to hand back the original instead: when the result is no
   // smaller, and it's the same format at the same size, the original is
   // the better file.
@@ -86,6 +93,6 @@
   window.bdnixImage = {
     FORMATS: FORMATS, MAX_AREA: MAX_AREA,
     isImage: isImage, formatOf: formatOf, target: target, outName: outName,
-    fit: fit, keepOriginal: keepOriginal, saving: saving
+    fit: fit, cover: cover, keepOriginal: keepOriginal, saving: saving
   };
 })();

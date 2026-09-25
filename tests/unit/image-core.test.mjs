@@ -81,6 +81,14 @@ test('fit: images too big for a phone’s canvas are scaled down to fit', () => 
   assert.deepEqual(plain(I.fit(8064, 6048, 1920)), { width: 1920, height: 1440, scaled: true });
 });
 
+test('cover: the middle square, for thumbnails', () => {
+  assert.deepEqual(plain(I.cover(600, 400)), { x: 100, y: 0, size: 400 });
+  assert.deepEqual(plain(I.cover(300, 1000)), { x: 0, y: 350, size: 300 });
+  assert.deepEqual(plain(I.cover(5, 2)), { x: 1, y: 0, size: 2 });
+  assert.deepEqual(plain(I.cover(50, 50)), { x: 0, y: 0, size: 50 });
+  assert.deepEqual(plain(I.cover(1, 1)), { x: 0, y: 0, size: 1 });
+});
+
 test('keepOriginal: only when the result is no smaller, in the same format and size', () => {
   const jpg = { type: 'image/jpeg', name: 'a.jpg', size: 1000 };
   assert.equal(I.keepOriginal(jpg, 'jpeg', 1000, false), true);

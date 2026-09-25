@@ -8,6 +8,17 @@ const holiday = () => file('holiday photo.png', photo(600, 400), 'image/png');
 const RED = [212, 130, 52, 255], BLUE = [52, 130, 212, 255];
 const SIDES = [[0.25, 0.5], [0.75, 0.5]];
 
+// Whether each half of a row's thumbnail is mostly red or blue.
+function tileColours(page, row){
+  return page.locator('.track .thumb').nth(row).evaluate((tile) => {
+    const ctx = tile.getContext('2d');
+    return [0.25, 0.75].map((fx) => {
+      const [r, , b, a] = ctx.getImageData(Math.floor(fx * tile.width), tile.height / 2, 1, 1).data;
+      return !a ? 'blank' : r > b ? 'red' : 'blue';
+    });
+  });
+}
+
 async function fetchDownload(page, row){
   const [dl] = await Promise.all([page.waitForEvent('download'), row.locator('.dl').click()]);
   return { name: dl.suggestedFilename(), bytes: fs.readFileSync(await dl.path()) };
@@ -38,7 +49,8 @@ test('compresses a PNG to a much smaller JPEG of the same picture', async ({ pag
   await page.locator('#picker').setInputFiles([original]);
   await expect(page.locator('#summary')).toHaveText('1 image');
   await expect(page.locator('.track .file-meta')).toHaveText(/^\d+ KB$/);
-  await expect(page.locator('.track .thumb')).toHaveJSProperty('naturalWidth', 600);
+  // The thumbnail shows the photo's middle: red on the left, blue on the right.
+  await expect.poll(() => tileColours(page, 0)).toEqual(['red', 'blue']);
 
   await page.locator('#format').selectOption('jpeg');
   await expect(page.locator('#qualityField')).toBeVisible();

@@ -1,7 +1,7 @@
 /* Image compressor (compress-image): thumbnails in the file list. Page layout, settings and the file list live in tool.css. */
 .track .thumb{
   flex:0 0 auto;width:44px;height:44px;border-radius:8px;
-  object-fit:cover;background:rgba(255,255,255,.06);
+  background:rgba(255,255,255,.06);
 }
 .settings .hint:empty{display:none}
 

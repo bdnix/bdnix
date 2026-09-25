@@ -21,8 +21,9 @@
 
   document.getElementById('year').textContent = new Date().getFullYear();
 
-  // Each entry: { id, file, thumb, state, error, url, out, outSize, width,
-  // height, kept }. state is 'ready', 'working', 'done' or 'error'.
+  // Each entry: { id, file, src, tile, state, error, url, out, outSize,
+  // width, height, kept }. src is an object URL of the file; tile is its
+  // thumbnail. state is 'ready', 'working', 'done' or 'error'.
   var files = [];
   var nextId = 1;
   var busy = false;
@@ -45,7 +46,24 @@
 
   function forget(f){
     reset(f);
-    URL.revokeObjectURL(f.thumb);
+    URL.revokeObjectURL(f.src);
+  }
+
+  // Thumbnails are drawn small on a canvas, so a list of big photos doesn't
+  // keep every one of them on the page at full size.
+  var TILE = 88;
+  function thumbnail(f){
+    var tile = document.createElement('canvas');
+    tile.className = 'thumb';
+    tile.width = tile.height = TILE;
+    decode(f).then(function(img){
+      var c = I.cover(img.naturalWidth, img.naturalHeight);
+      tile.getContext('2d').drawImage(img, c.x, c.y, c.size, c.size, 0, 0, TILE, TILE);
+    }, function(){
+      // A format the browser can't show gets a blank tile instead.
+      tile.style.visibility = 'hidden';
+    });
+    return tile;
   }
 
   function addFiles(fileList){
@@ -53,7 +71,9 @@
     var incoming = Array.prototype.slice.call(fileList);
     var skipped = incoming.filter(function(f){ return !I.isImage(f); });
     incoming.filter(I.isImage).forEach(function(file){
-      files.push({ id: nextId++, file: file, thumb: URL.createObjectURL(file), state: 'ready' });
+      var f = { id: nextId++, file: file, src: URL.createObjectURL(file), state: 'ready' };
+      f.tile = thumbnail(f);
+      files.push(f);
     });
     render();
     if (skipped.length) {
@@ -70,13 +90,7 @@
       var li = document.createElement('li');
       li.className = 'track panel ' + f.state;
 
-      var img = document.createElement('img');
-      img.className = 'thumb';
-      img.alt = '';
-      img.src = f.thumb;
-      // A format the browser can't show gets a blank tile instead.
-      img.onerror = function(){ img.style.visibility = 'hidden'; };
-      li.appendChild(img);
+      li.appendChild(f.tile);
 
       var info = document.createElement('div');
       info.className = 'file-info';
@@ -155,7 +169,7 @@
       var img = new Image();
       img.onload = function(){ resolve(img); };
       img.onerror = reject;
-      img.src = f.thumb;
+      img.src = f.src;
     });
   }
 
