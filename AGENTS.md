@@ -9,11 +9,12 @@ The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub 
 | Page | Files |
 |---|---|
 | Landing `/` | `index.html`, `assets/css/style.css`, `assets/js/main.js` |
-| Tetris `/play/` | `play/index.html`, `assets/css/tetris.css`, `assets/js/tetris.js` |
+| Tetris `/tetris/` | `tetris/index.html`, `assets/css/tetris.css`, `assets/js/tetris.js` |
 | Pac-Man `/pacman/` | `pacman/index.html`, `assets/css/pacman.css`, `assets/js/pacman.js` |
 | Merge PDFs `/merge-pdf/` | `merge-pdf/index.html`, `assets/css/merge.css`, `assets/js/merge.js` |
 | Watermark `/watermark-pdf/` | `watermark-pdf/index.html`, `assets/css/watermark.css`, `assets/js/watermark.js`, `assets/js/watermark-layout.js` |
 | Redact `/redact-pdf/` | `redact-pdf/index.html`, `assets/css/redact.css`, `assets/js/redact.js`, `assets/js/redact-core.js` |
+| MP4 to MP3 `/mp4-to-mp3/` | `mp4-to-mp3/index.html`, `assets/css/audio.css`, `assets/js/audio.js`, `assets/js/audio-core.js` |
 | Profile `/profile/` | `profile/index.html`, `assets/css/profile.css`, `assets/js/profile-page.js` |
 
 Shared across pages:
@@ -21,10 +22,10 @@ Shared across pages:
 - `assets/css/game.css`: the game pages' shared layout.
 - `assets/css/tool.css`: the tool and profile pages' shared layout, including the preview-and-settings editor used by the watermark and redact pages.
 - `assets/js/blocks.js`: the falling-block backdrop (`window.bdnix`).
-- `assets/js/pdftools.js`: page-range parsing, file helpers, dropping files on the page, and the on-demand PDF.js loader (`window.bdnixPdf`).
+- `assets/js/pdftools.js`: page-range parsing, file helpers, dropping files on the page, and the on-demand PDF.js loader (`window.bdnixPdf`). The audio converter uses its file helpers too.
 - `assets/js/profile.js`: the visitor's name and scores (`window.bdnixProfile`).
 
-Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit), each with its licence file.
+Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit, lamejs), each with its licence file.
 
 ## Ground rules
 
@@ -32,7 +33,7 @@ Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit
 - **Keep it dependency-free at runtime.** No frameworks and no bundler. `package.json` holds dev tooling only (tests, coverage, the cache-busting script).
 - **Match the existing code.** Each script is one IIFE, `(function(){ ... })();`, in ES5-style `var`/`function` code. A script that other scripts use exposes one `window.bdnix*` object. Comment density, naming and CSS style should match the file you're in.
 - **Reuse, don't duplicate.** Use the tokens in `base.css`, the layout in `tool.css`, and the helpers in `pdftools.js` / `profile.js`. If two pages need the same logic, move it into a shared file.
-- **Pure logic goes in its own file** (as in `watermark-layout.js`, `redact-core.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
+- **Pure logic goes in its own file** (as in `watermark-layout.js`, `redact-core.js`, `audio-core.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
 - **Phone-sized screens matter.** Every page must work at 390 px wide with no sideways scrolling, and with touch as well as mouse and keyboard.
 - **Browser storage is optional.** Wrap every `localStorage` / IndexedDB access in `try/catch`; pages must work without it (private browsing). The keys in use are `bdnix_visits`, `bdnix_name`, `bdnix_tetris_best`, `bdnix_pacman_best` and `bdnix_watermark_v1` (localStorage), and the `bdnix-tools` database (IndexedDB). Don't rename them, since visitors' saved data would be lost.
 
@@ -41,7 +42,7 @@ Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit
 **Every new feature and every bug fix must come with tests in the same change.** A pull request that adds or changes behaviour without tests isn't done.
 
 - **Unit tests** (`tests/unit/*.test.mjs`, Node's built-in `node:test`) are for pure logic: parsing, maths, data rules. They load a script into a sandbox with `load()` from `tests/unit/load.mjs`, which also provides fake `localStorage` and `document`. New pure logic needs unit tests covering its normal cases, edge cases and errors.
-- **UI tests** (`tests/ui/*.spec.mjs`, Playwright) are for what a visitor sees and does. Import `test` and `expect` from `tests/ui/fixtures.mjs`, not from `@playwright/test`: the fixture fails the test on any uncaught page error, keeps the tests offline and records coverage. Each test runs at desktop and phone size. Build test files in code (see `tests/ui/pdfs.mjs`) rather than committing binaries, and check real output: open downloaded PDFs and assert on their contents.
+- **UI tests** (`tests/ui/*.spec.mjs`, Playwright) are for what a visitor sees and does. Import `test` and `expect` from `tests/ui/fixtures.mjs`, not from `@playwright/test`: the fixture fails the test on any uncaught page error, keeps the tests offline and records coverage. Each test runs at desktop and phone size. Build test files in code (see `tests/ui/pdfs.mjs` and `tests/ui/media.mjs`) rather than committing binaries, and check real output: open downloaded PDFs and assert on their contents.
 - **A bug fix needs a test that fails without the fix.** Check that it does before relying on it.
 - **Tests must be deterministic.** Don't assert on values that vary between runs (file sizes that include dates, real timings); wait for the state you need with `expect(...).toBe...` instead of fixed sleeps. Never skip, disable or loosen a test to get CI green. Find the cause instead; "flaky" isn't a cause.
 - **Games and anything animated:** open the page with `openGame()` from `tests/ui/games.mjs`. It fixes `Math.random` (Tetris then deals O, T, J, L, S, Z, I every bag) and freezes the clock *before* the page loads, so time only moves when the test calls `page.clock.runFor()`, and scores and positions come out exact. Don't install a clock after the page has loaded and then pause it: that races with the clock's real-time updates and occasionally steps time backwards, which stalls the game loops.

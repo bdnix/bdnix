@@ -51,7 +51,7 @@ test('initial: first character, uppercased, emoji-safe', () => {
 test('scores come from the keys the games write', () => {
   const { P } = setup({ bdnix_tetris_best: '12450', bdnix_pacman_best: '3120' });
   assert.deepEqual(plain(P.scores()), [
-    { id: 'tetris', name: 'Tetris', href: '/play/', best: 12450 },
+    { id: 'tetris', name: 'Tetris', href: '/tetris/', best: 12450 },
     { id: 'pacman', name: 'Pac-Man', href: '/pacman/', best: 3120 }
   ]);
 });

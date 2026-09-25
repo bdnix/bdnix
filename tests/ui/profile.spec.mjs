@@ -11,7 +11,7 @@ test('a new visitor is "User" with no scores yet', async ({ page }) => {
   await expect(page.locator('h1')).toHaveText('User');
   await expect(page.locator('.avatar-lg')).toHaveText('U');
   expect(await scores(page)).toEqual([
-    { game: 'Tetris', best: 'Not played yet', link: 'Play /play/' },
+    { game: 'Tetris', best: 'Not played yet', link: 'Play /tetris/' },
     { game: 'Pac-Man', best: 'Not played yet', link: 'Play /pacman/' }
   ]);
 });
@@ -24,7 +24,7 @@ test('shows the best scores the games saved', async ({ page }) => {
   });
   await page.reload();
   expect(await scores(page)).toEqual([
-    { game: 'Tetris', best: '12,450', link: 'Play again /play/' },
+    { game: 'Tetris', best: '12,450', link: 'Play again /tetris/' },
     { game: 'Pac-Man', best: '3,120', link: 'Play again /pacman/' }
   ]);
 });
@@ -32,7 +32,7 @@ test('shows the best scores the games saved', async ({ page }) => {
 test('a score saved in another tab shows up straight away', async ({ page, context }) => {
   await page.goto('/profile/');
   const game = await context.newPage();
-  await game.goto('/play/');
+  await game.goto('/tetris/');
   await game.evaluate(() => localStorage.setItem('bdnix_tetris_best', '20000'));
   await expect(page.locator('.score').first().locator('b')).toHaveText('20,000');
 });

@@ -32,21 +32,7 @@
 .toggles input:focus-visible + span{outline:2px solid var(--cyan);outline-offset:2px}
 .toggles input:disabled + span{opacity:.35;cursor:default}
 
-/* Segmented Text / Image switch */
-.seg{display:grid;grid-template-columns:1fr 1fr;gap:0}
-.seg legend{grid-column:1/-1}
-.seg label{position:relative}
-.seg input,.pos-grid input,.image-pick input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
-.seg span{
-  display:block;padding:10px;text-align:center;cursor:pointer;
-  border:1px solid var(--line);background:rgba(8,10,18,.4);
-  font-weight:600;font-size:14px;color:var(--muted);
-  transition:background .2s ease,color .2s ease;
-}
-.seg label:first-of-type span{border-radius:10px 0 0 10px}
-.seg label:last-of-type span{border-radius:0 10px 10px 0;border-left:0}
-.seg input:checked + span{background:rgba(168,85,247,.22);color:var(--fg);border-color:rgba(168,85,247,.55)}
-.seg input:focus-visible + span{outline:2px solid var(--cyan);outline-offset:2px}
+.pos-grid input,.image-pick input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
 .seg-hint{grid-column:1/-1;margin:8px 0 0}
 .remember{margin:0;font-size:13px;color:var(--faint);line-height:1.6}
 .remember .link-btn{font-size:13px;text-decoration:underline;text-underline-offset:3px}

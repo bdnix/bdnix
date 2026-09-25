@@ -1,4 +1,5 @@
-// Helpers shared by the bdnix PDF tools (merge-pdf, watermark-pdf, redact-pdf).
+// Helpers shared by the bdnix tools (merge-pdf, watermark-pdf, redact-pdf,
+// and the file handling in mp4-to-mp3).
 (function(){
   function fmtSize(n){
     if (n < 1024) return n + ' B';
