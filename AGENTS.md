@@ -13,14 +13,15 @@ The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub 
 | Pac-Man `/pacman/` | `pacman/index.html`, `assets/css/pacman.css`, `assets/js/pacman.js` |
 | Merge PDFs `/merge-pdf/` | `merge-pdf/index.html`, `assets/css/merge.css`, `assets/js/merge.js` |
 | Watermark `/watermark-pdf/` | `watermark-pdf/index.html`, `assets/css/watermark.css`, `assets/js/watermark.js`, `assets/js/watermark-layout.js` |
+| Redact `/redact-pdf/` | `redact-pdf/index.html`, `assets/css/redact.css`, `assets/js/redact.js`, `assets/js/redact-core.js` |
 | Profile `/profile/` | `profile/index.html`, `assets/css/profile.css`, `assets/js/profile-page.js` |
 
 Shared across pages:
 - `assets/css/base.css`: colour tokens and shared components (header, buttons, panels, profile chip).
 - `assets/css/game.css`: the game pages' shared layout.
-- `assets/css/tool.css`: the tool and profile pages' shared layout.
+- `assets/css/tool.css`: the tool and profile pages' shared layout, including the preview-and-settings editor used by the watermark and redact pages.
 - `assets/js/blocks.js`: the falling-block backdrop (`window.bdnix`).
-- `assets/js/pdftools.js`: page-range parsing and file helpers (`window.bdnixPdf`).
+- `assets/js/pdftools.js`: page-range parsing, file helpers, dropping files on the page, and the on-demand PDF.js loader (`window.bdnixPdf`).
 - `assets/js/profile.js`: the visitor's name and scores (`window.bdnixProfile`).
 
 Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit), each with its licence file.
@@ -31,7 +32,7 @@ Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit
 - **Keep it dependency-free at runtime.** No frameworks and no bundler. `package.json` holds dev tooling only (tests, coverage, the cache-busting script).
 - **Match the existing code.** Each script is one IIFE, `(function(){ ... })();`, in ES5-style `var`/`function` code. A script that other scripts use exposes one `window.bdnix*` object. Comment density, naming and CSS style should match the file you're in.
 - **Reuse, don't duplicate.** Use the tokens in `base.css`, the layout in `tool.css`, and the helpers in `pdftools.js` / `profile.js`. If two pages need the same logic, move it into a shared file.
-- **Pure logic goes in its own file** (as in `watermark-layout.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
+- **Pure logic goes in its own file** (as in `watermark-layout.js`, `redact-core.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
 - **Phone-sized screens matter.** Every page must work at 390 px wide with no sideways scrolling, and with touch as well as mouse and keyboard.
 - **Browser storage is optional.** Wrap every `localStorage` / IndexedDB access in `try/catch`; pages must work without it (private browsing). The keys in use are `bdnix_visits`, `bdnix_name`, `bdnix_tetris_best`, `bdnix_pacman_best` and `bdnix_watermark_v1` (localStorage), and the `bdnix-tools` database (IndexedDB). Don't rename them, since visitors' saved data would be lost.
 

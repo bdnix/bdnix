@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>bdnix — Redact a PDF</title>
+  <meta name="description" content="Black out names, numbers and anything else in a PDF, for good. Runs in your browser; your file is never uploaded.">
+  <meta property="og:title" content="bdnix — Redact a PDF">
+  <meta property="og:description" content="Black out names, numbers and anything else in a PDF, for good. Runs in your browser; your file is never uploaded.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/base.css?v=8e1870e4c0">
+  <link rel="stylesheet" href="/assets/css/tool.css?v=4fa38b5ad8">
+  <link rel="stylesheet" href="/assets/css/redact.css?v=981d2e77af">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#080a12">
+</head>
+<body>
+  <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
+
+  <header class="bar">
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ redact-pdf</span></a>
+    <a class="profile-chip" href="/profile/" title="Your profile"><span class="avatar" data-profile-initial aria-hidden="true">U</span><span data-profile-name>User</span></a>
+  </header>
+
+  <main class="tool wide">
+    <p class="kicker">// tools</p>
+    <h1>Redact a PDF</h1>
+    <p class="lede">Black out names, numbers or anything else, then download a copy where that text is really gone, not just covered up. Everything happens in your browser. Your file is never uploaded.</p>
+
+    <label class="drop panel" id="drop">
+      <input type="file" id="picker" accept="application/pdf,.pdf">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <b>Drop a PDF file here</b>
+      <span>or <u>choose a file</u></span>
+    </label>
+
+    <div class="file-bar panel" id="fileBar" hidden>
+      <div class="file-info">
+        <span class="file-name" id="fileName"></span>
+        <span class="file-meta" id="fileMeta"></span>
+      </div>
+      <button class="link-btn" id="changeBtn" type="button">Change file</button>
+    </div>
+
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+    <section class="editor" id="editor" hidden>
+      <div class="preview panel">
+        <div class="preview-stage" id="stage">
+          <div class="sheet" id="sheet" hidden>
+            <canvas id="pageCanvas" aria-label="The page, with the areas marked for redaction"></canvas>
+            <div class="marks" id="marks"></div>
+          </div>
+          <p class="preview-note" id="previewNote">Loading the page…</p>
+        </div>
+        <div class="preview-nav">
+          <button class="icon-btn" id="prevPage" type="button" aria-label="Previous page"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg></button>
+          <span class="label" id="pageLabel">Page 1 of 1</span>
+          <button class="icon-btn" id="nextPage" type="button" aria-label="Next page"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg></button>
+        </div>
+      </div>
+
+      <div class="settings panel">
+        <form class="field" id="findForm" autocomplete="off">
+          <label class="label" for="query">Find text</label>
+          <div class="find-row">
+            <input type="text" id="query" maxlength="200" spellcheck="false" placeholder="e.g. a name or account number">
+            <button class="btn btn-ghost btn-sm" id="findBtn" type="submit">Mark all</button>
+          </div>
+          <span class="hint" id="findHint">Marks every place it appears, on every page. Capitals don’t matter.</span>
+        </form>
+
+        <div class="field">
+          <span class="label">Draw</span>
+          <p class="tip">Drag across the page to cover anything else, like a signature or a photo. Tap × on a box to remove it.</p>
+        </div>
+
+        <div class="field">
+          <span class="label">Marked</span>
+          <div class="marked-row">
+            <span class="marked" id="summary">Nothing marked yet</span>
+            <button class="link-btn" id="undoBtn" type="button" disabled>Undo</button>
+            <button class="link-btn" id="clearBtn" type="button" disabled>Clear all</button>
+          </div>
+        </div>
+
+        <p class="tip">Pages with marks are turned into images with the marked areas blacked out, so the hidden text can’t be copied or recovered. Text left on those pages can’t be selected afterwards. Other pages stay exactly as they are.</p>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="applyBtn" type="button" disabled>
+            <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="12" height="6" rx="1" fill="currentColor"/></svg>
+            <span id="applyLabel">Redact PDF</span>
+          </button>
+          <a class="btn btn-ghost" id="downloadBtn" hidden>
+            <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4 7l4 4 4-4M2 14h12"/></svg>
+            <span id="downloadLabel">Download</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>© <span id="year">2026</span> bdnix</span>
+    <a href="mailto:root@bdnix.com">root@bdnix.com</a>
+  </footer>
+
+  <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
+  <script src="/assets/js/profile.js?v=a7c7071653"></script>
+  <script src="/assets/vendor/pdf-lib.min.js?v=1.17.1"></script>
+  <script src="/assets/js/pdftools.js?v=e69d57dcb6"></script>
+  <script src="/assets/js/redact-core.js?v=75e246b7d4"></script>
+  <script src="/assets/js/redact.js?v=41d7f45e7b"></script>
+</body>
+</html>

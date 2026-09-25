@@ -1,4 +1,4 @@
-// Helpers shared by the bdnix PDF tools (merge-pdf, watermark-pdf).
+// Helpers shared by the bdnix PDF tools (merge-pdf, watermark-pdf, redact-pdf).
 (function(){
   function fmtSize(n){
     if (n < 1024) return n + ' B';
@@ -47,8 +47,51 @@
     });
   }
 
+  // Files dropped anywhere on the page go to onFiles(fileList). The drop
+  // zone lights up while files are dragged over the window.
+  function onFileDrop(zone, onFiles){
+    function hasFiles(e){
+      var types = e.dataTransfer && e.dataTransfer.types;
+      return !!types && Array.prototype.indexOf.call(types, 'Files') >= 0;
+    }
+    var depth = 0;
+    document.addEventListener('dragenter', function(e){
+      if (!hasFiles(e)) return;
+      depth++;
+      zone.classList.add('over');
+    });
+    document.addEventListener('dragleave', function(e){
+      if (!hasFiles(e)) return;
+      depth = Math.max(0, depth - 1);
+      if (!depth) zone.classList.remove('over');
+    });
+    document.addEventListener('dragover', function(e){
+      if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
+    });
+    document.addEventListener('drop', function(e){
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth = 0;
+      zone.classList.remove('over');
+      onFiles(e.dataTransfer.files);
+    });
+  }
+
+  // pdf.js is big, so it's only fetched once a page needs it. Resolves to
+  // null if it can't load.
+  var pdfjsPromise = null;
+  function loadPdfjs(){
+    if (!pdfjsPromise) {
+      pdfjsPromise = import('/assets/vendor/pdfjs/pdf.min.mjs').then(function(lib){
+        lib.GlobalWorkerOptions.workerSrc = '/assets/vendor/pdfjs/pdf.worker.min.mjs';
+        return lib;
+      }).catch(function(){ return null; });
+    }
+    return pdfjsPromise;
+  }
+
   window.bdnixPdf = {
     fmtSize: fmtSize, plural: plural, parseRange: parseRange,
-    isPdf: isPdf, readBytes: readBytes
+    isPdf: isPdf, readBytes: readBytes, onFileDrop: onFileDrop, loadPdfjs: loadPdfjs
   };
 })();

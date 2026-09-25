@@ -236,31 +236,7 @@
     addFiles(picker.files);
     picker.value = '';
   });
-  function hasFiles(e){
-    var types = e.dataTransfer && e.dataTransfer.types;
-    return !!types && Array.prototype.indexOf.call(types, 'Files') >= 0;
-  }
-  var depth = 0;
-  document.addEventListener('dragenter', function(e){
-    if (!hasFiles(e)) return;
-    depth++;
-    drop.classList.add('over');
-  });
-  document.addEventListener('dragleave', function(e){
-    if (!hasFiles(e)) return;
-    depth = Math.max(0, depth - 1);
-    if (!depth) drop.classList.remove('over');
-  });
-  document.addEventListener('dragover', function(e){
-    if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
-  });
-  document.addEventListener('drop', function(e){
-    if (!hasFiles(e)) return;
-    e.preventDefault();
-    depth = 0;
-    drop.classList.remove('over');
-    addFiles(e.dataTransfer.files);
-  });
+  T.onFileDrop(drop, addFiles);
 
   clearBtn.addEventListener('click', function(){
     files = [];

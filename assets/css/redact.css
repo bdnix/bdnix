@@ -1,0 +1,29 @@
+/* PDF redaction editor. Page and editor layout live in tool.css. */
+
+/* The page, with the marked areas laid over it */
+.sheet{position:relative;line-height:0;max-width:100%}
+.marks{position:absolute;inset:0;cursor:crosshair;touch-action:none;user-select:none;-webkit-user-select:none}
+.mark{
+  position:absolute;
+  background:rgba(0,0,0,.72);
+  outline:1.5px solid var(--pink);
+}
+.mark.drawing{background:rgba(0,0,0,.45);outline-style:dashed}
+.mark-x{
+  position:absolute;top:-11px;right:-11px;
+  display:flex;align-items:center;justify-content:center;
+  width:22px;height:22px;padding:0;border-radius:50%;
+  border:1px solid rgba(255,255,255,.25);background:var(--pink);color:#080a12;
+  font:800 14px/1 var(--sans);
+}
+.mark-x:hover{background:#fff}
+.mark-x:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+/* Settings */
+.find-row{display:flex;gap:8px}
+.find-row input{flex:1;min-width:0}
+.btn-sm{padding:9px 14px;font-size:14px}
+.tip{margin:0;font-size:14px;line-height:1.55;color:var(--muted)}
+.marked-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.marked{flex:1;min-width:0;font-size:15px;font-weight:600}
+.link-btn:disabled{opacity:.4;cursor:default}

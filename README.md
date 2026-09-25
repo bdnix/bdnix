@@ -1,6 +1,6 @@
 # bdnix
 
-The static site behind [www.bdnix.com](https://www.bdnix.com): Tetris and Pac-Man, two PDF tools (merge and watermark), and a profile page for your name and best scores. Everything runs in the browser. Hosted on GitHub Pages; no build step.
+The static site behind [www.bdnix.com](https://www.bdnix.com): Tetris and Pac-Man, three PDF tools (merge, watermark and redact), and a profile page for your name and best scores. Everything runs in the browser. Hosted on GitHub Pages; no build step.
 
 ## Preview locally
 
@@ -25,10 +25,11 @@ Both pages share one design system, so they look like the same site:
 - [profile/index.html](profile/index.html), [assets/css/profile.css](assets/css/profile.css), [assets/js/profile-page.js](assets/js/profile-page.js): the visitor's profile, served at `/profile/`
 - [assets/js/profile.js](assets/js/profile.js): reads and saves the display name and reads the game scores; fills in the profile chip in the top bar of the landing and tool pages
 - [watermark-pdf/index.html](watermark-pdf/index.html), [assets/css/watermark.css](assets/css/watermark.css), [assets/js/watermark.js](assets/js/watermark.js), [assets/js/watermark-layout.js](assets/js/watermark-layout.js): PDF watermark tool, served at `/watermark-pdf/`. The layout file holds the placement maths, kept separate so it can be unit tested.
-- [assets/css/tool.css](assets/css/tool.css), [assets/js/pdftools.js](assets/js/pdftools.js): page layout and helpers (page-range parsing, file reading) shared by the PDF tools
-- [assets/vendor/pdf-lib.min.js](assets/vendor/pdf-lib.min.js): [pdf-lib](https://pdf-lib.js.org/) 1.17.1 (MIT, see [its licence](assets/vendor/pdf-lib.LICENSE.md)), used by both PDF tools to edit files
+- [redact-pdf/index.html](redact-pdf/index.html), [assets/css/redact.css](assets/css/redact.css), [assets/js/redact.js](assets/js/redact.js), [assets/js/redact-core.js](assets/js/redact-core.js): PDF redaction tool, served at `/redact-pdf/`. The core file holds the text search and box geometry, kept separate so it can be unit tested.
+- [assets/css/tool.css](assets/css/tool.css), [assets/js/pdftools.js](assets/js/pdftools.js): page layout (including the preview-and-settings editor) and helpers (page-range parsing, file reading, dropping files on the page, loading PDF.js) shared by the PDF tools
+- [assets/vendor/pdf-lib.min.js](assets/vendor/pdf-lib.min.js): [pdf-lib](https://pdf-lib.js.org/) 1.17.1 (MIT, see [its licence](assets/vendor/pdf-lib.LICENSE.md)), used by the PDF tools to edit files
 - [assets/vendor/fontkit.umd.min.js](assets/vendor/fontkit.umd.min.js): [@pdf-lib/fontkit](https://github.com/Hopding/fontkit) 1.1.1 (MIT, see [its licence](assets/vendor/fontkit.LICENSE.md)), lets pdf-lib embed a font file someone uploads. Only downloaded when they pick "Your own font file".
-- [assets/vendor/pdfjs/](assets/vendor/pdfjs/): [PDF.js](https://mozilla.github.io/pdf.js/) 6.3.289 legacy build (Apache 2.0, see [its licence](assets/vendor/pdfjs/LICENSE)), used by the watermark tool to draw its preview. It's only downloaded once someone opens a file there.
+- [assets/vendor/pdfjs/](assets/vendor/pdfjs/): [PDF.js](https://mozilla.github.io/pdf.js/) 6.3.289 legacy build (Apache 2.0, see [its licence](assets/vendor/pdfjs/LICENSE)), used by the watermark tool to draw its preview, and by the redact tool to show pages, search their text and redraw redacted pages. It's only downloaded once someone opens a file.
 
 ## Tests
 
@@ -43,8 +44,8 @@ npx playwright install chromium   # first time only
 npm test                          # unit tests, then UI tests
 ```
 
-- **Unit tests** (`npm run test:unit`, [tests/unit/](tests/unit/)) use Node's built-in test runner. They load the site's scripts in a sandbox and check the page-range parser, file-size formatting, the profile (name rules, reading the game scores, blocked storage), and the watermark placement maths for every page rotation.
-- **UI tests** (`npm run test:ui`, [tests/ui/](tests/ui/)) use Playwright to drive the real pages in Chromium, at desktop and phone size. They cover the landing page, profile, merging (order, page ranges, errors), watermarking (preview, layers, fonts, images, remembered settings; the downloaded PDFs are opened and checked), a start-up check for each game, and that no page scrolls sideways on a phone. Any uncaught JavaScript error fails the test. Test PDFs are generated on the fly, so no binary fixtures are committed.
+- **Unit tests** (`npm run test:unit`, [tests/unit/](tests/unit/)) use Node's built-in test runner. They load the site's scripts in a sandbox and check the page-range parser, file-size formatting, the profile (name rules, reading the game scores, blocked storage), the watermark placement maths for every page rotation, and the redact tool's text search and box geometry.
+- **UI tests** (`npm run test:ui`, [tests/ui/](tests/ui/)) use Playwright to drive the real pages in Chromium, at desktop and phone size. They cover the landing page, profile, merging (order, page ranges, errors), watermarking (preview, layers, fonts, images, remembered settings; the downloaded PDFs are opened and checked), redacting (search, drawing, undo; the downloaded PDFs are read back to check the text is gone and the areas are black), a start-up check for each game, and that no page scrolls sideways on a phone. Any uncaught JavaScript error fails the test. Test PDFs are generated on the fly, so no binary fixtures are committed.
 - `npm run serve` serves the site at http://localhost:4173 with the same small server the UI tests use.
 
 If a UI test fails on GitHub, the run's **playwright-report** artifact has the HTML report and a trace of each failed test (`npx playwright show-trace trace.zip`).
@@ -58,7 +59,7 @@ npm run coverage        # both suites with coverage, then the baseline check
 # open coverage/unit/index.html and coverage/ui/index.html
 ```
 
-- **Unit coverage** counts the files the unit tests load (the page-range parser, profile and watermark layout).
+- **Unit coverage** counts the files the unit tests load (the PDF helpers, profile, watermark layout and redact core).
 - **UI coverage** counts everything the pages run in Chromium.
 - The two stay separate reports, so each shows what its own suite exercises.
 
@@ -117,6 +118,18 @@ Open one PDF, then set up the watermark while a live preview shows it on your pa
 Settings are remembered in the browser for next time: the options in `localStorage`, and the chosen image and font file in IndexedDB. The page list isn't remembered, since it belongs to one file. "Reset to defaults" clears it all.
 
 Rotated pages are handled, so the watermark sits the same way on every page as the reader sees it. The download is named after the original, e.g. `report-watermarked.pdf`. Like the merger, it all runs in the browser.
+
+## PDF redaction
+
+Open one PDF, then mark what to black out:
+
+- **Find text** marks every place a word or phrase appears, on every page. Capitals don't matter, and neither does the spacing between words, so `jane doe` also finds `Jane  Doe`. If there's no match on the page you're looking at, it jumps to the first one.
+- **Draw** by dragging across the page (mouse, pen or finger) to cover anything else: signatures, photos, or text on scanned pages, which have no text to search.
+- Each box has a × to remove it. **Undo** takes back the last search or box, and **Clear all** starts over.
+
+**Redact PDF** makes the file. Every page with a mark is redrawn as an image (144 dpi) with the marked areas filled solid black, so the text under them is really gone: it can't be selected, copied, or uncovered by moving the box. The rest of the text on those pages can't be selected any more either. Pages with no marks are copied as they are. The result is a new file, so the original's title, author, bookmarks and attachments aren't carried over. The download is named after the original, e.g. `report-redacted.pdf`. Like the other tools, it all runs in the browser.
+
+Search places boxes using the PDF's own text, estimating where each letter sits, so the boxes are padded slightly. Check the marks in the preview before redacting, and draw extra boxes if anything peeks out.
 
 ## Contact
 

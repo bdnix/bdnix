@@ -32,6 +32,26 @@ export async function samplePdf(){
   return doc.save();
 }
 
+// Three pages for redacting: a name and an account number on page 1, the
+// name again on page 2 (turned with /Rotate 90), and nothing secret on page 3.
+// Also returns where "Jane Doe" sits on page 1, as fractions of the page
+// from its top-left corner.
+export async function secretPdf(){
+  const doc = await L.PDFDocument.create();
+  const font = await doc.embedFont(L.StandardFonts.Helvetica);
+  const one = doc.addPage([595, 842]);
+  one.drawText('Name: Jane Doe', { x: 40, y: 760, size: 14, font });
+  one.drawText('Account: 12345678', { x: 40, y: 730, size: 14, font });
+  one.drawText('Public line', { x: 40, y: 700, size: 14, font });
+  const two = doc.addPage([595, 842]);
+  two.drawText('Signed by Jane Doe', { x: 40, y: 760, size: 14, font });
+  two.setRotation(L.degrees(90));
+  doc.addPage([595, 842]).drawText('Nothing to hide here.', { x: 40, y: 760, size: 14, font });
+  const x = 40 + font.widthOfTextAtSize('Name: ', 14), w = font.widthOfTextAtSize('Jane Doe', 14);
+  const name = { x0: x / 595, x1: (x + w) / 595, y: (842 - 760 - 5) / 842 };
+  return { bytes: await doc.save(), name };
+}
+
 // A 120x60 blue PNG with transparent edges, built by hand to avoid dependencies.
 export function logoPng(){
   const W = 120, H = 60, raw = Buffer.alloc((W * 4 + 1) * H);
