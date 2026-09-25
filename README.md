@@ -33,7 +33,7 @@ Both pages share one design system, so they look like the same site:
 
 ## Tests
 
-Every new feature and bug fix needs tests, and coverage must not drop below the committed baseline. [AGENTS.md](AGENTS.md) has the full rules and conventions for working on this repo.
+Every new feature and bug fix needs tests, and a pull request must not lower code coverage. [AGENTS.md](AGENTS.md) has the full rules and conventions for working on this repo.
 
 
 Tests run on GitHub Actions ([.github/workflows/tests.yml](.github/workflows/tests.yml)) for every pull request and every push to `master`. A pull request also fails if its cache-busting hashes are out of date (see [Deploying changes](#deploying-changes)). To run them locally (Node 22+):
@@ -52,16 +52,12 @@ If a UI test fails on GitHub, the run's **playwright-report** artifact has the H
 
 ### Coverage
 
-CI measures how much of `assets/js/*.js` each suite runs. Each test job adds a coverage table to the run's summary page (open the workflow run on GitHub, then **Summary**), and uploads the full report as an artifact, **coverage-unit** or **coverage-ui**. The artifact has `index.html`, a browsable report that highlights every line, and `lcov.info` for other tools. Locally:
+CI combines what the unit and UI tests cover in `assets/js/*.js` into one report (a line counts as covered if either suite runs it) and publishes it to GitHub. GitHub then shows each pull request's line coverage, and how it changed per file, compared with `master`. This uses GitHub Code Quality's built-in coverage, which needs Code Quality enabled in the repository settings. The same report is on each workflow run: a table on the run's **Summary** page, and the full report as the **coverage-report** artifact. That artifact has `index.html`, a browsable report that highlights every line, plus `cobertura-coverage.xml` (what's uploaded) and `lcov.info`. Locally:
 
 ```bash
-npm run coverage        # both suites with coverage, then the baseline check
-# open coverage/unit/index.html and coverage/ui/index.html
+npm run coverage        # both suites with coverage, combined
+# open coverage/report/index.html
 ```
-
-- **Unit coverage** counts the files the unit tests load (the PDF helpers, profile, watermark layout and redact core).
-- **UI coverage** counts everything the pages run in Chromium.
-- The two stay separate reports, so each shows what its own suite exercises.
 
 ### Caching
 

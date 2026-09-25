@@ -47,11 +47,11 @@ Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit
 
 ## Coverage must not drop
 
-CI measures coverage of `assets/js/*.js` for each suite and compares it with the committed baseline in `tests/coverage/baseline.json`. **If total lines, statements or functions for either suite fall more than 0.5 points below the baseline, or branches more than 1 point, CI fails.** The tolerance only absorbs run-to-run noise: the games' random pieces and a few timing-dependent preview paths shift coverage slightly between runs and machines. It is not an allowance for untested code: new code still needs tests, however small.
+CI combines the unit and UI test coverage of `assets/js/*.js` into one report and publishes it to GitHub (a Cobertura XML upload with `actions/upload-code-coverage`). GitHub compares each pull request's line coverage with `master` and posts the result on the pull request, with a per-file breakdown. The repository's ruleset can block pull requests that fall below its coverage thresholds.
 
-- If your change raises coverage, CI passes with a warning. Lock the gain in: run `npm run coverage`, then `npm run coverage:baseline`, and commit `tests/coverage/baseline.json` in the same pull request.
-- Never lower the baseline to make CI pass. If coverage fell, add the missing tests. If code was deliberately removed and coverage fell as a side effect, say so in the pull request and update the baseline there, where a reviewer can see it.
-- To see what's uncovered, open `coverage/unit/index.html` or `coverage/ui/index.html` after `npm run coverage`. On GitHub, the coverage table is on the run's **Summary** page, and the full reports are the **coverage-unit** and **coverage-ui** artifacts.
+- **A pull request must not lower line coverage.** Check GitHub's coverage comment on your pull request: overall coverage and every file you touched should be the same or higher than on `master`. If a file lost coverage, add tests for the new or changed lines. Coverage moves a little between runs because the games use random pieces, but untested new code shows up clearly in the per-file breakdown.
+- Deleting code can lower coverage without anything being wrong. Say so in the pull request.
+- To see exactly which lines are uncovered, run `npm run coverage` and open `coverage/report/index.html`. On GitHub, the run's **Summary** page has the per-file table, and the full report is the **coverage-report** artifact.
 
 ## Cache-busting
 
@@ -69,25 +69,25 @@ npm run build:check    # fail if any hash is stale (what CI runs)
 npm test               # unit tests, then UI tests
 npm run test:unit
 npm run test:ui
-npm run coverage       # both suites with coverage, then the baseline check
-npm run coverage:baseline   # record current coverage as the new baseline
+npm run coverage       # both suites with coverage, combined into coverage/report
 npm run serve          # the site at http://localhost:4173
 ```
 
 ## Before you open a pull request
 
 1. `npm run build` if you touched `assets/js` or `assets/css`.
-2. `npm run coverage` passes: all tests green, and coverage isn't below the baseline.
+2. `npm run coverage` passes, and `coverage/report/index.html` shows your new and changed lines as covered.
 3. New or changed behaviour has tests, and a bug fix has a test that failed before the fix.
 4. The page works at phone width without sideways scrolling.
 5. `README.md` is updated if you added a page or feature, or changed how something is used or developed.
 
 ## CI
 
-`.github/workflows/tests.yml` runs on every pull request and push to `master`. Both jobs must pass:
+`.github/workflows/tests.yml` runs on every pull request and push to `master`:
 
-- **Unit tests:** hash check, unit tests with coverage, coverage check.
-- **UI tests:** Playwright in Chromium with coverage, coverage check. On failure it uploads the HTML report and a trace of each failed test (**playwright-report** artifact).
+- **Unit tests:** hash check, then the unit tests with coverage.
+- **UI tests:** Playwright in Chromium with coverage. On failure it uploads the HTML report and a trace of each failed test (**playwright-report** artifact).
+- **Code coverage:** once both pass, combines their coverage into one report, adds the table to the run's Summary page, and publishes it to GitHub. The upload on `master` is what pull requests are compared against.
 
 `node_modules` and Playwright's Chromium are cached; see `.github/actions/setup`.
 

@@ -9,11 +9,10 @@
     "test": "npm run test:unit && npm run test:ui",
     "test:unit": "node --test \"tests/unit/*.test.mjs\"",
     "test:ui": "playwright test",
-    "coverage": "npm run coverage:unit && npm run coverage:ui && npm run coverage:check",
+    "coverage": "npm run coverage:unit && npm run coverage:ui && npm run coverage:report",
     "coverage:unit": "mcr -c tests/coverage/unit.config.mjs node --test \"tests/unit/*.test.mjs\"",
     "coverage:ui": "COVERAGE=1 playwright test",
-    "coverage:check": "node scripts/coverage-check.mjs",
-    "coverage:baseline": "node scripts/coverage-check.mjs --update"
+    "coverage:report": "mcr merge -c tests/coverage/report.config.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",
