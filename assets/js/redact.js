@@ -260,7 +260,8 @@
     if (!textCache[i]) {
       textCache[i] = src.view.getPage(i + 1).then(function(page){
         var vp = page.getViewport({ scale: 1 });
-        return page.getTextContent().then(function(tc){
+        return Promise.all([page.getTextContent(), page.getOperatorList()]).then(function(got){
+          var tc = got[0];
           var items = tc.items.filter(function(it){ return typeof it.str === 'string'; }).map(function(it){
             var style = tc.styles[it.fontName];
             return {
@@ -269,7 +270,7 @@
               font: style && style.fontFamily || 'sans-serif'
             };
           });
-          return { items: items, vw: vp.width, vh: vp.height };
+          return { items: items, vw: vp.width, vh: vp.height, picture: R.hasPicture(got[1].fnArray, lib.OPS) };
         });
       });
     }
@@ -284,11 +285,12 @@
     busy = true;
     syncUi();
     hint('Searching…');
-    var found = [], hits = 0, firstPage = -1;
+    var found = [], hits = 0, firstPage = -1, pictures = [];
     T.loadPdfjs().then(function(lib){
       var chain = Promise.resolve();
       for (var i = 0; i < src.pages; i++) {
         chain = chain.then(pageText.bind(null, lib, i)).then(function(i, t){
+          if (t.picture) pictures.push(i);
           var m = R.findMatches(t.items, q);
           if (!m.length) return;
           hits += m.length;
@@ -299,12 +301,14 @@
       return chain;
     }).then(function(){
       var added = mark(found);
-      if (!hits) hint('“' + q + '” isn’t in this file’s text. Scanned pages are pictures with no text to search, so draw boxes over those instead.', true);
-      else if (!added) hint('Every “' + q + '” is already marked.');
+      // Search only sees real text, so point out the pictures it can't read.
+      var note = pictures.length ? ' Search can’t read words inside pictures, so drag boxes over any on ' + R.pageList(pictures) + '.' : '';
+      if (!hits) hint('“' + q + '” isn’t in this file’s text.' + (note || ' Scanned pages are pictures with no text to search, so draw boxes over those instead.'), true);
+      else if (!added) hint('Every “' + q + '” is already marked.' + note);
       else hint('Marked ' + matches(hits) + ' on ' + T.plural(found.reduce(function(pages, f){
         if (pages.indexOf(f.page) < 0) pages.push(f.page);
         return pages;
-      }, []).length, 'page') + '. Check them before you redact.');
+      }, []).length, 'page') + '. Check them before you redact.' + note);
       // Show the first one if there's none on this page.
       if (hits && !(marks[pageIndex] || []).length) goTo(firstPage);
     }).catch(function(err){

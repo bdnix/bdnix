@@ -115,3 +115,22 @@ test('matchBoxes: one box for each piece of each match', () => {
   near(boxes[2].x, (150 - 1.2) / 400, 'second match x');
   assert.deepEqual(plain(R.matchBoxes(its, [], 400, 500)), []);
 });
+
+test('hasPicture: true only when the page paints an image', () => {
+  const OPS = { showText: 44, paintImageXObject: 85, paintImageXObjectRepeat: 88, paintInlineImageXObject: 86, paintInlineImageXObjectGroup: 87, paintImageMaskXObject: 83 };
+  assert.equal(R.hasPicture([44, 85, 44], OPS), true);
+  assert.equal(R.hasPicture([88], OPS), true);
+  assert.equal(R.hasPicture([86], OPS), true);
+  assert.equal(R.hasPicture([87], OPS), true);
+  assert.equal(R.hasPicture([44, 44], OPS), false, 'text only');
+  assert.equal(R.hasPicture([83], OPS), false, 'a stencil mask, as Type 3 glyphs use, is not a picture');
+  assert.equal(R.hasPicture([], OPS), false);
+});
+
+test('pageList: pages counted from 1, with runs joined', () => {
+  assert.equal(R.pageList([1]), 'page 2');
+  assert.equal(R.pageList([0, 1, 2, 3, 4]), 'pages 1–5');
+  assert.equal(R.pageList([0, 2]), 'pages 1 and 3');
+  assert.equal(R.pageList([6, 0, 4, 2, 5]), 'pages 1, 3 and 5–7', 'sorted');
+  assert.equal(R.pageList([3, 3, 4]), 'pages 4–5', 'duplicates ignored');
+});
