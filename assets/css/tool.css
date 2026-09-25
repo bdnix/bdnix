@@ -1,4 +1,4 @@
-/* Layout shared by the PDF tool pages. Tokens and components live in base.css. */
+/* Layout shared by the tool pages. Tokens and components live in base.css. */
 /* .btn sets display, which would otherwise override the hidden attribute. */
 .tool [hidden]{display:none!important}
 .tool{
@@ -16,6 +16,12 @@
   width:fit-content;
 }
 .lede{margin:16px 0 28px;font-size:16px;line-height:1.55;color:var(--muted);max-width:56ch}
+/* What a tool does, as a short list under the lede */
+.lede:has(+ .features){margin-bottom:14px}
+.features{margin:0 0 28px;padding:0 0 0 18px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.5;color:var(--muted);max-width:62ch}
+.features li::marker{color:var(--violet)}
+.features b{color:var(--fg);font-weight:600}
+.features code{font:400 13px var(--mono);color:var(--fg)}
 
 /* Drop zone */
 .drop{
@@ -106,6 +112,7 @@
 .field input[type=text]::placeholder{color:var(--faint)}
 .field input[type=text]:focus{outline:none;border-color:var(--cyan)}
 .field input.invalid{border-color:var(--pink)}
+.settings input[type=range]{width:100%;accent-color:var(--violet);margin:0}
 .settings .hint{font-size:13px;color:var(--faint);min-height:1.3em}
 .settings .hint.error{color:var(--pink)}
 
@@ -125,6 +132,34 @@
 .seg input:checked + span{background:rgba(168,85,247,.22);color:var(--fg);border-color:rgba(168,85,247,.55)}
 .seg input:focus-visible + span{outline:2px solid var(--cyan);outline-offset:2px}
 
+/* File list: files converted one by one, each with its own download (mp4-to-mp3, compress-image) */
+.files{margin-top:12px}
+.files .settings{margin-bottom:16px}
+.files-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+
+.field select{
+  padding:9px 12px;border-radius:10px;
+  border:1px solid var(--line);background:rgba(8,10,18,.6);color:var(--fg);
+  font:400 15px var(--sans);
+}
+.field select:focus{outline:none;border-color:var(--cyan)}
+.field option{background:#10142a;color:var(--fg)}
+.settings :disabled + span,.field select:disabled{opacity:.5;cursor:default}
+
+.track-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.track{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;transition:border-color .2s ease}
+.track.done{border-color:rgba(34,211,238,.35)}
+.track .file-meta.error{color:var(--pink)}
+.track-bar{
+  display:block;height:3px;margin-top:4px;border-radius:2px;
+  background:linear-gradient(90deg,var(--cyan) calc(var(--p,0) * 100%),rgba(255,255,255,.08) 0);
+}
+.track .dl{flex:0 0 auto;padding:8px 12px;font-size:14px}
+.track .dl svg{width:14px;height:14px}
+.track .icon-btn{width:34px;height:34px;flex:0 0 auto}
+.track .icon-btn:disabled{opacity:.3;cursor:default}
+.track .rm:not(:disabled):hover{color:var(--pink)}
+
 @media (max-width:860px){
   .editor{grid-template-columns:1fr}
   .preview{position:static}
@@ -133,4 +168,8 @@
 @media (max-width:480px){
   .drop{padding:32px 16px}
   .actions .btn{flex:1 1 100%}
+
+  .track{flex-wrap:wrap;padding-left:12px}
+  .track .file-info{flex-basis:calc(100% - 44px)}
+  .track .dl{order:3;flex:1 1 100%;justify-content:center}
 }
