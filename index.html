@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>bdnix — Check back soon</title>
-  <meta name="description" content="Something is being built at bdnix. Check back soon, or play a game while you wait.">
+  <meta name="description" content="Something is being built at bdnix. Check back soon, or play Tetris or Pac-Man while you wait.">
   <meta property="og:title" content="bdnix — Check back soon">
-  <meta property="og:description" content="Something is being built at bdnix. Check back soon, or play a game while you wait.">
+  <meta property="og:description" content="Something is being built at bdnix. Check back soon, or play Tetris or Pac-Man while you wait.">
   <meta property="og:type" content="website">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/css/base.css?v=3">
-  <link rel="stylesheet" href="/assets/css/style.css?v=3">
+  <link rel="stylesheet" href="/assets/css/base.css?v=4">
+  <link rel="stylesheet" href="/assets/css/style.css?v=4">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#080a12">
 </head>
@@ -30,13 +30,33 @@
 
     <p class="terminal" aria-live="polite"><span class="prompt">$</span> <span id="typed">come back again to check.</span><span class="cursor"></span></p>
 
-    <div class="actions">
-      <a class="btn btn-primary" href="/play/">
-        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2.5v11a.5.5 0 0 0 .77.42l8.5-5.5a.5.5 0 0 0 0-.84l-8.5-5.5A.5.5 0 0 0 4 2.5z"/></svg>
-        Play Tetris while you wait
-      </a>
-      <a class="btn btn-ghost" href="mailto:root@bdnix.com">Say hello</a>
-    </div>
+    <section class="games" aria-labelledby="games-label">
+      <p class="label" id="games-label">While you wait</p>
+      <div class="game-cards">
+        <a class="game-card panel" href="/play/">
+          <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
+            <rect x="4" y="18" width="10" height="10" rx="2" fill="#a855f7"/>
+            <rect x="15" y="18" width="10" height="10" rx="2" fill="#a855f7"/>
+            <rect x="26" y="18" width="10" height="10" rx="2" fill="#a855f7"/>
+            <rect x="15" y="7" width="10" height="10" rx="2" fill="#a855f7"/>
+            <rect x="4" y="29" width="10" height="10" rx="2" fill="#22d3ee" opacity=".55"/>
+            <rect x="15" y="29" width="10" height="10" rx="2" fill="#22d3ee" opacity=".55"/>
+            <rect x="26" y="29" width="10" height="10" rx="2" fill="#22d3ee" opacity=".55"/>
+          </svg>
+          <span class="gc-text"><b>Tetris</b><span>Stack blocks, clear lines</span></span>
+          <svg class="gc-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a class="game-card panel" href="/pacman/">
+          <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
+            <path d="M14 20 L24.4 14 A12 12 0 1 0 24.4 26 Z" fill="#facc15"/>
+            <circle cx="29" cy="20" r="2" fill="#eef1f8" opacity=".8"/>
+            <circle cx="36" cy="20" r="2" fill="#eef1f8" opacity=".8"/>
+          </svg>
+          <span class="gc-text"><b>Pac-Man</b><span>Eat dots, dodge ghosts</span></span>
+          <svg class="gc-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+    </section>
 
     <p id="visit" class="visit"></p>
   </main>
@@ -46,7 +66,7 @@
     <a href="mailto:root@bdnix.com">root@bdnix.com</a>
   </footer>
 
-  <script src="/assets/js/blocks.js?v=3"></script>
-  <script src="/assets/js/main.js?v=3"></script>
+  <script src="/assets/js/blocks.js?v=4"></script>
+  <script src="/assets/js/main.js?v=4"></script>
 </body>
 </html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>bdnix — Pac-Man</title>
+  <meta name="description" content="A tiny Pac-Man to play while bdnix is under construction.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/base.css?v=4">
+  <link rel="stylesheet" href="/assets/css/game.css?v=4">
+  <link rel="stylesheet" href="/assets/css/pacman.css?v=4">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#080a12">
+</head>
+<body class="play">
+  <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
+
+  <header class="bar">
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ pac-man</span></a>
+    <button id="pauseBtn" class="icon-btn" aria-label="Pause">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2h3v12H4zM9 2h3v12H9z"/></svg>
+    </button>
+  </header>
+
+  <main class="game" id="game">
+    <section class="panel box stats">
+      <div><span class="label">Score</span><b id="score">0</b></div>
+      <div><span class="label">Best</span><b id="best">0</b></div>
+      <div><span class="label">Level</span><b id="level">1</b></div>
+      <div><span class="label">Lives</span><canvas id="lives" aria-label="Lives"></canvas></div>
+    </section>
+
+    <div class="board-wrap">
+      <canvas id="board"></canvas>
+      <div id="overlay" class="overlay">
+        <p class="label" id="ovKicker">bdnix arcade</p>
+        <h1 id="ovTitle">Pac-Man</h1>
+        <p id="ovText">Eat every dot. Dodge the ghosts.</p>
+        <button id="startBtn" class="btn btn-primary">Start game</button>
+        <p class="keys only-keys">Arrow keys or WASD to move · P pause</p>
+        <p class="keys only-touch">Swipe anywhere, or use the buttons below.</p>
+      </div>
+    </div>
+  </main>
+
+  <nav class="touch" aria-label="Game controls">
+    <button data-dir="left" aria-label="Left"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button data-dir="up" aria-label="Up"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button>
+    <button data-dir="down" aria-label="Down"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg></button>
+    <button data-dir="right" aria-label="Right"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+  </nav>
+
+  <script src="/assets/js/blocks.js?v=4"></script>
+  <script src="/assets/js/pacman.js?v=4"></script>
+</body>
+</html>
