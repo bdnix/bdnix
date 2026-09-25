@@ -45,3 +45,15 @@ for (const path of ['/', '/play/', '/pacman/', '/merge-pdf/', '/watermark-pdf/',
     await expectNoSideScroll(page);
   });
 }
+
+test('every page loads the minified scripts, and they load', async ({ page }) => {
+  for (const path of ['/', '/play/', '/pacman/', '/merge-pdf/', '/watermark-pdf/', '/profile/']) {
+    const failed = [];
+    page.on('response', (r) => { if (r.url().includes('/assets/') && r.status() >= 400) failed.push(r.url()); });
+    await page.goto(path);
+    const own = await page.locator('script[src^="/assets/js/"]').evaluateAll((els) => els.map((s) => s.getAttribute('src')));
+    expect(own.length, `${path} has scripts`).toBeGreaterThan(0);
+    for (const src of own) expect(src, path).toMatch(/^\/assets\/js\/[\w-]+\.min\.js\?v=[0-9a-f]{10}$/);
+    expect(failed, `${path}: assets that failed to load`).toEqual([]);
+  }
+});

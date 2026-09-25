@@ -9,6 +9,7 @@ theme: jekyll-theme-minimal
 exclude:
   - node_modules
   - tests
+  - scripts
   - package.json
   - package-lock.json
   - playwright.config.mjs

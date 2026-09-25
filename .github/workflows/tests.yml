@@ -24,7 +24,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # Unit tests use only Node's built-in test runner, so no npm install.
+          cache: npm
+      - run: npm ci
+      # Minify first: the unit tests also check the minified copies.
+      - run: npm run build
       - run: npm run test:unit
 
   ui:
@@ -40,6 +43,7 @@ jobs:
       - run: npm ci
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+      # Builds the minified scripts, then tests the pages that load them.
       - run: npm run test:ui
       - name: Upload report and traces
         if: failure()
@@ -50,3 +54,47 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 14
+
+  # Once master's tests pass, commit freshly minified scripts (and the pages'
+  # updated ?v= hashes) so GitHub Pages serves them.
+  minify:
+    name: Minify and commit
+    needs: [unit, ui]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Commit changes
+        id: commit
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Minified files are already up to date."
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A assets/js '*.html'
+          git commit -m "Minify JavaScript for ${GITHUB_SHA::7}"
+          git push origin HEAD:master
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+      # Pushes made with GITHUB_TOKEN may not start a Pages build on their
+      # own, so ask for one. Harmless if Pages would have built anyway.
+      - name: Request a GitHub Pages build
+        if: steps.commit.outputs.pushed == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/builds"
