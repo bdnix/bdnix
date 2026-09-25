@@ -5,7 +5,8 @@
   var T = window.bdnixPdf, A = window.bdnixAudio;
   var fmtSize = T.fmtSize, plural = T.plural, readBytes = T.readBytes;
 
-  // Decoded audio is resampled to this rate, which MP3 and WAV both suit.
+  // Audio decoded whole is resampled to this rate, which MP3 and WAV both
+  // suit.
   var RATE = 44100;
   var TYPES = { mp3: 'audio/mpeg', wav: 'audio/wav' };
 
@@ -133,12 +134,11 @@
     f.bar.style.setProperty('--p', f.progress);
   }
 
-  // Only the audio of an MP4 or MOV is read, so a long phone video doesn't
-  // have to fit in memory. Other files are read whole.
-  function audioData(file){
-    return A.audioOnly(function(from, to){
+  // Bytes from..to of a file, as a Uint8Array.
+  function reader(file){
+    return function(from, to){
       return readBytes(file.slice(from, to)).then(function(b){ return new Uint8Array(b); });
-    }, file.size).then(function(bytes){ return bytes ? bytes.buffer : readBytes(file); });
+    };
   }
 
   function decode(buf){
@@ -169,23 +169,124 @@
     });
   }
 
+  // The sample rates MP3 has. Streamed audio keeps its own rate; audio at
+  // other rates is decoded whole, which resamples it.
+  var MP3_RATES = [8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000];
+
+  // Whether the browser can decode the track a piece at a time (WebCodecs).
+  function canStream(track, opts){
+    if (!track || !track.config || !window.AudioDecoder) return Promise.resolve(false);
+    if (opts.format === 'mp3' && MP3_RATES.indexOf(track.config.sampleRate) < 0) return Promise.resolve(false);
+    return AudioDecoder.isConfigSupported(track.config).then(function(r){ return !!r.supported; }, function(){ return false; });
+  }
+
+  // How many encoded frames may wait in the decoder. Reading pauses until
+  // it catches up, so only a little of the file is in memory at a time.
+  var QUEUE = 64;
+
+  // Decodes an MP4's audio track piece by piece and encodes each piece as
+  // it comes, so the decoded sound is never all in memory at once.
+  // Resolves to what A.stream's end() returns.
+  function streamed(f, track, read, opts, unreadable){
+    var out = A.stream(opts, window.lamejs, track.cut);
+    return new Promise(function(resolve, reject){
+      var failed = false, wake = null, next = 0, fed = 0;
+      function fail(err){
+        if (failed) return;
+        failed = true;
+        wake = null;
+        if (decoder.state !== 'closed') decoder.close();
+        reject(err);
+      }
+      function resume(){
+        var w = wake;
+        wake = null;
+        if (w) w();
+      }
+      var decoder = new AudioDecoder({
+        output: function(data){
+          try {
+            if (!failed) {
+              var channels = [];
+              for (var c = 0; c < data.numberOfChannels; c++) {
+                var plane = new Float32Array(data.numberOfFrames);
+                data.copyTo(plane, { planeIndex: c, format: 'f32-planar' });
+                channels.push(plane);
+              }
+              out.write(A.mix(channels, opts.mono), data.sampleRate);
+            }
+          } catch (err) {
+            fail(err);
+          }
+          data.close();
+          resume();
+        },
+        error: function(){ fail(unreadable); }
+      });
+      decoder.ondequeue = resume;
+      decoder.configure(track.config);
+
+      function feed(){
+        if (next === track.chunks.length) {
+          decoder.flush().then(function(){
+            decoder.close();
+            resolve(out.end());
+          }, function(){ fail(unreadable); }).catch(reject);
+          return;
+        }
+        if (decoder.decodeQueueSize > QUEUE) {
+          // Woken by the decoder; the timer is in case a browser sends no
+          // event for this.
+          wake = feed;
+          setTimeout(resume, 100);
+          return;
+        }
+        var ch = track.chunks[next++];
+        read(ch.from, ch.from + ch.bytes).then(function(b){
+          if (failed) return;
+          for (var k = 0, at = 0; k < ch.sizes.length; at += ch.sizes[k++]) {
+            decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: ch.times[k], data: b.subarray(at, at + ch.sizes[k]) }));
+          }
+          fed += ch.sizes.length;
+          f.progress = fed / track.samples;
+          showMeta(f);
+          feed();
+        }).catch(function(){ fail(unreadable); });
+      }
+      feed();
+    });
+  }
+
+  // Decodes the whole sound at once: for files that aren't MP4, and for
+  // browsers without WebCodecs. From an MP4 only the audio track is read.
+  function whole(f, track, opts, unreadable){
+    return (track ? track.audioOnly() : readBytes(f.file)).then(function(b){ return b.buffer || b; })
+      .then(decode).catch(function(){ throw unreadable; }).then(function(audio){
+        var channels = [];
+        for (var c = 0; c < audio.numberOfChannels; c++) channels.push(audio.getChannelData(c));
+        var job = A.encoder(A.mix(channels, opts.mono), audio.sampleRate, opts, window.lamejs);
+        return encode(job, function(p){ f.progress = p; showMeta(f); }).then(function(parts){
+          return { parts: parts, frames: audio.length, rate: audio.sampleRate };
+        });
+      });
+  }
+
   function convert(f, opts){
     f.state = 'working';
     f.progress = 0;
     render();
-    var unreadable = {};
-    return audioData(f.file).then(decode).catch(function(){ throw unreadable; }).then(function(audio){
-      var channels = [];
-      for (var c = 0; c < audio.numberOfChannels; c++) channels.push(audio.getChannelData(c));
-      var job = A.encoder(A.mix(channels, opts.mono), audio.sampleRate, opts, window.lamejs);
-      return encode(job, function(p){ f.progress = p; showMeta(f); }).then(function(parts){
-        var blob = new Blob(parts, { type: TYPES[opts.format] });
-        f.url = URL.createObjectURL(blob);
-        f.out = A.outName(f.file.name, opts.format);
-        f.outSize = blob.size;
-        f.seconds = audio.duration;
-        f.state = 'done';
+    var unreadable = {}, read = reader(f.file);
+    return A.mp4(read, f.file.size).catch(function(){ throw unreadable; }).then(function(track){
+      return canStream(track, opts).then(function(ok){
+        return ok ? streamed(f, track, read, opts, unreadable) : whole(f, track, opts, unreadable);
       });
+    }).then(function(result){
+      var blob = new Blob(result.parts, { type: TYPES[opts.format] });
+      f.url = URL.createObjectURL(blob);
+      f.out = A.outName(f.file.name, opts.format);
+      f.outSize = blob.size;
+      f.seconds = result.frames / result.rate;
+      f.state = 'done';
     }).catch(function(err){
       f.state = 'error';
       f.error = err === unreadable ? 'No audio your browser can read in this file'

@@ -22,15 +22,15 @@ export function tone(seconds, channels, rate = RATE){
 
 // --- MP4 with FLAC audio ---
 
-const u8 = (n) => Buffer.from([n & 255]);
-const u16 = (n) => { const b = Buffer.alloc(2); b.writeUInt16BE(n); return b; };
-const u24 = (n) => Buffer.from([(n >> 16) & 255, (n >> 8) & 255, n & 255]);
-const u32 = (n) => { const b = Buffer.alloc(4); b.writeUInt32BE(n >>> 0); return b; };
-const box = (type, ...parts) => {
+export const u8 = (n) => Buffer.from([n & 255]);
+export const u16 = (n) => { const b = Buffer.alloc(2); b.writeUInt16BE(n); return b; };
+export const u24 = (n) => Buffer.from([(n >> 16) & 255, (n >> 8) & 255, n & 255]);
+export const u32 = (n) => { const b = Buffer.alloc(4); b.writeUInt32BE(n >>> 0); return b; };
+export const box = (type, ...parts) => {
   const body = Buffer.concat(parts);
   return Buffer.concat([u32(8 + body.length), Buffer.from(type, 'latin1'), body]);
 };
-const full = (type, version, flags, ...parts) => box(type, u8(version), u24(flags), ...parts);
+export const full = (type, version, flags, ...parts) => box(type, u8(version), u24(flags), ...parts);
 
 function crc8(bytes){
   let c = 0;
@@ -45,6 +45,10 @@ function crc16(bytes){
 
 const BLOCK = 4096;
 
+// FLAC numbers frames in UTF-8's variable-length form (up to 65535 here).
+const frameNumber = (n) => Buffer.from(n < 0x80 ? [n] : n < 0x800 ? [0xc0 | n >> 6, 0x80 | n & 63]
+  : [0xe0 | n >> 12, 0x80 | (n >> 6) & 63, 0x80 | n & 63]);
+
 // FLAC frames with uncompressed ("verbatim") 16-bit subframes.
 function flacFrames(channels, rate){
   const total = channels[0].length, frames = [];
@@ -54,7 +58,7 @@ function flacFrames(channels, rate){
       Buffer.from([0xff, 0xf8]),
       u8(0x70 | (rate === 44100 ? 0x9 : 0x0)),          // block size in the header's tail; 44.1 kHz
       u8(((channels.length - 1) << 4) | 0x08),           // independent channels, 16-bit
-      u8(n),                                             // frame number (under 128)
+      frameNumber(n),
       u16(size - 1)
     ]);
     const parts = [head, u8(crc8(head))];
@@ -82,8 +86,11 @@ function streamInfo(channels, rate){
 // An .mp4 holding one FLAC audio track. Options shape it like a phone
 // video: `video` bytes of filler video after each audio chunk (in a video
 // track), `perChunk` audio frames per chunk, `moovFirst` puts the index
-// before the media, and `co64` stores 64-bit chunk offsets.
-export function flacMp4(channels, rate = RATE, { video = 0, perChunk = 1, moovFirst = false, co64 = false } = {}){
+// before the media, and `co64` stores 64-bit chunk offsets. `entry`
+// replaces the audio's sample entry and `edts` adds an edit list box, for
+// tests of how the index is read; `longTimes` writes the track's header
+// in its 64-bit version.
+export function flacMp4(channels, rate = RATE, { video = 0, perChunk = 1, moovFirst = false, co64 = false, entry = null, edts = null, longTimes = false } = {}){
   const frames = flacFrames(channels, rate), total = channels[0].length;
   const ftyp = box('ftyp', Buffer.from('isom'), u32(512), Buffer.from('isomiso2mp41'));
   const chunks = [];
@@ -109,19 +116,20 @@ export function flacMp4(channels, rate = RATE, { video = 0, perChunk = 1, moovFi
   const hdlr = (kind) => full('hdlr', 0, 0, u32(0), Buffer.from(kind), Buffer.alloc(12), Buffer.from('Media\0'));
   const moov = (at) => {
     const where = offsets(at);
-    const entry = box('fLaC',
+    const flac = entry || box('fLaC',
       Buffer.alloc(6), u16(1), Buffer.alloc(8), u16(channels.length), u16(16), u16(0), u16(0), u32(rate * 65536),
       full('dfLa', 0, 0, u8(0x80), u24(34), streamInfo(channels, rate)));
     const stbl = box('stbl',
-      full('stsd', 0, 0, u32(1), entry),
+      full('stsd', 0, 0, u32(1), flac),
       full('stts', 0, 0, ...stts),
       full('stsc', 0, 0, ...stsc),
       full('stsz', 0, 0, u32(0), u32(frames.length), ...frames.map((f) => u32(f.length))),
       index(where.audio));
     const minf = box('minf', full('smhd', 0, 0, u32(0)),
       box('dinf', full('dref', 0, 0, u32(1), full('url ', 0, 1))), stbl);
-    const mdhd = full('mdhd', 0, 0, u32(0), u32(0), u32(rate), u32(total), u16(0x55c4), u16(0));
-    const sound = box('trak', tkhd(1), box('mdia', mdhd, hdlr('soun'), minf));
+    const mdhd = longTimes ? full('mdhd', 1, 0, Buffer.alloc(16), u32(rate), u32(0), u32(total), u16(0x55c4), u16(0))
+      : full('mdhd', 0, 0, u32(0), u32(0), u32(rate), u32(total), u16(0x55c4), u16(0));
+    const sound = box('trak', tkhd(1), ...(edts ? [edts] : []), box('mdia', mdhd, hdlr('soun'), minf));
     const mvhd = full('mvhd', 0, 0, u32(0), u32(0), u32(1000), u32(ms),
       u32(0x10000), u16(0x0100), Buffer.alloc(10), matrix, Buffer.alloc(24), u32(video ? 3 : 2));
     if (!video) return box('moov', mvhd, sound);
