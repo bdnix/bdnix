@@ -56,14 +56,24 @@ button{font:inherit;color:inherit;cursor:pointer}
 .wordmark b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .wordmark span{font:400 14px var(--mono);letter-spacing:0;color:var(--faint)}
 
-.badge{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:7px 12px;border:1px solid var(--line);border-radius:999px;
-  background:var(--panel);
-  font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+/* Profile chip in the top bar, filled in by profile.js */
+.profile-chip{
+  display:inline-flex;align-items:center;gap:8px;min-width:0;max-width:60vw;
+  padding:4px 12px 4px 4px;border:1px solid var(--line);border-radius:999px;
+  background:var(--panel);text-decoration:none;
+  font:600 13px/1 var(--sans);color:var(--muted);
+  transition:border-color .2s ease,color .2s ease;
 }
-.badge i{width:7px;height:7px;border-radius:50%;background:#facc15;animation:pulse 2s infinite}
-@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(250,204,21,.6)}70%,100%{box-shadow:0 0 0 8px rgba(250,204,21,0)}}
+.profile-chip:hover{border-color:rgba(168,85,247,.45);color:var(--fg)}
+.profile-chip:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.profile-chip span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:480px){ .profile-chip{max-width:50vw} }
+.avatar{
+  display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  width:28px;height:28px;border-radius:50%;
+  background:var(--grad);color:#080a12;
+  font:800 13px/1 var(--sans);
+}
 
 /* Buttons */
 .btn{

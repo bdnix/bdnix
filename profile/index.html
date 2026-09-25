@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>bdnix — Your profile</title>
+  <meta name="description" content="Your bdnix name and best game scores, kept in this browser.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/base.css?v=5">
+  <link rel="stylesheet" href="/assets/css/tool.css?v=1">
+  <link rel="stylesheet" href="/assets/css/profile.css?v=1">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#080a12">
+</head>
+<body>
+  <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
+
+  <header class="bar">
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ profile</span></a>
+  </header>
+
+  <main class="tool">
+    <p class="kicker">// profile</p>
+
+    <section class="who panel">
+      <span class="avatar avatar-lg" data-profile-initial aria-hidden="true">U</span>
+      <div class="who-text" id="nameView">
+        <h1 data-profile-name>User</h1>
+        <button class="link-btn" id="editBtn" type="button">Edit name</button>
+      </div>
+      <form class="name-form" id="nameForm" hidden>
+        <label class="label" for="nameInput">Your name</label>
+        <div class="name-row">
+          <input type="text" id="nameInput" maxlength="24" autocomplete="nickname" spellcheck="false">
+          <button class="btn btn-primary btn-sm" type="submit">Save</button>
+          <button class="btn btn-ghost btn-sm" id="cancelBtn" type="button">Cancel</button>
+        </div>
+        <p class="hint">Up to 24 characters. Leave it empty to go back to “User”.</p>
+      </form>
+    </section>
+
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+    <section aria-labelledby="scoresLabel">
+      <p class="label" id="scoresLabel">Best scores</p>
+      <div class="scores" id="scores"></div>
+    </section>
+
+    <p class="stat" id="visits"></p>
+    <p class="note">Your profile is kept in this browser only. It isn’t uploaded or shared, so it won’t follow you to other devices, and clearing this site’s data resets it.</p>
+  </main>
+
+  <footer class="foot">
+    <span>© <span id="year">2026</span> bdnix</span>
+    <a href="mailto:root@bdnix.com">root@bdnix.com</a>
+  </footer>
+
+  <script src="/assets/js/blocks.js?v=4"></script>
+  <script src="/assets/js/profile.js?v=1"></script>
+  <script src="/assets/js/profile-page.js?v=1"></script>
+</body>
+</html>
