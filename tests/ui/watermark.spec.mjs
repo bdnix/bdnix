@@ -9,6 +9,7 @@ async function openSample(page){
   await expect(page.locator('#fileMeta')).toHaveText(/^3 pages · \d+ KB$/);
   // The preview is drawn once pdf.js has loaded and rendered the page.
   await expect(page.locator('#previewCanvas')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('#previewNote')).toBeHidden();
 }
 
 const apply = (page) => download(page, async () => {
