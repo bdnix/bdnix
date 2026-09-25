@@ -9,18 +9,23 @@
     visits = (parseInt(localStorage.getItem('bdnix_visits'), 10) || 0) + 1;
     localStorage.setItem('bdnix_visits', visits);
   } catch (e) {}
+  // Greet returning visitors by the name they set on their profile, if any.
+  var P = window.bdnixProfile;
+  var name = P && P.getName() !== P.DEFAULT_NAME ? P.getName() : '';
+  var hello = 'Welcome back' + (name ? ', ' + name : '') + '.';
   document.getElementById('visit').textContent =
-    visits === 1 ? 'First time here? Bookmark this page and check back soon.' :
-    visits < 5   ? 'Welcome back. Visit #' + visits + ', still building. Thanks for checking in.' :
-                   'Visit #' + visits + '. You’re a regular now. Thanks for the patience.';
+    visits === 1 ? 'Welcome! Pick a game or a tool to get started.' :
+    visits < 5   ? hello :
+                   hello + ' Visit #' + visits + ', you’re a regular now.';
 
   // Typewriter
   if (reduce) return;
   var lines = [
-    'come back again to check.',
-    'compiling ideas... 42%',
-    'good things take time.',
-    'check back soon.'
+    'play a round of tetris.',
+    'chase ghosts in pac-man.',
+    'merge a stack of pdfs.',
+    'watermark a report.',
+    'nothing to install. nothing uploaded.'
   ];
   var typed = document.getElementById('typed');
   var li = 0, ci = lines[0].length, deleting = false;

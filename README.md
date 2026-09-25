@@ -1,6 +1,6 @@
-# bdnix — Check back soon
+# bdnix
 
-A static "under construction" page for [www.bdnix.com](https://www.bdnix.com), plus Tetris and Pac-Man to play while you wait, and two PDF tools (merge and watermark). Hosted on GitHub Pages; no build step.
+The static site behind [www.bdnix.com](https://www.bdnix.com): Tetris and Pac-Man, two PDF tools (merge and watermark), and a profile page for your name and best scores. Everything runs in the browser. Hosted on GitHub Pages; no build step.
 
 ## Preview locally
 
