@@ -152,6 +152,14 @@ test('a search jumps to the first page with a match', async ({ page }) => {
   await expect(page.locator('#marks .mark')).toHaveCount(1);
 });
 
+test('search works in browsers whose streams can’t be read with for await (Safari, iOS)', async ({ page }) => {
+  await page.addInitScript(() => { delete ReadableStream.prototype[Symbol.asyncIterator]; });
+  await openSecret(page);
+  await find(page, 'jane doe');
+  await expect(page.locator('#findHint')).toHaveText('Marked 2 matches on 2 pages. Check them before you redact.');
+  await expect(page.locator('#marks .mark')).toHaveCount(1);
+});
+
 test('explains an empty search and one with no matches', async ({ page }) => {
   await openSecret(page);
   await page.getByRole('button', { name: 'Mark all' }).click();

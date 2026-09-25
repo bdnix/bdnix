@@ -78,11 +78,41 @@
     });
   }
 
+  // pdf.js reads a page's text with `for await` over a ReadableStream, which
+  // Safari (so every iOS browser) can't do. This adds that to streams that
+  // lack it, reading them with a plain reader instead.
+  function streamIterable(Stream){
+    if (typeof Stream !== 'function' || typeof Symbol === 'undefined' || !Symbol.asyncIterator) return false;
+    var proto = Stream.prototype;
+    if (proto[Symbol.asyncIterator]) return false;
+    proto[Symbol.asyncIterator] = function(){
+      var reader = this.getReader();
+      var it = {
+        next: function(){
+          return reader.read().then(function(r){
+            if (r.done) reader.releaseLock();
+            return r;
+          });
+        },
+        'return': function(value){
+          return reader.cancel().then(function(){
+            reader.releaseLock();
+            return { done: true, value: value };
+          });
+        }
+      };
+      it[Symbol.asyncIterator] = function(){ return it; };
+      return it;
+    };
+    return true;
+  }
+
   // pdf.js is big, so it's only fetched once a page needs it. Resolves to
   // null if it can't load.
   var pdfjsPromise = null;
   function loadPdfjs(){
     if (!pdfjsPromise) {
+      streamIterable(window.ReadableStream);
       pdfjsPromise = import('/assets/vendor/pdfjs/pdf.min.mjs').then(function(lib){
         lib.GlobalWorkerOptions.workerSrc = '/assets/vendor/pdfjs/pdf.worker.min.mjs';
         return lib;
@@ -93,6 +123,7 @@
 
   window.bdnixPdf = {
     fmtSize: fmtSize, plural: plural, parseRange: parseRange,
-    isPdf: isPdf, readBytes: readBytes, onFileDrop: onFileDrop, loadPdfjs: loadPdfjs
+    isPdf: isPdf, readBytes: readBytes, onFileDrop: onFileDrop, loadPdfjs: loadPdfjs,
+    streamIterable: streamIterable
   };
 })();
