@@ -3,6 +3,7 @@
 (function(){
   var L = PDFLib;
   var T = window.bdnixPdf;
+  var Layout = window.bdnixWatermarkLayout;
   function $(id){ return document.getElementById(id); }
 
   var drop = $('drop'), picker = $('picker');
@@ -271,45 +272,12 @@
     });
   }
 
-  // Maps a point from the page as the reader sees it to PDF page space,
-  // undoing the page's /Rotate (which turns the page clockwise).
-  function toPage(vx, vy, rot, box){
-    var p = rot === 90 ? [box.width - vy, vx] :
-            rot === 180 ? [box.width - vx, box.height - vy] :
-            rot === 270 ? [vy, box.height - vx] : [vx, vy];
-    return [p[0] + box.x, p[1] + box.y];
-  }
-
-  function placeCenter(pos, vw, vh, bw, bh, margin){
-    var col = pos.charAt(1), row = pos.charAt(0);
-    var x = col === 'l' ? margin + bw / 2 : col === 'r' ? vw - margin - bw / 2 : vw / 2;
-    var y = row === 't' ? vh - margin - bh / 2 : row === 'b' ? margin + bh / 2 : vh / 2;
-    return [x, y];
-  }
-
-  // A brick pattern of copies, centred on the page, covering it edge to edge.
-  function tileCenters(vw, vh, bw, bh, gap){
-    var sx = bw + gap, sy = bh + gap, out = [];
-    var nx = Math.ceil((vw / 2 + bw) / sx) + 1, ny = Math.ceil((vh / 2 + bh) / sy);
-    for (var j = -ny; j <= ny; j++) {
-      var y = vh / 2 + j * sy, shift = Math.abs(j) % 2 ? sx / 2 : 0;
-      for (var i = -nx; i <= nx; i++) {
-        var x = vw / 2 + i * sx + shift;
-        if (x + bw / 2 > 0 && x - bw / 2 < vw && y + bh / 2 > 0 && y - bh / 2 < vh) out.push([x, y]);
-      }
-    }
-    return out;
-  }
-
   function stamp(page, mark, s){
     var box = page.getCropBox();
     var rot = rotationOf(page);
-    var sideways = rot % 180 !== 0;
-    var vw = sideways ? box.height : box.width, vh = sideways ? box.width : box.height;
-    var short = Math.min(vw, vh);
 
     // Size is the watermark's width as a share of the page's shorter side.
-    var w = short * s.size / 100, h, fontSize;
+    var w = Layout.viewSize(box, rot).short * s.size / 100, h, fontSize;
     if (mark.font) {
       fontSize = w / mark.font.widthOfTextAtSize(mark.text, 1);
       h = mark.font.heightAtSize(fontSize, { descender: false });
@@ -317,21 +285,9 @@
       h = w * mark.aspect;
     }
 
-    var a = s.rotation * Math.PI / 180;
-    var bw = Math.abs(w * Math.cos(a)) + Math.abs(h * Math.sin(a));
-    var bh = Math.abs(w * Math.sin(a)) + Math.abs(h * Math.cos(a));
-    var centers = s.tile ? tileCenters(vw, vh, bw, bh, short * 0.08) : [placeCenter(s.pos, vw, vh, bw, bh, short * 0.06)];
-
-    // pdf-lib rotates around the drawing origin (the bottom-left corner),
-    // so shift the origin to keep each copy centred where we want it.
-    var pageAngle = s.rotation + rot;
-    var pa = pageAngle * Math.PI / 180;
-    var ox = w / 2 * Math.cos(pa) - h / 2 * Math.sin(pa);
-    var oy = w / 2 * Math.sin(pa) + h / 2 * Math.cos(pa);
-
-    centers.forEach(function(c){
-      var p = toPage(c[0], c[1], rot, box);
-      var opts = { x: p[0] - ox, y: p[1] - oy, rotate: L.degrees(pageAngle), opacity: s.opacity };
+    var placed = Layout.place(box, rot, w, h, s);
+    placed.origins.forEach(function(o){
+      var opts = { x: o[0], y: o[1], rotate: L.degrees(placed.angle), opacity: s.opacity };
       if (mark.font) {
         opts.font = mark.font; opts.size = fontSize; opts.color = mark.color;
         page.drawText(mark.text, opts);

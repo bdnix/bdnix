@@ -1,0 +1,17 @@
+{
+  "name": "bdnix",
+  "private": true,
+  "description": "Tests for www.bdnix.com. The site itself is static files with no build step.",
+  "scripts": {
+    "serve": "node tests/server.mjs",
+    "test": "npm run test:unit && npm run test:ui",
+    "test:unit": "node --test \"tests/unit/*.test.mjs\"",
+    "test:ui": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
