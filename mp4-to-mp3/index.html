@@ -13,7 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/base.css?v=8e1870e4c0">
   <link rel="stylesheet" href="/assets/css/tool.css?v=f886c8a478">
-  <link rel="stylesheet" href="/assets/css/audio.css?v=b6a0b634c7">
+  <link rel="stylesheet" href="/assets/css/audio.css?v=e491ad3767">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#080a12">
 </head>
@@ -29,6 +29,8 @@
     <p class="kicker">// tools</p>
     <h1>MP4 to MP3</h1>
     <p class="lede">Pull the soundtrack out of a video, or convert audio files, to MP3 or WAV. Everything happens in your browser. Your files are never uploaded.</p>
+
+    <p class="support-warn panel" id="supportWarn" role="note" hidden><b>Long videos may not convert in this browser.</b> It can’t decode a video’s sound a piece at a time, so all of it has to fit in memory at once, and videos longer than about 15 minutes can make the page reload. To convert longer videos, update your browser: on iPhone and iPad, to iOS 26 or later; on Android, to the latest Chrome.</p>
 
     <label class="drop panel" id="drop">
       <input type="file" id="picker" accept="video/*,audio/*,.mp4,.m4a,.m4v,.mov,.webm,.mkv,.ogg,.opus,.mp3,.wav,.flac,.aac" multiple>
@@ -89,6 +91,6 @@
   <script src="/assets/vendor/lame.min.js?v=1.2.1"></script>
   <script src="/assets/js/pdftools.js?v=ca90f587a4"></script>
   <script src="/assets/js/audio-core.js?v=11fbd584a4"></script>
-  <script src="/assets/js/audio.js?v=78c9cd2cb6"></script>
+  <script src="/assets/js/audio.js?v=712ed5f368"></script>
 </body>
 </html>

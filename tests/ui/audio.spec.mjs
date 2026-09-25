@@ -183,6 +183,45 @@ test('a decoder that fails part way says the audio can’t be read', async ({ pa
   await expect(page.locator('.file-meta')).toHaveText('No audio your browser can read in this file');
 });
 
+// The warning for browsers that can't decode phone videos' AAC audio a
+// piece at a time. It depends on what the browser can do, not on which
+// phone it is, so it covers old iPhones and Android phones alike.
+const warning = (page) => page.getByRole('note');
+
+test('no warning where AAC can be decoded a piece at a time', async ({ page }) => {
+  await page.addInitScript(() => {
+    const check = AudioDecoder.isConfigSupported;
+    AudioDecoder.isConfigSupported = (config) => {
+      if (config.codec !== 'mp4a.40.2') return check.call(AudioDecoder, config);
+      window.aacChecked = true;
+      return Promise.resolve({ supported: true, config });
+    };
+  });
+  await page.reload();
+  // The warning starts hidden, so wait until the page has checked.
+  await page.waitForFunction(() => window.aacChecked);
+  await expect(warning(page)).toBeHidden();
+});
+
+for (const [name, script] of [
+  ['without WebCodecs (iOS before 26, older Android browsers)', () => { delete window.AudioDecoder; }],
+  ['when AAC can’t be decoded that way', () => { AudioDecoder.isConfigSupported = () => Promise.resolve({ supported: false }); }],
+  ['when the check fails', () => { AudioDecoder.isConfigSupported = () => Promise.reject(new TypeError('bad config')); }]
+]) {
+  test(`warns about long videos ${name}`, async ({ page }) => {
+    await page.addInitScript(script);
+    await page.reload();
+    await expect(warning(page)).toBeVisible();
+    await expect(warning(page)).toContainText('Long videos may not convert in this browser.');
+    await expect(warning(page)).toContainText('on iPhone and iPad, to iOS 26 or later; on Android, to the latest Chrome');
+    await expectNoSideScroll(page);
+    // Converting still works.
+    await page.locator('#picker').setInputFiles([clip()]);
+    await page.getByRole('button', { name: 'Convert 1 file' }).click();
+    await expect(page.locator('#msg')).toHaveText('Done. Converted 1 file.');
+  });
+}
+
 test('quality and mono settings shape the MP3', async ({ page }) => {
   await page.locator('#picker').setInputFiles([clip()]);
   await page.getByLabel('Quality').selectOption('96');

@@ -21,8 +21,19 @@
   var clearBtn = document.getElementById('clearBtn');
   var convertBtn = document.getElementById('convertBtn');
   var convertLabel = document.getElementById('convertLabel');
+  var supportWarn = document.getElementById('supportWarn');
 
   document.getElementById('year').textContent = new Date().getFullYear();
+
+  // Phones record AAC. A browser that can't decode it a piece at a time
+  // (WebCodecs; iOS before 26, older Android browsers) decodes each file
+  // whole, which long videos can't fit in a phone's memory, so say so.
+  function streamsAac(){
+    if (!window.AudioDecoder) return Promise.resolve(false);
+    return AudioDecoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate: 44100, numberOfChannels: 2 })
+      .then(function(r){ return !!r.supported; }, function(){ return false; });
+  }
+  streamsAac().then(function(ok){ supportWarn.hidden = ok; });
 
   // Each entry: { id, file, state, progress, error, url, out, outSize, seconds }
   // state is 'ready', 'working', 'done' or 'error'.
