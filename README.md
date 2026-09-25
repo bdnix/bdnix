@@ -32,6 +32,9 @@ Both pages share one design system, so they look like the same site:
 
 ## Tests
 
+Every new feature and bug fix needs tests, and coverage must not drop below the committed baseline. [AGENTS.md](AGENTS.md) has the full rules and conventions for working on this repo.
+
+
 Tests run on GitHub Actions ([.github/workflows/tests.yml](.github/workflows/tests.yml)) for every pull request and every push to `master`. A pull request also fails if its cache-busting hashes are out of date (see [Deploying changes](#deploying-changes)). To run them locally (Node 22+):
 
 ```bash
@@ -51,7 +54,7 @@ If a UI test fails on GitHub, the run's **playwright-report** artifact has the H
 CI measures how much of `assets/js/*.js` each suite runs. Each test job adds a coverage table to the run's summary page (open the workflow run on GitHub, then **Summary**), and uploads the full report as an artifact, **coverage-unit** or **coverage-ui**. The artifact has `index.html`, a browsable report that highlights every line, and `lcov.info` for other tools. Locally:
 
 ```bash
-npm run coverage        # both suites with coverage
+npm run coverage        # both suites with coverage, then the baseline check
 # open coverage/unit/index.html and coverage/ui/index.html
 ```
 

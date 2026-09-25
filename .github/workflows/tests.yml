@@ -29,6 +29,9 @@ jobs:
         run: npm run build:check
       - name: Unit tests with coverage
         run: npm run coverage:unit
+      # Fails if coverage fell below tests/coverage/baseline.json (see AGENTS.md).
+      - name: Coverage hasn't dropped
+        run: node scripts/coverage-check.mjs unit
       - name: Coverage summary
         if: ${{ !cancelled() && hashFiles('coverage/unit/coverage-details.md') != '' }}
         run: cat coverage/unit/coverage-details.md >> "$GITHUB_STEP_SUMMARY"
@@ -66,6 +69,8 @@ jobs:
         run: npx playwright install-deps chromium
       - name: UI tests with coverage
         run: npm run coverage:ui
+      - name: Coverage hasn't dropped
+        run: node scripts/coverage-check.mjs ui
       - name: Coverage summary
         if: ${{ !cancelled() && hashFiles('coverage/ui/coverage-details.md') != '' }}
         run: cat coverage/ui/coverage-details.md >> "$GITHUB_STEP_SUMMARY"

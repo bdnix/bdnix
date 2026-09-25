@@ -14,3 +14,5 @@ exclude:
   - package-lock.json
   - playwright.config.mjs
   - coverage
+  - AGENTS.md
+  - CLAUDE.md
