@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>bdnix — Merge PDFs</title>
+  <meta name="description" content="Combine several PDF files into one. Runs in your browser; your files are never uploaded.">
+  <meta property="og:title" content="bdnix — Merge PDFs">
+  <meta property="og:description" content="Combine several PDF files into one. Runs in your browser; your files are never uploaded.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/base.css?v=4">
+  <link rel="stylesheet" href="/assets/css/merge.css?v=3">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#080a12">
+</head>
+<body>
+  <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
+
+  <header class="bar">
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ merge-pdf</span></a>
+  </header>
+
+  <main class="tool">
+    <p class="kicker">// tools</p>
+    <h1>Merge PDFs</h1>
+    <p class="lede">Add your files, put them in order, pick the pages you want, and download one combined PDF. Everything happens in your browser. Your files are never uploaded.</p>
+
+    <label class="drop panel" id="drop">
+      <input type="file" id="picker" accept="application/pdf,.pdf" multiple>
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <b>Drop PDF files here</b>
+      <span>or <u>choose files</u></span>
+    </label>
+
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+    <section class="files" id="filesWrap" hidden>
+      <div class="files-head">
+        <span class="label" id="summary"></span>
+        <button class="link-btn" id="clearBtn" type="button">Clear all</button>
+      </div>
+      <ol class="file-list" id="list"></ol>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="mergeBtn" type="button">
+          <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h6M3 8h10M3 13h6M11 11l2 2-2 2"/></svg>
+          <span id="mergeLabel">Merge PDFs</span>
+        </button>
+        <a class="btn btn-ghost" id="downloadBtn" download="merged.pdf" hidden>
+          <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4 7l4 4 4-4M2 14h12"/></svg>
+          <span id="downloadLabel">Download merged.pdf</span>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>© <span id="year">2026</span> bdnix</span>
+    <a href="mailto:root@bdnix.com">root@bdnix.com</a>
+  </footer>
+
+  <script src="/assets/js/blocks.js?v=4"></script>
+  <script src="/assets/vendor/pdf-lib.min.js?v=1.17.1"></script>
+  <script src="/assets/js/merge.js?v=2"></script>
+</body>
+</html>
