@@ -46,14 +46,15 @@ for (const path of ['/', '/play/', '/pacman/', '/merge-pdf/', '/watermark-pdf/',
   });
 }
 
-test('every page loads the minified scripts, and they load', async ({ page }) => {
+test('every page links its own scripts and styles with a content hash, and they load', async ({ page }) => {
   for (const path of ['/', '/play/', '/pacman/', '/merge-pdf/', '/watermark-pdf/', '/profile/']) {
     const failed = [];
     page.on('response', (r) => { if (r.url().includes('/assets/') && r.status() >= 400) failed.push(r.url()); });
     await page.goto(path);
-    const own = await page.locator('script[src^="/assets/js/"]').evaluateAll((els) => els.map((s) => s.getAttribute('src')));
-    expect(own.length, `${path} has scripts`).toBeGreaterThan(0);
-    for (const src of own) expect(src, path).toMatch(/^\/assets\/js\/[\w-]+\.min\.js\?v=[0-9a-f]{10}$/);
+    const own = await page.locator('script[src^="/assets/js/"], link[href^="/assets/css/"]')
+      .evaluateAll((els) => els.map((e) => e.getAttribute('src') || e.getAttribute('href')));
+    expect(own.length, `${path} has scripts and styles`).toBeGreaterThan(1);
+    for (const url of own) expect(url, path).toMatch(/^\/assets\/(js\/[\w-]+\.js|css\/[\w-]+\.css)\?v=[0-9a-f]{10}$/);
     expect(failed, `${path}: assets that failed to load`).toEqual([]);
   }
 });

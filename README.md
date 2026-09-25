@@ -32,7 +32,7 @@ Both pages share one design system, so they look like the same site:
 
 ## Tests
 
-Tests run on GitHub Actions ([.github/workflows/tests.yml](.github/workflows/tests.yml)) for every pull request and every push to `master`. On `master`, a final job then minifies the scripts and commits them (see [Deploying changes](#deploying-changes)). To run them locally (Node 22+):
+Tests run on GitHub Actions ([.github/workflows/tests.yml](.github/workflows/tests.yml)) for every pull request and every push to `master`. A pull request also fails if its cache-busting hashes are out of date (see [Deploying changes](#deploying-changes)). To run them locally (Node 22+):
 
 ```bash
 npm install
@@ -40,8 +40,8 @@ npx playwright install chromium   # first time only
 npm test                          # unit tests, then UI tests
 ```
 
-- **Unit tests** (`npm run test:unit`, [tests/unit/](tests/unit/)) use Node's built-in test runner. They load the site's scripts in a sandbox, both the readable source and the minified copy, and check the page-range parser, file-size formatting, the profile (name rules, reading the game scores, blocked storage), and the watermark placement maths for every page rotation.
-- **UI tests** (`npm run test:ui`, [tests/ui/](tests/ui/)) run the build first, then use Playwright to drive the real pages in Chromium, at desktop and phone size. They cover the landing page, profile, merging (order, page ranges, errors), watermarking (preview, layers, fonts, images, remembered settings; the downloaded PDFs are opened and checked), a start-up check for each game, and that no page scrolls sideways on a phone. Any uncaught JavaScript error fails the test. Test PDFs are generated on the fly, so no binary fixtures are committed.
+- **Unit tests** (`npm run test:unit`, [tests/unit/](tests/unit/)) use Node's built-in test runner. They load the site's scripts in a sandbox and check the page-range parser, file-size formatting, the profile (name rules, reading the game scores, blocked storage), and the watermark placement maths for every page rotation.
+- **UI tests** (`npm run test:ui`, [tests/ui/](tests/ui/)) use Playwright to drive the real pages in Chromium, at desktop and phone size. They cover the landing page, profile, merging (order, page ranges, errors), watermarking (preview, layers, fonts, images, remembered settings; the downloaded PDFs are opened and checked), a start-up check for each game, and that no page scrolls sideways on a phone. Any uncaught JavaScript error fails the test. Test PDFs are generated on the fly, so no binary fixtures are committed.
 - `npm run serve` serves the site at http://localhost:4173 with the same small server the UI tests use.
 
 If a UI test fails on GitHub, the run's **playwright-report** artifact has the HTML report and a trace of each failed test (`npx playwright show-trace trace.zip`).
@@ -51,13 +51,13 @@ If a UI test fails on GitHub, the run's **playwright-report** artifact has the H
 CI measures how much of `assets/js/*.js` each suite runs. Each test job adds a coverage table to the run's summary page (open the workflow run on GitHub, then **Summary**), and uploads the full report as an artifact, **coverage-unit** or **coverage-ui**. The artifact has `index.html`, a browsable report that highlights every line, and `lcov.info` for other tools. Locally:
 
 ```bash
-npm run coverage        # build, then both suites with coverage
+npm run coverage        # both suites with coverage
 # open coverage/unit/index.html and coverage/ui/index.html
 ```
 
 - **Unit coverage** counts the files the unit tests load (the page-range parser, profile and watermark layout).
-- **UI coverage** counts everything the pages run in Chromium. The pages load the minified scripts, and their source maps put the numbers back on the readable files. This is also why the build doesn't use terser's `compress` step: it would blur those line mappings, and it only saves about 2% once gzipped.
-- The two stay separate reports. The coverage tool can't reliably merge source-mapped UI data with the unit data, and a merged report would under-count lines only one suite runs.
+- **UI coverage** counts everything the pages run in Chromium.
+- The two stay separate reports, so each shows what its own suite exercises.
 
 ### Caching
 
@@ -67,10 +67,11 @@ The workflow caches what it can between runs:
 
 ## Deploying changes
 
-Pages load minified scripts (`assets/js/*.min.js`), which are generated from the readable `assets/js/*.js` files. Edit the readable files, never the `.min.js` ones.
+Anything pushed to `master` is live once GitHub Pages rebuilds; there's nothing to compile. The one thing to remember is cache-busting.
 
-- **Scripts:** `npm run build` minifies every script, with a source map for debugging, and updates each page's `<script>` tags to load the `.min.js` file with a `?v=` taken from a hash of its contents, so browsers pick up new code straight away. You don't need to run it yourself: when a change lands on `master` and the tests pass, GitHub Actions runs the build, commits any updated files back to `master` with `[skip ci]` in the message (so that commit doesn't start another run), and then asks GitHub Pages to publish it. Run it locally to see your changes before then, since the pages load the minified copies. `npm run build:check` reports whether the files are stale without changing anything.
-- **Stylesheets:** GitHub Pages lets browsers cache CSS for a while, so when you change a file in `assets/css`, bump the `?v=` number on its `<link>` tags in every page that loads it (`index.html`, `play/index.html`, `pacman/index.html`, `merge-pdf/index.html`, `watermark-pdf/index.html`, `profile/index.html`).
+GitHub Pages lets browsers cache scripts and stylesheets for a while. So every page links the site's own files with a `?v=` taken from a hash of the file's contents, e.g. `/assets/js/merge.js?v=d07a831b04`, and the URL changes whenever the file does. **After editing anything in `assets/js` or `assets/css`, run `npm run build`** to update those hashes in every page, and commit the result. If you forget, the pull request's tests fail and say so. `npm run build:check` runs the same check locally without changing anything.
+
+The vendored libraries in `assets/vendor` keep their version number as `?v=`; bump it by hand if you ever upgrade one.
 
 ## Tetris controls
 

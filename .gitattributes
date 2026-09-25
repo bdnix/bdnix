@@ -1,3 +1,0 @@
-# Built by scripts/build.mjs; GitHub collapses these in diffs.
-assets/js/*.min.js linguist-generated=true
-assets/js/*.min.js.map linguist-generated=true

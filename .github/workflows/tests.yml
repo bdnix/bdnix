@@ -22,8 +22,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      # Minify first: the unit tests also check the minified copies.
-      - run: npm run build
+      # Every page links its scripts and styles with ?v=<hash of the file>.
+      # Fails if a change to assets/js or assets/css wasn't followed by
+      # `npm run build`, which would let browsers keep a stale copy.
+      - name: Cache-busting hashes are up to date
+        run: npm run build:check
       - name: Unit tests with coverage
         run: npm run coverage:unit
       - name: Coverage summary
@@ -61,7 +64,6 @@ jobs:
       - name: Install Chromium's system libraries
         if: steps.browsers.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
-      - run: npm run build
       - name: UI tests with coverage
         run: npm run coverage:ui
       - name: Coverage summary
@@ -83,46 +85,3 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 14
-
-  # Once master's tests pass, commit freshly minified scripts (and the pages'
-  # updated ?v= hashes) so GitHub Pages serves them.
-  minify:
-    name: Minify and commit
-    needs: [unit, ui]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: write
-      pages: write
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: master
-      - uses: ./.github/actions/setup
-      - run: npm run build
-      - name: Commit changes
-        id: commit
-        run: |
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "Minified files are already up to date."
-            echo "pushed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A assets/js '*.html'
-          # [skip ci] keeps this commit from starting any workflow, this one
-          # included. (Pushes made with GITHUB_TOKEN don't start workflows
-          # anyway; this keeps it that way if the token ever changes.)
-          git commit -m "Minify JavaScript for ${GITHUB_SHA::7} [skip ci]"
-          git push origin HEAD:master
-          echo "pushed=true" >> "$GITHUB_OUTPUT"
-      # [skip ci] also skips the automatic Pages build for that commit, so
-      # this request is what publishes the minified files. If it fails, the
-      # job fails, rather than leaving the site on the previous build.
-      - name: Request a GitHub Pages build
-        if: steps.commit.outputs.pushed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/builds"

@@ -20,13 +20,6 @@ export function load(files, globals = {}){
   return sandbox;
 }
 
-// Each script is tested twice: the source, and the minified copy the site
-// actually serves (built by scripts/build.mjs), to catch minifier breakage.
-export const variants = (file) => [
-  ['source', file],
-  ['minified', file.replace(/\.js$/, '.min.js')]
-];
-
 // Values made inside the sandbox have that realm's Array/Object prototypes,
 // which assert.deepStrictEqual treats as different. This copies them over.
 export const plain = (value) => JSON.parse(JSON.stringify(value));
