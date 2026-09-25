@@ -48,11 +48,11 @@ Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit
 
 ## Coverage must not drop
 
-CI combines the unit and UI test coverage of `assets/js/*.js` into one report and publishes it to GitHub (a Cobertura XML upload with `actions/upload-code-coverage`). GitHub compares each pull request's line coverage with `master` and posts the result on the pull request, with a per-file breakdown. The repository's ruleset can block pull requests that fall below its coverage thresholds.
+CI combines the unit and UI test coverage of `assets/js/*.js` into one report. The run's **Summary** page shows a per-file table, and the full HTML report is the **coverage-report** artifact.
 
-- **A pull request must not lower line coverage.** Check GitHub's coverage comment on your pull request: overall coverage and every file you touched should be the same or higher than on `master`. If a file lost coverage, add tests for the new or changed lines. Untested new code shows up clearly in the per-file breakdown.
+- **A pull request must not lower line coverage.** Compare your run's Summary table with the latest run on `master`: overall coverage and every file you touched should be the same or higher. If a file lost coverage, add tests for the new or changed lines.
 - Deleting code can lower coverage without anything being wrong. Say so in the pull request.
-- To see exactly which lines are uncovered, run `npm run coverage` and open `coverage/report/index.html`. On GitHub, the run's **Summary** page has the per-file table, and the full report is the **coverage-report** artifact.
+- To see exactly which lines are uncovered, run `npm run coverage` and open `coverage/report/index.html`, or download the **coverage-report** artifact.
 
 ## Cache-busting
 
@@ -88,7 +88,7 @@ npm run serve          # the site at http://localhost:4173
 
 - **Unit tests:** hash check, then the unit tests with coverage.
 - **UI tests:** Playwright in Chromium with coverage. On failure it uploads the HTML report and a trace of each failed test (**playwright-report** artifact).
-- **Code coverage:** once both pass, combines their coverage into one report, adds the table to the run's Summary page, and publishes it to GitHub. The upload on `master` is what pull requests are compared against.
+- **Code coverage:** once both pass, combines their coverage into one report, adds the table to the run's Summary page, and uploads the full report (**coverage-report** artifact).
 
 `node_modules` and Playwright's Chromium are cached; see `.github/actions/setup`.
 

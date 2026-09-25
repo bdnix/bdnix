@@ -20,11 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      # The PR's own head commit rather than GitHub's merge commit, so coverage
-      # line numbers match the pull request's diff.
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/setup
       # Every page links its scripts and styles with ?v=<hash of the file>.
       # Fails if a change to assets/js or assets/css wasn't followed by
@@ -46,8 +42,6 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/setup
       - id: playwright
         name: Playwright version
@@ -84,21 +78,16 @@ jobs:
             test-results/
           retention-days: 14
 
-  # Combines both suites' coverage into one report and publishes it to
-  # GitHub, which compares each pull request with master and shows the
-  # result on the pull request. Runs only when all tests pass.
+  # Combines both suites' coverage into one report: a per-file table on the
+  # run's Summary page, and the full report as the coverage-report artifact.
+  # Runs only when all tests pass.
   coverage:
     name: Code coverage
     needs: [unit, ui]
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    permissions:
-      contents: read
-      code-quality: write
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/setup
       - uses: actions/download-artifact@v8
         with:
@@ -118,11 +107,3 @@ jobs:
           name: coverage-report
           path: coverage/report/
           retention-days: 30
-      # Pull requests from forks can't be given write access, so they skip it.
-      - name: Publish coverage to GitHub
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        uses: actions/upload-code-coverage@v1
-        with:
-          file: coverage/report/cobertura-coverage.xml
-          language: JavaScript
-          label: code-coverage/bdnix

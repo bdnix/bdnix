@@ -52,7 +52,7 @@ If a UI test fails on GitHub, the run's **playwright-report** artifact has the H
 
 ### Coverage
 
-CI combines what the unit and UI tests cover in `assets/js/*.js` into one report (a line counts as covered if either suite runs it) and publishes it to GitHub. GitHub then shows each pull request's line coverage, and how it changed per file, compared with `master`. This uses GitHub Code Quality's built-in coverage, which needs Code Quality enabled in the repository settings. The same report is on each workflow run: a table on the run's **Summary** page, and the full report as the **coverage-report** artifact. That artifact has `index.html`, a browsable report that highlights every line, plus `cobertura-coverage.xml` (what's uploaded) and `lcov.info`. Locally:
+CI combines what the unit and UI tests cover in `assets/js/*.js` into one report (a line counts as covered if either suite runs it). Each workflow run shows it as a per-file table on the run's **Summary** page, and uploads the full report as the **coverage-report** artifact: `index.html`, a browsable report that highlights every line, plus `cobertura-coverage.xml` and `lcov.info` for other tools. Locally:
 
 ```bash
 npm run coverage        # both suites with coverage, combined
