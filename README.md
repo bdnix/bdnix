@@ -1,6 +1,6 @@
-# bdnix — Check back soon
+# bdnix
 
-A static "under construction" page for [www.bdnix.com](https://www.bdnix.com), plus Tetris and Pac-Man to play while you wait, and two PDF tools (merge and watermark). Hosted on GitHub Pages; no build step.
+The static site behind [www.bdnix.com](https://www.bdnix.com): Tetris and Pac-Man, two PDF tools (merge and watermark), and a profile page for your name and best scores. Everything runs in the browser. Hosted on GitHub Pages; no build step.
 
 ## Preview locally
 
@@ -20,6 +20,8 @@ Both pages share one design system, so they look like the same site:
 - [play/index.html](play/index.html), [assets/css/tetris.css](assets/css/tetris.css), [assets/js/tetris.js](assets/js/tetris.js): Tetris, served at `/play/`
 - [pacman/index.html](pacman/index.html), [assets/css/pacman.css](assets/css/pacman.css), [assets/js/pacman.js](assets/js/pacman.js): Pac-Man, served at `/pacman/`
 - [merge-pdf/index.html](merge-pdf/index.html), [assets/css/merge.css](assets/css/merge.css), [assets/js/merge.js](assets/js/merge.js): PDF merger, served at `/merge-pdf/`
+- [profile/index.html](profile/index.html), [assets/css/profile.css](assets/css/profile.css), [assets/js/profile-page.js](assets/js/profile-page.js): the visitor's profile, served at `/profile/`
+- [assets/js/profile.js](assets/js/profile.js): reads and saves the display name and reads the game scores; fills in the profile chip in the top bar of the landing and tool pages
 - [watermark-pdf/index.html](watermark-pdf/index.html), [assets/css/watermark.css](assets/css/watermark.css), [assets/js/watermark.js](assets/js/watermark.js): PDF watermark tool, served at `/watermark-pdf/`
 - [assets/css/tool.css](assets/css/tool.css), [assets/js/pdftools.js](assets/js/pdftools.js): page layout and helpers (page-range parsing, file reading) shared by the PDF tools
 - [assets/vendor/pdf-lib.min.js](assets/vendor/pdf-lib.min.js): [pdf-lib](https://pdf-lib.js.org/) 1.17.1 (MIT, see [its licence](assets/vendor/pdf-lib.LICENSE.md)), used by both PDF tools to edit files
@@ -28,7 +30,7 @@ Both pages share one design system, so they look like the same site:
 
 ## Deploying changes
 
-GitHub Pages lets browsers cache CSS and JS for a while. When you change any file in `assets/css` or `assets/js`, bump the `?v=` number on its `<link>` / `<script>` tags in every page that loads it (`index.html`, `play/index.html`, `pacman/index.html`, `merge-pdf/index.html`, `watermark-pdf/index.html`). Otherwise visitors can get the new HTML with old styles.
+GitHub Pages lets browsers cache CSS and JS for a while. When you change any file in `assets/css` or `assets/js`, bump the `?v=` number on its `<link>` / `<script>` tags in every page that loads it (`index.html`, `play/index.html`, `pacman/index.html`, `merge-pdf/index.html`, `watermark-pdf/index.html`, `profile/index.html`). Otherwise visitors can get the new HTML with old styles.
 
 ## Tetris controls
 
@@ -49,6 +51,10 @@ GitHub Pages lets browsers cache CSS and JS for a while. When you change any fil
 | Pause  | P / Esc            | ❚❚                            |
 
 Both games save their best score in the browser's localStorage.
+
+## Profile
+
+The chip in the top right of the landing and tool pages links to `/profile/`. It shows the visitor's name ("User" until they set one, up to 24 characters) and their best Tetris and Pac-Man scores, read straight from the keys the games already save (`bdnix_tetris_best`, `bdnix_pacman_best`). It also shows the visit count kept by the landing page. The name is stored as `bdnix_name`. All of it lives in the browser's localStorage, so it's per device and nothing is uploaded.
 
 ## PDF merger
 

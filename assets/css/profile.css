@@ -1,0 +1,38 @@
+/* Profile page. Page layout lives in tool.css. */
+.who{display:flex;align-items:center;gap:20px;padding:22px;flex-wrap:wrap}
+.avatar-lg{width:72px;height:72px;font-size:32px}
+.who-text{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;flex:1}
+.who h1{
+  font-size:clamp(28px,5vw,40px);
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+.name-form{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.name-row{display:flex;gap:8px;flex-wrap:wrap}
+.name-row input{
+  flex:1 1 180px;min-width:0;
+  padding:10px 12px;border-radius:10px;
+  border:1px solid var(--line);background:rgba(8,10,18,.6);color:var(--fg);
+  font:600 16px var(--sans);
+}
+.name-row input:focus{outline:none;border-color:var(--cyan)}
+.btn-sm{padding:10px 16px;font-size:14px}
+.hint{margin:0;font-size:13px;color:var(--faint)}
+
+.scores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.score{display:flex;align-items:center;gap:14px;padding:16px}
+.score .gc-icon{width:40px;height:40px;flex:0 0 auto}
+.score-text{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.score-text span{font-size:14px;color:var(--muted)}
+.score-text b{font:600 26px/1.1 var(--mono);color:var(--fg)}
+.score-text b.none{font:400 14px var(--sans);color:var(--faint)}
+.score .btn{padding:10px 14px;font-size:14px}
+
+.stat{margin:22px 0 0;font-size:14px;color:var(--muted)}
+.note{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--faint);max-width:60ch}
+
+@media (max-width:560px){
+  .scores{grid-template-columns:1fr}
+  .who{gap:16px;padding:18px}
+  .avatar-lg{width:56px;height:56px;font-size:26px}
+}

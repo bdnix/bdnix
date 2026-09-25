@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>bdnix — Check back soon</title>
-  <meta name="description" content="Something is being built at bdnix. Check back soon, or play Tetris or Pac-Man while you wait.">
-  <meta property="og:title" content="bdnix — Check back soon">
-  <meta property="og:description" content="Something is being built at bdnix. Check back soon, or play Tetris or Pac-Man while you wait.">
+  <title>bdnix</title>
+  <meta name="description" content="Play Tetris and Pac-Man, or merge and watermark PDFs, right in your browser. Nothing to install and nothing uploaded.">
+  <meta property="og:title" content="bdnix">
+  <meta property="og:description" content="Play Tetris and Pac-Man, or merge and watermark PDFs, right in your browser. Nothing to install and nothing uploaded.">
   <meta property="og:type" content="website">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/css/base.css?v=4">
+  <link rel="stylesheet" href="/assets/css/base.css?v=5">
   <link rel="stylesheet" href="/assets/css/style.css?v=4">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#080a12">
@@ -21,17 +21,17 @@
 
   <header class="bar">
     <a class="wordmark" href="/"><b>bdnix</b></a>
-    <span class="badge"><i></i>Under construction</span>
+    <a class="profile-chip" href="/profile/" title="Your profile"><span class="avatar" data-profile-initial aria-hidden="true">U</span><span data-profile-name>User</span></a>
   </header>
 
   <main class="hero">
-    <p class="kicker">// status: work in progress</p>
-    <h1>Something good<br><em>is being built here.</em></h1>
+    <p class="kicker">// games &amp; tools, right in your browser</p>
+    <h1>Play a little.<br><em>Get things done.</em></h1>
 
-    <p class="terminal" aria-live="polite"><span class="prompt">$</span> <span id="typed">come back again to check.</span><span class="cursor"></span></p>
+    <p class="terminal" aria-live="polite"><span class="prompt">$</span> <span id="typed">play a round of tetris.</span><span class="cursor"></span></p>
 
     <section class="games" aria-labelledby="games-label">
-      <p class="label" id="games-label">While you wait</p>
+      <p class="label" id="games-label">Games</p>
       <div class="game-cards">
         <a class="game-card panel" href="/play/">
           <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
@@ -91,6 +91,7 @@
   </footer>
 
   <script src="/assets/js/blocks.js?v=4"></script>
-  <script src="/assets/js/main.js?v=4"></script>
+  <script src="/assets/js/profile.js?v=1"></script>
+  <script src="/assets/js/main.js?v=5"></script>
 </body>
 </html>
