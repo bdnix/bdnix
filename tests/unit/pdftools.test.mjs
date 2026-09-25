@@ -75,3 +75,50 @@ test('readBytes: uses File.arrayBuffer when there is one', async () => {
   const buf = new ArrayBuffer(3);
   assert.equal(await T.readBytes({ arrayBuffer: async () => buf }), buf);
 });
+
+test('onFileDrop: lights up the drop zone while files are dragged, and hands over dropped files', () => {
+  const listeners = {};
+  const document = { addEventListener: (type, fn) => { listeners[type] = fn; } };
+  const { bdnixPdf } = load(FILE, { document });
+  const classes = new Set();
+  const zone = { classList: { add: (c) => classes.add(c), remove: (c) => classes.delete(c) } };
+  const got = [];
+  bdnixPdf.onFileDrop(zone, (files) => got.push(files));
+
+  let prevented = 0;
+  const event = (types, files) => ({ dataTransfer: { types, files, dropEffect: '' }, preventDefault: () => { prevented++; } });
+  const withFiles = () => event(['Files']);
+
+  // Text being dragged around the page is left alone.
+  listeners.dragenter(event(['text/plain']));
+  listeners.dragover(event(['text/plain']));
+  assert.equal(classes.has('over'), false);
+  assert.equal(prevented, 0);
+
+  // Entering a child element fires another dragenter before the dragleave.
+  listeners.dragenter(withFiles());
+  listeners.dragenter(withFiles());
+  listeners.dragleave(withFiles());
+  assert.equal(classes.has('over'), true);
+  const over = withFiles();
+  listeners.dragover(over);
+  assert.equal(over.dataTransfer.dropEffect, 'copy');
+  listeners.dragleave(withFiles());
+  assert.equal(classes.has('over'), false);
+
+  listeners.dragenter(withFiles());
+  listeners.drop(event(['Files'], ['a.pdf']));
+  assert.equal(classes.has('over'), false);
+  assert.deepEqual(got, [['a.pdf']]);
+  listeners.drop(event(['text/plain'], ['b.txt']));
+  assert.equal(got.length, 1);
+});
+
+test('loadPdfjs: resolves to null when pdf.js can’t be loaded, and only tries once', async () => {
+  // The sandbox has no module loader, so its import() always fails. (The
+  // browser tests cover pdf.js loading for real.)
+  const { bdnixPdf } = load(FILE);
+  const first = bdnixPdf.loadPdfjs();
+  assert.equal(bdnixPdf.loadPdfjs(), first);
+  assert.equal(await first, null);
+});

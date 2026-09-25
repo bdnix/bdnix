@@ -146,18 +146,6 @@
       useFont(v.bytes, v.name).catch(function(){ files.remove('font'); });
     });
   }
-  // ---- pdf.js, only fetched once a file is chosen ----
-  var pdfjsPromise = null;
-  function loadPdfjs(){
-    if (!pdfjsPromise) {
-      pdfjsPromise = import('/assets/vendor/pdfjs/pdf.min.mjs').then(function(lib){
-        lib.GlobalWorkerOptions.workerSrc = '/assets/vendor/pdfjs/pdf.worker.min.mjs';
-        return lib;
-      }).catch(function(){ return null; });
-    }
-    return pdfjsPromise;
-  }
-
   // ---- fontkit, only fetched when someone uses their own font ----
   var fontkitPromise = null;
   function loadFontkit(){
@@ -434,7 +422,7 @@
     var included = !sel.error && sel.pages.indexOf(i) >= 0;
     var fit = stageSize();
 
-    loadPdfjs().then(function(lib){
+    T.loadPdfjs().then(function(lib){
       if (included && s.layer === 'back') {
         return behindPage(i, s, fit, lib).then(function(c){
           return c ? [c, null] : Promise.all([basePage(i, fit), null]);
@@ -564,7 +552,7 @@
       fileMeta.textContent = T.plural(src.pages, 'page') + ' · ' + T.fmtSize(file.size);
       say('');
       var current = src;
-      loadPdfjs().then(function(lib){
+      T.loadPdfjs().then(function(lib){
         if (!lib) throw new Error('pdf.js did not load');
         // pdf.js takes ownership of the buffer it's given, so hand it a copy.
         current.viewTask = lib.getDocument({ data: new Uint8Array(bytes.slice(0)), isEvalSupported: false });
@@ -590,30 +578,8 @@
   });
   changeBtn.addEventListener('click', function(){ picker.click(); });
 
-  function hasFiles(e){
-    var types = e.dataTransfer && e.dataTransfer.types;
-    return !!types && Array.prototype.indexOf.call(types, 'Files') >= 0;
-  }
-  var depth = 0;
-  document.addEventListener('dragenter', function(e){
-    if (!hasFiles(e)) return;
-    depth++;
-    drop.classList.add('over');
-  });
-  document.addEventListener('dragleave', function(e){
-    if (!hasFiles(e)) return;
-    depth = Math.max(0, depth - 1);
-    if (!depth) drop.classList.remove('over');
-  });
-  document.addEventListener('dragover', function(e){
-    if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
-  });
-  document.addEventListener('drop', function(e){
-    if (!hasFiles(e)) return;
-    e.preventDefault();
-    depth = 0;
-    drop.classList.remove('over');
-    var f = e.dataTransfer.files[0];
+  T.onFileDrop(drop, function(list){
+    var f = list[0];
     // An image dropped while the image option is open becomes the watermark.
     if (f && /^image\//.test(f.type) && src && F.kind.value === 'image') return openImage(f);
     openFile(f);

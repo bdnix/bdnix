@@ -18,9 +18,6 @@
 .file.dragging{opacity:.4}
 .file.drop-before{box-shadow:0 -2px 0 var(--cyan)}
 .file.drop-after{box-shadow:0 2px 0 var(--cyan)}
-.file-info{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
-.file-name{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.file-meta{font:400 12px var(--mono);color:var(--faint)}
 .file-meta.error{color:var(--pink)}
 .file-range{display:flex;align-items:center;gap:8px;margin-top:6px}
 .file-range span{font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
