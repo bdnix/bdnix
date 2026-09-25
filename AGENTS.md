@@ -43,15 +43,16 @@ Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit
 - **Unit tests** (`tests/unit/*.test.mjs`, Node's built-in `node:test`) are for pure logic: parsing, maths, data rules. They load a script into a sandbox with `load()` from `tests/unit/load.mjs`, which also provides fake `localStorage` and `document`. New pure logic needs unit tests covering its normal cases, edge cases and errors.
 - **UI tests** (`tests/ui/*.spec.mjs`, Playwright) are for what a visitor sees and does. Import `test` and `expect` from `tests/ui/fixtures.mjs`, not from `@playwright/test`: the fixture fails the test on any uncaught page error, keeps the tests offline and records coverage. Each test runs at desktop and phone size. Build test files in code (see `tests/ui/pdfs.mjs`) rather than committing binaries, and check real output: open downloaded PDFs and assert on their contents.
 - **A bug fix needs a test that fails without the fix.** Check that it does before relying on it.
-- **Tests must be deterministic.** Don't assert on values that vary between runs (file sizes that include dates, timings, random game pieces); wait for the state you need with `expect(...).toBe...` instead of fixed sleeps. Never skip, disable or loosen a test to get CI green. Find the cause instead; "flaky" isn't a cause.
+- **Tests must be deterministic.** Don't assert on values that vary between runs (file sizes that include dates, real timings); wait for the state you need with `expect(...).toBe...` instead of fixed sleeps. Never skip, disable or loosen a test to get CI green. Find the cause instead; "flaky" isn't a cause.
+- **Games and anything animated:** open the page with `openGame()` from `tests/ui/games.mjs`. It fixes `Math.random` (Tetris then deals O, T, J, L, S, Z, I every bag) and freezes the clock *before* the page loads, so time only moves when the test calls `page.clock.runFor()`, and scores and positions come out exact. Don't install a clock after the page has loaded and then pause it: that races with the clock's real-time updates and occasionally steps time backwards, which stalls the game loops.
 
 ## Coverage must not drop
 
-CI measures coverage of `assets/js/*.js` for each suite and compares it with the committed baseline in `tests/coverage/baseline.json`. **If total lines, statements or functions for either suite fall more than 0.5 points below the baseline, or branches more than 1 point, CI fails.** The tolerance only absorbs run-to-run noise: the games' random pieces and a few timing-dependent preview paths shift coverage slightly between runs and machines. It is not an allowance for untested code: new code still needs tests, however small.
+CI combines the unit and UI test coverage of `assets/js/*.js` into one report. The run's **Summary** page shows a per-file table, and the full HTML report is the **coverage-report** artifact.
 
-- If your change raises coverage, CI passes with a warning. Lock the gain in: run `npm run coverage`, then `npm run coverage:baseline`, and commit `tests/coverage/baseline.json` in the same pull request.
-- Never lower the baseline to make CI pass. If coverage fell, add the missing tests. If code was deliberately removed and coverage fell as a side effect, say so in the pull request and update the baseline there, where a reviewer can see it.
-- To see what's uncovered, open `coverage/unit/index.html` or `coverage/ui/index.html` after `npm run coverage`. On GitHub, the coverage table is on the run's **Summary** page, and the full reports are the **coverage-unit** and **coverage-ui** artifacts.
+- **A pull request must not lower line coverage.** Compare your run's Summary table with the latest run on `master`: overall coverage and every file you touched should be the same or higher. If a file lost coverage, add tests for the new or changed lines.
+- Deleting code can lower coverage without anything being wrong. Say so in the pull request.
+- To see exactly which lines are uncovered, run `npm run coverage` and open `coverage/report/index.html`, or download the **coverage-report** artifact.
 
 ## Cache-busting
 
@@ -69,25 +70,25 @@ npm run build:check    # fail if any hash is stale (what CI runs)
 npm test               # unit tests, then UI tests
 npm run test:unit
 npm run test:ui
-npm run coverage       # both suites with coverage, then the baseline check
-npm run coverage:baseline   # record current coverage as the new baseline
+npm run coverage       # both suites with coverage, combined into coverage/report
 npm run serve          # the site at http://localhost:4173
 ```
 
 ## Before you open a pull request
 
 1. `npm run build` if you touched `assets/js` or `assets/css`.
-2. `npm run coverage` passes: all tests green, and coverage isn't below the baseline.
+2. `npm run coverage` passes, and `coverage/report/index.html` shows your new and changed lines as covered.
 3. New or changed behaviour has tests, and a bug fix has a test that failed before the fix.
 4. The page works at phone width without sideways scrolling.
 5. `README.md` is updated if you added a page or feature, or changed how something is used or developed.
 
 ## CI
 
-`.github/workflows/tests.yml` runs on every pull request and push to `master`. Both jobs must pass:
+`.github/workflows/tests.yml` runs on every pull request and push to `master`:
 
-- **Unit tests:** hash check, unit tests with coverage, coverage check.
-- **UI tests:** Playwright in Chromium with coverage, coverage check. On failure it uploads the HTML report and a trace of each failed test (**playwright-report** artifact).
+- **Unit tests:** hash check, then the unit tests with coverage.
+- **UI tests:** Playwright in Chromium with coverage. On failure it uploads the HTML report and a trace of each failed test (**playwright-report** artifact).
+- **Code coverage:** once both pass, combines their coverage into one report, adds the table to the run's Summary page, and uploads the full report (**coverage-report** artifact).
 
 `node_modules` and Playwright's Chromium are cached; see `.github/actions/setup`.
 

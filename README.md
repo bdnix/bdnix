@@ -33,7 +33,7 @@ Both pages share one design system, so they look like the same site:
 
 ## Tests
 
-Every new feature and bug fix needs tests, and coverage must not drop below the committed baseline. [AGENTS.md](AGENTS.md) has the full rules and conventions for working on this repo.
+Every new feature and bug fix needs tests, and a pull request must not lower code coverage. [AGENTS.md](AGENTS.md) has the full rules and conventions for working on this repo.
 
 
 Tests run on GitHub Actions ([.github/workflows/tests.yml](.github/workflows/tests.yml)) for every pull request and every push to `master`. A pull request also fails if its cache-busting hashes are out of date (see [Deploying changes](#deploying-changes)). To run them locally (Node 22+):
@@ -45,23 +45,19 @@ npm test                          # unit tests, then UI tests
 ```
 
 - **Unit tests** (`npm run test:unit`, [tests/unit/](tests/unit/)) use Node's built-in test runner. They load the site's scripts in a sandbox and check the page-range parser, file-size formatting, the profile (name rules, reading the game scores, blocked storage), the watermark placement maths for every page rotation, and the redact tool's text search and box geometry.
-- **UI tests** (`npm run test:ui`, [tests/ui/](tests/ui/)) use Playwright to drive the real pages in Chromium, at desktop and phone size. They cover the landing page, profile, merging (order, page ranges, errors), watermarking (preview, layers, fonts, images, remembered settings; the downloaded PDFs are opened and checked), redacting (search, drawing, undo; the downloaded PDFs are read back to check the text is gone and the areas are black), a start-up check for each game, and that no page scrolls sideways on a phone. Any uncaught JavaScript error fails the test. Test PDFs are generated on the fly, so no binary fixtures are committed.
+- **UI tests** (`npm run test:ui`, [tests/ui/](tests/ui/)) use Playwright to drive the real pages in Chromium, at desktop and phone size. They cover the landing page, profile, merging (order, page ranges, errors), watermarking (preview, layers, fonts, images, remembered settings; the downloaded PDFs are opened and checked), redacting (search, drawing, undo; the downloaded PDFs are read back to check the text is gone and the areas are black), gameplay in both games (Tetris: moving, rotating, holding, clearing a line, pausing, touch buttons and game over; Pac-Man: steering a route to a power pellet, pausing, touch buttons and swipes, and losing every life), run on a frozen clock with fixed randomness so the scores are exact, and that no page scrolls sideways on a phone. Any uncaught JavaScript error fails the test. Test PDFs are generated on the fly, so no binary fixtures are committed.
 - `npm run serve` serves the site at http://localhost:4173 with the same small server the UI tests use.
 
 If a UI test fails on GitHub, the run's **playwright-report** artifact has the HTML report and a trace of each failed test (`npx playwright show-trace trace.zip`).
 
 ### Coverage
 
-CI measures how much of `assets/js/*.js` each suite runs. Each test job adds a coverage table to the run's summary page (open the workflow run on GitHub, then **Summary**), and uploads the full report as an artifact, **coverage-unit** or **coverage-ui**. The artifact has `index.html`, a browsable report that highlights every line, and `lcov.info` for other tools. Locally:
+CI combines what the unit and UI tests cover in `assets/js/*.js` into one report (a line counts as covered if either suite runs it). Each workflow run shows it as a per-file table on the run's **Summary** page, and uploads the full report as the **coverage-report** artifact: `index.html`, a browsable report that highlights every line, plus `cobertura-coverage.xml` and `lcov.info` for other tools. Locally:
 
 ```bash
-npm run coverage        # both suites with coverage, then the baseline check
-# open coverage/unit/index.html and coverage/ui/index.html
+npm run coverage        # both suites with coverage, combined
+# open coverage/report/index.html
 ```
-
-- **Unit coverage** counts the files the unit tests load (the PDF helpers, profile, watermark layout and redact core).
-- **UI coverage** counts everything the pages run in Chromium.
-- The two stay separate reports, so each shows what its own suite exercises.
 
 ### Caching
 
