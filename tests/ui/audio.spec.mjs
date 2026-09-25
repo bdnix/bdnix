@@ -38,6 +38,28 @@ test('converts an MP4 to a stereo MP3 of the same sound', async ({ page }) => {
   await expectNoSideScroll(page);
 });
 
+test('reads only the audio of a big video, not the whole file', async ({ page }) => {
+  // Reading all of a long phone video at once made iPhones reload the page.
+  await page.evaluate(() => {
+    window.reads = [];
+    const read = Blob.prototype.arrayBuffer;
+    Blob.prototype.arrayBuffer = function(){ window.reads.push(this.size); return read.call(this); };
+  });
+  // 1 MB of video after every two audio frames, index first, 64-bit offsets.
+  const video = flacMp4(tone(1, 2), 44100, { video: 1024 * 1024, perChunk: 2, moovFirst: true, co64: true });
+  expect(video.length).toBeGreaterThan(6 * 1024 * 1024);
+  await page.locator('#picker').setInputFiles([file('phone video.mov', video, 'video/quicktime')]);
+  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await expect(page.locator('#msg')).toHaveText('Done. Converted 1 file.');
+  expect(Math.max(...await page.evaluate(() => window.reads))).toBeLessThan(64 * 1024);
+  const out = await fetchDownload(page, page.locator('.track'));
+  expect(out.name).toBe('phone video.mp3');
+  const sound = await analyse(page, out.bytes);
+  expect(sound.seconds).toBeGreaterThanOrEqual(1);
+  expect(sound.seconds).toBeLessThan(1.1);
+  expect(sound.hz).toEqual([440, 660]);
+});
+
 test('quality and mono settings shape the MP3', async ({ page }) => {
   await page.locator('#picker').setInputFiles([clip()]);
   await page.getByLabel('Quality').selectOption('96');

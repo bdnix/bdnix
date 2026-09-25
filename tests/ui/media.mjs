@@ -79,34 +79,68 @@ function streamInfo(channels, rate){
   return b;
 }
 
-// An .mp4 holding one FLAC audio track.
-export function flacMp4(channels, rate = RATE){
+// An .mp4 holding one FLAC audio track. Options shape it like a phone
+// video: `video` bytes of filler video after each audio chunk (in a video
+// track), `perChunk` audio frames per chunk, `moovFirst` puts the index
+// before the media, and `co64` stores 64-bit chunk offsets.
+export function flacMp4(channels, rate = RATE, { video = 0, perChunk = 1, moovFirst = false, co64 = false } = {}){
   const frames = flacFrames(channels, rate), total = channels[0].length;
   const ftyp = box('ftyp', Buffer.from('isom'), u32(512), Buffer.from('isomiso2mp41'));
-  const mdat = box('mdat', ...frames);
+  const chunks = [];
+  for (let i = 0; i < frames.length; i += perChunk) chunks.push(Buffer.concat(frames.slice(i, i + perChunk)));
+  const filler = Buffer.alloc(video, 0x5a);
+  const media = chunks.flatMap((c) => (video ? [c, filler] : [c]));
+  const mdat = box('mdat', ...media);
   const last = total - (frames.length - 1) * BLOCK;
   const stts = last === BLOCK ? [u32(1), u32(frames.length), u32(BLOCK)]
     : [u32(2), u32(frames.length - 1), u32(BLOCK), u32(1), u32(last)];
-  const entry = box('fLaC',
-    Buffer.alloc(6), u16(1), Buffer.alloc(8), u16(channels.length), u16(16), u16(0), u16(0), u32(rate * 65536),
-    full('dfLa', 0, 0, u8(0x80), u24(34), streamInfo(channels, rate)));
-  const stbl = box('stbl',
-    full('stsd', 0, 0, u32(1), entry),
-    full('stts', 0, 0, ...stts),
-    full('stsc', 0, 0, u32(1), u32(1), u32(frames.length), u32(1)),
-    full('stsz', 0, 0, u32(0), u32(frames.length), ...frames.map((f) => u32(f.length))),
-    full('stco', 0, 0, u32(1), u32(ftyp.length + 8)));
+  const stsc = chunks.length * perChunk === frames.length ? [u32(1), u32(1), u32(perChunk), u32(1)]
+    : [u32(2), u32(1), u32(perChunk), u32(1), u32(chunks.length), u32(frames.length % perChunk), u32(1)];
+  const offsets = (at) => {
+    const audio = [], filled = [];
+    for (const c of chunks) { audio.push(at); at += c.length; filled.push(at); at += video; }
+    return { audio, video: filled };
+  };
+  const index = (at) => (co64 ? full('co64', 0, 0, u32(at.length), ...at.map((o) => Buffer.concat([u32(Math.floor(o / 2 ** 32)), u32(o)]))) : full('stco', 0, 0, u32(at.length), ...at.map(u32)));
   const matrix = Buffer.concat([u32(0x10000), u32(0), u32(0), u32(0), u32(0x10000), u32(0), u32(0), u32(0), u32(0x40000000)]);
-  const mdhd = full('mdhd', 0, 0, u32(0), u32(0), u32(rate), u32(total), u16(0x55c4), u16(0));
-  const hdlr = full('hdlr', 0, 0, u32(0), Buffer.from('soun'), Buffer.alloc(12), Buffer.from('Sound\0'));
-  const minf = box('minf', full('smhd', 0, 0, u32(0)),
-    box('dinf', full('dref', 0, 0, u32(1), full('url ', 0, 1))), stbl);
-  const tkhd = full('tkhd', 0, 3, u32(0), u32(0), u32(1), u32(0), u32(Math.round(total * 1000 / rate)),
+  const ms = Math.round(total * 1000 / rate);
+  const tkhd = (id) => full('tkhd', 0, 3, u32(0), u32(0), u32(id), u32(0), u32(ms),
     Buffer.alloc(8), u16(0), u16(0), u16(0x0100), u16(0), matrix, u32(0), u32(0));
-  const mvhd = full('mvhd', 0, 0, u32(0), u32(0), u32(1000), u32(Math.round(total * 1000 / rate)),
-    u32(0x10000), u16(0x0100), Buffer.alloc(10), matrix, Buffer.alloc(24), u32(2));
-  const moov = box('moov', mvhd, box('trak', tkhd, box('mdia', mdhd, hdlr, minf)));
-  return Buffer.concat([ftyp, mdat, moov]);
+  const hdlr = (kind) => full('hdlr', 0, 0, u32(0), Buffer.from(kind), Buffer.alloc(12), Buffer.from('Media\0'));
+  const moov = (at) => {
+    const where = offsets(at);
+    const entry = box('fLaC',
+      Buffer.alloc(6), u16(1), Buffer.alloc(8), u16(channels.length), u16(16), u16(0), u16(0), u32(rate * 65536),
+      full('dfLa', 0, 0, u8(0x80), u24(34), streamInfo(channels, rate)));
+    const stbl = box('stbl',
+      full('stsd', 0, 0, u32(1), entry),
+      full('stts', 0, 0, ...stts),
+      full('stsc', 0, 0, ...stsc),
+      full('stsz', 0, 0, u32(0), u32(frames.length), ...frames.map((f) => u32(f.length))),
+      index(where.audio));
+    const minf = box('minf', full('smhd', 0, 0, u32(0)),
+      box('dinf', full('dref', 0, 0, u32(1), full('url ', 0, 1))), stbl);
+    const mdhd = full('mdhd', 0, 0, u32(0), u32(0), u32(rate), u32(total), u16(0x55c4), u16(0));
+    const sound = box('trak', tkhd(1), box('mdia', mdhd, hdlr('soun'), minf));
+    const mvhd = full('mvhd', 0, 0, u32(0), u32(0), u32(1000), u32(ms),
+      u32(0x10000), u16(0x0100), Buffer.alloc(10), matrix, Buffer.alloc(24), u32(video ? 3 : 2));
+    if (!video) return box('moov', mvhd, sound);
+    // One filler "frame" per chunk, of a codec nothing decodes.
+    const vstbl = box('stbl',
+      full('stsd', 0, 0, u32(1), box('zzzz', Buffer.alloc(6), u16(1))),
+      full('stts', 0, 0, u32(1), u32(chunks.length), u32(1000)),
+      full('stsc', 0, 0, u32(1), u32(1), u32(1), u32(1)),
+      full('stsz', 0, 0, u32(video), u32(chunks.length)),
+      index(where.video));
+    const vminf = box('minf', full('vmhd', 0, 1, u32(0), u32(0)),
+      box('dinf', full('dref', 0, 0, u32(1), full('url ', 0, 1))), vstbl);
+    const vmdhd = full('mdhd', 0, 0, u32(0), u32(0), u32(1000), u32(chunks.length * 1000), u16(0x55c4), u16(0));
+    // The video track comes first, as in a phone's recordings.
+    return box('moov', mvhd, box('trak', tkhd(2), box('mdia', vmdhd, hdlr('vide'), vminf)), sound);
+  };
+  if (!moovFirst) return Buffer.concat([ftyp, mdat, moov(ftyp.length + 8)]);
+  const size = moov(0).length;
+  return Buffer.concat([ftyp, moov(ftyp.length + size + 8), mdat]);
 }
 
 // --- WAV ---

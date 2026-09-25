@@ -133,6 +133,14 @@
     f.bar.style.setProperty('--p', f.progress);
   }
 
+  // Only the audio of an MP4 or MOV is read, so a long phone video doesn't
+  // have to fit in memory. Other files are read whole.
+  function audioData(file){
+    return A.audioOnly(function(from, to){
+      return readBytes(file.slice(from, to)).then(function(b){ return new Uint8Array(b); });
+    }, file.size).then(function(bytes){ return bytes ? bytes.buffer : readBytes(file); });
+  }
+
   function decode(buf){
     var Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
     return new Promise(function(resolve, reject){
@@ -166,7 +174,7 @@
     f.progress = 0;
     render();
     var unreadable = {};
-    return readBytes(f.file).then(decode).catch(function(){ throw unreadable; }).then(function(audio){
+    return audioData(f.file).then(decode).catch(function(){ throw unreadable; }).then(function(audio){
       var channels = [];
       for (var c = 0; c < audio.numberOfChannels; c++) channels.push(audio.getChannelData(c));
       var job = A.encoder(A.mix(channels, opts.mono), audio.sampleRate, opts, window.lamejs);

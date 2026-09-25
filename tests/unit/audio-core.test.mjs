@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './load.mjs';
+import { flacMp4, wav, tone } from '../ui/media.mjs';
 
 const { bdnixAudio: A, lamejs } = load(['assets/vendor/lame.min.js', 'assets/js/audio-core.js']);
 
@@ -137,4 +138,170 @@ test('encoder: MP3 output is the same however it is split up', () => {
   assert.equal(run(a, 1152), 27);
   assert.equal(run(b, 1152 * 100), 1);
   assert.deepEqual(bytesOf(a.parts), bytesOf(b.parts));
+});
+
+// --- audioOnly: the audio track of an MP4 or MOV ---
+
+// Reads from a Buffer the way audio.js reads from a File, noting each read.
+function reader(buf, reads = []){
+  return (from, to) => { reads.push(to - from); return Promise.resolve(new Uint8Array(buf.subarray(from, to))); };
+}
+
+function boxesOf(buf, from = 0, to = buf.length){
+  const out = [];
+  while (from + 8 <= to) {
+    let size = buf.readUInt32BE(from), head = 8;
+    if (size === 1) { size = Number(buf.readBigUInt64BE(from + 8)); head = 16; } else if (size === 0) size = to - from;
+    out.push({ type: buf.toString('latin1', from + 4, from + 8), body: from + head, end: from + size });
+    from += size;
+  }
+  return out;
+}
+const child = (buf, box, type) => boxesOf(buf, box.body, box.end).find((c) => c.type === type);
+
+// The audio track's samples, found through its own index: { traks, samples }.
+function audioSamples(buf){
+  const moov = boxesOf(buf).find((b) => b.type === 'moov');
+  const traks = boxesOf(buf, moov.body, moov.end).filter((b) => b.type === 'trak');
+  const trak = traks.find((t) => { const h = child(buf, child(buf, t, 'mdia'), 'hdlr'); return buf.toString('latin1', h.body + 8, h.body + 12) === 'soun'; });
+  const stbl = ['mdia', 'minf', 'stbl'].reduce((b, type) => child(buf, b, type), trak);
+  const stsc = child(buf, stbl, 'stsc'), stsz = child(buf, stbl, 'stsz');
+  const co64 = child(buf, stbl, 'co64'), stco = co64 || child(buf, stbl, 'stco');
+  const fixed = buf.readUInt32BE(stsz.body + 4), runs = buf.readUInt32BE(stsc.body + 4);
+  const samples = [];
+  let n = 0;
+  for (let c = 0; c < buf.readUInt32BE(stco.body + 4); c++) {
+    let run = 0;
+    for (let r = 0; r < runs; r++) if (buf.readUInt32BE(stsc.body + 8 + r * 12) - 1 <= c) run = r;
+    let at = co64 ? Number(buf.readBigUInt64BE(stco.body + 8 + c * 8)) : buf.readUInt32BE(stco.body + 8 + c * 4);
+    for (let k = 0; k < buf.readUInt32BE(stsc.body + 12 + run * 12); k++, n++) {
+      const size = fixed || buf.readUInt32BE(stsz.body + 12 + n * 4);
+      samples.push(buf.subarray(at, at + size));
+      at += size;
+    }
+  }
+  return { traks: traks.length, samples, co64: !!co64 };
+}
+
+const audioOf = (buf, reads) => A.audioOnly(reader(buf, reads), buf.length).then((out) => out && Buffer.from(out));
+
+// Swaps every occurrence of one 4-letter box type for another.
+const retype = (buf, from, to) => Buffer.from(buf.toString('latin1').split(from).join(to), 'latin1');
+
+test('audioOnly: keeps just the audio of a video, reading only small pieces', async () => {
+  const video = flacMp4(tone(1, 2), 44100, { video: 100000, perChunk: 3, moovFirst: true, co64: true });
+  const reads = [];
+  const out = await audioOf(video, reads);
+  const before = audioSamples(video), after = audioSamples(out);
+  assert.equal(before.traks, 2);
+  assert.equal(before.samples.length, 11);
+  assert.equal(after.traks, 1);
+  assert.equal(after.co64, true);
+  assert.deepEqual(after.samples, before.samples);
+  assert.deepEqual(boxesOf(out).map((b) => b.type), ['ftyp', 'moov', 'mdat']);
+  // The filler video isn't in the output, and no read went near it.
+  assert.ok(out.length < 5000 + before.samples.reduce((n, s) => n + s.length, 0));
+  // Three frames of verbatim FLAC are about 50 KB; the filler is 100 KB.
+  assert.ok(Math.max(...reads) < 60000);
+});
+
+test('audioOnly: index at the end, 32-bit offsets', async () => {
+  const file = flacMp4(tone(1, 2), 44100, { video: 5000 });
+  const out = await audioOf(file);
+  assert.deepEqual(boxesOf(out).map((b) => b.type), ['ftyp', 'moov', 'mdat']);
+  assert.equal(audioSamples(out).co64, false);
+  assert.deepEqual(audioSamples(out).samples, audioSamples(file).samples);
+});
+
+test('audioOnly: an audio-only MP4 comes out holding the same samples', async () => {
+  const file = flacMp4(tone(0.5, 1));
+  const out = await audioOf(file);
+  assert.deepEqual(audioSamples(out).samples, audioSamples(file).samples);
+});
+
+test('audioOnly: samples all one size, and a 64-bit mdat header', async () => {
+  // Three whole blocks make three frames of one size.
+  const file = flacMp4(tone(3 * 4096 / 44100, 1));
+  const sizes = audioSamples(file).samples.map((s) => s.length);
+  assert.deepEqual([...new Set(sizes)].length, 1);
+  // Record the one size in stsz, and leave the table (now ignored) as it is.
+  const fixed = Buffer.from(file), stsz = file.indexOf('stsz') + 4;
+  fixed.writeUInt32BE(sizes[0], stsz + 4);
+  // ftyp, then mdat rewritten with a 64-bit size: 8 more bytes in front of
+  // the audio, so the offsets move along by 8.
+  const ftyp = boxesOf(fixed)[0], mdat = boxesOf(fixed)[1];
+  const wide = Buffer.concat([
+    fixed.subarray(0, ftyp.end),
+    Buffer.from([0, 0, 0, 1]), Buffer.from('mdat'), Buffer.alloc(4), Buffer.from([0, 0, 0, 0]),
+    fixed.subarray(mdat.body)
+  ]);
+  wide.writeUInt32BE(mdat.end - mdat.body + 16, ftyp.end + 12);
+  const stco = wide.indexOf('stco') + 4;
+  for (let i = 0; i < wide.readUInt32BE(stco + 4); i++) wide.writeUInt32BE(wide.readUInt32BE(stco + 8 + i * 4) + 8, stco + 8 + i * 4);
+  const out = await audioOf(wide);
+  assert.deepEqual(audioSamples(out).samples, audioSamples(file).samples);
+});
+
+test('audioOnly: an index that runs to the end of the file (size 0)', async () => {
+  const file = Buffer.from(flacMp4(tone(0.5, 2)));
+  const moov = boxesOf(file).find((b) => b.type === 'moov');
+  file.writeUInt32BE(0, moov.body - 8);
+  const out = await audioOf(file);
+  assert.deepEqual(audioSamples(out).samples, audioSamples(flacMp4(tone(0.5, 2))).samples);
+});
+
+test('audioOnly: no ftyp box is fine', async () => {
+  const file = flacMp4(tone(0.5, 2));
+  const ftyp = boxesOf(file)[0];
+  const bare = file.subarray(ftyp.end);
+  // Offsets are from the start of the file, which is now ftyp.end earlier.
+  const moved = Buffer.from(bare), stco = moved.indexOf('stco') + 4;
+  for (let i = 0; i < moved.readUInt32BE(stco + 4); i++) moved.writeUInt32BE(moved.readUInt32BE(stco + 8 + i * 4) - ftyp.end, stco + 8 + i * 4);
+  const out = await audioOf(moved);
+  assert.deepEqual(boxesOf(out).map((b) => b.type), ['moov', 'mdat']);
+  assert.deepEqual(audioSamples(out).samples, audioSamples(file).samples);
+});
+
+test('audioOnly: other formats, and MP4s it can’t take apart, are left to be read whole', async () => {
+  assert.equal(await audioOf(wav(tone(0.1, 1))), null);
+  assert.equal(await audioOf(Buffer.from('not really a video')), null);
+  assert.equal(await audioOf(Buffer.alloc(0)), null);
+  // A 64-bit size with no room for it.
+  assert.equal(await audioOf(Buffer.from('\0\0\0\x01mdat\0\0\0\0', 'latin1')), null);
+  const file = flacMp4(tone(0.5, 2));
+  // No index, as in a fragmented MP4.
+  assert.equal(await audioOf(file.subarray(0, boxesOf(file).find((b) => b.type === 'moov').body - 8)), null);
+  // Parts of the index missing.
+  assert.equal(await audioOf(retype(file, 'mvhd', 'free')), null);
+  assert.equal(await audioOf(retype(file, 'stsc', 'free')), null);
+  assert.equal(await audioOf(retype(file, 'stco', 'free')), null);
+  // A table longer than its box.
+  const long = Buffer.from(file);
+  long.writeUInt32BE(1000, long.indexOf('stsz') + 12);
+  assert.equal(await audioOf(long), null);
+  // Audio that would be past the end of the file (cut short).
+  const cut = Buffer.from(file), stco = cut.indexOf('stco') + 4;
+  cut.writeUInt32BE(cut.length, stco + 12);
+  assert.equal(await audioOf(cut), null);
+});
+
+test('audioOnly: an index too big to be real is left alone', async () => {
+  const file = flacMp4(tone(0.1, 1));
+  const moov = boxesOf(file).find((b) => b.type === 'moov');
+  const reads = [];
+  // Claims to be 100 MB, running past the file, so it isn't a box at all.
+  const big = Buffer.from(file);
+  big.writeUInt32BE(100 * 1024 * 1024, moov.body - 8);
+  assert.equal(await audioOf(big, reads), null);
+  // A real 65 MB index isn't read either.
+  const huge = Buffer.concat([file.subarray(0, moov.body - 8), Buffer.alloc(8)]);
+  huge.writeUInt32BE(65 * 1024 * 1024, moov.body - 8);
+  huge.write('moov', moov.body - 4, 'latin1');
+  const reader65 = (from, to) => Promise.resolve(new Uint8Array(huge.subarray(from, Math.min(to, huge.length))));
+  assert.equal(await A.audioOnly(reader65, moov.body - 8 + 65 * 1024 * 1024), null);
+});
+
+test('audioOnly: a video with no sound says so', async () => {
+  const file = retype(flacMp4(tone(0.5, 2)), 'soun', 'vide');
+  await assert.rejects(audioOf(file), /no audio track/);
 });
