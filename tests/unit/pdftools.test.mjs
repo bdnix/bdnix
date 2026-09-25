@@ -122,3 +122,49 @@ test('loadPdfjs: resolves to null when pdf.js can’t be loaded, and only tries 
   assert.equal(bdnixPdf.loadPdfjs(), first);
   assert.equal(await first, null);
 });
+
+// A stream like Safari's: it has a reader but can't be used with `for await`.
+function safariStream(){
+  return class {
+    constructor(chunks){ this.chunks = chunks; this.log = []; }
+    getReader(){
+      const s = this;
+      s.log.push('lock');
+      return {
+        read: async () => (s.chunks.length ? { done: false, value: s.chunks.shift() } : { done: true, value: undefined }),
+        cancel: async () => { s.log.push('cancel'); },
+        releaseLock: () => { s.log.push('release'); }
+      };
+    }
+  };
+}
+
+test('streamIterable: lets `for await` read a stream that lacks it', async () => {
+  const Stream = safariStream();
+  assert.equal(T.streamIterable(Stream), true);
+  const s = new Stream(['a', 'b', 'c']);
+  const got = [];
+  for await (const chunk of s) got.push(chunk);
+  assert.deepEqual(got, ['a', 'b', 'c']);
+  assert.deepEqual(s.log, ['lock', 'release']);
+  const it = new Stream([])[Symbol.asyncIterator]();
+  assert.equal(it[Symbol.asyncIterator](), it);
+});
+
+test('streamIterable: stopping early cancels the stream', async () => {
+  const Stream = safariStream();
+  T.streamIterable(Stream);
+  const s = new Stream(['a', 'b', 'c']);
+  for await (const chunk of s) { assert.equal(chunk, 'a'); break; }
+  assert.deepEqual(s.log, ['lock', 'cancel', 'release']);
+  assert.deepEqual(s.chunks, ['b', 'c']);
+});
+
+test('streamIterable: leaves streams that already support it, and missing ones, alone', () => {
+  const own = function(){ return 'native'; };
+  const Stream = safariStream();
+  Stream.prototype[Symbol.asyncIterator] = own;
+  assert.equal(T.streamIterable(Stream), false);
+  assert.equal(Stream.prototype[Symbol.asyncIterator], own);
+  assert.equal(T.streamIterable(undefined), false);
+});
