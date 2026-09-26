@@ -17,12 +17,16 @@ export function sourcePath(filePath){
 // Applied to paths as they arrive (before sourcePath), so normalise first.
 export const sourceFilter = (p) => /^assets\/js\/[\w-]+\.js$/.test(sourcePath(p));
 
-// One test suite's coverage: raw data for tests/coverage/report.config.mjs
-// to combine, plus a summary table in the log.
+// One test suite's coverage: lcov.info for CI to upload to Codecov (which
+// combines the suites), raw data for tests/coverage/report.config.mjs to
+// combine locally, and a summary table in the log.
 export const suite = (name, extra = {}) => ({
   name: `bdnix ${name} test coverage`,
   outputDir: `coverage/${name}`,
-  reports: ['raw', 'console-summary'],
+  reports: ['raw', 'lcovonly', 'console-summary'],
+  // Scripts the suite never loads still appear, at 0%, so a new script
+  // without tests counts against the total.
+  all: { dir: ['assets/js'], filter: '**/*.js' },
   sourcePath,
   sourceFilter,
   ...extra

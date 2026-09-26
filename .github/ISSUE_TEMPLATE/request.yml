@@ -1,0 +1,31 @@
+name: Request a tool or game
+description: Suggest a new tool or game for www.bdnix.com, or a feature for one that's already there.
+title: "Request: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! Everything on bdnix runs in the browser and nothing is uploaded, so the best requests are ones that can work that way.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What would you like?
+      options:
+        - A new tool
+        - A new game
+        - A feature for an existing tool or game
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What should it do?
+      description: Describe it the way you'd use it, e.g. "Split a PDF into one file per page".
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Anything else?
+      description: Why it would help you, similar sites you've used, or files it should handle.

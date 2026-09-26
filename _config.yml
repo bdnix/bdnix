@@ -16,3 +16,4 @@ exclude:
   - coverage
   - AGENTS.md
   - CLAUDE.md
+  - codecov.yml

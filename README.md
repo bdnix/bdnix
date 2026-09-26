@@ -1,6 +1,9 @@
 # bdnix
 
-The static site behind [www.bdnix.com](https://www.bdnix.com): Tetris and Pac-Man, three PDF tools (merge, watermark and redact), an MP4 to MP3 converter, an image compressor, and a profile page for your name and best scores. Everything runs in the browser. Hosted on GitHub Pages; no build step.
+[![Tests](https://github.com/bdnix/bdnix/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/bdnix/bdnix/actions/workflows/tests.yml?query=branch%3Amaster)
+[![Coverage](https://codecov.io/gh/bdnix/bdnix/branch/master/graph/badge.svg)](https://codecov.io/gh/bdnix/bdnix)
+
+The open source site behind [www.bdnix.com](https://www.bdnix.com): Tetris and Pac-Man, three PDF tools (merge, watermark and redact), an MP4 to MP3 converter, an image compressor, and a profile page for your name and best scores. Everything runs in the browser. Hosted on GitHub Pages; no build step.
 
 ## Preview locally
 
@@ -29,6 +32,9 @@ Both pages share one design system, so they look like the same site:
 - [mp4-to-mp3/index.html](mp4-to-mp3/index.html), [assets/css/audio.css](assets/css/audio.css), [assets/js/audio.js](assets/js/audio.js), [assets/js/audio-core.js](assets/js/audio-core.js): audio converter, served at `/mp4-to-mp3/`. The core file holds the channel mixing, the MP3 and WAV encoding (whole or as the audio is decoded), and reading an MP4 or MOV's index to find its audio and its codec, kept separate so it can be unit tested.
 - [compress-image/index.html](compress-image/index.html), [assets/css/image.css](assets/css/image.css), [assets/js/image.js](assets/js/image.js), [assets/js/image-core.js](assets/js/image-core.js): image compressor, served at `/compress-image/`. The core file holds the rules for which files are images, which format to save as, the output name and size, and when to keep the original, kept separate so it can be unit tested.
 - [assets/js/analytics.js](assets/js/analytics.js): Google Analytics (measurement ID `G-67D1H8GX6X`), linked from every page. On the live site (`www.bdnix.com` and `bdnix.com`) a banner asks visitors first, and Google's script only loads once they click **Accept**. **Decline** is remembered too, and the choice can be changed any time under **Analytics cookies** on the profile page (turning it off also deletes Google's `_ga` cookies). The choice is saved as `bdnix_analytics` in localStorage. Local previews and the tests show no banner and don't contact Google. It records page views only; files opened in the tools never leave the browser.
+- [robots.txt](robots.txt), [sitemap.xml](sitemap.xml): tell search engines what to index. The sitemap lists every page except the profile, which is marked `noindex` since it only shows what's saved in the visitor's browser. Add new pages to it.
+- Each page's `<head>` has its title and description, a canonical URL on `https://www.bdnix.com`, Open Graph and Twitter tags for link previews, and (on the landing page, games and tools) [schema.org](https://schema.org) structured data. A new page needs the same; [tests/ui/seo.spec.mjs](tests/ui/seo.spec.mjs) checks them all.
+- [assets/img/og.png](assets/img/og.png) (the 1200×630 image shown when a page is shared) and [assets/img/apple-touch-icon.png](assets/img/apple-touch-icon.png) are drawn by [scripts/og-image.mjs](scripts/og-image.mjs). To change them, edit the script, run `npm run og-image` and commit the PNGs.
 - [assets/css/tool.css](assets/css/tool.css), [assets/js/pdftools.js](assets/js/pdftools.js): page layout (including the preview-and-settings editor, the feature list under a tool's intro, and the file list with a download per file) and helpers (page-range parsing, file reading, dropping files on the page, loading PDF.js) shared by the tools
 - [assets/vendor/pdf-lib.min.js](assets/vendor/pdf-lib.min.js): [pdf-lib](https://pdf-lib.js.org/) 1.17.1 (MIT, see [its licence](assets/vendor/pdf-lib.LICENSE.md)), used by the PDF tools to edit files
 - [assets/vendor/fontkit.umd.min.js](assets/vendor/fontkit.umd.min.js): [@pdf-lib/fontkit](https://github.com/Hopding/fontkit) 1.1.1 (MIT, see [its licence](assets/vendor/fontkit.LICENSE.md)), lets pdf-lib embed a font file someone uploads. Only downloaded when they pick "Your own font file".
@@ -56,11 +62,11 @@ If a UI test fails on GitHub, the run's **playwright-report** artifact has the H
 
 ### Coverage
 
-CI combines what the unit and UI tests cover in `assets/js/*.js` into one report (a line counts as covered if either suite runs it). Each workflow run shows it as a per-file table on the run's **Summary** page, and uploads the full report as the **coverage-report** artifact: `index.html`, a browsable report that highlights every line, plus `cobertura-coverage.xml` and `lcov.info` for other tools. Locally:
+The unit and UI test jobs each upload what they cover in `assets/js/*.js` to [Codecov](https://codecov.io/gh/bdnix/bdnix) as `lcov.info`. Codecov combines them (a line counts as covered if either suite runs it; scripts no test loads count at 0%), draws the coverage badge at the top of this page, and comments on each pull request with how its coverage compares to `master`. Codecov also checks every pull request ([codecov.yml](codecov.yml)): **codecov/project** fails if overall line coverage drops more than 0.1% below `master`, and **codecov/patch** fails if less than 90% of the new or changed lines are covered. The **Tests** badge is GitHub's own status for the workflow on `master`. Locally:
 
 ```bash
 npm run coverage        # both suites with coverage, combined
-# open coverage/report/index.html
+# open coverage/report/index.html, a browsable report that highlights every line
 ```
 
 ### Caching
@@ -157,6 +163,6 @@ Several images can be compressed at once, and each gets its own download, named 
 
 The browser decodes each image (turning phone photos upright) and a canvas saves it again, so nothing is uploaded, and the hidden details a camera stores (location, camera model, date) aren't carried over. If the result is no smaller than the original, in the same format and at the same size, the original is handed back unchanged instead. Images bigger than 16.7 megapixels (4096 × 4096) are scaled down to fit, because iPhones and iPads can't draw bigger canvases. An image the browser can't open, or a format it can't save (Safari can't save WebP), is marked on the list with a message.
 
-## Contact
+## Requests and contact
 
-root@bdnix.com
+Want a tool or game that isn't here, or a feature for one that is? [Open a request on GitHub](https://github.com/bdnix/bdnix/issues/new?template=request.yml) or email root@bdnix.com. The landing page asks for requests the same way (the **Want a tool or game that isn't here?** panel), and the footer of the landing, tool and profile pages links to it and to this repository. The GitHub form is [.github/ISSUE_TEMPLATE/request.yml](.github/ISSUE_TEMPLATE/request.yml).
