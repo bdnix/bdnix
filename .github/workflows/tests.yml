@@ -6,7 +6,7 @@ on:
   pull_request:
   workflow_dispatch:
 
-# id-token lets the Codecov uploads sign in with GitHub's OIDC token, so
+# id-token lets the Codecov upload sign in with GitHub's OIDC token, so
 # there's no Codecov secret to set up.
 permissions:
   contents: read
@@ -17,9 +17,9 @@ concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
 
-# Each test job uploads its own coverage to Codecov, which combines them
-# (see codecov.yml), reports on the pull request and draws the README badge.
-# A failed upload doesn't fail the job.
+# The UI tests job uploads both suites' coverage to Codecov, which combines
+# them (see codecov.yml), reports on the pull request and draws the README
+# badge. A failed upload doesn't fail the job.
 jobs:
   unit:
     name: Unit tests
@@ -33,15 +33,8 @@ jobs:
       # `npm run build`, which would let browsers keep a stale copy.
       - name: Cache-busting hashes are up to date
         run: npm run build:check
-      - name: Unit tests with coverage
-        run: npm run coverage:unit
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v7
-        with:
-          files: coverage/unit/lcov.info
-          flags: unit
-          disable_search: true
-          use_oidc: true
+      - name: Unit tests
+        run: npm run test:unit
 
   ui:
     name: UI tests
@@ -69,11 +62,16 @@ jobs:
         run: npx playwright install-deps chromium
       - name: UI tests with coverage
         run: npm run coverage:ui
+      # The unit tests again, just for their coverage (they take seconds), so
+      # both suites go to Codecov in one upload. Two separate uploads would
+      # leave the badge showing only the first suite's share until the second
+      # arrived.
+      - name: Unit test coverage
+        run: npm run coverage:unit
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
-          files: coverage/ui/lcov.info
-          flags: ui
+          files: coverage/unit/lcov.info,coverage/ui/lcov.info
           disable_search: true
           use_oidc: true
       - name: Upload test report and traces
