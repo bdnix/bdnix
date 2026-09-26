@@ -12,7 +12,8 @@ test('a new visitor is "User" with no scores yet', async ({ page }) => {
   await expect(page.locator('.avatar-lg')).toHaveText('U');
   expect(await scores(page)).toEqual([
     { game: 'Tetris', best: 'Not played yet', link: 'Play /tetris/' },
-    { game: 'Pac-Man', best: 'Not played yet', link: 'Play /pacman/' }
+    { game: 'Pac-Man', best: 'Not played yet', link: 'Play /pacman/' },
+    { game: 'Flappy Bird', best: 'Not played yet', link: 'Play /flappy-bird/' }
   ]);
 });
 
@@ -21,11 +22,13 @@ test('shows the best scores the games saved', async ({ page }) => {
   await page.evaluate(() => {
     localStorage.setItem('bdnix_tetris_best', '12450');
     localStorage.setItem('bdnix_pacman_best', '3120');
+    localStorage.setItem('bdnix_flappy_best', '27');
   });
   await page.reload();
   expect(await scores(page)).toEqual([
     { game: 'Tetris', best: '12,450', link: 'Play again /tetris/' },
-    { game: 'Pac-Man', best: '3,120', link: 'Play again /pacman/' }
+    { game: 'Pac-Man', best: '3,120', link: 'Play again /pacman/' },
+    { game: 'Flappy Bird', best: '27', link: 'Play again /flappy-bird/' }
   ]);
 });
 

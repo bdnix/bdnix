@@ -23,6 +23,7 @@
   var lines = [
     'play a round of tetris.',
     'chase ghosts in pac-man.',
+    'flap past a few pipes.',
     'merge a stack of pdfs.',
     'watermark a report.',
     'turn a video into an mp3.',

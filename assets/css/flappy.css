@@ -1,0 +1,49 @@
+/* Flappy Bird layout. Shared pieces live in base.css and game.css. */
+.game{
+  position:relative;z-index:1;
+  flex:1;min-height:0;
+  display:grid;
+  grid-template-columns:128px auto 128px;
+  grid-template-areas:"stats board .";
+  justify-content:center;align-content:start;
+  gap:14px;
+  padding:4px clamp(16px,4vw,32px) 24px;
+  cursor:pointer;
+}
+.stats{grid-area:stats;align-self:start;cursor:default}
+.board-wrap{grid-area:board}
+.overlay{cursor:default}
+
+/* ---- Phones & tablets ---- */
+@media (max-width:700px),(pointer:coarse){
+  .game{
+    grid-template-columns:1fr;
+    grid-template-rows:auto 1fr;
+    grid-template-areas:"stats" "board";
+    justify-content:stretch;justify-items:center;
+    gap:8px;
+    padding:0 16px calc(12px + env(safe-area-inset-bottom));
+  }
+  .stats{justify-self:stretch;grid-template-columns:repeat(2,1fr);gap:4px;padding:8px 6px}
+  .stats div{justify-content:space-between}
+  .board-wrap{align-self:center}
+}
+
+/* ---- Phones held sideways: scores beside the board ---- */
+@media (orientation:landscape) and (max-height:520px){
+  body.play{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+    grid-template-rows:auto auto 1fr;
+    grid-template-areas:
+      "bar   board ."
+      "stats board ."
+      ".     board .";
+    gap:8px;
+    padding:8px max(16px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+  }
+  body.play > .game{display:contents}
+  .bar{grid-area:bar;padding:0}
+  .board-wrap{grid-area:board;align-self:center}
+  .stats{grid-template-columns:repeat(2,1fr);gap:8px}
+}

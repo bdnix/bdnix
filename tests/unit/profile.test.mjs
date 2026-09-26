@@ -49,16 +49,17 @@ test('initial: first character, uppercased, emoji-safe', () => {
 });
 
 test('scores come from the keys the games write', () => {
-  const { P } = setup({ bdnix_tetris_best: '12450', bdnix_pacman_best: '3120' });
+  const { P } = setup({ bdnix_tetris_best: '12450', bdnix_pacman_best: '3120', bdnix_flappy_best: '27' });
   assert.deepEqual(plain(P.scores()), [
     { id: 'tetris', name: 'Tetris', href: '/tetris/', best: 12450 },
-    { id: 'pacman', name: 'Pac-Man', href: '/pacman/', best: 3120 }
+    { id: 'pacman', name: 'Pac-Man', href: '/pacman/', best: 3120 },
+    { id: 'flappy', name: 'Flappy Bird', href: '/flappy-bird/', best: 27 }
   ]);
 });
 
 test('missing or junk scores count as not played', () => {
   const { P } = setup({ bdnix_tetris_best: 'abc', bdnix_pacman_best: '-5' });
-  assert.deepEqual(plain(P.scores()).map((s) => s.best), [0, 0]);
+  assert.deepEqual(plain(P.scores()).map((s) => s.best), [0, 0, 0]);
 });
 
 test('visits come from the landing page counter', () => {
@@ -80,5 +81,5 @@ test('blocked storage (e.g. private mode) falls back quietly', () => {
   const w = load(FILE, { localStorage: broken, document: fakeDocument(), addEventListener(){} });
   assert.equal(w.bdnixProfile.getName(), 'User');
   assert.equal(w.bdnixProfile.setName('Musa'), 'Musa');
-  assert.deepEqual(plain(w.bdnixProfile.scores()).map((s) => s.best), [0, 0]);
+  assert.deepEqual(plain(w.bdnixProfile.scores()).map((s) => s.best), [0, 0, 0]);
 });
