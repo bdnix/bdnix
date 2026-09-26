@@ -16,19 +16,36 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # One job runs everything once: the hash check, the unit tests and the UI
-  # tests, each with coverage, then uploads both suites' coverage to Codecov
-  # together (see codecov.yml). The unit tests take seconds, so running them
-  # in parallel elsewhere would save nothing.
-  test:
-    name: Tests
+  # The unit and UI tests run in parallel, each with coverage. Once both
+  # pass, the coverage job uploads their reports to Codecov together (see
+  # codecov.yml), so Codecov never builds a report from one suite alone.
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      # Every page links its scripts and styles with ?v=<hash of the file>.
+      # Fails if a change to assets/js or assets/css wasn't followed by
+      # `npm run build`, which would let browsers keep a stale copy.
+      - name: Cache-busting hashes are up to date
+        run: npm run build:check
+      # Runs even if the hash check failed, so one run reports both.
+      - name: Unit tests with coverage
+        if: ${{ !cancelled() }}
+        run: npm run coverage:unit
+      - name: Save coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-unit
+          path: coverage/unit/lcov.info
+          retention-days: 1
+
+  ui:
+    name: UI tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    permissions:
-      contents: read
-      # Lets the Codecov upload sign in with GitHub's OIDC token, so there's
-      # no Codecov secret to set up.
-      id-token: write
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -49,27 +66,14 @@ jobs:
       - name: Install Chromium's system libraries
         if: steps.browsers.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
-      # Every page links its scripts and styles with ?v=<hash of the file>.
-      # Fails if a change to assets/js or assets/css wasn't followed by
-      # `npm run build`, which would let browsers keep a stale copy.
-      - name: Cache-busting hashes are up to date
-        run: npm run build:check
-      # The three checks run even when an earlier one failed, so one run
-      # reports every problem.
-      - name: Unit tests with coverage
-        if: ${{ !cancelled() }}
-        run: npm run coverage:unit
       - name: UI tests with coverage
-        if: ${{ !cancelled() }}
         run: npm run coverage:ui
-      # Only after everything passed, so Codecov never gets half a report.
-      # A failed upload doesn't fail the job.
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+      - name: Save coverage
+        uses: actions/upload-artifact@v7
         with:
-          files: coverage/unit/lcov.info,coverage/ui/lcov.info
-          disable_search: true
-          use_oidc: true
+          name: coverage-ui
+          path: coverage/ui/lcov.info
+          retention-days: 1
       - name: Upload test report and traces
         if: failure()
         uses: actions/upload-artifact@v7
@@ -79,3 +83,32 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 14
+
+  coverage:
+    name: Coverage
+    needs: [unit, ui]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # Lets the Codecov upload sign in with GitHub's OIDC token, so there's
+      # no Codecov secret to set up.
+      id-token: write
+    steps:
+      # Codecov reads the commit and the file list from the checkout.
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: coverage-unit
+          path: coverage/unit/
+      - uses: actions/download-artifact@v8
+        with:
+          name: coverage-ui
+          path: coverage/ui/
+      # A failed upload doesn't fail the job.
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          files: coverage/unit/lcov.info,coverage/ui/lcov.info
+          disable_search: true
+          use_oidc: true

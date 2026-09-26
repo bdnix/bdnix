@@ -100,7 +100,11 @@ npm run serve          # the site at http://localhost:4173
 
 ## CI
 
-`.github/workflows/tests.yml` runs one job, **Tests**, on every pull request and push to `master`: the hash check, the unit tests with coverage, then the UI tests (Playwright in Chromium) with coverage. All three run even if an earlier one failed. If everything passed, both suites' coverage goes to Codecov in one upload; if not, it uploads the HTML report and a trace of each failed test (**playwright-report** artifact).
+`.github/workflows/tests.yml` runs on every pull request and push to `master`:
+
+- **Unit tests:** hash check, then the unit tests with coverage.
+- **UI tests:** Playwright in Chromium with coverage. On failure it uploads the HTML report and a trace of each failed test (**playwright-report** artifact).
+- **Coverage:** once both pass, uploads their coverage to Codecov together.
 
 Codecov then posts **codecov/project** and **codecov/patch** (see [Coverage must not drop](#coverage-must-not-drop)). `node_modules` and Playwright's Chromium are cached; see `.github/actions/setup`.
 
