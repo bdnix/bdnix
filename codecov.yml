@@ -1,0 +1,30 @@
+# Codecov settings: https://docs.codecov.com/docs/codecov-yaml
+# CI uploads the combined unit and UI coverage of assets/js/*.js (see
+# .github/workflows/tests.yml). The two checks below are what AGENTS.md asks
+# of every pull request.
+codecov:
+  # Only report once every CI job has passed.
+  require_ci_to_pass: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+  status:
+    # codecov/project: overall line coverage mustn't drop below master's.
+    # The 0.1% threshold absorbs rounding; deleting well-tested code can
+    # still lower it, which is worth a note in the pull request.
+    project:
+      default:
+        target: auto
+        threshold: 0.1%
+    # codecov/patch: at least 90% of the lines a pull request adds or changes
+    # must be covered by tests.
+    patch:
+      default:
+        target: 90%
+
+comment:
+  layout: "condensed_header, diff, files"
+  # Also post when coverage is unchanged, so every pull request shows it.
+  require_changes: false

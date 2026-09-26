@@ -66,7 +66,7 @@ Leave merging to the owner: don't merge the pull request yourself.
 
 CI combines the unit and UI test coverage of `assets/js/*.js` into one report. The run's **Summary** page shows a per-file table, and the full HTML report is the **coverage-report** artifact.
 
-- **A pull request must not lower line coverage.** Compare your run's Summary table with the latest run on `master`: overall coverage and every file you touched should be the same or higher. If a file lost coverage, add tests for the new or changed lines.
+- **A pull request must not lower line coverage.** Codecov checks this on every pull request (settings in `codecov.yml`): **codecov/project** fails if overall line coverage drops more than 0.1% below `master`, and **codecov/patch** fails if less than 90% of the lines the pull request adds or changes are covered. Both must pass. Codecov's pull request comment and the run's Summary table show which files lost coverage; add tests for the new or changed lines.
 - Deleting code can lower coverage without anything being wrong. Say so in the pull request.
 - To see exactly which lines are uncovered, run `npm run coverage` and open `coverage/report/index.html`, or download the **coverage-report** artifact.
 
