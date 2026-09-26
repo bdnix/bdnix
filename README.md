@@ -1,6 +1,6 @@
 # bdnix
 
-The static site behind [www.bdnix.com](https://www.bdnix.com): Tetris and Pac-Man, three PDF tools (merge, watermark and redact), an MP4 to MP3 converter, an image compressor, and a profile page for your name and best scores. Everything runs in the browser. Hosted on GitHub Pages; no build step.
+The open source site behind [www.bdnix.com](https://www.bdnix.com): Tetris and Pac-Man, three PDF tools (merge, watermark and redact), an MP4 to MP3 converter, an image compressor, and a profile page for your name and best scores. Everything runs in the browser. Hosted on GitHub Pages; no build step.
 
 ## Preview locally
 
@@ -160,6 +160,6 @@ Several images can be compressed at once, and each gets its own download, named 
 
 The browser decodes each image (turning phone photos upright) and a canvas saves it again, so nothing is uploaded, and the hidden details a camera stores (location, camera model, date) aren't carried over. If the result is no smaller than the original, in the same format and at the same size, the original is handed back unchanged instead. Images bigger than 16.7 megapixels (4096 × 4096) are scaled down to fit, because iPhones and iPads can't draw bigger canvases. An image the browser can't open, or a format it can't save (Safari can't save WebP), is marked on the list with a message.
 
-## Contact
+## Requests and contact
 
-root@bdnix.com
+Want a tool or game that isn't here, or a feature for one that is? [Open a request on GitHub](https://github.com/bdnix/bdnix/issues/new?template=request.yml) or email root@bdnix.com. The landing page asks for requests the same way (the **Want a tool or game that isn't here?** panel), and the footer of the landing, tool and profile pages links to it and to this repository. The GitHub form is [.github/ISSUE_TEMPLATE/request.yml](.github/ISSUE_TEMPLATE/request.yml).

@@ -45,17 +45,17 @@
 .gc-text span{font-size:13px;color:var(--muted)}
 .gc-arrow{width:16px;height:16px;color:var(--faint);transition:transform .15s ease,color .2s ease}
 .game-card:hover .gc-arrow{transform:translateX(3px);color:var(--fg)}
+.suggest{margin-top:32px;padding:22px 24px;max-width:612px}
+.suggest h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+.suggest p{margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--muted)}
+.suggest-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.suggest .oss{margin-top:16px;font-size:13px;color:var(--faint)}
+.suggest .oss a{color:var(--muted)}
+.suggest .oss a:hover{color:var(--fg)}
 .visit{margin:22px 0 0;font-size:14px;color:var(--faint);min-height:1.4em}
-
-.foot{
-  position:relative;z-index:1;
-  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
-  padding:20px clamp(16px,4vw,32px) calc(20px + env(safe-area-inset-bottom));
-  font:400 12px var(--mono);color:var(--faint);
-}
-.foot a{text-decoration:none}
-.foot a:hover{color:var(--fg)}
 
 @media (max-width:560px){
   .game-cards{grid-template-columns:1fr}
+  .suggest{padding:20px}
+  .suggest-actions .btn{flex:1 1 auto}
 }

@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 
 test('shows the games and tools, with no under-construction wording', async ({ page }) => {
@@ -58,4 +59,42 @@ test('every page links its own scripts and styles with a content hash, and they 
     for (const url of own) expect(url, path).toMatch(/^\/assets\/(js\/[\w-]+\.js|css\/[\w-]+\.css)\?v=[0-9a-f]{10}$/);
     expect(failed, `${path}: assets that failed to load`).toEqual([]);
   }
+});
+
+test('asks for tool and game requests by email or GitHub issue, and says the site is open source', async ({ page }) => {
+  await page.goto('/');
+  const suggest = page.getByRole('region', { name: 'Want a tool or game that isn’t here?' });
+  await expect(suggest).toBeVisible();
+
+  const email = suggest.getByRole('link', { name: 'Email a request' });
+  const mail = new URL(await email.getAttribute('href'));
+  expect(mail.protocol).toBe('mailto:');
+  expect(mail.pathname).toBe('root@bdnix.com');
+  expect(mail.searchParams.get('subject')).toBe('bdnix request: ');
+  expect(mail.searchParams.get('body')).toBe('What should it do?\n\n');
+
+  const issue = suggest.getByRole('link', { name: 'Open a GitHub issue' });
+  await expect(issue).toHaveAttribute('href', 'https://github.com/bdnix/bdnix/issues/new?template=request.yml');
+  // The link picks the issue form by file name, so it has to exist.
+  expect(fs.existsSync(new URL('../../.github/ISSUE_TEMPLATE/request.yml', import.meta.url))).toBe(true);
+
+  await expect(suggest.locator('.oss')).toHaveText('bdnix is open source. Read the code, report a bug or send a pull request on GitHub.');
+  await expect(suggest.locator('.oss').getByRole('link', { name: 'GitHub' })).toHaveAttribute('href', 'https://github.com/bdnix/bdnix');
+  await expectNoSideScroll(page);
+});
+
+test('every page with a footer links to the GitHub repository and to the request section', async ({ page }) => {
+  for (const url of ['/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/mp4-to-mp3/', '/compress-image/', '/profile/']) {
+    await page.goto(url);
+    const foot = page.locator('footer.foot');
+    await expect(foot.getByRole('link', { name: 'Open source on GitHub' }), url).toHaveAttribute('href', 'https://github.com/bdnix/bdnix');
+    await expect(foot.getByRole('link', { name: 'Suggest a tool or game' }), url).toHaveAttribute('href', '/#suggest');
+    await expect(foot.getByRole('link', { name: 'root@bdnix.com' }), url).toHaveAttribute('href', 'mailto:root@bdnix.com');
+    await expectNoSideScroll(page);
+  }
+
+  await page.goto('/merge-pdf/');
+  await page.getByRole('link', { name: 'Suggest a tool or game' }).click();
+  await expect(page).toHaveURL(/\/#suggest$/);
+  await expect(page.locator('#suggest')).toBeInViewport();
 });
