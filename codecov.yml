@@ -1,10 +1,14 @@
 # Codecov settings: https://docs.codecov.com/docs/codecov-yaml
-# CI uploads the combined unit and UI coverage of assets/js/*.js (see
-# .github/workflows/tests.yml). The two checks below are what AGENTS.md asks
-# of every pull request.
+# The unit and UI test jobs each upload their coverage of assets/js/*.js
+# (see .github/workflows/tests.yml), and Codecov combines them: a line counts
+# as covered if either suite runs it. The two checks below are what
+# AGENTS.md asks of every pull request.
 codecov:
   # Only report once every CI job has passed.
   require_ci_to_pass: true
+  notify:
+    # The unit and UI test jobs each upload; wait for both.
+    after_n_builds: 2
 
 coverage:
   precision: 2
@@ -25,6 +29,7 @@ coverage:
         target: 90%
 
 comment:
-  layout: "condensed_header, diff, files"
+  layout: "condensed_header, diff, flags, files"
+  after_n_builds: 2
   # Also post when coverage is unchanged, so every pull request shows it.
   require_changes: false

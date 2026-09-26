@@ -62,11 +62,11 @@ If a UI test fails on GitHub, the run's **playwright-report** artifact has the H
 
 ### Coverage
 
-CI combines what the unit and UI tests cover in `assets/js/*.js` into one report (a line counts as covered if either suite runs it). Each workflow run shows it as a per-file table on the run's **Summary** page, and uploads the full report as the **coverage-report** artifact: `index.html`, a browsable report that highlights every line, plus `cobertura-coverage.xml` and `lcov.info` for other tools. It also uploads `lcov.info` to [Codecov](https://codecov.io/gh/bdnix/bdnix), which draws the coverage badge at the top of this page and comments on each pull request with how its coverage compares to `master`. Codecov also checks every pull request ([codecov.yml](codecov.yml)): **codecov/project** fails if overall line coverage drops more than 0.1% below `master`, and **codecov/patch** fails if less than 90% of the new or changed lines are covered. The **Tests** badge is GitHub's own status for the workflow on `master`. Locally:
+The unit and UI test jobs each upload what they cover in `assets/js/*.js` to [Codecov](https://codecov.io/gh/bdnix/bdnix) as `lcov.info`. Codecov combines them (a line counts as covered if either suite runs it; scripts no test loads count at 0%), draws the coverage badge at the top of this page, and comments on each pull request with how its coverage compares to `master`. Codecov also checks every pull request ([codecov.yml](codecov.yml)): **codecov/project** fails if overall line coverage drops more than 0.1% below `master`, and **codecov/patch** fails if less than 90% of the new or changed lines are covered. The **Tests** badge is GitHub's own status for the workflow on `master`. Locally:
 
 ```bash
 npm run coverage        # both suites with coverage, combined
-# open coverage/report/index.html
+# open coverage/report/index.html, a browsable report that highlights every line
 ```
 
 ### Caching
