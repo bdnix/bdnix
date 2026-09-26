@@ -11,6 +11,9 @@ export default defineConfig({
   globalTeardown: './tests/coverage/ui-teardown.mjs',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
+  // Playwright uses half the CPUs by default. The tests are deterministic
+  // (frozen clocks, fixed randomness), so CI can use all of them.
+  workers: process.env.CI ? '100%' : undefined,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: `http://localhost:${PORT}`,
