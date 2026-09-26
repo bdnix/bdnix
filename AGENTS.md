@@ -64,7 +64,7 @@ Leave merging to the owner: don't merge the pull request yourself.
 
 ## Coverage must not drop
 
-The unit and UI test jobs each upload their coverage of `assets/js/*.js` to [Codecov](https://codecov.io/gh/bdnix/bdnix), which combines them (a line counts as covered if either suite runs it), comments on the pull request with a per-file table, and draws the README badge.
+CI uploads the unit and UI tests' coverage of `assets/js/*.js` to [Codecov](https://codecov.io/gh/bdnix/bdnix) in one upload. Codecov combines them (a line counts as covered if either suite runs it), comments on the pull request with a per-file table, and draws the README badge.
 
 - **A pull request must not lower line coverage.** Codecov checks this on every pull request (settings in `codecov.yml`): **codecov/project** fails if overall line coverage drops more than 0.1% below `master`, and **codecov/patch** fails if less than 90% of the lines the pull request adds or changes are covered. Both must pass. Codecov's pull request comment shows which files lost coverage; add tests for the new or changed lines.
 - Deleting code can lower coverage without anything being wrong. Say so in the pull request.
@@ -102,8 +102,9 @@ npm run serve          # the site at http://localhost:4173
 
 `.github/workflows/tests.yml` runs on every pull request and push to `master`:
 
-- **Unit tests:** hash check, then the unit tests with coverage, uploaded to Codecov.
-- **UI tests:** Playwright in Chromium with coverage, uploaded to Codecov. On failure it uploads the HTML report and a trace of each failed test (**playwright-report** artifact).
+- **Unit tests:** hash check, then the unit tests with coverage.
+- **UI tests:** Playwright in Chromium with coverage. On failure it uploads the HTML report and a trace of each failed test (**playwright-report** artifact).
+- **Coverage:** once both pass, uploads their coverage to Codecov together.
 
 Codecov then posts **codecov/project** and **codecov/patch** (see [Coverage must not drop](#coverage-must-not-drop)). `node_modules` and Playwright's Chromium are cached; see `.github/actions/setup`.
 

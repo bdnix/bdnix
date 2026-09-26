@@ -6,21 +6,19 @@ on:
   pull_request:
   workflow_dispatch:
 
-# id-token lets the Codecov uploads sign in with GitHub's OIDC token, so
-# there's no Codecov secret to set up.
 permissions:
   contents: read
-  id-token: write
 
-# A newer push to the same branch or PR replaces a run still in progress.
 concurrency:
   group: tests-${{ github.ref }}
-  cancel-in-progress: true
+  # On a pull request, a newer push replaces a run still in progress. Runs on
+  # master always finish, so every commit there gets its coverage report.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Each test job uploads its own coverage to Codecov, which combines them
-# (see codecov.yml), reports on the pull request and draws the README badge.
-# A failed upload doesn't fail the job.
 jobs:
+  # The unit and UI tests run in parallel, each with coverage. Once both
+  # pass, the coverage job uploads their reports to Codecov together (see
+  # codecov.yml), so Codecov never builds a report from one suite alone.
   unit:
     name: Unit tests
     runs-on: ubuntu-latest
@@ -33,15 +31,16 @@ jobs:
       # `npm run build`, which would let browsers keep a stale copy.
       - name: Cache-busting hashes are up to date
         run: npm run build:check
+      # Runs even if the hash check failed, so one run reports both.
       - name: Unit tests with coverage
+        if: ${{ !cancelled() }}
         run: npm run coverage:unit
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v7
+      - name: Save coverage
+        uses: actions/upload-artifact@v7
         with:
-          files: coverage/unit/lcov.info
-          flags: unit
-          disable_search: true
-          use_oidc: true
+          name: coverage-unit
+          path: coverage/unit/lcov.info
+          retention-days: 1
 
   ui:
     name: UI tests
@@ -69,13 +68,12 @@ jobs:
         run: npx playwright install-deps chromium
       - name: UI tests with coverage
         run: npm run coverage:ui
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v7
+      - name: Save coverage
+        uses: actions/upload-artifact@v7
         with:
-          files: coverage/ui/lcov.info
-          flags: ui
-          disable_search: true
-          use_oidc: true
+          name: coverage-ui
+          path: coverage/ui/lcov.info
+          retention-days: 1
       - name: Upload test report and traces
         if: failure()
         uses: actions/upload-artifact@v7
@@ -86,3 +84,31 @@ jobs:
             test-results/
           retention-days: 14
 
+  coverage:
+    name: Coverage
+    needs: [unit, ui]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # Lets the Codecov upload sign in with GitHub's OIDC token, so there's
+      # no Codecov secret to set up.
+      id-token: write
+    steps:
+      # Codecov reads the commit and the file list from the checkout.
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: coverage-unit
+          path: coverage/unit/
+      - uses: actions/download-artifact@v8
+        with:
+          name: coverage-ui
+          path: coverage/ui/
+      # A failed upload doesn't fail the job.
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          files: coverage/unit/lcov.info,coverage/ui/lcov.info
+          disable_search: true
+          use_oidc: true
