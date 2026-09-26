@@ -25,12 +25,13 @@ Shared across pages:
 - `assets/js/blocks.js`: the falling-block backdrop (`window.bdnix`).
 - `assets/js/pdftools.js`: page-range parsing, file helpers, dropping files on the page, and the on-demand PDF.js loader (`window.bdnixPdf`). The audio converter and image compressor use its file helpers too.
 - `assets/js/profile.js`: the visitor's name and scores (`window.bdnixProfile`).
+- `assets/js/analytics.js`: Google Analytics page views (`window.bdnixAnalytics`). Every page links it in `<head>`; it only runs on `www.bdnix.com` / `bdnix.com`, so local previews and tests send nothing.
 
 Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit, lamejs), each with its licence file.
 
 ## Ground rules
 
-- **Everything runs in the browser.** Files the visitor opens are never uploaded; there is no server. Don't add anything that sends user data anywhere, including analytics, and don't add external scripts. Load libraries from `assets/vendor/`, not a CDN.
+- **Everything runs in the browser.** Files the visitor opens are never uploaded; there is no server. Don't add anything that sends user data anywhere, and don't add external scripts. Load libraries from `assets/vendor/`, not a CDN. The one exception is Google Analytics (`assets/js/analytics.js`), which the site owner chose to add: it reports page views only and must never be given file names, file contents or anything else the visitor enters. A new page must link it in `<head>` (the UI test in `tests/ui/analytics.spec.mjs` lists every page).
 - **Keep it dependency-free at runtime.** No frameworks and no bundler. `package.json` holds dev tooling only (tests, coverage, the cache-busting script).
 - **Match the existing code.** Each script is one IIFE, `(function(){ ... })();`, in ES5-style `var`/`function` code. A script that other scripts use exposes one `window.bdnix*` object. Comment density, naming and CSS style should match the file you're in.
 - **Reuse, don't duplicate.** Use the tokens in `base.css`, the layout in `tool.css`, and the helpers in `pdftools.js` / `profile.js`. If two pages need the same logic, move it into a shared file.
