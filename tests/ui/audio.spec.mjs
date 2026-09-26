@@ -16,7 +16,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('keeps its title, and describes what it does', async ({ page }) => {
-  await expect(page).toHaveTitle('bdnix — MP4 to MP3');
+  await expect(page).toHaveTitle('MP4 to MP3 — Convert video to audio free | bdnix');
   await expect(page.locator('h1')).toHaveText('MP4 to MP3');
   await expect(page.locator('.features li b')).toHaveText(['Any video or audio in.', 'MP3 or WAV out.', 'Stereo or mono.', 'Several files at once.', 'Long phone videos.']);
   await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /MP3 \(64 to 320 kbps\) or WAV, in stereo or mono/);

@@ -2,7 +2,7 @@ import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 
 test('shows the games and tools, with no under-construction wording', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle('bdnix');
+  await expect(page).toHaveTitle('bdnix — Free browser games and PDF, audio and image tools');
   await expect(page.locator('h1')).toHaveText('Play a little.Get things done.');
   await expect(page.locator('body')).not.toContainText(/under construction|check back soon|being built/i);
 

@@ -36,7 +36,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('describes what it does', async ({ page }) => {
-  await expect(page).toHaveTitle('bdnix — Compress Images');
+  await expect(page).toHaveTitle('Compress Images — Shrink JPEG, PNG and WebP free | bdnix');
   await expect(page.locator('h1')).toHaveText('Compress Images');
   await expect(page.locator('.features li')).toHaveCount(5);
   await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /never uploaded/);
