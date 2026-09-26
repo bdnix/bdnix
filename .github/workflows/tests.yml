@@ -107,3 +107,31 @@ jobs:
           name: coverage-report
           path: coverage/report/
           retention-days: 30
+
+  # Publishes the README's coverage badge (coverage/report/coverage-badge.json)
+  # to the `badges` branch, which holds only that file. Runs for pushes to
+  # master, so the badge shows master's coverage.
+  badge:
+    name: Coverage badge
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [coverage]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: coverage-report
+          path: report/
+      - name: Push the badge to the badges branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir badges && cp report/coverage-badge.json badges/coverage.json
+          cd badges
+          git init -q -b badges
+          git add coverage.json
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -q -m "Coverage badge for ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" badges
