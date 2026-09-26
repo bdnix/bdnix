@@ -28,6 +28,11 @@
 .score-text b.none{font:400 14px var(--sans);color:var(--faint)}
 .score .btn{padding:10px 14px;font-size:14px}
 
+.analytics{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:22px;padding:16px 18px}
+.analytics-text{flex:1 1 260px;min-width:0}
+.analytics-text p{margin:0}
+.analytics-text p:last-child{margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--muted)}
+
 .stat{margin:22px 0 0;font-size:14px;color:var(--muted)}
 .note{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--faint);max-width:60ch}
 

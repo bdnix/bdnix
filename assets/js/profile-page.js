@@ -62,6 +62,22 @@
     msg.textContent = 'Saved. Hi, ' + name + '!';
   });
 
+  // Google Analytics consent: the same choice the banner asks for.
+  var A = window.bdnixAnalytics;
+  function renderAnalytics(){
+    var on = A.consent() === 'granted';
+    $('analyticsState').textContent = on
+      ? 'On. Google Analytics counts your visits with cookies. Files you open in the tools never leave your browser.'
+      : 'Off. Turn it on to let Google Analytics count your visits with cookies. Files you open in the tools never leave your browser.';
+    $('analyticsBtn').textContent = on ? 'Turn off' : 'Turn on';
+  }
+  $('analyticsBtn').addEventListener('click', function(){
+    var on = A.setConsent(A.consent() === 'granted' ? 'denied' : 'granted') === 'granted';
+    msg.textContent = on ? 'Analytics cookies turned on. Thanks!' : 'Analytics cookies turned off.';
+  });
+  window.addEventListener('bdnix:consent', renderAnalytics);
+  renderAnalytics();
+
   // Scores can change in another tab (a game in progress), so keep them fresh.
   window.addEventListener('storage', renderScores);
   window.addEventListener('pageshow', renderScores);
