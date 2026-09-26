@@ -79,13 +79,17 @@ jobs:
           retention-days: 14
 
   # Combines both suites' coverage into one report: a per-file table on the
-  # run's Summary page, and the full report as the coverage-report artifact.
+  # run's Summary page, the full report as the coverage-report artifact, and
+  # an upload to Codecov.
   # Runs only when all tests pass.
   coverage:
     name: Code coverage
     needs: [unit, ui]
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -107,31 +111,13 @@ jobs:
           name: coverage-report
           path: coverage/report/
           retention-days: 30
-
-  # Publishes the README's coverage badge (coverage/report/coverage-badge.json)
-  # to the `badges` branch, which holds only that file. Runs for pushes to
-  # master, so the badge shows master's coverage.
-  badge:
-    name: Coverage badge
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    needs: [coverage]
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v8
+      # Codecov keeps the history behind the README's coverage badge and
+      # comments on pull requests with the change. It signs in with GitHub's
+      # OIDC token, so there's no secret to set up. An upload that fails
+      # doesn't fail the run.
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
         with:
-          name: coverage-report
-          path: report/
-      - name: Push the badge to the badges branch
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir badges && cp report/coverage-badge.json badges/coverage.json
-          cd badges
-          git init -q -b badges
-          git add coverage.json
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -q -m "Coverage badge for ${GITHUB_SHA::7}"
-          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" badges
+          files: coverage/report/lcov.info
+          disable_search: true
+          use_oidc: true

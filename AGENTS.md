@@ -104,8 +104,7 @@ npm run serve          # the site at http://localhost:4173
 
 - **Unit tests:** hash check, then the unit tests with coverage.
 - **UI tests:** Playwright in Chromium with coverage. On failure it uploads the HTML report and a trace of each failed test (**playwright-report** artifact).
-- **Code coverage:** once both pass, combines their coverage into one report, adds the table to the run's Summary page, and uploads the full report (**coverage-report** artifact).
-- **Coverage badge:** on pushes to `master` only, publishes the README's coverage badge (`coverage.json`, a shields.io endpoint) to the `badges` branch. That branch holds only the badge and is rewritten on every run; don't work on it.
+- **Code coverage:** once both pass, combines their coverage into one report, adds the table to the run's Summary page, uploads the full report (**coverage-report** artifact), and sends it to Codecov for the README badge and a coverage comment on the pull request.
 
 `node_modules` and Playwright's Chromium are cached; see `.github/actions/setup`.
 

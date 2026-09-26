@@ -1,7 +1,7 @@
 # bdnix
 
 [![Tests](https://github.com/bdnix/bdnix/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/bdnix/bdnix/actions/workflows/tests.yml?query=branch%3Amaster)
-[![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fbdnix%2Fbdnix%2Fbadges%2Fcoverage.json)](https://github.com/bdnix/bdnix/actions/workflows/tests.yml?query=branch%3Amaster)
+[![Coverage](https://codecov.io/gh/bdnix/bdnix/branch/master/graph/badge.svg)](https://codecov.io/gh/bdnix/bdnix)
 
 The open source site behind [www.bdnix.com](https://www.bdnix.com): Tetris and Pac-Man, three PDF tools (merge, watermark and redact), an MP4 to MP3 converter, an image compressor, and a profile page for your name and best scores. Everything runs in the browser. Hosted on GitHub Pages; no build step.
 
@@ -62,7 +62,7 @@ If a UI test fails on GitHub, the run's **playwright-report** artifact has the H
 
 ### Coverage
 
-CI combines what the unit and UI tests cover in `assets/js/*.js` into one report (a line counts as covered if either suite runs it). Each workflow run shows it as a per-file table on the run's **Summary** page, and uploads the full report as the **coverage-report** artifact: `index.html`, a browsable report that highlights every line, plus `cobertura-coverage.xml` and `lcov.info` for other tools. After each push to `master`, the **Coverage badge** job publishes the line coverage figure to the `badges` branch as `coverage.json`, a [shields.io endpoint](https://shields.io/badges/endpoint-badge) that the badge at the top of this page reads ([tests/coverage/badge.mjs](tests/coverage/badge.mjs) builds it). The **Tests** badge is GitHub's own status for the workflow on `master`. Locally:
+CI combines what the unit and UI tests cover in `assets/js/*.js` into one report (a line counts as covered if either suite runs it). Each workflow run shows it as a per-file table on the run's **Summary** page, and uploads the full report as the **coverage-report** artifact: `index.html`, a browsable report that highlights every line, plus `cobertura-coverage.xml` and `lcov.info` for other tools. It also uploads `lcov.info` to [Codecov](https://codecov.io/gh/bdnix/bdnix), which draws the coverage badge at the top of this page and comments on each pull request with how its coverage compares to `master`. The **Tests** badge is GitHub's own status for the workflow on `master`. Locally:
 
 ```bash
 npm run coverage        # both suites with coverage, combined
