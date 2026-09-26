@@ -13,6 +13,10 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('eats its way to a power pellet, then loses its lives', async ({ page }) => {
+  // Plays out every frame until the ghosts have caught it three times, which
+  // takes most of the default 30 s at phone size and more when the machine
+  // is busy, so give it the extra time Playwright allows for slow tests.
+  test.slow();
   const score = page.locator('#score');
   await page.clock.runFor(1500);                    // left to the wall: 7 dots
   await expect(score).toHaveText('70');
