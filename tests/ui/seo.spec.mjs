@@ -3,7 +3,7 @@ import { test, expect } from './fixtures.mjs';
 const LIVE = 'https://www.bdnix.com';
 // Pages search engines should list. The profile only shows what's saved in
 // the visitor's own browser, so it's kept out of the index.
-const listed = ['/', '/tetris/', '/pacman/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/mp4-to-mp3/', '/compress-image/'];
+const listed = ['/', '/tetris/', '/pacman/', '/flappy-bird/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/mp4-to-mp3/', '/compress-image/'];
 const pages = [...listed, '/profile/'];
 
 const meta = (page, attr, name) => page.locator(`head meta[${attr}="${name}"]`);
@@ -66,7 +66,7 @@ test('the landing page, games and tools describe themselves as structured data',
     } else {
       expect(data['@type'], url).toBe('WebApplication');
       expect(await page.title(), url).toContain(data.name);
-      expect(data.applicationCategory, url).toBe(/tetris|pacman/.test(url) ? 'GameApplication' : /pdf/.test(url) ? 'UtilitiesApplication' : 'MultimediaApplication');
+      expect(data.applicationCategory, url).toBe(/tetris|pacman|flappy/.test(url) ? 'GameApplication' : /pdf/.test(url) ? 'UtilitiesApplication' : 'MultimediaApplication');
       expect(data.offers, url).toEqual({ '@type': 'Offer', price: '0', priceCurrency: 'USD' });
     }
   }

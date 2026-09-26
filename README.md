@@ -3,7 +3,7 @@
 [![Tests](https://github.com/bdnix/bdnix/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/bdnix/bdnix/actions/workflows/tests.yml?query=branch%3Amaster)
 [![Coverage](https://codecov.io/gh/bdnix/bdnix/branch/master/graph/badge.svg)](https://codecov.io/gh/bdnix/bdnix)
 
-The open source site behind [www.bdnix.com](https://www.bdnix.com): Tetris and Pac-Man, three PDF tools (merge, watermark and redact), an MP4 to MP3 converter, an image compressor, and a profile page for your name and best scores. Everything runs in the browser. Hosted on GitHub Pages; no build step.
+The open source site behind [www.bdnix.com](https://www.bdnix.com): Tetris, Pac-Man and Flappy Bird, three PDF tools (merge, watermark and redact), an MP4 to MP3 converter, an image compressor, and a profile page for your name and best scores. Everything runs in the browser. Hosted on GitHub Pages; no build step.
 
 ## Preview locally
 
@@ -24,6 +24,7 @@ Both pages share one design system, so they look like the same site:
 - [index.html](index.html), [assets/css/style.css](assets/css/style.css), [assets/js/main.js](assets/js/main.js): landing page
 - [tetris/index.html](tetris/index.html), [assets/css/tetris.css](assets/css/tetris.css), [assets/js/tetris.js](assets/js/tetris.js): Tetris, served at `/tetris/`.
 - [pacman/index.html](pacman/index.html), [assets/css/pacman.css](assets/css/pacman.css), [assets/js/pacman.js](assets/js/pacman.js): Pac-Man, served at `/pacman/`
+- [flappy-bird/index.html](flappy-bird/index.html), [assets/css/flappy.css](assets/css/flappy.css), [assets/js/flappy.js](assets/js/flappy.js), [assets/js/flappy-core.js](assets/js/flappy-core.js): Flappy Bird, served at `/flappy-bird/`. The rules (physics, pipes, collisions, scoring, medals) are in `flappy-core.js`, unit tested; `flappy.js` draws them and handles input
 - [merge-pdf/index.html](merge-pdf/index.html), [assets/css/merge.css](assets/css/merge.css), [assets/js/merge.js](assets/js/merge.js): PDF merger, served at `/merge-pdf/`
 - [profile/index.html](profile/index.html), [assets/css/profile.css](assets/css/profile.css), [assets/js/profile-page.js](assets/js/profile-page.js): the visitor's profile, served at `/profile/`
 - [assets/js/profile.js](assets/js/profile.js): reads and saves the display name and reads the game scores; fills in the profile chip in the top bar of the landing and tool pages
@@ -55,7 +56,7 @@ npm test                          # unit tests, then UI tests
 ```
 
 - **Unit tests** (`npm run test:unit`, [tests/unit/](tests/unit/)) use Node's built-in test runner. They load the site's scripts in a sandbox and check the page-range parser, file-size formatting, the profile (name rules, reading the game scores, blocked storage), the watermark placement maths for every page rotation, the redact tool's text search and box geometry, and the audio converter's channel mixing, MP3 and WAV encoding (the MP3 frames are read back to check bitrate and channels, and encoding in pieces must match encoding whole) and reading MP4s (audio pieces and timings, codec configs for AAC, MP3 and FLAC in MP4 and QuickTime layouts, edit lists), and the image compressor's rules (which files are images, output format and name, resizing within a phone's canvas limit, keeping the original when it's smaller).
-- **UI tests** (`npm run test:ui`, [tests/ui/](tests/ui/)) use Playwright to drive the real pages in Chromium, at desktop and phone size. They cover the landing page, profile, merging (order, page ranges, errors), watermarking (preview, layers, fonts, images, remembered settings; the downloaded PDFs are opened and checked), redacting (search, drawing, undo; the downloaded PDFs are read back to check the text is gone and the areas are black), converting video and audio to MP3 and WAV (the downloads are decoded to check their length, channels and pitch), compressing images (the downloads are decoded to check their format, size and colours, including transparency), gameplay in both games (Tetris: moving, rotating, holding, clearing a line, pausing, touch buttons and game over; Pac-Man: steering a route to a power pellet, pausing, touch buttons and swipes, and losing every life), run on a frozen clock with fixed randomness so the scores are exact, and that no page scrolls sideways on a phone. Any uncaught JavaScript error fails the test. Test PDFs, MP4s, WAVs, PNGs and GIFs are generated on the fly, so no binary fixtures are committed. The test MP4s carry FLAC audio, because the Chromium that Playwright runs can't decode AAC, the usual MP4 audio; real Chrome, Edge, Firefox and Safari can.
+- **UI tests** (`npm run test:ui`, [tests/ui/](tests/ui/)) use Playwright to drive the real pages in Chromium, at desktop and phone size. They cover the landing page, profile, merging (order, page ranges, errors), watermarking (preview, layers, fonts, images, remembered settings; the downloaded PDFs are opened and checked), redacting (search, drawing, undo; the downloaded PDFs are read back to check the text is gone and the areas are black), converting video and audio to MP3 and WAV (the downloads are decoded to check their length, channels and pitch), compressing images (the downloads are decoded to check their format, size and colours, including transparency), gameplay in all three games (Tetris: moving, rotating, holding, clearing a line, pausing, touch buttons and game over; Pac-Man: steering a route to a power pellet, pausing, touch buttons and swipes, and losing every life; Flappy Bird: flying through pipes by watching where the bird is drawn, flapping by key, click and tap, pausing, and crashing), run on a frozen clock with fixed randomness so the scores are exact, and that no page scrolls sideways on a phone. Any uncaught JavaScript error fails the test. Test PDFs, MP4s, WAVs, PNGs and GIFs are generated on the fly, so no binary fixtures are committed. The test MP4s carry FLAC audio, because the Chromium that Playwright runs can't decode AAC, the usual MP4 audio; real Chrome, Edge, Firefox and Safari can.
 - `npm run serve` serves the site at http://localhost:4173 with the same small server the UI tests use.
 
 If a UI test fails on GitHub, the run's **playwright-report** artifact has the HTML report and a trace of each failed test (`npx playwright show-trace trace.zip`).
@@ -101,11 +102,20 @@ The vendored libraries in `assets/vendor` keep their version number as `?v=`; bu
 | Move   | Arrow keys or WASD | Swipe anywhere, or the arrow buttons |
 | Pause  | P / Esc            | ❚❚                            |
 
-Both games save their best score in the browser's localStorage.
+## Flappy Bird controls
+
+| Action | Keyboard           | Touch                  |
+|--------|--------------------|------------------------|
+| Flap   | Space, ↑ or W (or click) | Tap anywhere     |
+| Pause  | P / Esc            | ❚❚                     |
+
+Each pipe you pass is a point; 10, 20, 30 and 40 points earn bronze, silver, gold and platinum medals.
+
+All three games save their best score in the browser's localStorage.
 
 ## Profile
 
-The chip in the top right of the landing and tool pages links to `/profile/`. It shows the visitor's name ("User" until they set one, up to 24 characters) and their best Tetris and Pac-Man scores, read straight from the keys the games already save (`bdnix_tetris_best`, `bdnix_pacman_best`). It also shows the visit count kept by the landing page. The name is stored as `bdnix_name`. All of it lives in the browser's localStorage, so it's per device and nothing is uploaded. Below the scores, **Analytics cookies** turns Google Analytics on or off (the same choice the consent banner asks for).
+The chip in the top right of the landing and tool pages links to `/profile/`. It shows the visitor's name ("User" until they set one, up to 24 characters) and their best Tetris, Pac-Man and Flappy Bird scores, read straight from the keys the games already save (`bdnix_tetris_best`, `bdnix_pacman_best`, `bdnix_flappy_best`). It also shows the visit count kept by the landing page. The name is stored as `bdnix_name`. All of it lives in the browser's localStorage, so it's per device and nothing is uploaded. Below the scores, **Analytics cookies** turns Google Analytics on or off (the same choice the consent banner asks for).
 
 ## PDF merger
 

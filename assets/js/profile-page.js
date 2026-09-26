@@ -10,7 +10,8 @@
   // Same icons as the game cards on the landing page.
   var ICONS = {
     tetris: '<rect x="4" y="18" width="10" height="10" rx="2" fill="#a855f7"/><rect x="15" y="18" width="10" height="10" rx="2" fill="#a855f7"/><rect x="26" y="18" width="10" height="10" rx="2" fill="#a855f7"/><rect x="15" y="7" width="10" height="10" rx="2" fill="#a855f7"/><rect x="4" y="29" width="10" height="10" rx="2" fill="#22d3ee" opacity=".55"/><rect x="15" y="29" width="10" height="10" rx="2" fill="#22d3ee" opacity=".55"/><rect x="26" y="29" width="10" height="10" rx="2" fill="#22d3ee" opacity=".55"/>',
-    pacman: '<path d="M14 20 L24.4 14 A12 12 0 1 0 24.4 26 Z" fill="#facc15"/><circle cx="29" cy="20" r="2" fill="#eef1f8" opacity=".8"/><circle cx="36" cy="20" r="2" fill="#eef1f8" opacity=".8"/>'
+    pacman: '<path d="M14 20 L24.4 14 A12 12 0 1 0 24.4 26 Z" fill="#facc15"/><circle cx="29" cy="20" r="2" fill="#eef1f8" opacity=".8"/><circle cx="36" cy="20" r="2" fill="#eef1f8" opacity=".8"/>',
+    flappy: '<rect x="27" y="2" width="9" height="11" rx="1.5" fill="#22d3ee" opacity=".55"/><rect x="27" y="27" width="9" height="11" rx="1.5" fill="#22d3ee" opacity=".55"/><circle cx="14" cy="20" r="9" fill="#facc15"/><ellipse cx="11" cy="22" rx="4.5" ry="2.6" fill="#f59e0b"/><circle cx="17.5" cy="17" r="2.6" fill="#fff"/><path d="M21 20l6 2-6 2z" fill="#fb923c"/>'
   };
 
   function renderScores(){
