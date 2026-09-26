@@ -29,6 +29,19 @@ Shared across pages:
 
 Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit, lamejs), each with its licence file.
 
+## Every change ends in a pull request with green CI
+
+When the owner asks for a feature, a fix or any other change to this repo, the work isn't done until a pull request is open and all its CI checks pass. Don't ask whether to open one, and don't stop at a pushed branch.
+
+1. Work on a branch: the one the session assigns, or a new one off `master`. Never push to `master`.
+2. Do everything in [Before you open a pull request](#before-you-open-a-pull-request), then commit and push.
+3. Open a pull request against `master` right away, without asking for confirmation. If the branch already has an open pull request, push to it instead. If its pull request was already merged, start the branch again from the latest `master` and open a new one. The description says what changed, why, and how it was tested, and mentions anything that lowered coverage (see [Coverage must not drop](#coverage-must-not-drop)).
+4. Watch the pull request until every check in `.github/workflows/tests.yml` has finished. When one fails, read its log, find the cause, fix it, run the checks locally, push, and wait again. Repeat until everything passes. [Tests are required](#tests-are-required) still applies: never skip, disable or loosen a test to get green, and "flaky" isn't a cause.
+5. Handle review comments the same way: make the fix, push, and see CI through again.
+6. Report back only when the pull request is green and meets everything that was asked: give its link, what changed, and how it was tested. If something can't be fixed from the branch (it fails on `master` too, or needs access or a decision only the owner has), say so on the pull request and to the owner, with exactly what's needed.
+
+Leave merging to the owner: don't merge the pull request yourself.
+
 ## Ground rules
 
 - **Everything runs in the browser.** Files the visitor opens are never uploaded; there is no server. Don't send the visitor's files, or anything they type into a tool, anywhere. Load libraries from `assets/vendor/`, not a CDN. The site uses Google Analytics (`assets/js/analytics.js`); a new page must link it in `<head>` (the UI test in `tests/ui/analytics.spec.mjs` lists every page). A new page also needs the SEO tags the other pages have (canonical URL, Open Graph, Twitter, structured data) and an entry in `sitemap.xml`; `tests/ui/seo.spec.mjs` lists every page.
