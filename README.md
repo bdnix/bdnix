@@ -60,9 +60,28 @@ npm test                          # unit tests, then UI tests
 
 If a UI test fails on GitHub, the run's **playwright-report** artifact has the HTML report and a trace of each failed test (`npx playwright show-trace trace.zip`).
 
+### CI pipeline
+
+One workflow, one job (**Tests**), for every pull request and every push to `master`:
+
+```mermaid
+flowchart TD
+  trigger(["Pull request, or push to master"]) --> setup["Node 22 and node_modules<br/>(cached)"]
+  setup --> chromium["Chromium<br/>(cached; system libraries installed)"]
+  chromium --> hashes["Cache-busting hashes<br/>npm run build:check"]
+  hashes --> unit["Unit tests with coverage<br/>npm run coverage:unit"]
+  unit --> ui["UI tests with coverage<br/>npm run coverage:ui"]
+  ui --> passed{"All passed?"}
+  passed -- yes --> upload["Upload both lcov.info files<br/>to Codecov together"]
+  passed -- no --> report["Upload playwright-report<br/>(HTML report and traces)"]
+  upload --> codecov["Codecov: README badge, PR comment,<br/>codecov/project and codecov/patch checks"]
+```
+
+The three checks run even when an earlier one failed, so one run shows every problem. Coverage goes to Codecov only when everything passed, in a single upload, so it never sees half a report. On a pull request, a new push cancels the run still in progress; runs on `master` always finish, so every commit there gets a coverage report. GitHub's CodeQL code scanning runs separately (set up in the repository's settings, not in this workflow).
+
 ### Coverage
 
-The UI tests job uploads what both suites cover in `assets/js/*.js` to [Codecov](https://codecov.io/gh/bdnix/bdnix), as one upload of their two `lcov.info` files (it reruns the unit tests, which take seconds, for their coverage). Codecov combines them (a line counts as covered if either suite runs it; scripts no test loads count at 0%), draws the coverage badge at the top of this page, and comments on each pull request with how its coverage compares to `master`. Codecov also checks every pull request ([codecov.yml](codecov.yml)): **codecov/project** fails if overall line coverage drops more than 0.1% below `master`, and **codecov/patch** fails if less than 90% of the new or changed lines are covered. The **Tests** badge is GitHub's own status for the workflow on `master`. Locally:
+[Codecov](https://codecov.io/gh/bdnix/bdnix) combines what the unit and UI tests cover in `assets/js/*.js` (a line counts as covered if either suite runs it; scripts no test loads count at 0%), draws the coverage badge at the top of this page, and comments on each pull request with how its coverage compares to `master`. Codecov also checks every pull request ([codecov.yml](codecov.yml)): **codecov/project** fails if overall line coverage drops more than 0.1% below `master`, and **codecov/patch** fails if less than 90% of the new or changed lines are covered. The **Tests** badge is GitHub's own status for the workflow on `master`. Locally:
 
 ```bash
 npm run coverage        # both suites with coverage, combined
@@ -72,7 +91,7 @@ npm run coverage        # both suites with coverage, combined
 ### Caching
 
 The workflow caches what it can between runs:
-- **`node_modules`:** keyed on `package-lock.json` and the Node version, so `npm ci` only runs after a dependency change. This is set up once in [.github/actions/setup](.github/actions/setup/action.yml) and shared by every job.
+- **`node_modules`:** keyed on `package-lock.json` and the Node version, so `npm ci` only runs after a dependency change. This is set up in [.github/actions/setup](.github/actions/setup/action.yml).
 - **Playwright's Chromium:** keyed on the Playwright version. On a cache hit, only Chromium's Linux system libraries are installed, since they're apt packages and can't be cached.
 
 ## Deploying changes

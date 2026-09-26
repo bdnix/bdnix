@@ -6,40 +6,29 @@ on:
   pull_request:
   workflow_dispatch:
 
-# id-token lets the Codecov upload sign in with GitHub's OIDC token, so
-# there's no Codecov secret to set up.
 permissions:
   contents: read
-  id-token: write
 
-# A newer push to the same branch or PR replaces a run still in progress.
 concurrency:
   group: tests-${{ github.ref }}
-  cancel-in-progress: true
+  # On a pull request, a newer push replaces a run still in progress. Runs on
+  # master always finish, so every commit there gets its coverage report.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# The UI tests job uploads both suites' coverage to Codecov, which combines
-# them (see codecov.yml), reports on the pull request and draws the README
-# badge. A failed upload doesn't fail the job.
 jobs:
-  unit:
-    name: Unit tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      # Every page links its scripts and styles with ?v=<hash of the file>.
-      # Fails if a change to assets/js or assets/css wasn't followed by
-      # `npm run build`, which would let browsers keep a stale copy.
-      - name: Cache-busting hashes are up to date
-        run: npm run build:check
-      - name: Unit tests
-        run: npm run test:unit
-
-  ui:
-    name: UI tests
+  # One job runs everything once: the hash check, the unit tests and the UI
+  # tests, each with coverage, then uploads both suites' coverage to Codecov
+  # together (see codecov.yml). The unit tests take seconds, so running them
+  # in parallel elsewhere would save nothing.
+  test:
+    name: Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      # Lets the Codecov upload sign in with GitHub's OIDC token, so there's
+      # no Codecov secret to set up.
+      id-token: write
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -60,16 +49,23 @@ jobs:
       - name: Install Chromium's system libraries
         if: steps.browsers.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
-      - name: UI tests with coverage
-        run: npm run coverage:ui
-      # The unit tests again, just for their coverage (they take seconds), so
-      # both suites go to Codecov in one upload. Two separate uploads would
-      # leave the badge showing only the first suite's share until the second
-      # arrived.
-      - name: Unit test coverage
+      # Every page links its scripts and styles with ?v=<hash of the file>.
+      # Fails if a change to assets/js or assets/css wasn't followed by
+      # `npm run build`, which would let browsers keep a stale copy.
+      - name: Cache-busting hashes are up to date
+        run: npm run build:check
+      # The three checks run even when an earlier one failed, so one run
+      # reports every problem.
+      - name: Unit tests with coverage
+        if: ${{ !cancelled() }}
         run: npm run coverage:unit
+      - name: UI tests with coverage
+        if: ${{ !cancelled() }}
+        run: npm run coverage:ui
+      # Only after everything passed, so Codecov never gets half a report.
+      # A failed upload doesn't fail the job.
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v7
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           files: coverage/unit/lcov.info,coverage/ui/lcov.info
           disable_search: true
@@ -83,4 +79,3 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 14
-
