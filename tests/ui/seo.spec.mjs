@@ -3,7 +3,7 @@ import { test, expect } from './fixtures.mjs';
 const LIVE = 'https://www.bdnix.com';
 // Pages search engines should list. The profile only shows what's saved in
 // the visitor's own browser, so it's kept out of the index.
-const listed = ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/mp4-to-mp3/', '/compress-image/'];
+const listed = ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/mp4-to-mp3/', '/compress-image/'];
 const pages = [...listed, '/profile/'];
 
 const meta = (page, attr, name) => page.locator(`head meta[${attr}="${name}"]`);
@@ -66,20 +66,40 @@ test('the landing page, games and tools describe themselves as structured data',
     } else {
       expect(data['@type'], url).toBe('WebApplication');
       expect(await page.title(), url).toContain(data.name);
-      expect(data.applicationCategory, url).toBe(/falling-blocks|maze-chase|flap/.test(url) ? 'GameApplication' : /pdf/.test(url) ? 'UtilitiesApplication' : 'MultimediaApplication');
+      expect(data.applicationCategory, url).toBe(/falling-blocks|maze-chase|flap|road-hop/.test(url) ? 'GameApplication' : /pdf/.test(url) ? 'UtilitiesApplication' : 'MultimediaApplication');
       expect(data.offers, url).toEqual({ '@type': 'Offer', price: '0', priceCurrency: 'USD' });
     }
   }
 });
 
-test('no page uses the trademarked names of the games that inspired ours', async ({ page, request }) => {
-  const names = /tetris|pac-?man|flappy/i;
+test('trademarked names of the games that inspired ours appear only in their credit line', async ({ page, request }) => {
+  const names = /tetris|pac-?man|flappy|crossy/i;
+  const credit = /<p class="credit">[^<]*<\/p>/g;
   for (const url of pages) {
     // Asset paths such as /assets/js/tetris.js are internal, so leave them out.
     const html = (await (await request.get(url)).text()).replace(/\/assets\/[\w./-]+/g, '');
-    expect(html, url).not.toMatch(names);
+    expect(html.replace(credit, ''), url).not.toMatch(names);
     await page.goto(url);
-    expect(await page.locator('body').innerText(), url).not.toMatch(names);
+    const text = await page.locator('body').evaluate((b) => {
+      const copy = b.cloneNode(true);
+      copy.querySelectorAll('.credit').forEach((c) => c.remove());
+      return copy.innerText;
+    });
+    expect(text, url).not.toMatch(names);
+  }
+});
+
+test('each game credits the classic that inspired it, without claiming any link to it', async ({ page }) => {
+  for (const [url, name, creator] of [
+    ['/falling-blocks/', 'Tetris', 'Alexey Pajitnov'], ['/maze-chase/', 'Pac-Man', 'Toru Iwatani'],
+    ['/flap/', 'Flappy Bird', 'Dong Nguyen'], ['/road-hop/', 'Crossy Road', 'Hipster Whale']
+  ]) {
+    await page.goto(url);
+    const credit = page.locator('#overlay .credit');
+    await expect(credit, url).toBeVisible();
+    await expect(credit, url).toContainText('Inspired by ' + name);
+    await expect(credit, url).toContainText(creator);
+    await expect(credit, url).toContainText(name + ' is a trademark of its owner; bdnix isn’t affiliated with or endorsed by them.');
   }
 });
 

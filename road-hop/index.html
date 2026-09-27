@@ -3,26 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Maze Chase — Play free in your browser | bdnix</title>
-  <meta name="description" content="Play Maze Chase free in your browser, with the keyboard, or with swipes and touch buttons on a phone. Eat every dot, dodge the ghosts and beat your best score. Nothing to install.">
-  <link rel="canonical" href="https://www.bdnix.com/maze-chase/">
+  <title>Road Hop — Play free in your browser | bdnix</title>
+  <meta name="description" content="Play Road Hop free in your browser: help a chicken hop across busy roads and ride logs over rivers. Keep moving, go as far as you can and beat your best. Nothing to install.">
+  <link rel="canonical" href="https://www.bdnix.com/road-hop/">
   <meta property="og:site_name" content="bdnix">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://www.bdnix.com/maze-chase/">
-  <meta property="og:title" content="Maze Chase — Play free in your browser | bdnix">
-  <meta property="og:description" content="Play Maze Chase free in your browser, with the keyboard, or with swipes and touch buttons on a phone. Eat every dot, dodge the ghosts and beat your best score. Nothing to install.">
+  <meta property="og:url" content="https://www.bdnix.com/road-hop/">
+  <meta property="og:title" content="Road Hop — Play free in your browser | bdnix">
+  <meta property="og:description" content="Play Road Hop free in your browser: help a chicken hop across busy roads and ride logs over rivers. Keep moving, go as far as you can and beat your best. Nothing to install.">
   <meta property="og:image" content="https://www.bdnix.com/assets/img/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="bdnix: Play a little. Get things done.">
   <meta name="twitter:card" content="summary_large_image">
-  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Maze Chase", "url": "https://www.bdnix.com/maze-chase/", "description": "Play Maze Chase free in your browser, with the keyboard, or with swipes and touch buttons on a phone. Eat every dot, dodge the ghosts and beat your best score. Nothing to install.", "applicationCategory": "GameApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Road Hop", "url": "https://www.bdnix.com/road-hop/", "description": "Play Road Hop free in your browser: help a chicken hop across busy roads and ride logs over rivers. Keep moving, go as far as you can and beat your best. Nothing to install.", "applicationCategory": "GameApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/base.css?v=f674399bef">
   <link rel="stylesheet" href="/assets/css/game.css?v=086e9f17f8">
-  <link rel="stylesheet" href="/assets/css/pacman.css?v=f2de2ef699">
+  <link rel="stylesheet" href="/assets/css/hop.css?v=5425c48418">
   <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
@@ -32,7 +32,7 @@
   <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
 
   <header class="bar">
-    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ maze chase</span></a>
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ road hop</span></a>
     <button id="pauseBtn" class="icon-btn" aria-label="Pause">
       <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2h3v12H4zM9 2h3v12H9z"/></svg>
     </button>
@@ -42,23 +42,21 @@
     <section class="panel box stats">
       <div><span class="label">Score</span><b id="score">0</b></div>
       <div><span class="label">Best</span><b id="best">0</b></div>
-      <div><span class="label">Level</span><b id="level">1</b></div>
-      <div><span class="label">Lives</span><canvas id="lives" aria-label="Lives"></canvas></div>
     </section>
 
     <div class="board-wrap">
-      <canvas id="board"></canvas>
+      <canvas id="board" aria-label="Road Hop board"></canvas>
       <div id="overlay" class="overlay">
         <p class="label" id="ovKicker">bdnix arcade</p>
-        <h1 id="ovTitle">Maze Chase</h1>
-        <p id="ovText">Eat every dot. Dodge the ghosts.</p>
+        <h1 id="ovTitle">Road Hop</h1>
+        <p id="ovText">Help the chicken across. Mind the traffic, ride the logs, and keep moving.</p>
         <div class="ov-actions">
           <button id="startBtn" class="btn btn-primary">Start game</button>
           <button id="newBtn" class="btn btn-ghost" hidden>New game</button>
         </div>
-        <p class="keys only-keys">Arrow keys or WASD to move · P pause</p>
-        <p class="keys only-touch">Swipe anywhere, or use the buttons below.</p>
-        <p class="credit">Inspired by Pac-Man, the arcade classic created by Toru Iwatani at Namco in 1980. Pac-Man is a trademark of its owner; bdnix isn’t affiliated with or endorsed by them.</p>
+        <p class="keys only-keys">Arrow keys or WASD to hop · click to hop forward · P pause</p>
+        <p class="keys only-touch">Tap to hop forward, swipe to hop any way, or use the buttons below.</p>
+        <p class="credit">Inspired by Crossy Road, created by Hipster Whale in 2014. Crossy Road is a trademark of its owner; bdnix isn’t affiliated with or endorsed by them.</p>
       </div>
     </div>
   </main>
@@ -72,6 +70,7 @@
 
   <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
   <script src="/assets/js/gamesave.js?v=fb243d7a1b"></script>
-  <script src="/assets/js/pacman.js?v=d8b336998e"></script>
+  <script src="/assets/js/hop-core.js?v=a525c710a4"></script>
+  <script src="/assets/js/hop.js?v=0feeab5856"></script>
 </body>
 </html>

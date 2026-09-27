@@ -13,7 +13,8 @@ test('a new visitor is "User" with no scores yet', async ({ page }) => {
   expect(await scores(page)).toEqual([
     { game: 'Falling Blocks', best: 'Not played yet', link: 'Play /falling-blocks/' },
     { game: 'Maze Chase', best: 'Not played yet', link: 'Play /maze-chase/' },
-    { game: 'Flap', best: 'Not played yet', link: 'Play /flap/' }
+    { game: 'Flap', best: 'Not played yet', link: 'Play /flap/' },
+    { game: 'Road Hop', best: 'Not played yet', link: 'Play /road-hop/' }
   ]);
 });
 
@@ -23,12 +24,14 @@ test('shows the best scores the games saved', async ({ page }) => {
     localStorage.setItem('bdnix_tetris_best', '12450');
     localStorage.setItem('bdnix_pacman_best', '3120');
     localStorage.setItem('bdnix_flappy_best', '27');
+    localStorage.setItem('bdnix_hop_best', '42');
   });
   await page.reload();
   expect(await scores(page)).toEqual([
     { game: 'Falling Blocks', best: '12,450', link: 'Play again /falling-blocks/' },
     { game: 'Maze Chase', best: '3,120', link: 'Play again /maze-chase/' },
-    { game: 'Flap', best: '27', link: 'Play again /flap/' }
+    { game: 'Flap', best: '27', link: 'Play again /flap/' },
+    { game: 'Road Hop', best: '42', link: 'Play again /road-hop/' }
   ]);
 });
 
