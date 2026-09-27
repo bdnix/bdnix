@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures.mjs';
 import { openGame, press, tap } from './games.mjs';
 
-// The player starts at the bottom, heading left. Each dot is 10 points and a
+// The player starts low in the maze, heading left. Each dot is 10 points and a
 // power pellet 50. The game waits 2.2 seconds on "Ready" before it moves.
 
 test.beforeEach(async ({ page }) => {
@@ -18,30 +18,25 @@ test('eats its way to a power pellet, then loses its lives', async ({ page }) =>
   // is busy, so give it the extra time Playwright allows for slow tests.
   test.slow();
   const score = page.locator('#score');
-  await page.clock.runFor(1500);                    // left to the wall: 7 dots
-  await expect(score).toHaveText('70');
+  await page.clock.runFor(2000);                    // left to the corner: 11 dots and a pellet
+  await expect(score).toHaveText('160');
   await press(page, 'ArrowUp');
-  await page.clock.runFor(150);
-  await press(page, 'ArrowLeft');                   // turns left at the first gap
-  await page.clock.runFor(1500);                    // 3 dots up, 5 along the top
-  await expect(score).toHaveText('150');
-  await press(page, 'ArrowDown');
-  await page.clock.runFor(800);                     // 2 dots down, then the pellet
-  await expect(score).toHaveText('220');
+  await page.clock.runFor(800);                     // 3 dots up the side, to the wall
+  await expect(score).toHaveText('190');
 
-  // Stuck in the corner, the ghosts catch it three times.
+  // Stuck at the top of the side corridor, the ghosts catch it three times.
   const overlay = page.locator('#overlay');
   for (let s = 0; s < 120 && !(await overlay.isVisible()); s++) await page.clock.runFor(1000);
   await expect(page.locator('#ovTitle')).toHaveText('Game over');
-  await expect(page.locator('#ovText')).toHaveText('Score 220 — new best!');
-  expect(await page.evaluate(() => localStorage.getItem('bdnix_pacman_best'))).toBe('220');
+  await expect(page.locator('#ovText')).toHaveText('Score 190 — new best!');
+  expect(await page.evaluate(() => localStorage.getItem('bdnix_pacman_best'))).toBe('190');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_pacman_save'))).toBeNull(); // nothing left to resume
   await expect(page.locator('#newBtn')).toBeHidden();
 
   await page.getByRole('button', { name: 'Play again' }).click();
   await expect(overlay).toBeHidden();
   await expect(score).toHaveText('0');
-  await expect(page.locator('#best')).toHaveText('220');
+  await expect(page.locator('#best')).toHaveText('190');
 });
 
 test('pausing stops the game, and it resumes where it was', async ({ page }) => {
@@ -54,8 +49,8 @@ test('pausing stops the game, and it resumes where it was', async ({ page }) => 
 
   await press(page, 'KeyP');
   await expect(page.locator('#overlay')).toBeHidden();
-  await page.clock.runFor(1500);
-  await expect(score).toHaveText('70');
+  await page.clock.runFor(2000);
+  await expect(score).toHaveText('160');
 
   await press(page, 'Escape');
   await expect(page.locator('#overlay')).toBeVisible();
@@ -67,11 +62,11 @@ test('pausing stops the game, and it resumes where it was', async ({ page }) => 
 
 test('the touch buttons and swipes steer', async ({ page }) => {
   const score = page.locator('#score');
-  await page.clock.runFor(1500);                    // stopped at the wall, 70 points
-  await expect(score).toHaveText('70');
+  await page.clock.runFor(2000);                    // stopped in the corner, 160 points
+  await expect(score).toHaveText('160');
   await tap(page.locator('.touch button[data-dir="up"]'));
-  await page.clock.runFor(300);                     // up the side corridor
-  await expect(score).not.toHaveText('70');
+  await page.clock.runFor(800);                     // up the side corridor
+  await expect(score).toHaveText('190');
 
   // A swipe right steers right at the next junction.
   const game = page.locator('#game');
@@ -84,40 +79,51 @@ test('the touch buttons and swipes steer', async ({ page }) => {
 });
 
 test('a reload keeps the game, paused where it was', async ({ page }) => {
-  // The same route as the first test, with a reload in the middle.
+  // The same route as the first test, with a reload in the corner.
   const score = page.locator('#score');
-  await page.clock.runFor(1500);
-  await press(page, 'ArrowUp');
-  await page.clock.runFor(150);
-  await expect(score).toHaveText('80');
+  await page.clock.runFor(2000);
+  await expect(score).toHaveText('160');
   await page.reload();
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
   await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
-  await expect(score).toHaveText('80');
+  await expect(score).toHaveText('160');
   await page.clock.runFor(5000);
-  await expect(score).toHaveText('80');                               // didn't move while paused
+  await expect(score).toHaveText('160');                              // didn't move while paused
 
   await press(page, 'Enter');
   await expect(page.locator('#overlay')).toBeHidden();
-  await press(page, 'ArrowLeft');
-  await page.clock.runFor(1500);
-  await expect(score).toHaveText('150');
+  await press(page, 'ArrowUp');
+  await page.clock.runFor(800);
+  await expect(score).toHaveText('190');                              // the same 3 dots up the side
 });
 
 test('New game on the pause screen starts over', async ({ page }) => {
-  await page.clock.runFor(1500);
+  await page.clock.runFor(2000);
   await page.reload();
-  await expect(page.locator('#score')).toHaveText('70');
+  await expect(page.locator('#score')).toHaveText('160');
   await page.getByRole('button', { name: 'New game' }).click();
   await expect(page.locator('#overlay')).toBeHidden();
   await expect(page.locator('#score')).toHaveText('0');
-  await page.clock.runFor(2300 + 1500);
-  await expect(page.locator('#score')).toHaveText('70');              // every dot back
+  await page.clock.runFor(2300 + 2000);
+  await expect(page.locator('#score')).toHaveText('160');              // every dot back
 });
 
 test('a save that does not make sense is thrown away', async ({ page }) => {
   // Written as the page loads, after the game in progress has saved itself.
   await page.addInitScript(() => localStorage.setItem('bdnix_pacman_save', JSON.stringify({ v: 1, data: { state: 'playing', score: 5 } })));
+  await page.reload();
+  await expect(page.locator('#ovTitle')).toHaveText('Maze Chase');
+  expect(await page.evaluate(() => localStorage.getItem('bdnix_pacman_save'))).toBeNull();
+});
+
+test('a save from a different maze is thrown away', async ({ page }) => {
+  // A real save, but with a dot where this maze has a wall, as a save from the
+  // old layout would have. Written as the page loads, like the test above.
+  await page.clock.runFor(1500);
+  await press(page, 'KeyP');
+  const save = JSON.parse(await page.evaluate(() => localStorage.getItem('bdnix_pacman_save')));
+  save.data.dots[0][0] = 1;
+  await page.addInitScript(s => localStorage.setItem('bdnix_pacman_save', s), JSON.stringify(save));
   await page.reload();
   await expect(page.locator('#ovTitle')).toHaveText('Maze Chase');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_pacman_save'))).toBeNull();

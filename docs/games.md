@@ -31,6 +31,8 @@ The level goes up every 10 lines, and pieces fall faster at each level.
 | Move | Arrow keys or WASD | Swipe anywhere, or the arrow buttons |
 | Pause | P / Esc | ❚❚ |
 
+The maze is the site's own design. A game saved on an earlier maze doesn't fit it, so it's discarded and a new game starts.
+
 ## Flap
 
 `/flap/`
