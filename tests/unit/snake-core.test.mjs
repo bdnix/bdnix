@@ -39,6 +39,17 @@ test('each step moves the head on and the tail along', () => {
   assert.deepEqual(plain(w.body), [{ x: 7, y: 8 }, { x: 6, y: 8 }, { x: 5, y: 8 }]);
 });
 
+test('the trail is where the tail was before the last step, for drawing the tail gliding', () => {
+  const w = F.create(() => 0);
+  assert.deepEqual(plain(w.trail), { x: 4, y: 8 }, 'still at the start');
+  F.step(w);
+  assert.deepEqual(plain(w.trail), { x: 4, y: 8 });
+  assert.deepEqual(plain(w.body[w.body.length - 1]), { x: 5, y: 8 });
+  run(w, 5);                                              // eats on the last of these
+  assert.equal(w.score, 1);
+  assert.deepEqual(plain(w.trail), plain(w.body[w.body.length - 1]), 'growing: the tail stays put');
+});
+
 test('turns: not the way it is going, not straight back, and at most two queued', () => {
   const w = F.create(() => 0);
   assert.equal(F.turn(w, 'right'), false);
@@ -127,8 +138,9 @@ test('filling the whole board wins', () => {
   assert.equal(F.placeFood(w), false);
 });
 
-test('the snake speeds up as it eats, to a limit', () => {
+test('the snake starts at a gentle pace and speeds up as it eats, to a limit', () => {
   assert.equal(F.interval(0), F.SLOW);
+  assert.ok(F.SLOW >= 0.2, 'no more than five cells a second to start');
   assert.ok(F.interval(10) < F.interval(5));
   assert.equal(F.interval(1000), F.FAST);
 });
@@ -138,9 +150,9 @@ test('advance runs whole steps and carries the rest over', () => {
   let r = F.advance(w, 0.1);
   assert.deepEqual([r.steps, r.end], [0, null]);
   assert.ok(Math.abs(r.carry - 0.1) < 1e-9);
-  r = F.advance(w, 0.25, r.carry);                        // 0.35s: two steps
+  r = F.advance(w, 0.4, r.carry);                         // 0.5s: two steps
   assert.equal(r.steps, 2);
-  assert.ok(Math.abs(r.carry - 0.05) < 1e-9);
+  assert.ok(Math.abs(r.carry - (0.5 - 2 * F.SLOW)) < 1e-9);
   assert.deepEqual(plain(w.body[0]), { x: 8, y: 8 });
   // A crash stops it early and drops the leftover time.
   F.turn(w, 'up');

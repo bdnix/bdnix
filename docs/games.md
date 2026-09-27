@@ -67,7 +67,7 @@ Each new row the chicken reaches scores a point. Lanes of grass, roads and river
 | Turn | Arrow keys or WASD | Swipe anywhere, or the arrow buttons |
 | Pause | P / Esc | ❚❚ |
 
-The snake waits until the first direction is pressed. Each piece of food scores a point and makes the snake one longer and a little faster. Hitting a wall or the snake's own body ends the round; filling the whole board wins it. Two quick presses make two turns on the next two steps, so a U-turn is easy.
+The snake waits until the first direction is pressed, then glides from cell to cell at about four and a half cells a second. Each piece of food scores a point and makes the snake one longer and a little faster, up to ten cells a second. Hitting a wall or the snake's own body ends the round; filling the whole board wins it. Two quick presses make two turns on the next two steps, so a U-turn is easy.
 
 ## Scores and saved games
 
