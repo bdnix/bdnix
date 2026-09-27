@@ -5,7 +5,7 @@ email: "root@bdnix.com"
 baseurl: ""
 theme: jekyll-theme-minimal
 
-# Test tooling isn't part of the site.
+# Test tooling and repository docs aren't part of the site.
 exclude:
   - node_modules
   - tests
@@ -15,5 +15,6 @@ exclude:
   - playwright.config.mjs
   - coverage
   - AGENTS.md
+  - docs
   - CLAUDE.md
   - codecov.yml
