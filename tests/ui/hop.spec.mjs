@@ -4,7 +4,7 @@ import { openGame, press, tap } from './games.mjs';
 // With Math.random fixed at 0 the lanes are the same every time: grass on
 // rows 0 and 1, a road on row 2, grass on 3 and 4, a river on 5, grass on 6
 // and 7, a road on 8, and so on, with no trees. The chicken starts on row 0
-// in the middle column (4).
+// in the middle column (4). Each ending shows the first of its lines.
 const MARGIN = 3;
 
 // The round as saved: pausing saves it, and resuming carries on at the same
@@ -63,7 +63,7 @@ test.beforeEach(async ({ page }) => {
   await page.clock.runFor(100);
 });
 
-test('crosses a road and a river, then is hit by a car', async ({ page }) => {
+test('crosses a road and a river, then gets hit by traffic', async ({ page }) => {
   await start(page);
   await hopTo(page, 6);
   await expect(page.locator('#score')).toHaveText('6');
@@ -73,7 +73,7 @@ test('crosses a road and a river, then is hit by a car', async ({ page }) => {
   await press(page, 'ArrowUp');
   await press(page, 'ArrowUp');
   await waitForGameOver(page);
-  await expect(page.locator('#ovKicker')).toHaveText('Hit by a car.');
+  await expect(page.locator('#ovKicker')).toHaveText('Fowl play on the road!');
   await expect(page.locator('#ovText')).toHaveText('Score 8 — new best!');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_hop_best'))).toBe('8');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_hop_save'))).toBeNull(); // nothing left to resume
@@ -112,7 +112,7 @@ test('riding a log off the edge of the board sweeps the chicken away', async ({ 
   await page.clock.runFor(500);
   expect((await peek(page)).chicken.x).toBeGreaterThan(on.chicken.x);    // carried along with the log
   await waitForGameOver(page);
-  await expect(page.locator('#ovKicker')).toHaveText('Swept away down the river.');
+  await expect(page.locator('#ovKicker')).toHaveText('Gone with the current.');
 });
 
 test('keys, taps, swipes and the buttons all hop', async ({ page }) => {

@@ -7,6 +7,7 @@ All four games work with a keyboard, mouse or touch screen, and at phone size.
 - [Flap](#flap)
 - [Road Hop](#road-hop)
 - [Scores and saved games](#scores-and-saved-games)
+- [Credits](#credits)
 
 ## Falling Blocks
 
@@ -63,3 +64,16 @@ Each game keeps its best score in the browser's `localStorage`, and the [profile
 A game in progress is saved whenever it pauses and when the page is reloaded, closed or left. Returning to the page, even days later, shows the game paused exactly where it was, with the message "Picked up where you left off.": **Resume** carries on and **New game** starts over. The save is removed when the game ends. Flap only keeps a round once the bird has flapped, and Road Hop once the chicken has hopped.
 
 Clearing the browser's site data removes saved games and best scores. See [Privacy and data](privacy.md) for the storage keys.
+
+## Credits
+
+Each game is our own take on a classic, with its own name, artwork and code. The start screen of each credits the original:
+
+| Our game | Inspired by |
+|---|---|
+| Falling Blocks | Tetris, created by Alexey Pajitnov in 1984 |
+| Maze Chase | Pac-Man, created by Toru Iwatani at Namco in 1980 |
+| Flap | Flappy Bird, created by Dong Nguyen in 2013 |
+| Road Hop | Crossy Road, created by Hipster Whale in 2014 |
+
+These names are trademarks of their owners. bdnix isn't affiliated with or endorsed by them.

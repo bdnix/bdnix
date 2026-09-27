@@ -8,11 +8,12 @@
   var DEATH_TIME = 0.9;         // how long the crash plays before the score shows
 
   var CAR_COLORS = ['#f472b6', '#a855f7', '#22d3ee', '#facc15'];
+  // A few ways to say how the round ended; one is picked at random.
   var ENDINGS = {
-    car: 'Hit by a car.',
-    water: 'Splash! Chickens can’t swim.',
-    swept: 'Swept away down the river.',
-    behind: 'Too slow: the road moved on without you.'
+    car: ['Fowl play on the road!', 'Scrambled by traffic.', 'Flat as a pancake.', 'Beep beep. Splat.'],
+    water: ['Splash! Chickens can’t swim.', 'Chicken soup, anyone?', 'Should have been a duck.'],
+    swept: ['Gone with the current.', 'Off on a river cruise.', 'Swept off downstream.'],
+    behind: ['Too slow: the road moved on without you.', 'Dawdled a little too long.', 'Why did the chicken stop crossing?']
   };
 
   var board = document.getElementById('board');
@@ -99,7 +100,8 @@
   function gameOver(){
     setState('over');
     var score = world.score;
-    ovKicker.textContent = ENDINGS[world.dead];
+    var lines = ENDINGS[world.dead];
+    ovKicker.textContent = lines[Math.min(lines.length - 1, Math.floor(Math.random() * lines.length))];
     ovTitle.textContent = 'Game over';
     ovText.textContent = 'Score ' + score + (score >= best && score > 0 ? ' — new best!' : ' · Best ' + best);
     startBtn.textContent = 'Play again';

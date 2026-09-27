@@ -72,14 +72,34 @@ test('the landing page, games and tools describe themselves as structured data',
   }
 });
 
-test('no page uses the trademarked names of the games that inspired ours', async ({ page, request }) => {
+test('trademarked names of the games that inspired ours appear only in their credit line', async ({ page, request }) => {
   const names = /tetris|pac-?man|flappy|crossy/i;
+  const credit = /<p class="credit">[^<]*<\/p>/g;
   for (const url of pages) {
     // Asset paths such as /assets/js/tetris.js are internal, so leave them out.
     const html = (await (await request.get(url)).text()).replace(/\/assets\/[\w./-]+/g, '');
-    expect(html, url).not.toMatch(names);
+    expect(html.replace(credit, ''), url).not.toMatch(names);
     await page.goto(url);
-    expect(await page.locator('body').innerText(), url).not.toMatch(names);
+    const text = await page.locator('body').evaluate((b) => {
+      const copy = b.cloneNode(true);
+      copy.querySelectorAll('.credit').forEach((c) => c.remove());
+      return copy.innerText;
+    });
+    expect(text, url).not.toMatch(names);
+  }
+});
+
+test('each game credits the classic that inspired it, without claiming any link to it', async ({ page }) => {
+  for (const [url, name, creator] of [
+    ['/falling-blocks/', 'Tetris', 'Alexey Pajitnov'], ['/maze-chase/', 'Pac-Man', 'Toru Iwatani'],
+    ['/flap/', 'Flappy Bird', 'Dong Nguyen'], ['/road-hop/', 'Crossy Road', 'Hipster Whale']
+  ]) {
+    await page.goto(url);
+    const credit = page.locator('#overlay .credit');
+    await expect(credit, url).toBeVisible();
+    await expect(credit, url).toContainText('Inspired by ' + name);
+    await expect(credit, url).toContainText(creator);
+    await expect(credit, url).toContainText(name + ' is a trademark of its owner; bdnix isn’t affiliated with or endorsed by them.');
   }
 });
 

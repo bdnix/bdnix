@@ -40,6 +40,7 @@ body.play{
 .ov-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
 .ov-actions [hidden]{display:none}
 .overlay .keys{font:400 11px/1.8 var(--mono);color:var(--faint);margin-top:6px}
+.overlay .credit{max-width:34ch;font-size:11px;line-height:1.5;color:var(--faint)}
 .only-touch{display:none}
 
 .touch{display:none}
