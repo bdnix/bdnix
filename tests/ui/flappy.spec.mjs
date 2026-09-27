@@ -57,6 +57,8 @@ test('flies through three pipes, then crashes', async ({ page }) => {
   await expect(page.locator('#ovText')).toHaveText('Score 3 — new best!');
   await expect(page.locator('#ovKicker')).toHaveText('bdnix arcade');   // no medal under 10
   expect(await page.evaluate(() => localStorage.getItem('bdnix_flappy_best'))).toBe('3');
+  expect(await page.evaluate(() => localStorage.getItem('bdnix_flappy_save'))).toBeNull(); // nothing left to resume
+  await expect(page.locator('#newBtn')).toBeHidden();
 
   await page.getByRole('button', { name: 'Play again' }).click();
   await expect(overlay).toBeHidden();
@@ -151,4 +153,67 @@ test('a phone held sideways fits the whole board on screen, scores beside it', a
   await tap(page.locator('#game'));
   await page.clock.runFor(150);
   expect(await birdY(page)).toBeLessThan(200);
+});
+
+test('a reload keeps the round, paused where it was', async ({ page }) => {
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await flyThrough(page, 1, () => press(page, 'Space'));
+  const y = await birdY(page);
+  await page.reload();
+  await expect(page.locator('#ovTitle')).toHaveText('Paused');
+  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
+  await expect(page.locator('#score')).toHaveText('1');
+  expect(Math.abs(await birdY(page) - y)).toBeLessThan(1);            // in the air where it was
+  await page.clock.runFor(3000);
+  expect(Math.abs(await birdY(page) - y)).toBeLessThan(1);            // and stays there while paused
+
+  await page.locator('#startBtn').click();
+  await expect(page.locator('#overlay')).toBeHidden();
+  await flyThrough(page, 2, () => press(page, 'Space'));              // carries on through the next pipe
+});
+
+test('a reload while falling after a crash still ends the round', async ({ page }) => {
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await flyThrough(page, 1, () => press(page, 'Space'));
+  // Stops flapping and reloads as soon as the bird hits something.
+  const dying = () => page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('bdnix_flappy_save') || 'null');
+    return s && s.data.state;
+  });
+  for (let s = 0; s < 200; s++) {
+    await page.locator('#pauseBtn').click();                          // pausing saves
+    const state = await dying();
+    if (state === 'dying') break;
+    await page.locator('#pauseBtn').click();
+    await page.clock.runFor(20);
+  }
+  expect(await dying()).toBe('dying');
+  await page.reload();
+  await expect(page.locator('#ovTitle')).toHaveText('Paused');
+  await page.locator('#startBtn').click();
+  for (let s = 0; s < 20 && !(await page.locator('#ovTitle').textContent()).includes('Game over'); s++) await page.clock.runFor(250);
+  await expect(page.locator('#ovTitle')).toHaveText('Game over');
+  await expect(page.locator('#ovText')).toHaveText('Score 1 — new best!');
+});
+
+test('before the first flap there is nothing to keep', async ({ page }) => {
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await page.reload();
+  await expect(page.locator('#ovTitle')).toHaveText('Flappy Bird');
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await press(page, 'Space');
+  await page.clock.runFor(200);
+  await press(page, 'KeyP');
+  await page.getByRole('button', { name: 'New game' }).click();       // back to "Get ready"
+  await expect(page.locator('#overlay')).toBeHidden();
+  await page.reload();
+  await expect(page.locator('#ovTitle')).toHaveText('Flappy Bird');
+});
+
+test('a save that does not make sense is thrown away', async ({ page }) => {
+  // Written as the page loads, after the game in progress has saved itself.
+  await page.addInitScript(() => localStorage.setItem('bdnix_flappy_save', JSON.stringify({ v: 1, data: { state: 'playing', bird: {} } })));
+  await page.reload();
+  await expect(page.locator('#ovTitle')).toHaveText('Flappy Bird');
+  expect(await page.evaluate(() => localStorage.getItem('bdnix_flappy_save'))).toBeNull();
 });

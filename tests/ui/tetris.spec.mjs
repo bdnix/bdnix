@@ -98,6 +98,8 @@ test('stacking to the top ends the game and saves the best score', async ({ page
   expect(Number(score)).toBeGreaterThan(0);
   await expect(page.locator('#ovText')).toHaveText(`Score ${score} — new best!`);
   expect(await page.evaluate(() => localStorage.getItem('bdnix_tetris_best'))).toBe(score);
+  expect(await page.evaluate(() => localStorage.getItem('bdnix_tetris_save'))).toBeNull(); // nothing left to resume
+  await expect(page.locator('#newBtn')).toBeHidden();
 
   await page.getByRole('button', { name: 'Play again' }).click();
   await expect(overlay).toBeHidden();
@@ -106,4 +108,54 @@ test('stacking to the top ends the game and saves the best score', async ({ page
 
   await page.goto('/profile/');
   await expect(page.locator('.score').first().locator('b')).toHaveText(Number(score).toLocaleString('en-US'));
+});
+
+test('a reload keeps the game, paused where it was', async ({ page }) => {
+  await press(page, 'ArrowLeft', 4); await press(page, 'Space');     // O into columns 1-2
+  await press(page, 'KeyC');                                         // hold the T; the J comes in
+  await page.reload();
+  await expect(page.locator('#ovTitle')).toHaveText('Paused');
+  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
+  await expect(page.locator('#pauseBtn')).toHaveAttribute('aria-label', 'Resume');
+  await expect(page.locator('#score')).toHaveText('36');
+  expect(await inkOn(page, '#hold')).toBeGreaterThan(0);             // the T is still held
+  await page.clock.runFor(5000);                                     // nothing falls while paused
+
+  await page.locator('#startBtn').click();
+  await expect(page.locator('#overlay')).toBeHidden();
+  await press(page, 'Space');                                        // the J, still at the top: 18 rows
+  await expect(page.locator('#score')).toHaveText('72');
+});
+
+test('New game on the pause screen starts over', async ({ page }) => {
+  await press(page, 'Space');
+  await page.reload();
+  await expect(page.locator('#score')).toHaveText('36');
+  await page.getByRole('button', { name: 'New game' }).click();
+  await expect(page.locator('#overlay')).toBeHidden();
+  await expect(page.locator('#newBtn')).toBeHidden();
+  await expect(page.locator('#score')).toHaveText('0');
+  expect(await inkOn(page, '#hold')).toBe(0);
+});
+
+test('a save that does not make sense is thrown away', async ({ page }) => {
+  // Written as the page loads, after the game in progress has saved itself.
+  await page.addInitScript(() => localStorage.setItem('bdnix_tetris_save', JSON.stringify({ v: 1, data: { grid: [], score: 5 } })));
+  await page.reload();
+  await expect(page.locator('#ovTitle')).toHaveText('Tetris');
+  expect(await page.evaluate(() => localStorage.getItem('bdnix_tetris_save'))).toBeNull();
+});
+
+test('a reload while a row is clearing finishes the clear on resume', async ({ page }) => {
+  await press(page, 'ArrowLeft', 4); await press(page, 'Space');
+  await press(page, 'ArrowLeft'); await press(page, 'Space');
+  await press(page, 'ArrowRight', 2); await press(page, 'Space');
+  await press(page, 'ArrowUp'); await press(page, 'ArrowRight', 4);
+  await press(page, 'Space');                                        // fills the row: it starts to flash
+  await page.reload();
+  await expect(page.locator('#ovTitle')).toHaveText('Paused');
+  expect(await hud(page)).toEqual({ score: '142', lines: '0', level: '1' });
+  await page.locator('#startBtn').click();
+  await page.clock.runFor(300);
+  expect(await hud(page)).toEqual({ score: '242', lines: '1', level: '1' });
 });
