@@ -26,6 +26,7 @@ Shared across pages:
 - `assets/js/blocks.js`: the falling-block backdrop (`window.bdnix`).
 - `assets/js/pdftools.js`: page-range parsing, file helpers, dropping files on the page, and the on-demand PDF.js loader (`window.bdnixPdf`). The audio converter and image compressor use its file helpers too.
 - `assets/js/profile.js`: the visitor's name and scores (`window.bdnixProfile`).
+- `assets/js/gamesave.js`: saves a game in progress and loads it back paused (`window.bdnixSave`). Each game snapshots its own state, checks a loaded save before using it, and throws away one that doesn't make sense.
 - `assets/js/analytics.js`: Google Analytics page views and the cookie consent banner (`window.bdnixAnalytics`). Every page links it in `<head>` (not `async`: the profile page reads it). It only runs on `www.bdnix.com` / `bdnix.com`, so local previews and tests show no banner and send nothing; `tests/ui/analytics.spec.mjs` serves the site as `www.bdnix.com` to test it. Google's script loads only after the visitor accepts; they can change their choice on the profile page.
 
 Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit, lamejs), each with its licence file.
@@ -51,7 +52,7 @@ Leave merging to the owner: don't merge the pull request yourself.
 - **Reuse, don't duplicate.** Use the tokens in `base.css`, the layout in `tool.css`, and the helpers in `pdftools.js` / `profile.js`. If two pages need the same logic, move it into a shared file.
 - **Pure logic goes in its own file** (as in `watermark-layout.js`, `redact-core.js`, `flappy-core.js`, `audio-core.js`, `image-core.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
 - **Phone-sized screens matter.** Every page must work at 390 px wide with no sideways scrolling, and with touch as well as mouse and keyboard.
-- **Browser storage is optional.** Wrap every `localStorage` / IndexedDB access in `try/catch`; pages must work without it (private browsing). The keys in use are `bdnix_visits`, `bdnix_name`, `bdnix_tetris_best`, `bdnix_pacman_best`, `bdnix_flappy_best`, `bdnix_watermark_v1` and `bdnix_analytics` (localStorage), and the `bdnix-tools` database (IndexedDB). Don't rename them, since visitors' saved data would be lost.
+- **Browser storage is optional.** Wrap every `localStorage` / IndexedDB access in `try/catch`; pages must work without it (private browsing). The keys in use are `bdnix_visits`, `bdnix_name`, `bdnix_tetris_best`, `bdnix_pacman_best`, `bdnix_flappy_best`, `bdnix_tetris_save`, `bdnix_pacman_save`, `bdnix_flappy_save`, `bdnix_watermark_v1` and `bdnix_analytics` (localStorage), and the `bdnix-tools` database (IndexedDB). Don't rename them, since visitors' saved data would be lost.
 
 ## Tests are required
 

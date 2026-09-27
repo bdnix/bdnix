@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/base.css?v=f674399bef">
-  <link rel="stylesheet" href="/assets/css/game.css?v=843b322663">
+  <link rel="stylesheet" href="/assets/css/game.css?v=bde9b722f7">
   <link rel="stylesheet" href="/assets/css/tetris.css?v=9070139a67">
   <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
@@ -62,7 +62,10 @@
         <p class="label" id="ovKicker">bdnix arcade</p>
         <h1 id="ovTitle">Tetris</h1>
         <p id="ovText">Clear lines. Don't hit the top.</p>
-        <button id="startBtn" class="btn btn-primary">Start game</button>
+        <div class="ov-actions">
+          <button id="startBtn" class="btn btn-primary">Start game</button>
+          <button id="newBtn" class="btn btn-ghost" hidden>New game</button>
+        </div>
         <p class="keys only-keys">← → move · ↑ rotate · ↓ soft drop<br>Space hard drop · C hold · P pause</p>
         <p class="keys only-touch">Use the buttons below. Tap the board to rotate.</p>
       </div>
@@ -79,6 +82,7 @@
   </nav>
 
   <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
-  <script src="/assets/js/tetris.js?v=d20e6cd613"></script>
+  <script src="/assets/js/gamesave.js?v=fb243d7a1b"></script>
+  <script src="/assets/js/tetris.js?v=055fcea838"></script>
 </body>
 </html>

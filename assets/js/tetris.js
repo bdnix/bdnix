@@ -22,6 +22,7 @@
   var ovTitle = document.getElementById('ovTitle');
   var ovText = document.getElementById('ovText');
   var startBtn = document.getElementById('startBtn');
+  var newBtn = document.getElementById('newBtn');
   var pauseBtn = document.getElementById('pauseBtn');
   var el = {
     score: document.getElementById('score'),
@@ -235,9 +236,11 @@
     updateHud();
     state = 'playing';
     overlay.hidden = true;
+    newBtn.hidden = true;
     startBtn.blur();
     pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.setAttribute('aria-label', 'Pause');
     lastTime = performance.now();
+    persist();
   }
   function gameOver(){
     state = 'over';
@@ -251,8 +254,10 @@
     ovText.textContent = 'Score ' + score + (score >= best && score > 0 ? ' — new best!' : ' · Best ' + best);
     startBtn.textContent = 'Play again';
     startBtn.blur();
+    newBtn.hidden = true;
     overlay.hidden = false;
     startBtn.focus();
+    persist();
   }
   function togglePause(){
     if (state === 'playing') {
@@ -260,8 +265,10 @@
       ovTitle.textContent = 'Paused';
       ovText.textContent = 'Take a breather.';
       startBtn.textContent = 'Resume';
+      newBtn.hidden = false;
       overlay.hidden = false;
       pauseBtn.innerHTML = ICON_PLAY; pauseBtn.setAttribute('aria-label', 'Resume');
+      persist();
     } else if (state === 'paused') {
       state = 'playing';
       overlay.hidden = true;
@@ -274,6 +281,42 @@
     el.lines.textContent = lines;
     el.level.textContent = level;
     el.best.textContent = Math.max(best, score);
+  }
+
+  // ---------- Saving ----------
+  // A game in progress is saved as the page goes away, and comes back paused.
+  function snapshot(){
+    if (state !== 'playing' && state !== 'paused') return null;
+    return {
+      grid: grid, bag: bag, queue: queue, piece: piece, held: held, canHold: canHold,
+      score: score, lines: lines, level: level, clearing: clearing,
+      dropAcc: dropAcc, lockAcc: lockAcc, lockResets: lockResets
+    };
+  }
+  var persist = window.bdnixSave.keep('tetris', snapshot);
+
+  function isType(t){ return typeof t === 'string' && Object.prototype.hasOwnProperty.call(SHAPES, t); }
+  function isRow(r){ return Array.isArray(r) && r.length === COLS && r.every(function(c){ return c === null || isType(c); }); }
+  function isMatrix(m){ return Array.isArray(m) && m.length > 0 && m.every(function(r){ return Array.isArray(r) && r.length === m.length; }); }
+  function restore(s){
+    var num = window.bdnixSave.num;
+    var p = s.piece, c = s.clearing;
+    var ok = Array.isArray(s.grid) && s.grid.length === ROWS && s.grid.every(isRow) &&
+      Array.isArray(s.queue) && s.queue.length >= 3 && s.queue.every(isType) &&
+      Array.isArray(s.bag) && s.bag.every(isType) &&
+      (s.held === null || isType(s.held)) &&
+      (p ? isType(p.type) && isMatrix(p.m) && num(p.x) && num(p.y) :
+        c && num(c.t) && Array.isArray(c.rows) && c.rows.every(function(y){ return num(y) && y >= 0 && y < ROWS; })) &&
+      [s.score, s.lines, s.level, s.dropAcc, s.lockAcc, s.lockResets].every(num);
+    if (!ok) return false;
+    grid = s.grid; bag = s.bag; queue = s.queue; piece = p || null; held = s.held; canHold = !!s.canHold;
+    score = s.score; lines = s.lines; level = s.level; clearing = c || null;
+    dropAcc = s.dropAcc; lockAcc = s.lockAcc; lockResets = s.lockResets;
+    state = 'playing';
+    togglePause();
+    ovText.textContent = 'Picked up where you left off.';
+    updateHud();
+    return true;
   }
 
   // ---------- Loop ----------
@@ -438,6 +481,7 @@
     else newGame();
   }
   startBtn.addEventListener('click', startOrResume);
+  newBtn.addEventListener('click', newGame);
   pauseBtn.addEventListener('click', function(){
     if (state === 'playing' || state === 'paused') togglePause();
   });
@@ -448,6 +492,8 @@
     landscapeMQ.addEventListener('change', resize);
   }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(resize);
+  var saved = window.bdnixSave.load('tetris');
+  if (saved && !restore(saved)) window.bdnixSave.clear('tetris');
   resize();
   lastTime = performance.now();
   requestAnimationFrame(loop);

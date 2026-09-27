@@ -35,6 +35,8 @@ test('eats its way to a power pellet, then loses its lives', async ({ page }) =>
   await expect(page.locator('#ovTitle')).toHaveText('Game over');
   await expect(page.locator('#ovText')).toHaveText('Score 220 — new best!');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_pacman_best'))).toBe('220');
+  expect(await page.evaluate(() => localStorage.getItem('bdnix_pacman_save'))).toBeNull(); // nothing left to resume
+  await expect(page.locator('#newBtn')).toBeHidden();
 
   await page.getByRole('button', { name: 'Play again' }).click();
   await expect(overlay).toBeHidden();
@@ -79,4 +81,44 @@ test('the touch buttons and swipes steer', async ({ page }) => {
   const before = Number(await score.textContent());
   await page.clock.runFor(1000);
   expect(Number(await score.textContent())).toBeGreaterThan(before);
+});
+
+test('a reload keeps the game, paused where it was', async ({ page }) => {
+  // The same route as the first test, with a reload in the middle.
+  const score = page.locator('#score');
+  await page.clock.runFor(1500);
+  await press(page, 'ArrowUp');
+  await page.clock.runFor(150);
+  await expect(score).toHaveText('80');
+  await page.reload();
+  await expect(page.locator('#ovTitle')).toHaveText('Paused');
+  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
+  await expect(score).toHaveText('80');
+  await page.clock.runFor(5000);
+  await expect(score).toHaveText('80');                               // didn't move while paused
+
+  await press(page, 'Enter');
+  await expect(page.locator('#overlay')).toBeHidden();
+  await press(page, 'ArrowLeft');
+  await page.clock.runFor(1500);
+  await expect(score).toHaveText('150');
+});
+
+test('New game on the pause screen starts over', async ({ page }) => {
+  await page.clock.runFor(1500);
+  await page.reload();
+  await expect(page.locator('#score')).toHaveText('70');
+  await page.getByRole('button', { name: 'New game' }).click();
+  await expect(page.locator('#overlay')).toBeHidden();
+  await expect(page.locator('#score')).toHaveText('0');
+  await page.clock.runFor(2300 + 1500);
+  await expect(page.locator('#score')).toHaveText('70');              // every dot back
+});
+
+test('a save that does not make sense is thrown away', async ({ page }) => {
+  // Written as the page loads, after the game in progress has saved itself.
+  await page.addInitScript(() => localStorage.setItem('bdnix_pacman_save', JSON.stringify({ v: 1, data: { state: 'playing', score: 5 } })));
+  await page.reload();
+  await expect(page.locator('#ovTitle')).toHaveText('Pac-Man');
+  expect(await page.evaluate(() => localStorage.getItem('bdnix_pacman_save'))).toBeNull();
 });

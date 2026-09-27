@@ -37,6 +37,8 @@ body.play{
 }
 .overlay p{margin:0;color:var(--muted);font-size:clamp(12px,calc(var(--cell,28px) * .5),14px)}
 .overlay .btn{margin-top:8px;white-space:nowrap;padding:12px 18px}
+.ov-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.ov-actions [hidden]{display:none}
 .overlay .keys{font:400 11px/1.8 var(--mono);color:var(--faint);margin-top:6px}
 .only-touch{display:none}
 

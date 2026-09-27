@@ -15,6 +15,7 @@
   var ovTitle = document.getElementById('ovTitle');
   var ovText = document.getElementById('ovText');
   var startBtn = document.getElementById('startBtn');
+  var newBtn = document.getElementById('newBtn');
   var pauseBtn = document.getElementById('pauseBtn');
   var el = {
     score: document.getElementById('score'),
@@ -39,10 +40,13 @@
     world = F.create();
     carry = 0; hitFlash = 0;
     setState('ready');
+    pausedFrom = null;
     overlay.hidden = true;
+    newBtn.hidden = true;
     startBtn.blur();
     pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.setAttribute('aria-label', 'Pause');
     updateHud();
+    persist();
   }
   function flap(){
     if (state === 'ready') setState('playing');
@@ -91,8 +95,10 @@
     ovTitle.textContent = 'Game over';
     ovText.textContent = 'Score ' + score + (score >= best && score > 0 ? ' — new best!' : ' · Best ' + best);
     startBtn.textContent = 'Play again';
+    newBtn.hidden = true;
     overlay.hidden = false;
     startBtn.focus();
+    persist();
   }
   function togglePause(){
     if (state === 'paused') {
@@ -106,13 +112,49 @@
       ovTitle.textContent = 'Paused';
       ovText.textContent = 'Take a breather.';
       startBtn.textContent = 'Resume';
+      newBtn.hidden = false;
       overlay.hidden = false;
       pauseBtn.innerHTML = ICON_PLAY; pauseBtn.setAttribute('aria-label', 'Resume');
+      persist();
     }
   }
   function updateHud(){
     el.score.textContent = world.score;
     el.best.textContent = Math.max(best, world.score);
+  }
+
+  // ---------- Saving ----------
+  // A round in progress is saved as the page goes away, and comes back
+  // paused. Before the first flap there's nothing worth keeping.
+  function snapshot(){
+    var s = state === 'paused' ? pausedFrom : state;
+    if (s !== 'playing' && s !== 'dying') return null;
+    return {
+      state: s, stateTime: stateTime, carry: carry, groundTime: groundTime, wingTime: wingTime,
+      bird: world.bird, pipes: world.pipes, nextPipe: world.nextPipe, score: world.score,
+      dead: world.dead, landed: world.landed, distance: world.distance
+    };
+  }
+  var persist = window.bdnixSave.keep('flappy', snapshot);
+
+  function restore(s){
+    var num = window.bdnixSave.num, b = s.bird;
+    var ok = (s.state === 'playing' || s.state === 'dying') &&
+      !!b && num(b.y) && num(b.vy) &&
+      Array.isArray(s.pipes) && s.pipes.every(function(p){ return p && num(p.x) && num(p.top); }) &&
+      [s.stateTime, s.carry, s.groundTime, s.wingTime, s.nextPipe, s.score, s.distance].every(num);
+    if (!ok) return false;
+    world = F.create();
+    world.bird = { y: b.y, vy: b.vy };
+    world.pipes = s.pipes.map(function(p){ return { x: p.x, top: p.top, scored: !!p.scored }; });
+    world.nextPipe = s.nextPipe; world.score = s.score; world.distance = s.distance;
+    world.dead = !!s.dead; world.landed = !!s.landed;
+    carry = s.carry; groundTime = s.groundTime; wingTime = s.wingTime;
+    state = s.state; stateTime = s.stateTime;
+    togglePause();
+    ovText.textContent = 'Picked up where you left off.';
+    updateHud();
+    return true;
   }
 
   // ---------- Sizing ----------
@@ -290,6 +332,7 @@
   gameEl.style.touchAction = 'none';
 
   startBtn.addEventListener('click', startOrResume);
+  newBtn.addEventListener('click', newGame);
   pauseBtn.addEventListener('click', togglePause);
 
   window.addEventListener('resize', resize);
@@ -299,6 +342,8 @@
   }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(resize);
 
+  var saved = window.bdnixSave.load('flappy');
+  if (saved && !restore(saved)) window.bdnixSave.clear('flappy');
   updateHud();
   resize();
   requestAnimationFrame(loop);

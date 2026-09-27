@@ -58,6 +58,7 @@
   var ovTitle = document.getElementById('ovTitle');
   var ovText = document.getElementById('ovText');
   var startBtn = document.getElementById('startBtn');
+  var newBtn = document.getElementById('newBtn');
   var pauseBtn = document.getElementById('pauseBtn');
   var el = {
     score: document.getElementById('score'),
@@ -134,10 +135,13 @@
     resetDots();
     resetActors();
     setState('ready');
+    pausedFrom = null;
     overlay.hidden = true;
+    newBtn.hidden = true;
     startBtn.blur();
     pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.setAttribute('aria-label', 'Pause');
     updateHud();
+    persist();
   }
   function setState(s){ state = s; stateTime = 0; }
 
@@ -361,8 +365,10 @@
     ovTitle.textContent = 'Game over';
     ovText.textContent = 'Score ' + score + (score >= best && score > 0 ? ' — new best!' : ' · Best ' + best);
     startBtn.textContent = 'Play again';
+    newBtn.hidden = true;
     overlay.hidden = false;
     startBtn.focus();
+    persist();
   }
   function togglePause(){
     if (state === 'paused') {
@@ -375,8 +381,10 @@
       ovTitle.textContent = 'Paused';
       ovText.textContent = 'Take a breather.';
       startBtn.textContent = 'Resume';
+      newBtn.hidden = false;
       overlay.hidden = false;
       pauseBtn.innerHTML = ICON_PLAY; pauseBtn.setAttribute('aria-label', 'Resume');
+      persist();
     }
   }
   function updateHud(){
@@ -384,6 +392,59 @@
     el.best.textContent = Math.max(best, score);
     el.level.textContent = level;
     drawLives();
+  }
+
+  // ---------- Saving ----------
+  // A game in progress is saved as the page goes away, and comes back paused.
+  var RUNNING = ['ready', 'playing', 'dying', 'cleared'];
+  function snapshot(){
+    var s = state === 'paused' ? pausedFrom : state;
+    if (RUNNING.indexOf(s) < 0) return null;
+    return {
+      state: s, stateTime: stateTime,
+      dots: dots, dotsLeft: dotsLeft, dotsEaten: dotsEaten, totalDots: totalDots,
+      pac: pac, wanted: wanted,
+      ghosts: ghosts.map(function(g){ return { x: g.x, y: g.y, dir: g.dir, state: g.state, fright: g.fright, bob: g.bob }; }),
+      score: score, level: level, lives: lives, extraLifeGiven: extraLifeGiven,
+      modeIndex: modeIndex, modeTime: modeTime, frightTime: frightTime, frightCombo: frightCombo || 0,
+      lifeTime: lifeTime, freeze: freeze, fruit: fruit, popups: popups
+    };
+  }
+  var persist = window.bdnixSave.keep('pacman', snapshot);
+
+  function isDir(d){ return !!d && [-1, 0, 1].indexOf(d.x) >= 0 && [-1, 0, 1].indexOf(d.y) >= 0; }
+  function isRow(r){ return Array.isArray(r) && r.length === COLS && r.every(function(v){ return v === 0 || v === 1 || v === 2; }); }
+  function restore(s){
+    var num = window.bdnixSave.num;
+    var p = s.pac, f = s.fruit;
+    var ok = RUNNING.indexOf(s.state) >= 0 &&
+      Array.isArray(s.dots) && s.dots.length === ROWS && s.dots.every(isRow) &&
+      !!p && num(p.x) && num(p.y) && num(p.chomp) && isDir(p.face) && (p.dir === null || isDir(p.dir)) &&
+      (s.wanted === null || isDir(s.wanted)) &&
+      Array.isArray(s.ghosts) && s.ghosts.length === GHOSTS.length && s.ghosts.every(function(g){
+        return g && num(g.x) && num(g.y) && num(g.bob) && (g.dir === null || isDir(g.dir)) &&
+          ['house', 'leaving', 'active', 'eaten', 'entering'].indexOf(g.state) >= 0;
+      }) &&
+      (f === null || (f && num(f.x) && num(f.y) && num(f.t))) &&
+      Array.isArray(s.popups) && s.popups.every(function(q){ return q && num(q.x) && num(q.y) && num(q.t); }) &&
+      [s.stateTime, s.dotsLeft, s.dotsEaten, s.totalDots, s.score, s.level, s.lives, s.modeIndex,
+        s.modeTime, s.frightTime, s.frightCombo, s.lifeTime, s.freeze].every(num);
+    if (!ok) return false;
+    dots = s.dots; dotsLeft = s.dotsLeft; dotsEaten = s.dotsEaten; totalDots = s.totalDots;
+    pac = { x: p.x, y: p.y, dir: p.dir, face: p.face, moving: !!p.moving, chomp: p.chomp };
+    wanted = s.wanted;
+    ghosts = s.ghosts.map(function(g, i){
+      return { def: GHOSTS[i], x: g.x, y: g.y, dir: g.dir, state: g.state, fright: !!g.fright, bob: g.bob };
+    });
+    score = s.score; level = s.level; lives = s.lives; extraLifeGiven = !!s.extraLifeGiven;
+    modeIndex = Math.min(s.modeIndex, MODES.length - 1); modeTime = s.modeTime;
+    frightTime = s.frightTime; frightCombo = s.frightCombo;
+    lifeTime = s.lifeTime; freeze = s.freeze; fruit = f; popups = s.popups;
+    state = s.state; stateTime = s.stateTime;
+    togglePause();
+    ovText.textContent = 'Picked up where you left off.';
+    updateHud();
+    return true;
   }
 
   // ---------- Sizing ----------
@@ -663,6 +724,7 @@
   gameEl.style.touchAction = 'none';
 
   startBtn.addEventListener('click', startOrResume);
+  newBtn.addEventListener('click', newGame);
   pauseBtn.addEventListener('click', togglePause);
 
   window.addEventListener('resize', resize);
@@ -674,6 +736,8 @@
 
   resetDots();
   resetActors();
+  var saved = window.bdnixSave.load('pacman');
+  if (saved && !restore(saved)) window.bdnixSave.clear('pacman');
   updateHud();
   resize();
   requestAnimationFrame(loop);
