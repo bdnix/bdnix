@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidance for AI coding agents (and humans) working on this repository. Read this before changing anything. [README.md](README.md) has the user-facing details.
+Guidance for AI coding agents (and humans) working on this repository. Read this before changing anything. [README.md](README.md) is the project overview; [docs/](docs/) has the detailed guides to the tools, games, privacy and development.
 
 ## What this is
 
@@ -105,7 +105,7 @@ npm run serve          # the site at http://localhost:4173
 2. `npm run coverage` passes, and `coverage/report/index.html` shows your new and changed lines as covered.
 3. New or changed behaviour has tests, and a bug fix has a test that failed before the fix.
 4. The page works at phone width without sideways scrolling.
-5. `README.md` is updated if you added a page or feature, or changed how something is used or developed.
+5. The docs are updated if you added a page or feature, or changed how something is used or developed: a brief entry in `README.md` for a new tool or game, and the details in the matching guide in `docs/` (`tools.md`, `games.md`, `privacy.md` or `development.md`).
 
 ## CI
 
