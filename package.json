@@ -1,6 +1,7 @@
 {
   "name": "bdnix",
   "private": true,
+  "license": "MIT",
   "description": "Build and test tooling for www.bdnix.com. The site is static files; `npm run build` updates their cache-busting hashes.",
   "scripts": {
     "serve": "node tests/server.mjs",

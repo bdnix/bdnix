@@ -9,9 +9,9 @@ The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub 
 | Page | Files |
 |---|---|
 | Landing `/` | `index.html`, `assets/css/style.css`, `assets/js/main.js` |
-| Tetris `/tetris/` | `tetris/index.html`, `assets/css/tetris.css`, `assets/js/tetris.js` |
-| Pac-Man `/pacman/` | `pacman/index.html`, `assets/css/pacman.css`, `assets/js/pacman.js` |
-| Flappy Bird `/flappy-bird/` | `flappy-bird/index.html`, `assets/css/flappy.css`, `assets/js/flappy.js`, `assets/js/flappy-core.js` |
+| Falling Blocks `/falling-blocks/` | `falling-blocks/index.html`, `assets/css/tetris.css`, `assets/js/tetris.js` |
+| Maze Chase `/maze-chase/` | `maze-chase/index.html`, `assets/css/pacman.css`, `assets/js/pacman.js` |
+| Flap `/flap/` | `flap/index.html`, `assets/css/flappy.css`, `assets/js/flappy.js`, `assets/js/flappy-core.js` |
 | Merge PDFs `/merge-pdf/` | `merge-pdf/index.html`, `assets/css/merge.css`, `assets/js/merge.js` |
 | Watermark `/watermark-pdf/` | `watermark-pdf/index.html`, `assets/css/watermark.css`, `assets/js/watermark.js`, `assets/js/watermark-layout.js` |
 | Redact `/redact-pdf/` | `redact-pdf/index.html`, `assets/css/redact.css`, `assets/js/redact.js`, `assets/js/redact-core.js` |
@@ -51,13 +51,14 @@ Leave merging to the owner: don't merge the pull request yourself.
 - **Match the existing code.** Each script is one IIFE, `(function(){ ... })();`, in ES5-style `var`/`function` code. A script that other scripts use exposes one `window.bdnix*` object. Comment density, naming and CSS style should match the file you're in.
 - **Reuse, don't duplicate.** Use the tokens in `base.css`, the layout in `tool.css`, and the helpers in `pdftools.js` / `profile.js`. If two pages need the same logic, move it into a shared file.
 - **Pure logic goes in its own file** (as in `watermark-layout.js`, `redact-core.js`, `flappy-core.js`, `audio-core.js`, `image-core.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
-- **Every game keeps a game in progress.** A game must survive a reload or a later visit and come back paused exactly where it was, as Tetris, Pac-Man and Flappy Bird do. Use `window.bdnixSave` from `assets/js/gamesave.js`:
+- **Every game keeps a game in progress.** A game must survive a reload or a later visit and come back paused exactly where it was, as Falling Blocks, Maze Chase and Flap do. Use `window.bdnixSave` from `assets/js/gamesave.js`:
   - Save through `bdnixSave.keep('<game>', snapshot)`. `snapshot()` returns the whole state as plain JSON, or `null` when no game is in progress. Call the function `keep()` returns when the game pauses, starts a new game or ends.
   - Restore at startup. Check every field of the loaded save before using it. Clear a save that doesn't make sense and show the normal start screen.
   - Come back paused with "Picked up where you left off." The pause screen has **Resume** and a **New game** button (`#newBtn`).
   - Remove the save at game over.
   - The key is `bdnix_<game>_save`. Add it to the list of storage keys below.
   - UI tests must cover reloading mid-game and carrying on from the same spot, New game from the pause screen, discarding an invalid save, and the save being gone after game over (see the reload tests in `tests/ui/tetris.spec.mjs`).
+- **Don't use other games' trademarks.** Anything a visitor sees (titles, headings, URLs, SEO tags, docs) uses the site's own names: Falling Blocks, Maze Chase and Flap, never Tetris, Pac-Man or Flappy Bird. New games get original names and artwork too. The old names survive only as internal identifiers (file names such as `tetris.js`, `bdnixSave` ids and storage keys), which stay as they are so visitors' saved data isn't lost.
 - **Phone-sized screens matter.** Every page must work at 390 px wide with no sideways scrolling, and with touch as well as mouse and keyboard.
 - **Browser storage is optional.** Wrap every `localStorage` / IndexedDB access in `try/catch`; pages must work without it (private browsing). The keys in use are `bdnix_visits`, `bdnix_name`, `bdnix_tetris_best`, `bdnix_pacman_best`, `bdnix_flappy_best`, `bdnix_tetris_save`, `bdnix_pacman_save`, `bdnix_flappy_save`, `bdnix_watermark_v1` and `bdnix_analytics` (localStorage), and the `bdnix-tools` database (IndexedDB). Don't rename them, since visitors' saved data would be lost.
 
@@ -69,7 +70,7 @@ Leave merging to the owner: don't merge the pull request yourself.
 - **UI tests** (`tests/ui/*.spec.mjs`, Playwright) are for what a visitor sees and does. Import `test` and `expect` from `tests/ui/fixtures.mjs`, not from `@playwright/test`: the fixture fails the test on any uncaught page error, keeps the tests offline and records coverage. Each test runs at desktop and phone size. Build test files in code (see `tests/ui/pdfs.mjs`, `tests/ui/media.mjs` and `tests/ui/images.mjs`) rather than committing binaries, and check real output: open downloaded PDFs and assert on their contents.
 - **A bug fix needs a test that fails without the fix.** Check that it does before relying on it.
 - **Tests must be deterministic.** Don't assert on values that vary between runs (file sizes that include dates, real timings); wait for the state you need with `expect(...).toBe...` instead of fixed sleeps. Never skip, disable or loosen a test to get CI green. Find the cause instead; "flaky" isn't a cause.
-- **Games and anything animated:** open the page with `openGame()` from `tests/ui/games.mjs`. It fixes `Math.random` (Tetris then deals O, T, J, L, S, Z, I every bag) and freezes the clock *before* the page loads, so time only moves when the test calls `page.clock.runFor()`, and scores and positions come out exact. Don't install a clock after the page has loaded and then pause it: that races with the clock's real-time updates and occasionally steps time backwards, which stalls the game loops.
+- **Games and anything animated:** open the page with `openGame()` from `tests/ui/games.mjs`. It fixes `Math.random` (Falling Blocks then deals O, T, J, L, S, Z, I every bag) and freezes the clock *before* the page loads, so time only moves when the test calls `page.clock.runFor()`, and scores and positions come out exact. Don't install a clock after the page has loaded and then pause it: that races with the clock's real-time updates and occasionally steps time backwards, which stalls the game loops.
 
 ## Coverage must not drop
 

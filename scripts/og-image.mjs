@@ -26,7 +26,7 @@ const og = `<!doctype html><html><head>${fonts}<style>
 </style></head><body>
   <div class="mark"><i>B</i>bdnix</div>
   <h1>Play a little.<br><em>Get things done.</em></h1>
-  <p>Tetris · Pac-Man · PDF, audio and image tools<br>Free, in your browser. Nothing uploaded.</p>
+  <p>Falling Blocks · Maze Chase · PDF, audio and image tools<br>Free, in your browser. Nothing uploaded.</p>
 </body></html>`;
 
 const icon = `<!doctype html><html><head>${fonts}<style>

@@ -8,7 +8,7 @@ Files are read and processed by the browser. They are never uploaded or sent any
 
 ## Profile
 
-The chip in the top right of the landing and tool pages links to `/profile/`. It shows the visitor's name ("User" until they set one, up to 24 characters), their best Tetris, Pac-Man and Flappy Bird scores, and the number of visits counted by the landing page. The profile page is marked `noindex`, since it only shows what's saved in the browser.
+The chip in the top right of the landing and tool pages links to `/profile/`. It shows the visitor's name ("User" until they set one, up to 24 characters), their best Falling Blocks, Maze Chase and Flap scores, and the number of visits counted by the landing page. The profile page is marked `noindex`, since it only shows what's saved in the browser.
 
 ## What is stored
 

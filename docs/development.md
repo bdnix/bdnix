@@ -21,7 +21,7 @@ python3 -m http.server 8000   # http://localhost:8000
 
 ## Project layout
 
-- Each page lives in its own directory (`tetris/`, `merge-pdf/`, …) as an `index.html`, with its stylesheet in `assets/css/` and its script in `assets/js/`.
+- Each page lives in its own directory (`falling-blocks/`, `merge-pdf/`, …) as an `index.html`, with its stylesheet in `assets/css/` and its script in `assets/js/`.
 - Shared styles: `base.css` (colour tokens and common components), `game.css` (game layout) and `tool.css` (tool and profile layout).
 - Shared scripts expose one `window.bdnix*` object each: the falling-block backdrop, PDF and file helpers, the profile, saved games and analytics.
 - Pure logic (layout maths, parsing, encoding, game rules) is kept in separate `*-core.js` style files so it can be unit tested without a browser.

@@ -35,8 +35,8 @@ async function flyThrough(page, pipes, flap){
 }
 
 test.beforeEach(async ({ page }) => {
-  await openGame(page, '/flappy-bird/');
-  await expect(page.locator('#ovTitle')).toHaveText('Flappy Bird');
+  await openGame(page, '/flap/');
+  await expect(page.locator('#ovTitle')).toHaveText('Flap');
   await page.clock.runFor(100);
 });
 
@@ -199,7 +199,7 @@ test('a reload while falling after a crash still ends the round', async ({ page 
 test('before the first flap there is nothing to keep', async ({ page }) => {
   await page.getByRole('button', { name: 'Start game' }).click();
   await page.reload();
-  await expect(page.locator('#ovTitle')).toHaveText('Flappy Bird');
+  await expect(page.locator('#ovTitle')).toHaveText('Flap');
   await page.getByRole('button', { name: 'Start game' }).click();
   await press(page, 'Space');
   await page.clock.runFor(200);
@@ -207,13 +207,13 @@ test('before the first flap there is nothing to keep', async ({ page }) => {
   await page.getByRole('button', { name: 'New game' }).click();       // back to "Get ready"
   await expect(page.locator('#overlay')).toBeHidden();
   await page.reload();
-  await expect(page.locator('#ovTitle')).toHaveText('Flappy Bird');
+  await expect(page.locator('#ovTitle')).toHaveText('Flap');
 });
 
 test('a save that does not make sense is thrown away', async ({ page }) => {
   // Written as the page loads, after the game in progress has saved itself.
   await page.addInitScript(() => localStorage.setItem('bdnix_flappy_save', JSON.stringify({ v: 1, data: { state: 'playing', bird: {} } })));
   await page.reload();
-  await expect(page.locator('#ovTitle')).toHaveText('Flappy Bird');
+  await expect(page.locator('#ovTitle')).toHaveText('Flap');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_flappy_save'))).toBeNull();
 });

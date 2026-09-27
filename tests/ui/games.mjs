@@ -1,5 +1,5 @@
 // Makes the games deterministic for tests: Math.random always returns 0
-// (so Tetris deals O, T, J, L, S, Z, I every bag and frightened ghosts
+// (so Falling Blocks deals O, T, J, L, S, Z, I every bag and frightened ghosts
 // always take their first option), and time only moves when a test calls
 // page.clock.runFor(). Leaves the game on its start screen.
 //
