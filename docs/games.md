@@ -1,11 +1,12 @@
 # Games guide
 
-All four games work with a keyboard, mouse or touch screen, and at phone size.
+All five games work with a keyboard, mouse or touch screen, and at phone size.
 
 - [Falling Blocks](#falling-blocks)
 - [Maze Chase](#maze-chase)
 - [Flap](#flap)
 - [Road Hop](#road-hop)
+- [Snake](#snake)
 - [Scores and saved games](#scores-and-saved-games)
 - [Credits](#credits)
 
@@ -57,11 +58,22 @@ Each pipe passed scores a point. 10, 20, 30 and 40 points earn bronze, silver, g
 
 Each new row the chicken reaches scores a point. Lanes of grass, roads and rivers are laid out at random for every round, and the traffic and the rivers speed up the further the chicken goes. A car ends the round, and so does landing in the water, riding a log off the edge of the board, or standing still so long that the screen moves on without the chicken. Trees are in the way but harmless.
 
+## Snake
+
+`/snake/`
+
+| Action | Keyboard | Touch |
+|---|---|---|
+| Turn | Arrow keys or WASD | Swipe anywhere, or the arrow buttons |
+| Pause | P / Esc | ❚❚ |
+
+The snake waits until the first direction is pressed. Each piece of food scores a point and makes the snake one longer and a little faster. Hitting a wall or the snake's own body ends the round; filling the whole board wins it. Two quick presses make two turns on the next two steps, so a U-turn is easy.
+
 ## Scores and saved games
 
 Each game keeps its best score in the browser's `localStorage`, and the [profile page](privacy.md#profile) shows them all.
 
-A game in progress is saved whenever it pauses and when the page is reloaded, closed or left. Returning to the page, even days later, shows the game paused exactly where it was, with the message "Picked up where you left off.": **Resume** carries on and **New game** starts over. The save is removed when the game ends. Flap only keeps a round once the bird has flapped, and Road Hop once the chicken has hopped.
+A game in progress is saved whenever it pauses and when the page is reloaded, closed or left. Returning to the page, even days later, shows the game paused exactly where it was, with the message "Picked up where you left off.": **Resume** carries on and **New game** starts over. The save is removed when the game ends. Flap only keeps a round once the bird has flapped, Road Hop once the chicken has hopped, and Snake once the snake has started moving.
 
 Clearing the browser's site data removes saved games and best scores. See [Privacy and data](privacy.md) for the storage keys.
 
@@ -75,5 +87,6 @@ Each game is our own take on a classic, with its own name, artwork and code. The
 | Maze Chase | Pac-Man, created by Toru Iwatani at Namco in 1980 |
 | Flap | Flappy Bird, created by Dong Nguyen in 2013 |
 | Road Hop | Crossy Road, created by Hipster Whale in 2014 |
+| Snake | Blockade, created by Gremlin in 1976, and the snake games that followed |
 
 These names are trademarks of their owners. bdnix isn't affiliated with or endorsed by them.

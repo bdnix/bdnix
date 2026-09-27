@@ -25,6 +25,7 @@ There's nothing to install and no account to create. Files you open in a tool ar
 | [Maze Chase](https://www.bdnix.com/maze-chase/) | Clear the maze of dots while avoiding the ghosts, or eat a power pellet and chase them. |
 | [Flap](https://www.bdnix.com/flap/) | Tap to fly through the gaps in the pipes and earn medals. |
 | [Road Hop](https://www.bdnix.com/road-hop/) | Help a chicken hop across busy roads and ride logs over rivers, as far as it can go. |
+| [Snake](https://www.bdnix.com/snake/) | Steer the snake to the food and grow as long as you can without hitting a wall or your own tail. |
 
 Every game plays with keyboard, mouse or touch, keeps your best score, and saves a game in progress so you can pick up where you left off, even days later.
 

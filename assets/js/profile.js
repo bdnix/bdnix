@@ -5,12 +5,13 @@
   var DEFAULT_NAME = 'User';
   var MAX_NAME = 24;
 
-  // Keys written by the games (see tetris.js, pacman.js, flappy.js and hop.js) and main.js.
+  // Keys written by the games (see tetris.js, pacman.js, flappy.js, hop.js and snake.js) and main.js.
   var GAMES = [
     { id: 'tetris', name: 'Falling Blocks', key: 'bdnix_tetris_best', href: '/falling-blocks/' },
     { id: 'pacman', name: 'Maze Chase', key: 'bdnix_pacman_best', href: '/maze-chase/' },
     { id: 'flappy', name: 'Flap', key: 'bdnix_flappy_best', href: '/flap/' },
-    { id: 'hop', name: 'Road Hop', key: 'bdnix_hop_best', href: '/road-hop/' }
+    { id: 'hop', name: 'Road Hop', key: 'bdnix_hop_best', href: '/road-hop/' },
+    { id: 'snake', name: 'Snake', key: 'bdnix_snake_best', href: '/snake/' }
   ];
 
   function read(key){
