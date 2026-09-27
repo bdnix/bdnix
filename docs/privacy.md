@@ -8,7 +8,7 @@ Files are read and processed by the browser. They are never uploaded or sent any
 
 ## Profile
 
-The chip in the top right of the landing and tool pages links to `/profile/`. It shows the visitor's name ("User" until they set one, up to 24 characters), their best Falling Blocks, Maze Chase and Flap scores, and the number of visits counted by the landing page. The profile page is marked `noindex`, since it only shows what's saved in the browser.
+The chip in the top right of the landing and tool pages links to `/profile/`. It shows the visitor's name ("User" until they set one, up to 24 characters), their best Falling Blocks, Maze Chase, Flap and Road Hop scores, and the number of visits counted by the landing page. The profile page is marked `noindex`, since it only shows what's saved in the browser.
 
 ## What is stored
 
@@ -18,8 +18,8 @@ In `localStorage`:
 |---|---|
 | `bdnix_name` | Display name |
 | `bdnix_visits` | Landing page visit count |
-| `bdnix_tetris_best`, `bdnix_pacman_best`, `bdnix_flappy_best` | Best scores |
-| `bdnix_tetris_save`, `bdnix_pacman_save`, `bdnix_flappy_save` | Games in progress |
+| `bdnix_tetris_best`, `bdnix_pacman_best`, `bdnix_flappy_best`, `bdnix_hop_best` | Best scores |
+| `bdnix_tetris_save`, `bdnix_pacman_save`, `bdnix_flappy_save`, `bdnix_hop_save` | Games in progress |
 | `bdnix_watermark_v1` | Watermark tool settings |
 | `bdnix_analytics` | Analytics consent choice |
 

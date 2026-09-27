@@ -3,7 +3,7 @@ import { test, expect } from './fixtures.mjs';
 const LIVE = 'https://www.bdnix.com';
 // Pages search engines should list. The profile only shows what's saved in
 // the visitor's own browser, so it's kept out of the index.
-const listed = ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/mp4-to-mp3/', '/compress-image/'];
+const listed = ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/mp4-to-mp3/', '/compress-image/'];
 const pages = [...listed, '/profile/'];
 
 const meta = (page, attr, name) => page.locator(`head meta[${attr}="${name}"]`);
@@ -66,14 +66,14 @@ test('the landing page, games and tools describe themselves as structured data',
     } else {
       expect(data['@type'], url).toBe('WebApplication');
       expect(await page.title(), url).toContain(data.name);
-      expect(data.applicationCategory, url).toBe(/falling-blocks|maze-chase|flap/.test(url) ? 'GameApplication' : /pdf/.test(url) ? 'UtilitiesApplication' : 'MultimediaApplication');
+      expect(data.applicationCategory, url).toBe(/falling-blocks|maze-chase|flap|road-hop/.test(url) ? 'GameApplication' : /pdf/.test(url) ? 'UtilitiesApplication' : 'MultimediaApplication');
       expect(data.offers, url).toEqual({ '@type': 'Offer', price: '0', priceCurrency: 'USD' });
     }
   }
 });
 
 test('no page uses the trademarked names of the games that inspired ours', async ({ page, request }) => {
-  const names = /tetris|pac-?man|flappy/i;
+  const names = /tetris|pac-?man|flappy|crossy/i;
   for (const url of pages) {
     // Asset paths such as /assets/js/tetris.js are internal, so leave them out.
     const html = (await (await request.get(url)).text()).replace(/\/assets\/[\w./-]+/g, '');

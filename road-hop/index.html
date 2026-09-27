@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Road Hop — Play free in your browser | bdnix</title>
+  <meta name="description" content="Play Road Hop free in your browser: help a chicken hop across busy roads and ride logs over rivers. Keep moving, go as far as you can and beat your best. Nothing to install.">
+  <link rel="canonical" href="https://www.bdnix.com/road-hop/">
+  <meta property="og:site_name" content="bdnix">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.bdnix.com/road-hop/">
+  <meta property="og:title" content="Road Hop — Play free in your browser | bdnix">
+  <meta property="og:description" content="Play Road Hop free in your browser: help a chicken hop across busy roads and ride logs over rivers. Keep moving, go as far as you can and beat your best. Nothing to install.">
+  <meta property="og:image" content="https://www.bdnix.com/assets/img/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="bdnix: Play a little. Get things done.">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Road Hop", "url": "https://www.bdnix.com/road-hop/", "description": "Play Road Hop free in your browser: help a chicken hop across busy roads and ride logs over rivers. Keep moving, go as far as you can and beat your best. Nothing to install.", "applicationCategory": "GameApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/base.css?v=f674399bef">
+  <link rel="stylesheet" href="/assets/css/game.css?v=bde9b722f7">
+  <link rel="stylesheet" href="/assets/css/hop.css?v=5425c48418">
+  <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
+  <meta name="theme-color" content="#080a12">
+</head>
+<body class="play">
+  <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
+
+  <header class="bar">
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ road hop</span></a>
+    <button id="pauseBtn" class="icon-btn" aria-label="Pause">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2h3v12H4zM9 2h3v12H9z"/></svg>
+    </button>
+  </header>
+
+  <main class="game" id="game">
+    <section class="panel box stats">
+      <div><span class="label">Score</span><b id="score">0</b></div>
+      <div><span class="label">Best</span><b id="best">0</b></div>
+    </section>
+
+    <div class="board-wrap">
+      <canvas id="board" aria-label="Road Hop board"></canvas>
+      <div id="overlay" class="overlay">
+        <p class="label" id="ovKicker">bdnix arcade</p>
+        <h1 id="ovTitle">Road Hop</h1>
+        <p id="ovText">Help the chicken across. Mind the traffic, ride the logs, and keep moving.</p>
+        <div class="ov-actions">
+          <button id="startBtn" class="btn btn-primary">Start game</button>
+          <button id="newBtn" class="btn btn-ghost" hidden>New game</button>
+        </div>
+        <p class="keys only-keys">Arrow keys or WASD to hop · click to hop forward · P pause</p>
+        <p class="keys only-touch">Tap to hop forward, swipe to hop any way, or use the buttons below.</p>
+      </div>
+    </div>
+  </main>
+
+  <nav class="touch" aria-label="Game controls">
+    <button data-dir="left" aria-label="Left"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button data-dir="up" aria-label="Up"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button>
+    <button data-dir="down" aria-label="Down"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg></button>
+    <button data-dir="right" aria-label="Right"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+  </nav>
+
+  <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
+  <script src="/assets/js/gamesave.js?v=fb243d7a1b"></script>
+  <script src="/assets/js/hop-core.js?v=a525c710a4"></script>
+  <script src="/assets/js/hop.js?v=5b2c52dfee"></script>
+</body>
+</html>
