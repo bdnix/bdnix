@@ -1,6 +1,6 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 
-const pages = ['/', '/tetris/', '/pacman/', '/flappy-bird/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/mp4-to-mp3/', '/compress-image/', '/profile/'];
+const pages = ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/mp4-to-mp3/', '/compress-image/', '/profile/'];
 const LIVE = 'https://www.bdnix.com';
 const TAG = 'https://www.googletagmanager.com/gtag/js?id=G-67D1H8GX6X';
 
@@ -74,7 +74,7 @@ test('accepting loads Google Analytics straight away, and on every page after', 
   const config = await page.evaluate(() => Array.prototype.slice.call(window.dataLayer[1]));
   expect(config).toEqual(['config', 'G-67D1H8GX6X']);
 
-  await page.goto(LIVE + '/tetris/');
+  await page.goto(LIVE + '/falling-blocks/');
   await expect(page.locator('.consent')).toHaveCount(0);
   await expect.poll(() => google).toEqual([TAG, TAG]);
 });

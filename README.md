@@ -21,9 +21,9 @@ There's nothing to install and no account to create. Files you open in a tool ar
 
 | Game | What it is |
 |---|---|
-| [Tetris](https://www.bdnix.com/tetris/) | The falling-block classic, with hold, hard drop and a ghost piece. |
-| [Pac-Man](https://www.bdnix.com/pacman/) | Clear the maze of dots while avoiding the ghosts, or eat a power pellet and chase them. |
-| [Flappy Bird](https://www.bdnix.com/flappy-bird/) | Tap to fly through the gaps in the pipes and earn medals. |
+| [Falling Blocks](https://www.bdnix.com/falling-blocks/) | Stack falling blocks and clear lines, with hold, hard drop and a ghost piece. |
+| [Maze Chase](https://www.bdnix.com/maze-chase/) | Clear the maze of dots while avoiding the ghosts, or eat a power pellet and chase them. |
+| [Flap](https://www.bdnix.com/flap/) | Tap to fly through the gaps in the pipes and earn medals. |
 
 Every game plays with keyboard, mouse or touch, keeps your best score, and saves a game in progress so you can pick up where you left off, even days later.
 
@@ -57,3 +57,9 @@ npm test
 ## Requests and contact
 
 Want a tool or game that isn't here, or a feature for one that is? [Open a request on GitHub](https://github.com/bdnix/bdnix/issues/new?template=request.yml) or email root@bdnix.com.
+
+## Licence
+
+The code is released under the [MIT License](LICENSE), © bdnix. The licence covers the code only, not the bdnix name or logo.
+
+The games are original takes on classic genres and aren't affiliated with or endorsed by the owners of any similar games. Third-party libraries in [assets/vendor/](assets/vendor/) keep their own licences (MIT, Apache 2.0 and LGPL), listed in [Development](docs/development.md#third-party-libraries).

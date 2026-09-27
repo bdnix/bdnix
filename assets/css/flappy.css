@@ -1,4 +1,4 @@
-/* Flappy Bird layout. Shared pieces live in base.css and game.css. */
+/* Flap layout. Shared pieces live in base.css and game.css. */
 .game{
   position:relative;z-index:1;
   flex:1;min-height:0;

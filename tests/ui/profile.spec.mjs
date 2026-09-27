@@ -11,9 +11,9 @@ test('a new visitor is "User" with no scores yet', async ({ page }) => {
   await expect(page.locator('h1')).toHaveText('User');
   await expect(page.locator('.avatar-lg')).toHaveText('U');
   expect(await scores(page)).toEqual([
-    { game: 'Tetris', best: 'Not played yet', link: 'Play /tetris/' },
-    { game: 'Pac-Man', best: 'Not played yet', link: 'Play /pacman/' },
-    { game: 'Flappy Bird', best: 'Not played yet', link: 'Play /flappy-bird/' }
+    { game: 'Falling Blocks', best: 'Not played yet', link: 'Play /falling-blocks/' },
+    { game: 'Maze Chase', best: 'Not played yet', link: 'Play /maze-chase/' },
+    { game: 'Flap', best: 'Not played yet', link: 'Play /flap/' }
   ]);
 });
 
@@ -26,16 +26,16 @@ test('shows the best scores the games saved', async ({ page }) => {
   });
   await page.reload();
   expect(await scores(page)).toEqual([
-    { game: 'Tetris', best: '12,450', link: 'Play again /tetris/' },
-    { game: 'Pac-Man', best: '3,120', link: 'Play again /pacman/' },
-    { game: 'Flappy Bird', best: '27', link: 'Play again /flappy-bird/' }
+    { game: 'Falling Blocks', best: '12,450', link: 'Play again /falling-blocks/' },
+    { game: 'Maze Chase', best: '3,120', link: 'Play again /maze-chase/' },
+    { game: 'Flap', best: '27', link: 'Play again /flap/' }
   ]);
 });
 
 test('a score saved in another tab shows up straight away', async ({ page, context }) => {
   await page.goto('/profile/');
   const game = await context.newPage();
-  await game.goto('/tetris/');
+  await game.goto('/falling-blocks/');
   await game.evaluate(() => localStorage.setItem('bdnix_tetris_best', '20000'));
   await expect(page.locator('.score').first().locator('b')).toHaveText('20,000');
 });

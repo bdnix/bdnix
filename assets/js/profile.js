@@ -7,9 +7,9 @@
 
   // Keys written by the games (see tetris.js, pacman.js and flappy.js) and main.js.
   var GAMES = [
-    { id: 'tetris', name: 'Tetris', key: 'bdnix_tetris_best', href: '/tetris/' },
-    { id: 'pacman', name: 'Pac-Man', key: 'bdnix_pacman_best', href: '/pacman/' },
-    { id: 'flappy', name: 'Flappy Bird', key: 'bdnix_flappy_best', href: '/flappy-bird/' }
+    { id: 'tetris', name: 'Falling Blocks', key: 'bdnix_tetris_best', href: '/falling-blocks/' },
+    { id: 'pacman', name: 'Maze Chase', key: 'bdnix_pacman_best', href: '/maze-chase/' },
+    { id: 'flappy', name: 'Flap', key: 'bdnix_flappy_best', href: '/flap/' }
   ];
 
   function read(key){

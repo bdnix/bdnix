@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures.mjs';
 import { openGame, press, tap } from './games.mjs';
 
-// Pac-Man starts at the bottom, heading left. Each dot is 10 points and a
+// The player starts at the bottom, heading left. Each dot is 10 points and a
 // power pellet 50. The game waits 2.2 seconds on "Ready" before it moves.
 
 test.beforeEach(async ({ page }) => {
-  await openGame(page, '/pacman/');
-  await expect(page.locator('#ovTitle')).toHaveText('Pac-Man');
+  await openGame(page, '/maze-chase/');
+  await expect(page.locator('#ovTitle')).toHaveText('Maze Chase');
   await page.getByRole('button', { name: 'Start game' }).click();
   await expect(page.locator('#overlay')).toBeHidden();
   await page.clock.runFor(2300);
@@ -119,6 +119,6 @@ test('a save that does not make sense is thrown away', async ({ page }) => {
   // Written as the page loads, after the game in progress has saved itself.
   await page.addInitScript(() => localStorage.setItem('bdnix_pacman_save', JSON.stringify({ v: 1, data: { state: 'playing', score: 5 } })));
   await page.reload();
-  await expect(page.locator('#ovTitle')).toHaveText('Pac-Man');
+  await expect(page.locator('#ovTitle')).toHaveText('Maze Chase');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_pacman_save'))).toBeNull();
 });

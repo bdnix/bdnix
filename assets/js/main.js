@@ -21,8 +21,8 @@
   // Typewriter
   if (reduce) return;
   var lines = [
-    'play a round of tetris.',
-    'chase ghosts in pac-man.',
+    'play a round of falling blocks.',
+    'dodge ghosts in maze chase.',
     'flap past a few pipes.',
     'merge a stack of pdfs.',
     'watermark a report.',

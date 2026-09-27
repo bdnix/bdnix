@@ -281,7 +281,7 @@
     var steps = Math.ceil(dt / (1 / 120));
     var h = dt / steps;
     for (var s = 0; s < steps && state === 'playing' && freeze <= 0; s++) {
-      // Pac-Man may reverse at any time, not only at tile centres.
+      // The player may reverse at any time, not only at tile centres.
       if (wanted && pac.dir && wanted.x === -pac.dir.x && wanted.y === -pac.dir.y) { pac.dir = wanted; pac.face = wanted; }
       if (!pac.dir) pacChoose(pac);
       advance(pac, pacSpeed() * h, pacChoose);

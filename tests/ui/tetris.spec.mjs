@@ -12,8 +12,8 @@ const hud = (page) => page.evaluate(() => ({
 }));
 
 test.beforeEach(async ({ page }) => {
-  await openGame(page, '/tetris/');
-  await expect(page.locator('#ovTitle')).toHaveText('Tetris');
+  await openGame(page, '/falling-blocks/');
+  await expect(page.locator('#ovTitle')).toHaveText('Falling Blocks');
   await page.getByRole('button', { name: 'Start game' }).click();
   await expect(page.locator('#overlay')).toBeHidden();
 });
@@ -142,7 +142,7 @@ test('a save that does not make sense is thrown away', async ({ page }) => {
   // Written as the page loads, after the game in progress has saved itself.
   await page.addInitScript(() => localStorage.setItem('bdnix_tetris_save', JSON.stringify({ v: 1, data: { grid: [], score: 5 } })));
   await page.reload();
-  await expect(page.locator('#ovTitle')).toHaveText('Tetris');
+  await expect(page.locator('#ovTitle')).toHaveText('Falling Blocks');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_tetris_save'))).toBeNull();
 });
 

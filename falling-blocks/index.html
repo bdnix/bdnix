@@ -3,26 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Tetris — Play free in your browser | bdnix</title>
-  <meta name="description" content="Play Tetris free in your browser, with the keyboard or with touch buttons on a phone. Hold a piece, hard drop, clear lines and beat your best score. Nothing to install.">
-  <link rel="canonical" href="https://www.bdnix.com/tetris/">
+  <title>Falling Blocks — Play free in your browser | bdnix</title>
+  <meta name="description" content="Play Falling Blocks free in your browser, with the keyboard or with touch buttons on a phone. Hold a piece, hard drop, clear lines and beat your best score. Nothing to install.">
+  <link rel="canonical" href="https://www.bdnix.com/falling-blocks/">
   <meta property="og:site_name" content="bdnix">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://www.bdnix.com/tetris/">
-  <meta property="og:title" content="Tetris — Play free in your browser | bdnix">
-  <meta property="og:description" content="Play Tetris free in your browser, with the keyboard or with touch buttons on a phone. Hold a piece, hard drop, clear lines and beat your best score. Nothing to install.">
+  <meta property="og:url" content="https://www.bdnix.com/falling-blocks/">
+  <meta property="og:title" content="Falling Blocks — Play free in your browser | bdnix">
+  <meta property="og:description" content="Play Falling Blocks free in your browser, with the keyboard or with touch buttons on a phone. Hold a piece, hard drop, clear lines and beat your best score. Nothing to install.">
   <meta property="og:image" content="https://www.bdnix.com/assets/img/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="bdnix: Play a little. Get things done.">
   <meta name="twitter:card" content="summary_large_image">
-  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Tetris", "url": "https://www.bdnix.com/tetris/", "description": "Play Tetris free in your browser, with the keyboard or with touch buttons on a phone. Hold a piece, hard drop, clear lines and beat your best score. Nothing to install.", "applicationCategory": "GameApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Falling Blocks", "url": "https://www.bdnix.com/falling-blocks/", "description": "Play Falling Blocks free in your browser, with the keyboard or with touch buttons on a phone. Hold a piece, hard drop, clear lines and beat your best score. Nothing to install.", "applicationCategory": "GameApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/base.css?v=f674399bef">
   <link rel="stylesheet" href="/assets/css/game.css?v=bde9b722f7">
-  <link rel="stylesheet" href="/assets/css/tetris.css?v=9070139a67">
+  <link rel="stylesheet" href="/assets/css/tetris.css?v=796c81051e">
   <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
@@ -32,7 +32,7 @@
   <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
 
   <header class="bar">
-    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ tetris</span></a>
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ falling blocks</span></a>
     <button id="pauseBtn" class="icon-btn" aria-label="Pause">
       <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2h3v12H4zM9 2h3v12H9z"/></svg>
     </button>
@@ -60,7 +60,7 @@
       <canvas id="board"></canvas>
       <div id="overlay" class="overlay">
         <p class="label" id="ovKicker">bdnix arcade</p>
-        <h1 id="ovTitle">Tetris</h1>
+        <h1 id="ovTitle">Falling Blocks</h1>
         <p id="ovText">Clear lines. Don't hit the top.</p>
         <div class="ov-actions">
           <button id="startBtn" class="btn btn-primary">Start game</button>

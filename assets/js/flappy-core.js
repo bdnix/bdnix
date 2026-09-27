@@ -1,4 +1,4 @@
-// Flappy Bird rules: the bird, the pipes, collisions and scoring. No DOM, so
+// Flap rules: the bird, the pipes, collisions and scoring. No DOM, so
 // it can be unit tested; flappy.js draws the world and handles input.
 // Distances are in world units on a 288 x 512 board, times in seconds.
 (function(){
