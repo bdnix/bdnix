@@ -8,8 +8,8 @@
   var START_LEN = 3;
   var START = { x: 6, y: 8 };           // the head; the tail trails off to the left
   var FIRST_FOOD = { x: 12, y: 8 };     // straight ahead, so the first bite is easy
-  var SLOW = 0.15, FAST = 0.07;         // seconds per step, at the start and at top speed
-  var SPEEDUP = 0.004;                  // seconds taken off per piece of food eaten
+  var SLOW = 0.22, FAST = 0.1;          // seconds per step, at the start and at top speed
+  var SPEEDUP = 0.003;                  // seconds taken off per piece of food eaten
 
   var DIRS = {
     up: { x: 0, y: -1 }, down: { x: 0, y: 1 },
@@ -44,6 +44,7 @@
     return {
       rand: rand || Math.random,
       body: body,               // head first
+      trail: { x: body[START_LEN - 1].x, y: body[START_LEN - 1].y }, // where the tail was before the last step
       dir: 'right',             // the way the snake last moved
       queue: [],                // turns pressed but not made yet
       food: { x: FIRST_FOOD.x, y: FIRST_FOOD.y },
@@ -67,7 +68,7 @@
   function step(w){
     if (w.dead) return null;
     if (w.queue.length) w.dir = w.queue.shift();
-    var d = DIRS[w.dir], head = w.body[0];
+    var d = DIRS[w.dir], head = w.body[0], tail = w.body[w.body.length - 1];
     var x = head.x + d.x, y = head.y + d.y;
     if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return (w.dead = 'wall');
     var eats = !!w.food && x === w.food.x && y === w.food.y;
@@ -75,6 +76,7 @@
     var rest = eats ? w.body : w.body.slice(0, -1);
     if (onBody(rest, x, y)) return (w.dead = 'self');
     w.body.unshift({ x: x, y: y });
+    w.trail = { x: tail.x, y: tail.y };
     if (!eats) { w.body.pop(); return null; }
     w.score++;
     if (!placeFood(w)) w.dead = 'full';

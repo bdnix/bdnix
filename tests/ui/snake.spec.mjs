@@ -31,6 +31,29 @@ async function openSaved(page, data){
 const saved = (body, extra = {}) => ({ carry: 0, body, dir: 'right', queue: [], food: { x: 0, y: 0 }, score: body.length - 3, ...extra });
 const row = (x, y, n) => Array.from({ length: n }, (_, i) => ({ x: x - i, y }));
 
+// Where the head is drawn, in cells: the middle of the pixels in its exact colour.
+function headOnBoard(page){
+  return page.locator('#board').evaluate((c, [cols, rows]) => {
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let n = 0, sx = 0, sy = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i] === 34 && d[i + 1] === 211 && d[i + 2] === 238 && d[i + 3] === 255) {
+        sx += (i / 4) % c.width; sy += Math.floor(i / 4 / c.width); n++;
+      }
+    }
+    return n ? { x: sx / n / c.width * cols, y: sy / n / c.height * rows } : null;
+  }, [COLS, ROWS]);
+}
+// How many pixels of the snake are drawn (bright cyan to purple, not the berry or the grid).
+function snakeOnBoard(page){
+  return page.locator('#board').evaluate((c) => {
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 80 && d[i] < 200 && d[i + 2] > 150) n++;
+    return n;
+  });
+}
+
 test.beforeEach(async ({ page }) => {
   await openGame(page, '/snake/');
   await expect(page.locator('#ovTitle')).toHaveText('Snake');
@@ -71,6 +94,38 @@ test('eats, grows and runs into the wall', async ({ page }) => {
   await expect(page.locator('#overlay')).toBeHidden();
 });
 
+test('the snake glides a little every frame instead of jumping a cell at a time', async ({ page }) => {
+  await page.getByRole('button', { name: 'Start game' }).click();
+  const still = await headOnBoard(page);
+  expect(still.x).toBeCloseTo(6.5, 1);                  // on "Get ready", in the middle of its cell
+  await press(page, 'ArrowRight');
+  let prev = await headOnBoard(page);
+  expect(prev.x).toBeCloseTo(6.5, 1);                  // starting off doesn't jump it forward
+  for (let i = 0; i < 12; i++) {
+    await page.clock.runFor(40);
+    const now = await headOnBoard(page);
+    const moved = now.x - prev.x;
+    expect(moved, `frame ${i}`).toBeGreaterThan(0.05);  // always moving...
+    expect(moved, `frame ${i}`).toBeLessThan(0.4);      // ...a fraction of a cell at a time
+    expect(now.y).toBeCloseTo(8.5, 1);
+    prev = now;
+  }
+});
+
+test('the snake stays on screen every frame, through the crash, with no blinking', async ({ page }) => {
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await press(page, 'ArrowUp');
+  const overlay = page.locator('#overlay');
+  let frames = 0;
+  for (let t = 0; t < 5000 && !(await overlay.isVisible()); t += 50) {
+    await page.clock.runFor(50);
+    expect(await snakeOnBoard(page), `at ${t}ms`).toBeGreaterThan(200);
+    frames++;
+  }
+  expect(frames).toBeGreaterThan(30);                   // it ran up to the wall, then crashed
+  await expect(page.locator('#ovTitle')).toHaveText('Game over');
+});
+
 test('running into its own body ends the round', async ({ page }) => {
   await openSaved(page, saved(row(6, 8, 5)));
   await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
@@ -108,14 +163,17 @@ test('keys, swipes and the buttons all turn', async ({ page }) => {
   await page.getByRole('button', { name: 'Start game' }).click();
   await press(page, 'ArrowLeft');                      // straight back doesn't start it
   expect(await peek(page)).toBeNull();
-  await press(page, 'KeyW');
-  await press(page, 'KeyA');
-  expect((await peek(page)).queue).toEqual(['up', 'left']);
-  await press(page, 'KeyS');                           // only two turns wait at once
-  expect((await peek(page)).queue).toEqual(['up', 'left']);
-  await page.clock.runFor(400);
+  await press(page, 'KeyW');                           // the first press turns and starts it at once
   let s = await peek(page);
-  expect([s.dir, s.queue]).toEqual(['left', []]);
+  expect([s.dir, s.queue, s.body[0]]).toEqual(['up', [], { x: 6, y: 7 }]);
+  await press(page, 'KeyA');
+  await press(page, 'KeyS');
+  expect((await peek(page)).queue).toEqual(['left', 'down']);
+  await press(page, 'KeyD');                           // only two turns wait at once
+  expect((await peek(page)).queue).toEqual(['left', 'down']);
+  await page.clock.runFor(500);
+  s = await peek(page);
+  expect([s.dir, s.queue]).toEqual(['down', []]);
 
   const game = page.locator('#game');
   const swipe = async (...moves) => {
@@ -129,34 +187,34 @@ test('keys, swipes and the buttons all turn', async ({ page }) => {
   };
   await swipe([0, 5]);                                  // too short to count
   expect((await peek(page)).queue).toEqual([]);
-  await swipe([0, 30], [30, 0]);                        // one stroke, two turns
-  expect((await peek(page)).queue).toEqual(['down', 'right']);
-  await page.clock.runFor(400);
-  await swipe([0, -30]);
+  await swipe([30, 0], [0, -30]);                       // one stroke, two turns
+  expect((await peek(page)).queue).toEqual(['right', 'up']);
+  await page.clock.runFor(500);
   await swipe([-30, 0]);
-  expect((await peek(page)).queue).toEqual(['up', 'left']);
-  await page.clock.runFor(400);
+  await swipe([0, 30]);
+  expect((await peek(page)).queue).toEqual(['left', 'down']);
+  await page.clock.runFor(500);
 
-  await tap(page.locator('.touch [data-dir=down]'));
   await tap(page.locator('.touch [data-dir=right]'));
-  expect((await peek(page)).queue).toEqual(['down', 'right']);
-  await page.clock.runFor(400);
   await tap(page.locator('.touch [data-dir=up]'));
+  expect((await peek(page)).queue).toEqual(['right', 'up']);
+  await page.clock.runFor(500);
   await tap(page.locator('.touch [data-dir=left]'));
-  expect((await peek(page)).queue).toEqual(['up', 'left']);
-  await page.clock.runFor(400);
-  await press(page, 'ArrowDown');
-  await press(page, 'KeyD');
-  expect((await peek(page)).queue).toEqual(['down', 'right']);
-  await page.clock.runFor(400);
-  await press(page, 'ArrowUp');
-  expect((await peek(page)).queue).toEqual(['up']);
+  await tap(page.locator('.touch [data-dir=down]'));
+  expect((await peek(page)).queue).toEqual(['left', 'down']);
+  await page.clock.runFor(500);
+  await press(page, 'ArrowRight');
+  await press(page, 'KeyW');
+  expect((await peek(page)).queue).toEqual(['right', 'up']);
+  await page.clock.runFor(500);
+  await press(page, 'ArrowLeft');
+  expect((await peek(page)).queue).toEqual(['left']);
 
   // A right click doesn't start a swipe.
   await game.dispatchEvent('pointerdown', { pointerType: 'mouse', button: 2, clientX: 200, clientY: 300 });
   await game.dispatchEvent('pointermove', { pointerType: 'mouse', button: 2, clientX: 260, clientY: 300 });
   await game.dispatchEvent('pointercancel', { pointerType: 'mouse' });
-  expect((await peek(page)).queue).toEqual(['up']);
+  expect((await peek(page)).queue).toEqual(['left']);
 });
 
 test('pausing stops the snake, and it resumes where it was', async ({ page }) => {
@@ -223,7 +281,7 @@ test('a phone held sideways fits the whole board on screen, controls beside it',
 
   await page.getByRole('button', { name: 'Start game' }).click();
   await tap(page.locator('.touch [data-dir=up]'));
-  expect((await peek(page)).queue).toEqual(['up']);
+  expect((await peek(page)).dir).toBe('up');
 });
 
 test('a reload keeps the round, paused where it was', async ({ page }) => {

@@ -59,6 +59,9 @@
     if (state === 'ready') {
       if (dir === F.OPPOSITE[world.dir]) return;
       F.turn(world, dir);
+      // The first step is taken straight away: the snake is drawn gliding
+      // from where it was into the cell it just took.
+      F.step(world);
       carry = 0;
       setState('playing');
     } else if (state === 'playing') {
@@ -91,6 +94,7 @@
   }
   function gameOver(){
     setState('over');
+    stale = true;                       // one last frame of the faded snake
     var score = world.score;
     var lines = ENDINGS[world.dead];
     ovKicker.textContent = lines[Math.min(lines.length - 1, Math.floor(Math.random() * lines.length))];
@@ -130,7 +134,7 @@
   function snapshot(){
     var s = state === 'paused' ? pausedFrom : state;
     if (s !== 'playing' || world.dead) return null;
-    return { carry: carry, body: world.body, dir: world.dir, queue: world.queue, food: world.food, score: world.score };
+    return { carry: carry, body: world.body, trail: world.trail, dir: world.dir, queue: world.queue, food: world.food, score: world.score };
   }
   var persist = window.bdnixSave.keep('snake', snapshot);
 
@@ -155,6 +159,9 @@
     if (F.onBody(b, s.food.x, s.food.y)) return false;
     var w = F.create();
     w.body = b.map(function(c){ return { x: c.x, y: c.y }; });
+    // Where the tail is gliding from; a save without one just starts it still.
+    var tail = b[b.length - 1], tr = s.trail;
+    if (isCell(tr) && Math.abs(tr.x - tail.x) + Math.abs(tr.y - tail.y) <= 1) w.trail = { x: tr.x, y: tr.y };
     w.dir = s.dir;
     s.queue.forEach(function(d){ F.turn(w, d); });
     w.food = { x: s.food.x, y: s.food.y };
@@ -194,21 +201,46 @@
     SCALE = Math.max(0.5, Math.min(1.6, Math.floor(Math.min((availW - 2) / W, (availH - 2) / H) * 100) / 100));
     sizeCanvas(board, ctx, Math.round(W * SCALE), Math.round(H * SCALE));
     board.parentNode.style.setProperty('--cell', Math.max(16, 32 * SCALE) + 'px');
+    buildLayers();
     render();
   }
 
   // ---------- Drawing ----------
+  // The board and the food never change shape, so they're drawn once per
+  // size into offscreen canvases and copied in each frame. Glow (shadowBlur)
+  // is slow to draw, so it's only ever drawn here.
+  var grid = document.createElement('canvas'), berry = document.createElement('canvas');
+  function buildLayers(){
+    var k = (window.devicePixelRatio || 1) * SCALE;
+    grid.width = board.width; grid.height = board.height;
+    var g = grid.getContext('2d');
+    g.setTransform(k, 0, 0, k, 0, 0);
+    // A faint checkerboard, so it's easy to see where the snake will go.
+    g.fillStyle = 'rgba(168,85,247,.05)';
+    for (var y = 0; y < ROWS; y++) {
+      for (var x = (y % 2); x < COLS; x += 2) g.fillRect(x * CELL, y * CELL, CELL, CELL);
+    }
+    // A glowing berry with a leaf, two cells across to leave room for the glow.
+    berry.width = berry.height = Math.ceil(CELL * 2 * k);
+    var f = berry.getContext('2d'), c = CELL, r = CELL * 0.3;
+    f.setTransform(k, 0, 0, k, 0, 0);
+    f.fillStyle = '#f472b6';
+    f.shadowColor = '#f472b6'; f.shadowBlur = 12 * k;
+    f.beginPath(); f.arc(c, c + 1, r, 0, Math.PI * 2); f.fill();
+    f.shadowBlur = 0;
+    f.fillStyle = 'rgba(255,255,255,.55)';
+    f.beginPath(); f.arc(c - r * 0.35, c - r * 0.2, r * 0.25, 0, Math.PI * 2); f.fill();
+    f.fillStyle = '#4ade80';
+    f.beginPath(); f.ellipse(c + 3, c - r - 1, 4, 2, -0.5, 0, Math.PI * 2); f.fill();
+  }
+
   function render(){
     var dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, W * SCALE, H * SCALE);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, board.width, board.height);
+    ctx.drawImage(grid, 0, 0);
     ctx.setTransform(dpr * SCALE, 0, 0, dpr * SCALE, 0, 0);
 
-    // A faint checkerboard, so it's easy to see where the snake will go.
-    ctx.fillStyle = 'rgba(168,85,247,.05)';
-    for (var y = 0; y < ROWS; y++) {
-      for (var x = (y % 2); x < COLS; x += 2) ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
-    }
     if (world.food) drawFood(world.food);
     drawSnake();
 
@@ -227,63 +259,76 @@
     }
   }
 
-  // A glowing berry with a leaf, pulsing gently.
+  // The berry pulses gently.
   function drawFood(f){
-    var cx = (f.x + 0.5) * CELL, cy = (f.y + 0.5) * CELL;
-    var r = CELL * 0.3 * (1 + Math.sin(clock * 5) * 0.08);
-    ctx.fillStyle = '#f472b6';
-    ctx.shadowColor = '#f472b6'; ctx.shadowBlur = 12;
-    ctx.beginPath(); ctx.arc(cx, cy + 1, r, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(255,255,255,.55)';
-    ctx.beginPath(); ctx.arc(cx - r * 0.35, cy - r * 0.2, r * 0.25, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#4ade80';
-    ctx.beginPath(); ctx.ellipse(cx + 3, cy - r - 1, 4, 2, -0.5, 0, Math.PI * 2); ctx.fill();
+    var size = CELL * 2 * (1 + Math.sin(clock * 5) * 0.08);
+    ctx.drawImage(berry, (f.x + 0.5) * CELL - size / 2, (f.y + 0.5) * CELL - size / 2, size, size);
   }
 
-  function roundRect(x, y, w, h, r){
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
+  // How far through the current step the snake is drawn, from 0 (just
+  // stepped) to 1 (about to step again).
+  function progress(){
+    var s = state === 'paused' ? pausedFrom : state;
+    return s === 'playing' ? Math.min(1, carry / F.interval(world.score)) : 1;
   }
+  // The snake's colour, from cyan at the head (0) to purple at the tail (1).
+  function shade(k){
+    return 'rgb(' + Math.round(34 + 134 * k) + ',' + Math.round(211 - 126 * k) + ',' + Math.round(238 + 9 * k) + ')';
+  }
+  function lerp(a, b, t){ return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }; }
 
-  // The snake fades from cyan at the head to purple at the tail. After a
-  // crash it blinks until the score shows.
+  // The snake glides between cells: the head moves from the neck into the
+  // cell it has just taken while the tail leaves the cell it has just let go,
+  // so it slides smoothly instead of jumping a cell at a time. It's drawn as
+  // one thick line through the middle of its cells, fading from cyan at the
+  // head to purple at the tail. After a crash it fades until the score shows.
   function drawSnake(){
-    var b = world.body, n = b.length;
-    if (state === 'dying' && Math.floor(stateTime * 8) % 2) return;
-    for (var i = n - 1; i >= 0; i--) {
-      var t = n > 1 ? i / (n - 1) : 0;
-      var r = Math.round(34 + (168 - 34) * t), g = Math.round(211 + (85 - 211) * t), bl = Math.round(238 + (247 - 238) * t);
-      ctx.fillStyle = 'rgb(' + r + ',' + g + ',' + bl + ')';
-      var s = b[i], x = s.x * CELL, y = s.y * CELL, pad = i === 0 ? 1 : 2;
-      roundRect(x + pad, y + pad, CELL - pad * 2, CELL - pad * 2, i === 0 ? 8 : 6); ctx.fill();
-      // Fill the gap to the next piece, so the body reads as one.
-      if (i > 0) {
-        var p = b[i - 1];
-        ctx.fillRect(Math.min(x, p.x * CELL) + (s.x === p.x ? pad : CELL / 2), Math.min(y, p.y * CELL) + (s.y === p.y ? pad : CELL / 2),
-          s.x === p.x ? CELL - pad * 2 : CELL, s.y === p.y ? CELL - pad * 2 : CELL);
-      }
+    var b = world.body, n = b.length, t = progress();
+    var head = lerp(b[1], b[0], t);
+    var pts = [lerp(world.trail, b[n - 1], t)];
+    for (var i = n - 1; i >= 1; i--) pts.push(b[i]);
+    pts.push(head);
+
+    ctx.save();
+    if (state === 'dying' || state === 'over') ctx.globalAlpha = 1 - 0.55 * Math.min(1, state === 'over' ? 1 : stateTime / DEATH_TIME);
+    var m = pts.length - 1, w = CELL * 0.74;
+    // Round joints first (they show only at the corners and the tail end),
+    // then flat-ended pieces over them, so the colours blend without seams.
+    for (i = 0; i < m; i++) {
+      ctx.fillStyle = shade(1 - i / m);
+      ctx.beginPath(); ctx.arc((pts[i].x + 0.5) * CELL, (pts[i].y + 0.5) * CELL, w / 2, 0, Math.PI * 2); ctx.fill();
     }
-    // Eyes on the head, looking the way it's going.
-    var h = b[0], d = F.DIRS[world.dir], hx = (h.x + 0.5) * CELL, hy = (h.y + 0.5) * CELL;
-    var ex = d.y * 5, ey = d.x * 5;       // across the head
-    var fx = d.x * 4, fy = d.y * 4;       // towards the front
+    ctx.lineCap = 'butt';
+    ctx.lineWidth = w;
+    for (i = 0; i < m; i++) {
+      ctx.strokeStyle = shade(1 - (i + 0.5) / m);
+      ctx.beginPath();
+      ctx.moveTo((pts[i].x + 0.5) * CELL, (pts[i].y + 0.5) * CELL);
+      ctx.lineTo((pts[i + 1].x + 0.5) * CELL, (pts[i + 1].y + 0.5) * CELL);
+      ctx.stroke();
+    }
+    // The head, a little wider, with eyes looking the way it's going.
+    var hx = (head.x + 0.5) * CELL, hy = (head.y + 0.5) * CELL;
+    var dx = b[0].x - b[1].x, dy = b[0].y - b[1].y;
+    ctx.fillStyle = 'rgb(34,211,238)';
+    ctx.beginPath(); ctx.arc(hx, hy, CELL * 0.42, 0, Math.PI * 2); ctx.fill();
+    var ex = dy * 5, ey = dx * 5;         // across the head
+    var fx = dx * 4, fy = dy * 4;         // towards the front
     ctx.fillStyle = '#080a12';
     ctx.beginPath(); ctx.arc(hx + fx + ex, hy + fy + ey, 2.4, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(hx + fx - ex, hy + fy - ey, 2.4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
 
-  var last = performance.now();
+  var last = performance.now(), stale = false;
   function loop(now){
     var dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     update(dt);
-    render();
+    // Nothing moves while the overlay is up, so the board isn't redrawn
+    // under it (redrawing under its blur is costly on phones).
+    if (state === 'ready' || state === 'playing' || state === 'dying' || stale) render();
+    stale = false;
     requestAnimationFrame(loop);
   }
 
