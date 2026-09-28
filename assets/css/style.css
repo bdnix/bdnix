@@ -30,7 +30,26 @@
 }
 @keyframes blink{50%{opacity:0}}
 
+.search{margin-top:36px;max-width:612px}
+.search .label{display:block}
+.search-box{position:relative;margin-top:12px}
+.search-box svg{position:absolute;left:14px;top:50%;width:16px;height:16px;margin-top:-8px;z-index:1;color:var(--faint);pointer-events:none}
+.search-box input{
+  width:100%;padding:13px 14px 13px 40px;
+  border:1px solid var(--line);border-radius:12px;
+  background:var(--panel);color:var(--fg);
+  font:400 16px/1.2 var(--sans);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  transition:border-color .2s ease;
+}
+.search-box input::placeholder{color:var(--faint)}
+.search-box input:focus{outline:none;border-color:var(--cyan)}
+.search-status{margin:8px 0 0;font:400 12px var(--mono);color:var(--faint);min-height:1.4em}
+.search-empty{margin:20px 0 0;font-size:15px;color:var(--muted)}
+.search-empty a{color:var(--fg)}
 .games{margin-top:40px}
+.search-empty + .games{margin-top:24px}
+.games[hidden],.game-card[hidden]{display:none}
 .game-cards{display:grid;grid-template-columns:repeat(2,minmax(0,300px));gap:12px;margin-top:12px}
 .game-card{
   display:flex;align-items:center;gap:14px;

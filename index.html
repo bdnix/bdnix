@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/base.css?v=f674399bef">
-  <link rel="stylesheet" href="/assets/css/style.css?v=5a411b028a">
+  <link rel="stylesheet" href="/assets/css/style.css?v=38bf6496e5">
   <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
@@ -41,10 +41,20 @@
 
     <p class="terminal" aria-live="polite"><span class="prompt">$</span> <span id="typed">play a round of falling blocks.</span><span class="cursor"></span></p>
 
-    <section class="games" aria-labelledby="games-label">
+    <div class="search" role="search">
+      <label class="label" for="search">Search games &amp; tools</label>
+      <div class="search-box">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <input id="search" type="search" placeholder="Try “pdf”, “photo” or “snake”" autocomplete="off" spellcheck="false" aria-controls="games tools" aria-describedby="search-status">
+      </div>
+      <p class="search-status" id="search-status" aria-live="polite"></p>
+    </div>
+    <p class="search-empty" id="search-empty" hidden>Nothing matches that yet. <a href="#suggest">Ask for it</a> and it might be next.</p>
+
+    <section class="games" id="games" aria-labelledby="games-label">
       <p class="label" id="games-label">Games</p>
       <div class="game-cards">
-        <a class="game-card panel" href="/falling-blocks/">
+        <a class="game-card panel" href="/falling-blocks/" data-keywords="game puzzle blocks stack lines arcade">
           <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
             <rect x="4" y="18" width="10" height="10" rx="2" fill="#a855f7"/>
             <rect x="15" y="18" width="10" height="10" rx="2" fill="#a855f7"/>
@@ -57,7 +67,7 @@
           <span class="gc-text"><b>Falling Blocks</b><span>Stack blocks, clear lines</span></span>
           <svg class="gc-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        <a class="game-card panel" href="/maze-chase/">
+        <a class="game-card panel" href="/maze-chase/" data-keywords="game arcade maze ghosts dots">
           <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
             <path d="M14 20 L24.4 14 A12 12 0 1 0 24.4 26 Z" fill="#facc15"/>
             <circle cx="29" cy="20" r="2" fill="#eef1f8" opacity=".8"/>
@@ -66,7 +76,7 @@
           <span class="gc-text"><b>Maze Chase</b><span>Eat dots, dodge ghosts</span></span>
           <svg class="gc-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        <a class="game-card panel" href="/flap/">
+        <a class="game-card panel" href="/flap/" data-keywords="game arcade bird pipes fly tap">
           <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
             <rect x="27" y="2" width="9" height="11" rx="1.5" fill="#22d3ee" opacity=".55"/>
             <rect x="27" y="27" width="9" height="11" rx="1.5" fill="#22d3ee" opacity=".55"/>
@@ -78,7 +88,7 @@
           <span class="gc-text"><b>Flap</b><span>Flap through the pipes</span></span>
           <svg class="gc-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        <a class="game-card panel" href="/road-hop/">
+        <a class="game-card panel" href="/road-hop/" data-keywords="game arcade chicken cross road cars traffic">
           <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
             <rect x="0" y="4" width="40" height="10" rx="2" fill="#22d3ee" opacity=".3"/>
             <rect x="24" y="5.5" width="12" height="7" rx="2.5" fill="#f472b6"/>
@@ -91,7 +101,7 @@
           <span class="gc-text"><b>Road Hop</b><span>Help a chicken cross the road</span></span>
           <svg class="gc-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        <a class="game-card panel" href="/snake/">
+        <a class="game-card panel" href="/snake/" data-keywords="game arcade classic grow">
           <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
             <path d="M6 32h14V20h12V9" fill="none" stroke="#a855f7" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M20 20h12V9" fill="none" stroke="#22d3ee" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -102,7 +112,7 @@
           <span class="gc-text"><b>Snake</b><span>Eat, grow, don’t bite your tail</span></span>
           <svg class="gc-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        <a class="game-card panel" href="/brick-bounce/">
+        <a class="game-card panel" href="/brick-bounce/" data-keywords="game arcade ball paddle bricks">
           <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
             <rect x="3" y="5" width="10" height="6" rx="1.5" fill="#f472b6"/>
             <rect x="15" y="5" width="10" height="6" rx="1.5" fill="#f472b6"/>
@@ -118,10 +128,10 @@
       </div>
     </section>
 
-    <section class="games" aria-labelledby="tools-label">
+    <section class="games" id="tools" aria-labelledby="tools-label">
       <p class="label" id="tools-label">Tools</p>
       <div class="game-cards">
-        <a class="game-card panel" href="/merge-pdf/">
+        <a class="game-card panel" href="/merge-pdf/" data-keywords="tool pdf combine join documents">
           <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
             <rect x="5" y="5" width="18" height="23" rx="3" fill="#22d3ee" opacity=".55"/>
             <rect x="17" y="12" width="18" height="23" rx="3" fill="#a855f7"/>
@@ -130,7 +140,7 @@
           <span class="gc-text"><b>Merge PDFs</b><span>Combine PDFs into one</span></span>
           <svg class="gc-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        <a class="game-card panel" href="/watermark-pdf/">
+        <a class="game-card panel" href="/watermark-pdf/" data-keywords="tool pdf stamp logo text documents">
           <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
             <rect x="9" y="4" width="22" height="32" rx="3" fill="#22d3ee" opacity=".55"/>
             <path d="M12 28 L28 12" stroke="#f472b6" stroke-width="4" stroke-linecap="round"/>
@@ -139,7 +149,7 @@
           <span class="gc-text"><b>Watermark a PDF</b><span>Stamp text or a logo</span></span>
           <svg class="gc-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        <a class="game-card panel" href="/redact-pdf/">
+        <a class="game-card panel" href="/redact-pdf/" data-keywords="tool pdf black out hide censor private documents">
           <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
             <rect x="9" y="4" width="22" height="32" rx="3" fill="#22d3ee" opacity=".55"/>
             <rect x="12" y="11" width="16" height="5" rx="1" fill="#080a12"/>
@@ -149,7 +159,7 @@
           <span class="gc-text"><b>Redact a PDF</b><span>Black out text for good</span></span>
           <svg class="gc-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        <a class="game-card panel" href="/mp4-to-mp3/">
+        <a class="game-card panel" href="/mp4-to-mp3/" data-keywords="tool audio video music sound convert extract wav">
           <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
             <rect x="3" y="8" width="22" height="17" rx="3" fill="#22d3ee" opacity=".55"/>
             <path d="M11 12.5v8l6.5-4z" fill="#eef1f8" opacity=".8"/>
@@ -160,7 +170,7 @@
           <span class="gc-text"><b>MP4 to MP3</b><span>Video or audio to MP3 or WAV</span></span>
           <svg class="gc-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        <a class="game-card panel" href="/compress-image/">
+        <a class="game-card panel" href="/compress-image/" data-keywords="tool image photo picture jpg jpeg png webp shrink smaller resize">
           <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
             <rect x="3" y="5" width="26" height="22" rx="3" fill="#22d3ee" opacity=".55"/>
             <circle cx="11" cy="12" r="3" fill="#eef1f8" opacity=".8"/>
@@ -171,7 +181,7 @@
           <span class="gc-text"><b>Compress Images</b><span>Make photos smaller</span></span>
           <svg class="gc-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        <a class="game-card panel" href="/photo-collage/">
+        <a class="game-card panel" href="/photo-collage/" data-keywords="tool image photo picture grid combine">
           <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
             <rect x="4" y="4" width="19" height="19" rx="3" fill="#22d3ee" opacity=".55"/>
             <rect x="26" y="4" width="10" height="8" rx="2" fill="#a855f7"/>
@@ -184,7 +194,7 @@
           <span class="gc-text"><b>Photo Collage</b><span>3, 6 or 9 photos in one</span></span>
           <svg class="gc-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        <a class="game-card panel" href="/fit-to-frame/">
+        <a class="game-card panel" href="/fit-to-frame/" data-keywords="tool image photo picture resize pad border square social">
           <svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">
             <rect x="4" y="4" width="32" height="32" rx="3" fill="#eef1f8" opacity=".85"/>
             <rect x="4" y="11" width="32" height="18" fill="#22d3ee" opacity=".75"/>
@@ -217,6 +227,7 @@
 
   <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
   <script src="/assets/js/profile.js?v=b5253a5e91"></script>
-  <script src="/assets/js/main.js?v=7f8557af04"></script>
+  <script src="/assets/js/search-core.js?v=56131f34d6"></script>
+  <script src="/assets/js/main.js?v=7a09b09716"></script>
 </body>
 </html>

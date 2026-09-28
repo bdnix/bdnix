@@ -25,6 +25,7 @@ python3 -m http.server 8000   # http://localhost:8000
 - Shared styles: `base.css` (colour tokens and common components), `game.css` (game layout) and `tool.css` (tool and profile layout).
 - Shared scripts expose one `window.bdnix*` object each: the falling-block backdrop, PDF and file helpers, the profile, saved games, game sounds and analytics.
 - Pure logic (layout maths, parsing, encoding, game rules) is kept in separate `*-core.js` style files so it can be unit tested without a browser.
+- The landing page's search box matches what's typed against each card's name, description and `data-keywords` attribute (`search-core.js`). A new game or tool card needs a few `data-keywords` so it turns up for the words people are likely to try.
 - Third-party libraries are vendored in `assets/vendor/`, each with its licence file.
 
 ## Tests

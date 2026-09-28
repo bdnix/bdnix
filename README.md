@@ -7,6 +7,8 @@ Free, private tools and classic games that run entirely in your browser, at **[w
 
 There's nothing to install and no account to create. Files you open in a tool are processed on your own device and are never uploaded.
 
+The search box on the home page narrows the list as you type: try "pdf", "photo" or a game's name. Press `/` to jump to it and Esc to clear it.
+
 ## Tools
 
 | Tool | What it does |
