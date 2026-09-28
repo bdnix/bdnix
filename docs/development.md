@@ -65,7 +65,7 @@ Tests that can't have changed aren't run again. The unit tests are cached as a w
 
 ## Deploying
 
-Anything merged to `master` goes live once GitHub Pages rebuilds.
+Anything merged to `master` goes live once GitHub Pages rebuilds. Pages builds the site from the branch with Jekyll: [_config.yml](../_config.yml) holds its settings and lists what isn't published (test tooling, `node_modules` and the repository docs). The build shows up in the Actions tab as **pages build and deployment**.
 
 ### Cache-busting
 
