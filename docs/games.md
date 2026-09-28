@@ -87,7 +87,7 @@ There are three balls. Missing the ball with the paddle loses one, and the next 
 
 ## Sound
 
-Every game has sound effects: a jingle when a game starts, sounds for the main moves (moving, turning and dropping pieces, eating dots and power pellets, flapping, hopping, eating food, the ball hitting the paddle and bricks), for scoring and clearing lines, for each way a round can end (a car, the river, a crash, a lost ball), and a tune at game over, a brighter one for a new best score.
+Every game has sound effects: a jingle when a game starts, sounds for the main moves (moving, turning and dropping pieces, eating dots and power pellets, flapping, hopping, eating food, the ball hitting the paddle, the walls and bricks), for scoring and clearing lines, for each way a round can end (a car, the river, a crash, a lost ball), and a tune at game over, a brighter one for a new best score.
 
 The speaker button beside pause in the top bar, or **M**, turns sound off and on. The choice applies to every game and is remembered in the browser (`bdnix_sound`). Sound is on until it's turned off.
 

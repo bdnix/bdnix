@@ -333,7 +333,7 @@ test('saves that do not make sense are thrown away', async ({ page }) => {
   await expect(page.locator('#level')).toHaveText('3');
 });
 
-test('launching, bricks, the paddle, lost balls and a new wall each have a sound', async ({ page }) => {
+test('launching, bricks, the paddle, the walls, lost balls and a new wall each have a sound', async ({ page }) => {
   await listen(page);
   await page.reload();
   await page.getByRole('button', { name: 'Start game' }).click();
@@ -346,6 +346,11 @@ test('launching, bricks, the paddle, lost balls and a new wall each have a sound
   await page.locator('#startBtn').click();
   await runUntil(page, async () => (await page.evaluate(() => window.heard.length)) > 0);
   expect(await heard(page)).toEqual(['paddle']);
+
+  await openSaved(page, saved({ ball: { x: 30, y: 300, dx: -1, dy: 0.0001 }, stuck: false }));
+  await page.locator('#startBtn').click();
+  await runUntil(page, async () => (await page.evaluate(() => window.heard.length)) > 0);
+  expect(await heard(page)).toEqual(['wall']);
 
   await openSaved(page, saved({ ...falling, lives: 2 }));
   await page.locator('#startBtn').click();

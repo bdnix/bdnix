@@ -78,6 +78,7 @@
     ev.bricks.forEach(function(i){ fading.push({ i: i, t: clock }); });
     if (ev.bricks.length) sound.play('brick');
     else if (ev.paddle) sound.play('paddle');
+    else if (ev.wall) sound.play('wall');
     if (ev.bricks.length || ev.lost || ev.cleared) updateHud();
     if (ev.end) return crash();
     if (ev.cleared) { fading = []; setState('ready'); sound.play('level'); persist(); }

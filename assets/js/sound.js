@@ -52,6 +52,7 @@
     win: notes([523, 659, 784, 1047, 1319, 1568], 0.08, 0.16, 'square', 0.13),
     // Brick Bounce.
     paddle: [tone(330, 330, 0.05, 'square', 0.1)],
+    wall: [tone(220, 220, 0.04, 'square', 0.07)],
     brick: [tone(784, 1175, 0.06, 'square', 0.09)]
   };
 
