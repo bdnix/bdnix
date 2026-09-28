@@ -5,7 +5,7 @@
 // and applies to every game.
 (function(){
   var KEY = 'bdnix_sound';
-  var VOLUME = 0.5;             // overall loudness, on top of each tone's own
+  var VOLUME = 1;               // overall loudness, on top of each tone's own
 
   // A sound is a list of tones. Each tone starts `t` seconds in, lasts `d`
   // seconds and slides from frequency `f` to `to` (Hz); `type` is an
@@ -18,38 +18,38 @@
 
   var SOUNDS = {
     // Shared by every game.
-    start: notes([392, 523, 659, 784], 0.07, 0.1, 'square', 0.12),
-    over: notes([494, 415, 349, 262], 0.16, 0.24, 'triangle', 0.3),
-    best: notes([523, 659, 784, 1047, 784, 1047], 0.09, 0.14, 'square', 0.13),
-    level: notes([659, 784, 988, 1319], 0.08, 0.12, 'square', 0.12),
-    point: [tone(988, 988, 0.06, 'square', 0.1), tone(1319, 1319, 0.14, 'square', 0.1, 0.06)],
-    hit: [tone(0, 0, 0.18, 'noise', 0.3), tone(180, 50, 0.25, 'triangle', 0.4)],
+    start: notes([392, 523, 659, 784], 0.07, 0.1, 'square', 0.16),
+    over: notes([494, 415, 349, 262], 0.16, 0.24, 'triangle', 0.4),
+    best: notes([523, 659, 784, 1047, 784, 1047], 0.09, 0.14, 'square', 0.17),
+    level: notes([659, 784, 988, 1319], 0.08, 0.12, 'square', 0.16),
+    point: [tone(988, 988, 0.06, 'square', 0.16), tone(1319, 1319, 0.14, 'square', 0.16, 0.06)],
+    hit: [tone(0, 0, 0.18, 'noise', 0.3), tone(180, 50, 0.25, 'triangle', 0.45)],
     // Falling Blocks.
-    move: [tone(260, 260, 0.03, 'square', 0.06)],
-    rotate: [tone(440, 660, 0.05, 'square', 0.07)],
-    drop: [tone(0, 0, 0.07, 'noise', 0.15), tone(320, 90, 0.1, 'triangle', 0.35)],
-    lock: [tone(150, 90, 0.07, 'triangle', 0.3)],
-    hold: [tone(520, 390, 0.08, 'sine', 0.25)],
-    clear: notes([523, 659, 784], 0.05, 0.1, 'square', 0.12),
-    bigclear: notes([523, 659, 784, 1047, 1319], 0.05, 0.12, 'square', 0.13),
+    move: [tone(260, 260, 0.03, 'square', 0.1)],
+    rotate: [tone(440, 660, 0.05, 'square', 0.1)],
+    drop: [tone(0, 0, 0.07, 'noise', 0.2), tone(320, 90, 0.1, 'triangle', 0.4)],
+    lock: [tone(150, 90, 0.07, 'triangle', 0.35)],
+    hold: [tone(520, 390, 0.08, 'sine', 0.35)],
+    clear: notes([523, 659, 784], 0.05, 0.1, 'square', 0.16),
+    bigclear: notes([523, 659, 784, 1047, 1319], 0.05, 0.12, 'square', 0.17),
     // Maze Chase.
-    chomp: [tone(480, 240, 0.07, 'square', 0.07)],
-    chomp2: [tone(240, 480, 0.07, 'square', 0.07)],
-    power: [tone(200, 800, 0.3, 'sawtooth', 0.1)],
-    ghost: [tone(300, 1400, 0.22, 'square', 0.1)],
-    fruit: notes([784, 1047, 1319], 0.05, 0.08, 'sine', 0.25),
-    life: notes([1047, 1319, 1047, 1319], 0.08, 0.1, 'sine', 0.25),
-    die: [tone(880, 110, 1.2, 'square', 0.1)],
+    chomp: [tone(480, 240, 0.07, 'square', 0.14)],
+    chomp2: [tone(240, 480, 0.07, 'square', 0.14)],
+    power: [tone(200, 800, 0.3, 'sawtooth', 0.22)],
+    ghost: [tone(300, 1400, 0.22, 'square', 0.18)],
+    fruit: notes([784, 1047, 1319], 0.05, 0.08, 'sine', 0.35),
+    life: notes([1047, 1319, 1047, 1319], 0.08, 0.1, 'sine', 0.35),
+    die: [tone(880, 110, 1.2, 'square', 0.18)],
     // Flap.
-    flap: [tone(340, 640, 0.09, 'triangle', 0.3)],
+    flap: [tone(340, 640, 0.09, 'triangle', 0.4)],
     // Road Hop.
-    hop: [tone(520, 820, 0.06, 'square', 0.06)],
-    crash: [tone(0, 0, 0.3, 'noise', 0.35), tone(120, 40, 0.3, 'sawtooth', 0.2)],
-    splash: [tone(0, 0, 0.45, 'noise', 0.25), tone(600, 150, 0.35, 'sine', 0.2)],
-    fall: [tone(700, 120, 0.5, 'triangle', 0.3)],
+    hop: [tone(520, 820, 0.06, 'square', 0.12)],
+    crash: [tone(0, 0, 0.3, 'noise', 0.35), tone(120, 40, 0.3, 'sawtooth', 0.25)],
+    splash: [tone(0, 0, 0.45, 'noise', 0.3), tone(600, 150, 0.35, 'sine', 0.3)],
+    fall: [tone(700, 120, 0.5, 'triangle', 0.4)],
     // Snake.
-    eat: [tone(660, 990, 0.08, 'square', 0.1)],
-    win: notes([523, 659, 784, 1047, 1319, 1568], 0.08, 0.16, 'square', 0.13)
+    eat: [tone(660, 990, 0.08, 'square', 0.16)],
+    win: notes([523, 659, 784, 1047, 1319, 1568], 0.08, 0.16, 'square', 0.17)
   };
 
   var muted = false;
@@ -57,15 +57,24 @@
 
   var ctx = null, noise = null;
   // The audio context is made on first use: browsers only let a page make
-  // sound once the visitor has pressed something.
+  // sound once the visitor has pressed something. Safari also puts it to
+  // sleep when the phone locks or another app takes the sound ('suspended'
+  // or 'interrupted'), and only lets it start again during a press.
   function context(){
     if (!ctx) {
       var AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
       ctx = new AC();
     }
-    if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
+    if ((ctx.state === 'suspended' || ctx.state === 'interrupted') && ctx.resume) ctx.resume();
     return ctx;
+  }
+  // Most sounds are played from a game's loop, not from a press (a dot is
+  // eaten, a ghost catches you), so every tap and key press wakes the audio
+  // up ready for them.
+  function wake(){
+    if (muted) return;
+    try { context(); } catch (e) {}
   }
   // A second of white noise, made once and reused for every noisy tone.
   function noiseBuffer(c){
@@ -117,13 +126,20 @@
   function setMuted(m){
     muted = !!m;
     try { localStorage.setItem(KEY, muted ? 'off' : 'on'); } catch (e) {}
+    wake();                     // unmuting is a press too
     listeners.forEach(function(fn){ fn(muted); });
   }
   function toggle(){ setMuted(!muted); return muted; }
   // Calls fn(muted) whenever sound is muted or unmuted.
   function onChange(fn){ listeners.push(fn); }
 
-  window.bdnixSound = { SOUNDS: SOUNDS, play: play, isMuted: isMuted, setMuted: setMuted, toggle: toggle, onChange: onChange };
+  window.bdnixSound = { VOLUME: VOLUME, SOUNDS: SOUNDS, play: play, isMuted: isMuted, setMuted: setMuted, toggle: toggle, onChange: onChange };
+
+  if (typeof document !== 'undefined') {
+    ['pointerdown', 'touchend', 'keydown', 'click'].forEach(function(type){
+      document.addEventListener(type, wake, true);
+    });
+  }
 
   // ---------- Mute button ----------
   // A game page puts a #soundBtn in its top bar; M toggles it too.
