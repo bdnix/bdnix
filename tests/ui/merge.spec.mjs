@@ -69,3 +69,4 @@ test('changing the list after merging hides the old download', async ({ page }) 
   await page.locator('.file').first().locator('.file-range input').fill('1');
   await expect(page.locator('#downloadBtn')).toBeHidden();
 });
+// CI cache check: dummy change
