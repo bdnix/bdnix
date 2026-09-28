@@ -68,3 +68,4 @@ Want a tool or game that isn't here, or a feature for one that is? [Open a reque
 The code is released under the [MIT License](LICENSE), © bdnix. The licence covers the code only, not the bdnix name or logo.
 
 The games are original takes on classic genres and aren't affiliated with or endorsed by the owners of any similar games. Third-party libraries in [assets/vendor/](assets/vendor/) keep their own licences (MIT, Apache 2.0 and LGPL), listed in [Development](docs/development.md#third-party-libraries).
+<!-- CI cache check: docs-only change -->
