@@ -1,0 +1,47 @@
+name: Master watch
+
+# Now and then GitHub drops a push event, and a merge to master gets no
+# Tests run and no Pages deployment. This checks master's latest commit got
+# both, and starts whichever is missing (see scripts/master-watch.mjs).
+on:
+  # A merged pull request is a separate event from the push, so it still
+  # arrives when the push is lost. pull_request_target gets a token that can
+  # start workflows; the job only checks out master, never the pull
+  # request's code.
+  pull_request_target:
+    types: [closed]
+    branches: [master]
+  # In case both events are lost, or master changed some other way.
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+  pages: write
+
+concurrency:
+  group: master-watch
+  cancel-in-progress: true
+
+jobs:
+  watch:
+    name: Master was tested and deployed
+    if: github.event_name != 'pull_request_target' || github.event.pull_request.merged
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: master
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Start any run master's latest commit is missing
+        run: node scripts/master-watch.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}

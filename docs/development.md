@@ -67,6 +67,8 @@ Tests that can't have changed aren't run again. The unit tests are cached as a w
 
 Anything merged to `master` goes live once GitHub Pages rebuilds.
 
+GitHub occasionally drops the push event for a merge, and then neither the Tests workflow nor the Pages build starts. [.github/workflows/master-watch.yml](../.github/workflows/master-watch.yml) runs when a pull request is merged (a separate event from the push) and every six hours. It gives `master`'s latest commit five minutes to get a Tests run and a Pages build, then starts whichever is missing ([scripts/master-watch.mjs](../scripts/master-watch.mjs)). To check straight away, run **Master watch** by hand from the Actions tab.
+
 ### Cache-busting
 
 Browsers may cache scripts and stylesheets, so every page links the site's own files with a `?v=` hash of their contents, for example `/assets/js/merge.js?v=d07a831b04`. **After editing anything in `assets/js` or `assets/css`, run `npm run build`** and commit the updated HTML. CI fails a pull request with stale hashes; `npm run build:check` runs the same check locally.

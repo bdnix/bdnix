@@ -127,10 +127,12 @@ Codecov then posts **codecov/project** and **codecov/patch** (see [Coverage must
 
 Tests whose inputs haven't changed since they last passed don't run again; CI reuses their cached result and coverage:
 
-- **Unit tests** are cached as a whole, keyed on `assets/js`, `assets/vendor`, `tests/unit`, `tests/coverage`, `package.json` and `package-lock.json`.
+- **Unit tests** are cached as a whole, keyed on `assets/js`, `assets/vendor`, `scripts/master-watch.mjs`, `tests/unit`, `tests/coverage`, `package.json` and `package-lock.json`. A unit test of anything else in `scripts/` needs that file added to the key.
 - **UI tests** are cached spec by spec by `scripts/ui-cache.mjs` (`npm run coverage:ui:cached`). The test server logs every file it serves and which spec asked for it (`tests/ui/fixtures.mjs` adds an `x-bdnix-spec` header to each request), so a spec runs again only when it, a file it loaded, or the shared test code (`tests/ui/*.mjs` helpers, `tests/coverage`, `tests/server.mjs`, `playwright.config.mjs`, the lock file) changes. A spec that fails is never cached.
 - So a UI test must get every repository file it depends on **through the test server** (`page.goto`, `request.get`, ...), never by reading it with `fs`, or the cache won't see a change to it.
 - Run the workflow by hand with **full** ticked to ignore the cache. Locally, `npm test` and `npm run coverage` always run everything.
+
+`.github/workflows/master-watch.yml` covers the times GitHub drops a push event, which leaves a merge to `master` with no Tests run and no Pages deployment. It runs when a pull request is merged into `master` and every six hours. It waits up to five minutes for `master`'s latest commit to get both, then starts the Tests workflow and requests a Pages build for whichever is still missing (`scripts/master-watch.mjs`, unit tested in `tests/unit/master-watch.test.mjs`).
 
 ## Commit messages
 
