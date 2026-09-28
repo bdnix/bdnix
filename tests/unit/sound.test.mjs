@@ -69,6 +69,23 @@ test('every sound is a list of well-formed tones', () => {
   }
 });
 
+test('every sound is loud enough to hear on a phone, without clipping', () => {
+  const { S } = setup();
+  // How loud a tone is for its peak level: a square wave is as loud as its
+  // peak, the others less so.
+  const weight = { square: 1, sine: Math.SQRT1_2, triangle: 1 / Math.sqrt(3), sawtooth: 1 / Math.sqrt(3), noise: 1 / Math.sqrt(3) };
+  for (const [name, tones] of Object.entries(S.SOUNDS)) {
+    const loudest = Math.max(...tones.map((n) => n.v * S.VOLUME * weight[n.type]));
+    assert.ok(loudest >= 0.1, name + ' is too quiet');
+    // Tones that sound at the same moment add up; together they stay below
+    // full scale. The most are sounding just as one starts.
+    for (const n of tones) {
+      const together = tones.filter((m) => m.t <= n.t && n.t < m.t + m.d).reduce((sum, m) => sum + m.v * S.VOLUME, 0);
+      assert.ok(together <= 1, name + ' clips');
+    }
+  }
+});
+
 test('the games have the sounds they play', () => {
   const { S } = setup();
   const used = ['start', 'over', 'best', 'level', 'point', 'hit', 'move', 'rotate', 'drop', 'lock', 'hold', 'clear',
@@ -89,7 +106,7 @@ test('playing a sound schedules its tones from now', () => {
   assert.equal(gains.length, 2);
   assert.deepEqual(oscs[0].connected, [gains[0]]);
   assert.deepEqual(gains[0].connected, [ctx.destination]);
-  assert.deepEqual(plain(gains[0].gain.events), [['set', 0.0001, 10], ['ramp', 0.05, 10.01], ['ramp', 0.0001, 10.06]]);
+  assert.deepEqual(plain(gains[0].gain.events), [['set', 0.0001, 10], ['ramp', 0.16, 10.01], ['ramp', 0.0001, 10.06]]);
   assert.deepEqual(plain(oscs[0].frequency.events), [['set', 988, 10]]);   // a steady note doesn't slide
 });
 
@@ -159,4 +176,63 @@ test('a browser without Web Audio stays silent without errors', () => {
   const broken = fakeAudio();
   broken.AudioContext.prototype.createOscillator = () => { throw new Error('no audio device'); };
   assert.equal(setup({ audio: broken }).S.play('start'), false);
+});
+
+// Just enough `document` for sound.js: event listeners, and no mute button.
+function fakeDocument(){
+  const on = {};
+  return {
+    addEventListener: (type, fn, capture) => { (on[type] = on[type] || []).push({ fn, capture }); },
+    getElementById: () => null,
+    press: (type) => (on[type] || []).forEach((l) => l.fn({ type })),
+    on
+  };
+}
+
+test('every press wakes the audio, ready for sounds played from the game loop', () => {
+  const document = fakeDocument();
+  const { S, audio } = setup({ globals: { document } });
+  for (const type of ['pointerdown', 'touchend', 'keydown', 'click']) {
+    assert.equal(document.on[type].length, 1, type);
+    assert.equal(document.on[type][0].capture, true, type);   // before the game handles the press
+  }
+  assert.equal(audio.AudioContext.contexts.length, 0);   // nothing until the first press
+  document.press('touchend');
+  const ctx = audio.AudioContext.contexts[0];
+  assert.equal(ctx.state, 'running');
+  assert.equal(audio.made.length, 0);                    // woken, but nothing played
+
+  // Safari puts it to sleep when the phone locks or a call comes in; the
+  // next press wakes it again.
+  ctx.state = 'interrupted';
+  document.press('pointerdown');
+  assert.equal(ctx.state, 'running');
+  assert.equal(ctx.resumed, 2);
+  ctx.state = 'suspended';
+  document.press('keydown');
+  assert.equal(ctx.state, 'running');
+  document.press('click');                               // already running: left alone
+  assert.equal(ctx.resumed, 3);
+  assert.equal(audio.AudioContext.contexts.length, 1);
+  assert.equal(S.play('chomp'), true);
+});
+
+test('presses while muted leave the audio alone, and unmuting wakes it', () => {
+  const document = fakeDocument();
+  const { S, audio } = setup({ storage: fakeStorage({ bdnix_sound: 'off' }), globals: { document } });
+  document.press('keydown');
+  assert.equal(audio.AudioContext.contexts.length, 0);
+  S.setMuted(false);                                     // the mute button's click
+  assert.equal(audio.AudioContext.contexts[0].state, 'running');
+});
+
+test('a press on a browser without Web Audio does nothing', () => {
+  const document = fakeDocument();
+  const broken = fakeAudio();
+  broken.AudioContext.prototype.resume = () => { throw new Error('not allowed'); };
+  setup({ audio: broken, globals: { document } });
+  assert.doesNotThrow(() => document.press('keydown'));
+  const none = { AudioContext: undefined, made: [] };
+  setup({ audio: none, globals: { document } });
+  assert.doesNotThrow(() => document.press('keydown'));
 });

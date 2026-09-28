@@ -147,22 +147,26 @@ test('dots, power pellets and getting caught each have a sound', async ({ page }
 });
 
 test('eating a ghost or fruit, an extra life and clearing the maze each have a sound', async ({ page }) => {
-  // A real save from just before the power pellet in the corner, changed so
-  // that the pellet takes the score past 10,000 and the dot above it is the
-  // last one, with a frightened ghost and a fruit right where the player is.
+  // A real save, changed to put the player two tiles right of the power
+  // pellet in the bottom-left corner, heading for it, with a fruit and a
+  // frightened ghost where it stands. The fruit takes the score past 10,000,
+  // and after the pellet the dot above it is the last one. (Where the player
+  // is when the game pauses shifts by a frame from run to run, so it's set
+  // rather than taken from the save.)
   await page.clock.runFor(1500);
   await press(page, 'KeyP');
   const save = JSON.parse(await page.evaluate(() => localStorage.getItem('bdnix_pacman_save')));
-  const d = save.data, at = { x: d.pac.x, y: d.pac.y };
+  const d = save.data, at = { x: 3, y: 23 }, left = { x: -1, y: 0 };
+  d.dots[23][1] = 2;
+  Object.assign(d.pac, at, { dir: left, face: left });
   Object.assign(d, { dotsLeft: 2, score: 9995, extraLifeGiven: false, frightTime: 5, fruit: { ...at, t: 5 } });
-  Object.assign(d.ghosts[0], at, { state: 'active', fright: true, dir: d.pac.dir });
+  Object.assign(d.ghosts[0], at, { state: 'active', fright: true, dir: left });
   await page.addInitScript(s => localStorage.setItem('bdnix_pacman_save', s), JSON.stringify(save));
   await listen(page);
   await page.reload();
   await press(page, 'Enter');
-  await page.clock.runFor(1000);
-  const sounds = await heard(page);
-  for (const s of ['ghost', 'power', 'life', 'fruit']) expect(sounds, s).toContain(s);
+  await page.clock.runFor(1500);                    // stops in the corner after the pellet
+  expect(await heard(page)).toEqual(['life', 'fruit', 'ghost', 'power']);
   await press(page, 'ArrowUp');
   await page.clock.runFor(800);
   expect((await heard(page)).slice(-1)).toEqual(['level']);   // after the last chomp
