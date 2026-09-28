@@ -26,6 +26,7 @@
     'flap past a few pipes.',
     'help a chicken cross the road.',
     'grow the longest snake.',
+    'smash a wall of bricks.',
     'merge a stack of pdfs.',
     'watermark a report.',
     'turn a video into an mp3.',

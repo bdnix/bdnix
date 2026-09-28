@@ -1,12 +1,13 @@
 # Games guide
 
-All five games work with a keyboard, mouse or touch screen, and at phone size.
+All six games work with a keyboard, mouse or touch screen, and at phone size.
 
 - [Falling Blocks](#falling-blocks)
 - [Maze Chase](#maze-chase)
 - [Flap](#flap)
 - [Road Hop](#road-hop)
 - [Snake](#snake)
+- [Brick Bounce](#brick-bounce)
 - [Sound](#sound)
 - [Scores and saved games](#scores-and-saved-games)
 - [Credits](#credits)
@@ -70,9 +71,23 @@ Each new row the chicken reaches scores a point. Lanes of grass, roads and river
 
 The snake waits until the first direction is pressed, then glides from cell to cell at about four and a half cells a second. Each piece of food scores a point and makes the snake one longer and a little faster, up to ten cells a second. Hitting a wall or the snake's own body ends the round; filling the whole board wins it. Two quick presses make two turns on the next two steps, so a U-turn is easy.
 
+## Brick Bounce
+
+`/brick-bounce/`
+
+| Action | Keyboard | Mouse | Touch |
+|---|---|---|---|
+| Move the paddle | ← → (or A / D) | Point across the board | Drag anywhere, or ◀ ▶ |
+| Launch the ball | Space, ↑ or W | Click | Tap, or the ↑ button |
+| Pause | P / Esc | ❚❚ | ❚❚ |
+
+Eight rows of bricks sit at the top of the board: the bottom two rows score 1 point a brick, then 3, 5 and 7 for the top two. The ball waits on the paddle until it's launched and bounces back off the paddle at an angle set by where it lands, straight up off the middle and steeper towards the ends. It speeds up after the 4th and 12th bricks of a wall and the first time it breaks into the upper and top rows. Once it reaches the top of the board the paddle shrinks for the rest of that wall.
+
+There are three balls. Missing the ball with the paddle loses one, and the next waits on the paddle; losing the last ends the game. Clearing a wall puts up a new one with the paddle back to full size, and each new wall starts the ball a little faster.
+
 ## Sound
 
-Every game has sound effects: a jingle when a game starts, sounds for the main moves (moving, turning and dropping pieces, eating dots and power pellets, flapping, hopping, eating food), for scoring and clearing lines, for each way a round can end (a car, the river, a crash), and a tune at game over, a brighter one for a new best score.
+Every game has sound effects: a jingle when a game starts, sounds for the main moves (moving, turning and dropping pieces, eating dots and power pellets, flapping, hopping, eating food, the ball hitting the paddle, the walls and bricks), for scoring and clearing lines, for each way a round can end (a car, the river, a crash, a lost ball), and a tune at game over, a brighter one for a new best score.
 
 The speaker button beside pause in the top bar, or **M**, turns sound off and on. The choice applies to every game and is remembered in the browser (`bdnix_sound`). Sound is on until it's turned off.
 
@@ -82,7 +97,7 @@ The sounds are made in the browser with the Web Audio API, so there are no audio
 
 Each game keeps its best score in the browser's `localStorage`, and the [profile page](privacy.md#profile) shows them all.
 
-A game in progress is saved whenever it pauses and when the page is reloaded, closed or left. Returning to the page, even days later, shows the game paused exactly where it was, with the message "Picked up where you left off.": **Resume** carries on and **New game** starts over. The save is removed when the game ends. Flap only keeps a round once the bird has flapped, Road Hop once the chicken has hopped, and Snake once the snake has started moving.
+A game in progress is saved whenever it pauses and when the page is reloaded, closed or left. Returning to the page, even days later, shows the game paused exactly where it was, with the message "Picked up where you left off.": **Resume** carries on and **New game** starts over. The save is removed when the game ends. Flap only keeps a round once the bird has flapped, Road Hop once the chicken has hopped, Snake once the snake has started moving, and Brick Bounce once the first ball has been launched.
 
 Clearing the browser's site data removes saved games and best scores. See [Privacy and data](privacy.md) for the storage keys.
 
@@ -97,5 +112,6 @@ Each game is our own take on a classic, with its own name, artwork and code. The
 | Flap | Flappy Bird, created by Dong Nguyen in 2013 |
 | Road Hop | Crossy Road, created by Hipster Whale in 2014 |
 | Snake | Blockade, created by Gremlin in 1976, and the snake games that followed |
+| Brick Bounce | Breakout, created by Atari in 1976 |
 
 These names are trademarks of their owners. bdnix isn't affiliated with or endorsed by them.

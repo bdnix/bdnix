@@ -72,7 +72,7 @@ test('every sound is a list of well-formed tones', () => {
 test('the games have the sounds they play', () => {
   const { S } = setup();
   const used = ['start', 'over', 'best', 'level', 'point', 'hit', 'move', 'rotate', 'drop', 'lock', 'hold', 'clear',
-    'bigclear', 'chomp', 'chomp2', 'power', 'ghost', 'fruit', 'life', 'die', 'flap', 'hop', 'crash', 'splash', 'fall', 'eat', 'win'];
+    'bigclear', 'chomp', 'chomp2', 'power', 'ghost', 'fruit', 'life', 'die', 'flap', 'hop', 'crash', 'splash', 'fall', 'eat', 'win', 'paddle', 'wall', 'brick'];
   assert.deepEqual(Object.keys(S.SOUNDS).sort(), used.sort());
 });
 
