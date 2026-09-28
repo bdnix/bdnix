@@ -1,12 +1,7 @@
-// Helpers shared by the bdnix tools (merge-pdf, watermark-pdf, redact-pdf,
-// and the file handling in mp4-to-mp3).
+// Helpers for the PDF tools (merge-pdf, watermark-pdf, redact-pdf): page
+// ranges, spotting a PDF, and loading pdf.js. Needs files.js first.
 (function(){
-  function fmtSize(n){
-    if (n < 1024) return n + ' B';
-    if (n < 1048576) return (n / 1024).toFixed(0) + ' KB';
-    return (n / 1048576).toFixed(1) + ' MB';
-  }
-  function plural(n, word){ return n + ' ' + word + (n === 1 ? '' : 's'); }
+  var plural = window.bdnixFiles.plural;
 
   // Parses "1-3, 5, 8-" into 0-based page indices, in the order written.
   // Empty means every page. "8-" runs to the last page, "-3" from the first,
@@ -36,46 +31,6 @@
 
   function isPdf(file){
     return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
-  }
-
-  function readBytes(file){
-    if (file.arrayBuffer) return file.arrayBuffer();
-    return new Promise(function(resolve, reject){
-      var r = new FileReader();
-      r.onload = function(){ resolve(r.result); };
-      r.onerror = function(){ reject(r.error); };
-      r.readAsArrayBuffer(file);
-    });
-  }
-
-  // Files dropped anywhere on the page go to onFiles(fileList). The drop
-  // zone lights up while files are dragged over the window.
-  function onFileDrop(zone, onFiles){
-    function hasFiles(e){
-      var types = e.dataTransfer && e.dataTransfer.types;
-      return !!types && Array.prototype.indexOf.call(types, 'Files') >= 0;
-    }
-    var depth = 0;
-    document.addEventListener('dragenter', function(e){
-      if (!hasFiles(e)) return;
-      depth++;
-      zone.classList.add('over');
-    });
-    document.addEventListener('dragleave', function(e){
-      if (!hasFiles(e)) return;
-      depth = Math.max(0, depth - 1);
-      if (!depth) zone.classList.remove('over');
-    });
-    document.addEventListener('dragover', function(e){
-      if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
-    });
-    document.addEventListener('drop', function(e){
-      if (!hasFiles(e)) return;
-      e.preventDefault();
-      depth = 0;
-      zone.classList.remove('over');
-      onFiles(e.dataTransfer.files);
-    });
   }
 
   // pdf.js reads a page's text with `for await` over a ReadableStream, which
@@ -122,8 +77,6 @@
   }
 
   window.bdnixPdf = {
-    fmtSize: fmtSize, plural: plural, parseRange: parseRange,
-    isPdf: isPdf, readBytes: readBytes, onFileDrop: onFileDrop, loadPdfjs: loadPdfjs,
-    streamIterable: streamIterable
+    parseRange: parseRange, isPdf: isPdf, loadPdfjs: loadPdfjs, streamIterable: streamIterable
   };
 })();

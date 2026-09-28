@@ -21,19 +21,27 @@ The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub 
 | MP4 to MP3 `/mp4-to-mp3/` | `mp4-to-mp3/index.html`, `assets/css/audio.css`, `assets/js/audio.js`, `assets/js/audio-core.js` |
 | Compress Images `/compress-image/` | `compress-image/index.html`, `assets/css/image.css`, `assets/js/image.js`, `assets/js/image-core.js` |
 | Photo Collage `/photo-collage/` | `photo-collage/index.html`, `assets/css/collage.css`, `assets/js/collage.js`, `assets/js/collage-core.js` |
-| Fit to Frame `/fit-to-frame/` | `fit-to-frame/index.html`, `assets/css/frame.css`, `assets/js/frame.js`, `assets/js/frame-core.js` (and `image-core.js` for formats and file names) |
+| Fit to Frame `/fit-to-frame/` | `fit-to-frame/index.html`, `assets/css/frame.css`, `assets/js/frame.js`, `assets/js/frame-core.js` |
 | Profile `/profile/` | `profile/index.html`, `assets/css/profile.css`, `assets/js/profile-page.js` |
 
-Shared across pages:
-- `assets/css/base.css`: colour tokens and shared components (header, buttons, panels, profile chip).
-- `assets/css/game.css`: the game pages' shared layout.
-- `assets/css/tool.css`: the tool and profile pages' shared layout, including the preview-and-settings editor used by the watermark, redact and photo collage pages, the feature list under a tool's intro, and the file list with a download per file used by the audio, image and fit-to-frame pages.
+Shared files hold only what is truly common (see [Keep apps modular](#keep-apps-modular)). Each is one concern, and a page links only the ones it uses.
+
+Stylesheets:
+- `assets/css/base.css`: what every page uses: colour tokens, the backdrop, the top bar, buttons, panels and the analytics consent banner.
+- `assets/css/game.css`: the layout every game page uses.
+- `assets/css/page.css`: the one-column layout of the tool pages and the profile page.
+- `assets/css/tool.css`: what every tool page has: the lede, the drop zone, fields, the files area and the action buttons.
+- Components, linked only by the pages that show them: `icon-btn.css` (square icon buttons), `avatar.css` (the visitor's initial), `profile-chip.css` (the name chip in the top bar), `footer.css`, `features.css` (the feature list under a tool's lede), `file.css` (a file's name and details), `editor.css` (a preview beside a settings panel), `settings.css` (a panel of settings), `seg.css` (a two-way switch) and `tracks.css` (a list of files, each with its own download).
+
+Scripts, each exposing one `window.bdnix*` object:
 - `assets/js/blocks.js`: the falling-block backdrop (`window.bdnix`).
-- `assets/js/pdftools.js`: page-range parsing, file helpers, dropping files on the page, and the on-demand PDF.js loader (`window.bdnixPdf`). The audio converter, image compressor, photo collage and Fit to Frame use its file helpers too.
-- `assets/js/profile.js`: the visitor's name and scores (`window.bdnixProfile`).
-- `assets/js/gamesave.js`: saves a game in progress and loads it back paused (`window.bdnixSave`). Each game snapshots its own state, checks a loaded save before using it, and throws away one that doesn't make sense.
-- `assets/js/sound.js`: the games' sound effects (`window.bdnixSound`), made with the Web Audio API from short recipes in the file, so there are no audio files. `bdnixSound.play('<name>')` plays one unless sound is muted. It also runs the mute button (`#soundBtn` in a game's top bar, beside pause) and the M key.
 - `assets/js/analytics.js`: Google Analytics page views and the cookie consent banner (`window.bdnixAnalytics`). Every page links it in `<head>` (not `async`: the profile page reads it). It only runs on `www.bdnix.com` / `bdnix.com`, so local previews and tests show no banner and send nothing; `tests/ui/analytics.spec.mjs` serves the site as `www.bdnix.com` to test it. Google's script loads only after the visitor accepts; they can change their choice on the profile page.
+- `assets/js/profile.js`: the visitor's display name and the profile chip (`window.bdnixProfile`). The list of games and their best scores belongs to the profile page (`profile-page.js`).
+- `assets/js/files.js`: reading the files a visitor opens, dropping files on the page, and file sizes and plurals (`window.bdnixFiles`). Every tool uses it.
+- `assets/js/pdftools.js`: page-range parsing, spotting a PDF and the on-demand PDF.js loader, for the PDF tools (`window.bdnixPdf`). Needs `files.js`.
+- `assets/js/images.js`: image files for the image tools: which files are images, the formats a canvas saves, the canvas size limit and result file names (`window.bdnixImages`).
+- `assets/js/gamesave.js`: saves a game in progress and loads it back paused (`window.bdnixSave`). Each game snapshots its own state, checks a loaded save before using it, and throws away one that doesn't make sense.
+- `assets/js/sound.js`: the sound engine for the games (`window.bdnixSound`), made with the Web Audio API from short recipes, so there are no audio files. It has only the sounds every game plays (`start`, `over` and `best`); each game adds its own with `bdnixSound.add({ name: [tones] })`, made with `bdnixSound.tone()` and `bdnixSound.notes()`. `bdnixSound.play('<name>')` plays one unless sound is muted. It also runs the mute button (`#soundBtn` in a game's top bar, beside pause) and the M key.
 
 Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit, lamejs), each with its licence file.
 
@@ -50,13 +58,23 @@ When the owner asks for a feature, a fix or any other change to this repo, the w
 
 Leave merging to the owner: don't merge the pull request yourself.
 
+## Keep apps modular
+
+Each game and tool is its own app. **Adding or changing a feature of one app must never mean editing a file another app loads.**
+
+- A shared file holds only what every page that links it uses, and nothing about any one app: no app's names, data, sounds, colours or special cases. A shared component (a stylesheet, a helper script) is one concern; a page links it only if it uses it.
+- Something only some apps use gets its own shared file (a component), linked by just those apps, not a corner of a bigger shared file.
+- Anything specific to one app lives in that app's own files: its sounds (added with `bdnixSound.add`), its rules, its styles and its words. Two apps that happen to want the same small thing (the same sound recipe, say) each keep their own copy rather than sharing a file that then couples them.
+- A page that lists every app (the landing page, the profile page, `sitemap.xml`, the SEO and analytics tests) is the one place that changes when an app is added.
+- Before editing a shared file for a feature, ask whether every page that links it needs the change. If not, the change belongs in the app, or in a new component.
+
 ## Ground rules
 
 - **Everything runs in the browser.** Files the visitor opens are never uploaded; there is no server. Don't send the visitor's files, or anything they type into a tool, anywhere. Load libraries from `assets/vendor/`, not a CDN. The site uses Google Analytics (`assets/js/analytics.js`); a new page must link it in `<head>` (the UI test in `tests/ui/analytics.spec.mjs` lists every page). A new page also needs the SEO tags the other pages have (canonical URL, Open Graph, Twitter, structured data) and an entry in `sitemap.xml`; `tests/ui/seo.spec.mjs` lists every page.
 - **Keep it dependency-free at runtime.** No frameworks and no bundler. `package.json` holds dev tooling only (tests, coverage, the cache-busting script).
 - **Match the existing code.** Each script is one IIFE, `(function(){ ... })();`, in ES5-style `var`/`function` code. A script that other scripts use exposes one `window.bdnix*` object. Comment density, naming and CSS style should match the file you're in.
-- **Reuse, don't duplicate.** Use the tokens in `base.css`, the layout in `tool.css`, and the helpers in `pdftools.js` / `profile.js`. If two pages need the same logic, move it into a shared file.
-- **Pure logic goes in its own file** (as in `watermark-layout.js`, `redact-core.js`, `flappy-core.js`, `hop-core.js`, `snake-core.js`, `bricks-core.js`, `audio-core.js`, `image-core.js`, `collage-core.js`, `frame-core.js`, `search-core.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
+- **Reuse what's truly shared.** Use the tokens in `base.css`, the layouts in `page.css`, `tool.css` and `game.css`, the components, and the helpers in `files.js`, `pdftools.js`, `images.js` and `profile.js`. When several apps need the same general-purpose logic (not a feature of one of them), give it its own shared file, as `files.js` and `images.js` are, and link it only from those apps.
+- **Pure logic goes in its own file** (as in `watermark-layout.js`, `redact-core.js`, `flappy-core.js`, `hop-core.js`, `snake-core.js`, `bricks-core.js`, `audio-core.js`, `image-core.js`, `collage-core.js`, `frame-core.js`, `search-core.js`, `images.js`, `files.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
 - **Every game keeps a game in progress.** A game must survive a reload or a later visit and come back paused exactly where it was, as Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce do. Use `window.bdnixSave` from `assets/js/gamesave.js`:
   - Save through `bdnixSave.keep('<game>', snapshot)`. `snapshot()` returns the whole state as plain JSON, or `null` when no game is in progress. Call the function `keep()` returns when the game pauses, starts a new game or ends.
   - Restore at startup. Check every field of the loaded save before using it. Clear a save that doesn't make sense and show the normal start screen.
@@ -64,7 +82,7 @@ Leave merging to the owner: don't merge the pull request yourself.
   - Remove the save at game over.
   - The key is `bdnix_<game>_save`. Add it to the list of storage keys below.
   - UI tests must cover reloading mid-game and carrying on from the same spot, New game from the pause screen, discarding an invalid save, and the save being gone after game over (see the reload tests in `tests/ui/tetris.spec.mjs`).
-- **Every game has sound.** Link `assets/js/sound.js`, put the `#soundBtn` mute button beside pause in the top bar (add the page to `tests/ui/sound.spec.mjs`), and call `window.bdnixSound.play()` for starting a game, the main moves, scoring, crashing and game over (`best` for a new best score, otherwise `over`). Reuse the sounds in `sound.js` or add a recipe there. UI tests record what plays with `listen()` and `heard()` from `tests/ui/games.mjs`.
+- **Every game has sound.** Link `assets/js/sound.js`, put the `#soundBtn` mute button beside pause in the top bar (add the page to `tests/ui/sound.spec.mjs`), and call `window.bdnixSound.play()` for starting a game, the main moves, scoring, crashing and game over (`best` for a new best score, otherwise `over`). `start`, `over` and `best` come from `sound.js`; add the game's other sounds in its own script with `bdnixSound.add()`, never in `sound.js`. UI tests record what plays with `listen()` and `heard()` from `tests/ui/games.mjs`, and each game's spec checks its sounds with `soundProblems()`.
 - **Don't use other games' trademarks as our own.** Titles, headings, URLs, SEO tags, structured data and docs use the site's own names: Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce, never Tetris, Pac-Man, Flappy Bird, Crossy Road, Blockade or Breakout. ("Snake" is the name of the genre, not a trademark.) New games get original names and artwork too. The exceptions are the credit line on each game's start screen (`<p class="credit">` in the overlay) and the Credits section of `docs/games.md`, which say which classic inspired the game and who created it, and state that the name is a trademark of its owner and bdnix isn't affiliated with or endorsed by them. A new game inspired by another needs both. `tests/ui/seo.spec.mjs` checks the credit lines. The old names also survive as internal identifiers (file names such as `tetris.js`, `bdnixSave` ids and storage keys), which stay as they are so visitors' saved data isn't lost.
 - **Phone-sized screens matter.** Every page must work at 390 px wide with no sideways scrolling, and with touch as well as mouse and keyboard.
 - **Browser storage is optional.** Wrap every `localStorage` / IndexedDB access in `try/catch`; pages must work without it (private browsing). The keys in use are `bdnix_visits`, `bdnix_name`, `bdnix_tetris_best`, `bdnix_pacman_best`, `bdnix_flappy_best`, `bdnix_hop_best`, `bdnix_snake_best`, `bdnix_bricks_best`, `bdnix_tetris_save`, `bdnix_pacman_save`, `bdnix_flappy_save`, `bdnix_hop_save`, `bdnix_snake_save`, `bdnix_bricks_save`, `bdnix_sound`, `bdnix_watermark_v1` and `bdnix_analytics` (localStorage), and the `bdnix-tools` database (IndexedDB). Don't rename them, since visitors' saved data would be lost.

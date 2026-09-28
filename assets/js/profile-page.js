@@ -17,10 +17,26 @@
     bricks: '<rect x="3" y="5" width="10" height="6" rx="1.5" fill="#f472b6"/><rect x="15" y="5" width="10" height="6" rx="1.5" fill="#f472b6"/><rect x="27" y="5" width="10" height="6" rx="1.5" fill="#f472b6"/><rect x="3" y="13" width="10" height="6" rx="1.5" fill="#a855f7"/><rect x="27" y="13" width="10" height="6" rx="1.5" fill="#a855f7"/><circle cx="20" cy="26" r="3" fill="#eef1f8"/><rect x="11" y="32" width="18" height="4" rx="2" fill="#22d3ee"/>'
   };
 
+  // Each game's best score, from the key the game writes (see tetris.js,
+  // pacman.js, flappy.js, hop.js, snake.js and bricks.js).
+  var GAMES = [
+    { id: 'tetris', name: 'Falling Blocks', key: 'bdnix_tetris_best', href: '/falling-blocks/' },
+    { id: 'pacman', name: 'Maze Chase', key: 'bdnix_pacman_best', href: '/maze-chase/' },
+    { id: 'flappy', name: 'Flap', key: 'bdnix_flappy_best', href: '/flap/' },
+    { id: 'hop', name: 'Road Hop', key: 'bdnix_hop_best', href: '/road-hop/' },
+    { id: 'snake', name: 'Snake', key: 'bdnix_snake_best', href: '/snake/' },
+    { id: 'bricks', name: 'Brick Bounce', key: 'bdnix_bricks_best', href: '/brick-bounce/' }
+  ];
+  function read(key){
+    try { return localStorage.getItem(key); } catch (e) { return null; }
+  }
+
   function renderScores(){
     var box = $('scores');
     box.textContent = '';
-    P.scores().forEach(function(g){
+    GAMES.forEach(function(g){
+      var best = parseInt(read(g.key), 10);
+      g = { id: g.id, name: g.name, href: g.href, best: best > 0 ? best : 0 };
       var card = document.createElement('div');
       card.className = 'score panel';
       card.innerHTML =
@@ -37,7 +53,7 @@
       box.appendChild(card);
     });
 
-    var v = P.visits();
+    var v = parseInt(read('bdnix_visits'), 10) || 0;   // counted by the landing page (main.js)
     $('visits').textContent = v ? 'You’ve visited bdnix ' + (v === 1 ? 'once' : v.toLocaleString() + ' times') + '.' : '';
   }
 

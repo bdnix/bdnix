@@ -85,9 +85,23 @@ Eight rows of bricks sit at the top of the board: the bottom two rows score 1 po
 
 There are three balls. Missing the ball with the paddle loses one, and the next waits on the paddle; losing the last ends the game. Clearing a wall puts up a new one with the paddle back to full size, and each new wall starts the ball a little faster.
 
+### Powers
+
+Six bricks in every wall, picked at random, hide a power and show its letter. Breaking one drops a capsule; catch it with the paddle to turn the power on. A capsule the paddle misses is gone.
+
+| Letter | Power | What it does |
+|---|---|---|
+| M | Multi-ball | Every ball in play splits in three (up to 12 balls). A ball is only lost when the last one in play goes past the paddle. |
+| F | Fireball | For 8 seconds the balls burn straight through every brick they touch instead of bouncing off. |
+| L | Laser | For 8 seconds the paddle fires a shot from each end every 0.4 seconds; each shot breaks the first brick above it. |
+| W | Wide paddle | For 12 seconds the paddle is half as wide again. |
+| + | Extra ball | One more ball, up to five. |
+
+Each wall hides two multi-balls and one of each of the others. The seconds left of the fireball, laser and wide paddle show under the paddle. Losing a ball or clearing a wall ends every power and clears away falling capsules and shots.
+
 ## Sound
 
-Every game has sound effects: a jingle when a game starts, sounds for the main moves (moving, turning and dropping pieces, eating dots and power pellets, flapping, hopping, eating food, the ball hitting the paddle, the walls and bricks), for scoring and clearing lines, for each way a round can end (a car, the river, a crash, a lost ball), and a tune at game over, a brighter one for a new best score.
+Every game has sound effects: a jingle when a game starts, sounds for the main moves (moving, turning and dropping pieces, eating dots and power pellets, flapping, hopping, eating food, the ball hitting the paddle, the walls and bricks, catching a power and firing the laser), for scoring and clearing lines, for each way a round can end (a car, the river, a crash, a lost ball), and a tune at game over, a brighter one for a new best score.
 
 The speaker button beside pause in the top bar, or **M**, turns sound off and on. The choice applies to every game and is remembered in the browser (`bdnix_sound`). Sound is on until it's turned off.
 

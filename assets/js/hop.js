@@ -42,6 +42,14 @@
   var hopT = 0, from = null;    // the hop being drawn, and where it started
   var best = 0;
   var sound = window.bdnixSound;
+  // This game's sounds, beside the ones every game shares (sound.js).
+  var tone = sound.tone;
+  sound.add({
+    hop: [tone(520, 820, 0.06, 'square', 0.12)],
+    crash: [tone(0, 0, 0.3, 'noise', 0.35), tone(120, 40, 0.3, 'sawtooth', 0.25)],
+    splash: [tone(0, 0, 0.45, 'noise', 0.3), tone(600, 150, 0.35, 'sine', 0.3)],
+    fall: [tone(700, 120, 0.5, 'triangle', 0.4)]
+  });
   // The sound for each way a round can end.
   var CRASH_SOUNDS = { car: 'crash', water: 'splash', swept: 'fall', behind: 'fall' };
 

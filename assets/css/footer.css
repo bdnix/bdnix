@@ -1,0 +1,10 @@
+/* Footer on the landing, tool and profile pages */
+.foot{
+  position:relative;z-index:1;
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  padding:20px clamp(16px,4vw,32px) calc(20px + env(safe-area-inset-bottom));
+  font:400 12px var(--mono);color:var(--faint);
+}
+.foot a{text-decoration:none}
+.foot a:hover,.foot a:focus-visible{color:var(--fg)}
+.foot-links{display:flex;flex-wrap:wrap;gap:8px 18px}

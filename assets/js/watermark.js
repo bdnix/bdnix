@@ -2,7 +2,7 @@
 // draws the preview. Everything runs in the browser; nothing is uploaded.
 (function(){
   var L = PDFLib;
-  var T = window.bdnixPdf;
+  var T = window.bdnixFiles, P = window.bdnixPdf;
   var Layout = window.bdnixWatermarkLayout;
   function $(id){ return document.getElementById(id); }
 
@@ -418,11 +418,11 @@
     }
 
     var s = settings();
-    var sel = T.parseRange(s.pages, src.pages);
+    var sel = P.parseRange(s.pages, src.pages);
     var included = !sel.error && sel.pages.indexOf(i) >= 0;
     var fit = stageSize();
 
-    T.loadPdfjs().then(function(lib){
+    P.loadPdfjs().then(function(lib){
       if (included && s.layer === 'back') {
         return behindPage(i, s, fit, lib).then(function(c){
           return c ? [c, null] : Promise.all([basePage(i, fit), null]);
@@ -484,7 +484,7 @@
 
     var ok = !!src;
     if (src) {
-      var sel = T.parseRange(s.pages, src.pages);
+      var sel = P.parseRange(s.pages, src.pages);
       F.pages.classList.toggle('invalid', !!sel.error);
       pagesHint.classList.toggle('error', !!sel.error);
       pagesHint.textContent = sel.error ? sel.error :
@@ -529,7 +529,7 @@
   // ---- Choosing files ----
   function openFile(file){
     if (!file || busy) return;
-    if (!T.isPdf(file)) return say('That isn’t a PDF file. Choose a .pdf to watermark.', true);
+    if (!P.isPdf(file)) return say('That isn’t a PDF file. Choose a .pdf to watermark.', true);
     busy = true;
     syncForm();
     say('Reading ' + file.name + '…');
@@ -552,7 +552,7 @@
       fileMeta.textContent = T.plural(src.pages, 'page') + ' · ' + T.fmtSize(file.size);
       say('');
       var current = src;
-      T.loadPdfjs().then(function(lib){
+      P.loadPdfjs().then(function(lib){
         if (!lib) throw new Error('pdf.js did not load');
         // pdf.js takes ownership of the buffer it's given, so hand it a copy.
         current.viewTask = lib.getDocument({ data: new Uint8Array(bytes.slice(0)), isEvalSupported: false });
@@ -689,7 +689,7 @@
     e.preventDefault();
     if (busy || !src) return;
     var s = settings();
-    var sel = T.parseRange(s.pages, src.pages);
+    var sel = P.parseRange(s.pages, src.pages);
     if (sel.error) return;
     busy = true;
     syncForm();

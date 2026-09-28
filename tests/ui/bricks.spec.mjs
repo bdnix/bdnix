@@ -1,5 +1,5 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
-import { openGame, press, tap, inkOn, listen, heard } from './games.mjs';
+import { openGame, press, tap, inkOn, listen, heard, soundProblems } from './games.mjs';
 
 // The board is 360 × 480 units. A new ball waits on the middle of the paddle
 // at (180, 435); with Math.random fixed at 0 it's launched up and to the
@@ -36,11 +36,11 @@ const full = () => Array(ROWS * COLS).fill(1);
 // Every brick gone but the ones listed.
 const only = (...keep) => full().map((_, i) => (keep.includes(i) ? 1 : 0));
 const onPaddle = (x = 180) => ({ x, y: PADDLE_Y - R, dx: 0, dy: -1 });
-const saved = (extra = {}) => ({ level: 1, bricks: full(), paddle: 180, small: false, ball: onPaddle(), stuck: true, lives: 2, score: 0, ...extra });
+const saved = (extra = {}) => ({ level: 1, bricks: full(), paddle: 180, small: false, balls: [onPaddle()], stuck: true, lives: 2, score: 0, ...extra });
 // Points for every brick broken in `bricks`.
 const points = (bricks) => bricks.reduce((n, b, i) => n + (b ? 0 : [7, 7, 5, 5, 3, 3, 1, 1][Math.floor(i / COLS)]), 0);
 // A ball falling past the far left of the paddle, which is at the far right.
-const falling = { paddle: 300, ball: { x: 20, y: 400, dx: 0, dy: 1 }, stuck: false };
+const falling = { paddle: 300, balls: [{ x: 20, y: 400, dx: 0, dy: 1 }], stuck: false };
 
 test.beforeEach(async ({ page }) => {
   await openGame(page, '/brick-bounce/');
@@ -59,7 +59,7 @@ test('launches, breaks a brick, and ends when the last ball is lost', async ({ p
   await runUntil(page, scoreIs(page, 1));              // the bottom row is worth 1
   const s = await peek(page);
   expect(s.bricks.indexOf(0)).toBeGreaterThanOrEqual((ROWS - 1) * COLS);
-  expect(s.ball.dy).toBeGreaterThan(0);                // on its way back down
+  expect(s.balls[0].dy).toBeGreaterThan(0);                // on its way back down
 
   // Nobody moves the paddle: sooner or later every ball is lost. Each new
   // ball waits on the paddle until it's launched.
@@ -93,9 +93,9 @@ test('losing a ball brings the next one to the paddle, and a worse game keeps th
   await page.locator('#startBtn').click();
   await runUntil(page, async () => (await page.locator('#lives').textContent()) === '1');
   let s = await peek(page);
-  expect([s.stuck, s.lives, s.ball]).toEqual([true, 1, onPaddle(300)]);
+  expect([s.stuck, s.lives, s.balls[0]]).toEqual([true, 1, onPaddle(300)]);
   await page.clock.runFor(1000);
-  expect((await peek(page)).ball).toEqual(onPaddle(300)); // waits there to be launched
+  expect((await peek(page)).balls[0]).toEqual(onPaddle(300)); // waits there to be launched
 
   await openSaved(page, saved({ ...falling, lives: 1, score: 1, bricks: only(...Array.from({ length: 79 }, (_, i) => i)) }));
   await page.locator('#startBtn').click();
@@ -106,15 +106,15 @@ test('losing a ball brings the next one to the paddle, and a worse game keeps th
 });
 
 test('the paddle sends the ball back up, and the ball is drawn every frame', async ({ page }) => {
-  await openSaved(page, saved({ ball: { x: 180, y: 380, dx: 0, dy: 1 }, stuck: false }));
+  await openSaved(page, saved({ balls: [{ x: 180, y: 380, dx: 0, dy: 1 }], stuck: false }));
   await page.locator('#startBtn').click();
   let s = await peek(page);
-  for (let i = 0; i < 40 && s.ball.dy > 0; i++) {
+  for (let i = 0; i < 40 && s.balls[0].dy > 0; i++) {
     await page.clock.runFor(20);
     expect(await inkOn(page, '#board')).toBeGreaterThan(1000);
     s = await peek(page);
   }
-  expect(s.ball.dy).toBe(-1);                          // off the middle: straight up
+  expect(s.balls[0].dy).toBe(-1);                          // off the middle: straight up
   expect(s.lives).toBe(2);
 });
 
@@ -126,7 +126,7 @@ test('keys, the mouse, dragging and the buttons all move the paddle', async ({ p
   await page.keyboard.up('ArrowRight');
   let s = await peek(page);
   expect(s.paddle).toBeGreaterThan(200);
-  expect(s.ball.x).toBe(s.paddle);                    // the ball comes along
+  expect(s.balls[0].x).toBe(s.paddle);                    // the ball comes along
   const right = s.paddle;
   await page.clock.runFor(200);
   expect((await peek(page)).paddle).toBe(right);      // and stops when the key comes up
@@ -177,7 +177,7 @@ test('Space, ↑, a click, a tap and the launch button each launch the ball', as
     await how();
     const s = await peek(page);
     expect(s.stuck).toBe(false);
-    expect(s.ball.dx).toBeCloseTo(-0.5, 5);
+    expect(s.balls[0].dx).toBeCloseTo(-0.5, 5);
   };
   await launched(() => press(page, 'Space'));
   await launched(() => press(page, 'ArrowUp'));
@@ -194,7 +194,7 @@ test('breaking the last brick puts up the next wall', async ({ page }) => {
   const last = (ROWS - 1) * COLS + 4;
   const bricks = only(last);
   const x = 12 + 4 * 33.6 + 16.8;                      // under the middle of that brick
-  await openSaved(page, saved({ bricks, score: points(bricks), small: true, paddle: 100, ball: { x, y: 300, dx: 0, dy: -1 }, stuck: false }));
+  await openSaved(page, saved({ bricks, score: points(bricks), small: true, paddle: 100, balls: [{ x, y: 300, dx: 0, dy: -1 }], stuck: false }));
   await expect(page.locator('#score')).toHaveText('319');
   await page.locator('#startBtn').click();
   await runUntil(page, async () => (await page.locator('#level').textContent()) === '2');
@@ -225,7 +225,7 @@ test('pausing stops the ball, and it resumes where it was', async ({ page }) => 
   await expect(page.locator('#overlay')).toBeHidden();
   await page.clock.runFor(100);
   const now = await peek(page);
-  expect(now.ball.y).toBeLessThan(JSON.parse(before).data.ball.y); // ...and the ball flies on
+  expect(now.balls[0].y).toBeLessThan(JSON.parse(before).data.balls[0].y); // ...and the ball flies on
 
   await press(page, 'Escape');
   await expect(page.locator('#overlay')).toBeVisible();
@@ -280,14 +280,14 @@ test('a reload keeps the game, paused where it was', async ({ page }) => {
   await expect(page.locator('#overlay')).toBeHidden();
   expect(await peek(page)).toEqual(s);                  // the ball in the same spot, going the same way
   await page.clock.runFor(200);
-  expect((await peek(page)).ball).not.toEqual(s.ball);  // and it carries on
+  expect((await peek(page)).balls[0]).not.toEqual(s.balls[0]);  // and it carries on
 
   // A ball waiting on the paddle comes back waiting.
-  await openSaved(page, saved({ lives: 1, paddle: 90, ball: onPaddle(90) }));
+  await openSaved(page, saved({ lives: 1, paddle: 90, balls: [onPaddle(90)] }));
   await expect(page.locator('#lives')).toHaveText('1');
   await page.locator('#startBtn').click();
   await page.clock.runFor(1000);
-  expect((await peek(page)).ball).toEqual(onPaddle(90));
+  expect((await peek(page)).balls[0]).toEqual(onPaddle(90));
 });
 
 test('New game from the pause screen starts over, and before the first launch there is nothing to keep', async ({ page }) => {
@@ -316,19 +316,19 @@ test('saves that do not make sense are thrown away', async ({ page }) => {
     { ...good, bricks: full().slice(1) },                                    // too few bricks
     { ...good, bricks: full().map(() => 0), score: 320 },                    // an empty wall
     { ...good, bricks: full().map(() => 2) },                                // not a brick
-    { ...good, lives: 4 },                                                   // too many balls
+    { ...good, lives: 6 },                                                   // too many balls
     { ...good, lives: 0 },                                                   // no ball to play
     { ...good, small: 'yes' },
     { ...good, paddle: 10 },                                                 // the paddle off the end
-    { ...good, ball: { x: 180, y: 300, dx: 1, dy: 1 }, stuck: false },       // not a direction
-    { ...good, ball: { x: -5, y: 300, dx: 0, dy: 1 }, stuck: false },        // off the board
-    { ...good, ball: { x: 180, y: 70, dx: 0, dy: 1 }, stuck: false }         // inside a brick
+    { ...good, balls: [{ x: 180, y: 300, dx: 1, dy: 1 }], stuck: false },       // not a direction
+    { ...good, balls: [{ x: -5, y: 300, dx: 0, dy: 1 }], stuck: false },        // off the board
+    { ...good, balls: [{ x: 180, y: 70, dx: 0, dy: 1 }], stuck: false }         // inside a brick
   ]) {
     await openSaved(page, bad);
     await expect(page.locator('#ovTitle'), JSON.stringify(bad)).toHaveText('Brick Bounce');
     expect(await page.evaluate(() => localStorage.getItem('bdnix_bricks_save'))).toBeNull();
   }
-  await openSaved(page, { ...good, level: 3, score: 700, ball: { x: 180, y: 300, dx: 0, dy: 1 }, stuck: false }); // and a good one is kept
+  await openSaved(page, { ...good, level: 3, score: 700, balls: [{ x: 180, y: 300, dx: 0, dy: 1 }], stuck: false }); // and a good one is kept
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
   await expect(page.locator('#level')).toHaveText('3');
 });
@@ -342,12 +342,12 @@ test('launching, bricks, the paddle, the walls, lost balls and a new wall each h
   await runUntil(page, scoreIs(page, 1));
   expect(await heard(page)).toEqual(['brick']);
 
-  await openSaved(page, saved({ ball: { x: 180, y: 380, dx: 0, dy: 1 }, stuck: false }));
+  await openSaved(page, saved({ balls: [{ x: 180, y: 380, dx: 0, dy: 1 }], stuck: false }));
   await page.locator('#startBtn').click();
   await runUntil(page, async () => (await page.evaluate(() => window.heard.length)) > 0);
   expect(await heard(page)).toEqual(['paddle']);
 
-  await openSaved(page, saved({ ball: { x: 30, y: 300, dx: -1, dy: 0.0001 }, stuck: false }));
+  await openSaved(page, saved({ balls: [{ x: 30, y: 300, dx: -1, dy: 0.0001 }], stuck: false }));
   await page.locator('#startBtn').click();
   await runUntil(page, async () => (await page.evaluate(() => window.heard.length)) > 0);
   expect(await heard(page)).toEqual(['wall']);
@@ -368,8 +368,121 @@ test('launching, bricks, the paddle, the walls, lost balls and a new wall each h
   expect(await heard(page)).toEqual(['fall', 'over']);
 
   const bricks = only(74);
-  await openSaved(page, saved({ bricks, score: points(bricks), ball: { x: 12 + 4 * 33.6 + 16.8, y: 300, dx: 0, dy: -1 }, stuck: false }));
+  await openSaved(page, saved({ bricks, score: points(bricks), balls: [{ x: 12 + 4 * 33.6 + 16.8, y: 300, dx: 0, dy: -1 }], stuck: false }));
   await page.locator('#startBtn').click();
   await runUntil(page, async () => (await page.locator('#level').textContent()) === '2');
   expect(await heard(page)).toEqual(['brick', 'level']);
+});
+
+// A ball out of the way, going side to side under the bricks.
+const aside = { x: 300, y: 300, dx: 1, dy: 0 };
+const none = () => full().map(() => '');
+
+test('a lettered brick drops its power, and the paddle catches it', async ({ page }) => {
+  // A new game hides its powers where the dice say: with them fixed, the top row.
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await press(page, 'Space');
+  await page.clock.runFor(100);
+  expect((await peek(page)).loot.slice(0, 7)).toEqual(['multi', 'fire', 'laser', 'wide', 'multi', 'life', '']);
+
+  await listen(page);
+  const i = (ROWS - 1) * COLS + 4, x = 12 + 4 * 33.6 + 16.8;
+  const loot = none(); loot[i] = 'fire';
+  await openSaved(page, saved({ loot, paddle: x, balls: [{ x, y: 300, dx: 0, dy: -1 }], stuck: false }));
+  await page.locator('#startBtn').click();
+  await runUntil(page, scoreIs(page, 1));
+  let s = await peek(page);
+  expect(s.loot[i]).toBe('');
+  expect(s.drops).toHaveLength(1);
+  expect(s.drops[0].kind).toBe('fire');
+  await runUntil(page, async () => (await peek(page)).fire > 0);
+  s = await peek(page);
+  expect(s.drops).toEqual([]);
+  expect(s.fire).toBeGreaterThan(7);
+  expect(await heard(page)).toContain('powerup');
+  expect(await inkOn(page, '#board')).toBeGreaterThan(1000);
+});
+
+test('each power does its job', async ({ page }) => {
+  const caught = async (kind, extra = {}) => {
+    await openSaved(page, saved({ balls: [aside], stuck: false, drops: [{ x: 180, y: 420, kind }], ...extra }));
+    await page.locator('#startBtn').click();
+    await runUntil(page, async () => !(await peek(page)).drops.length);
+    return peek(page);
+  };
+  let s = await caught('multi');
+  expect(s.balls).toHaveLength(3);
+  s = await caught('life');
+  expect(s.lives).toBe(3);
+  await expect(page.locator('#lives')).toHaveText('3');
+  s = await caught('wide', { paddle: 180 });
+  expect(s.wide).toBeGreaterThan(11);
+
+  // The laser's shots break the bricks above the paddle's ends.
+  await listen(page);
+  s = await caught('laser');
+  expect(s.laser).toBeGreaterThan(7);
+  await runUntil(page, async () => (await page.locator('#score').textContent()) !== '0');
+  s = await peek(page);
+  expect(s.bricks.filter((b) => !b).length).toBeGreaterThan(0);
+  expect(await heard(page)).toEqual(expect.arrayContaining(['powerup', 'shot', 'brick']));
+  expect(await inkOn(page, '#board')).toBeGreaterThan(1000);
+});
+
+test('a reload keeps the powers, the balls and everything in flight', async ({ page }) => {
+  const loot = none(); loot[5] = 'multi';
+  const game = saved({
+    loot, stuck: false, lives: 4, fire: 3.5, laser: 2, wide: 6, reload: 0.25,
+    balls: [aside, { x: 100, y: 350, dx: 0, dy: -1 }],
+    drops: [{ x: 60, y: 250, kind: 'life' }], shots: [{ x: 50, y: 300 }]
+  });
+  await openSaved(page, game);
+  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
+  await expect(page.locator('#lives')).toHaveText('4');
+  await page.locator('#startBtn').click();
+  expect(await peek(page)).toEqual(game);               // exactly as it was, nothing moved
+  await page.clock.runFor(200);
+  const s = await peek(page);
+  expect(s.fire).toBeLessThan(3.5);
+  expect(s.balls[0]).not.toEqual(aside);
+
+  // A game saved before there were powers comes back without them.
+  const { balls, ...old } = saved({ stuck: false, ball: { x: 180, y: 300, dx: 0, dy: 1 } });
+  await openSaved(page, old);
+  await expect(page.locator('#ovTitle')).toHaveText('Paused');
+  await page.locator('#startBtn').click();
+  const o = await peek(page);
+  expect([o.balls, o.loot.every((l) => l === ''), o.fire, o.drops]).toEqual([[{ x: 180, y: 300, dx: 0, dy: 1 }], true, 0, []]);
+});
+
+test('saved powers that do not make sense are thrown away', async ({ page }) => {
+  const good = saved({ balls: [aside], stuck: false });
+  const loot = (i, kind) => { const l = none(); l[i] = kind; return l; };
+  for (const bad of [
+    { ...good, loot: none().slice(1) },                                      // too few
+    { ...good, loot: loot(3, 'rocket') },                                    // no such power
+    { ...good, loot: loot(3, 'fire'), bricks: only(0) },                     // in a broken brick
+    { ...good, balls: [] },                                                  // no ball
+    { ...good, balls: Array(13).fill(aside) },                               // too many balls
+    { ...good, balls: [aside, { x: 180, y: 70, dx: 0, dy: 1 }] },            // one inside a brick
+    { ...good, drops: [{ x: 100, y: 100, kind: 'rocket' }] },
+    { ...good, drops: [{ x: -10, y: 100, kind: 'fire' }] },
+    { ...good, drops: 'fire' },
+    { ...good, shots: [{ x: 100, y: 470 }] },                                // below the paddle
+    { ...good, shots: [null] },
+    { ...good, fire: 20 },                                                   // longer than it lasts
+    { ...good, laser: -1 },
+    { ...good, wide: 'yes' },
+    { ...good, reload: 5 }
+  ]) {
+    await openSaved(page, bad);
+    await expect(page.locator('#ovTitle'), JSON.stringify(bad).slice(0, 300)).toHaveText('Brick Bounce');
+    expect(await page.evaluate(() => localStorage.getItem('bdnix_bricks_save'))).toBeNull();
+  }
+  await openSaved(page, { ...good, lives: 5 });                                // five balls is fine
+  await expect(page.locator('#ovTitle')).toHaveText('Paused');
+});
+
+test('its sounds are well formed and loud enough', async ({ page }) => {
+  expect(await soundProblems(page)).toEqual([]);
 });

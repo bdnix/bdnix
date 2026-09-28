@@ -1,4 +1,6 @@
-/* Shared design system for every bdnix page. */
+/* What every bdnix page uses: colour tokens, the backdrop, the top bar,
+   buttons, panels and the analytics consent banner. Components only some
+   pages use have their own stylesheets. */
 :root{
   --bg:#080a12;
   --bg-2:#10142a;
@@ -56,36 +58,6 @@ button{font:inherit;color:inherit;cursor:pointer}
 .wordmark b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .wordmark span{font:400 14px var(--mono);letter-spacing:0;color:var(--faint)}
 
-/* Profile chip in the top bar, filled in by profile.js */
-.profile-chip{
-  display:inline-flex;align-items:center;gap:8px;min-width:0;max-width:60vw;
-  padding:4px 12px 4px 4px;border:1px solid var(--line);border-radius:999px;
-  background:var(--panel);text-decoration:none;
-  font:600 13px/1 var(--sans);color:var(--muted);
-  transition:border-color .2s ease,color .2s ease;
-}
-.profile-chip:hover{border-color:rgba(168,85,247,.45);color:var(--fg)}
-.profile-chip:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
-.profile-chip span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media (max-width:480px){ .profile-chip{max-width:50vw} }
-.avatar{
-  display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
-  width:28px;height:28px;border-radius:50%;
-  background:var(--grad);color:#080a12;
-  font:800 13px/1 var(--sans);
-}
-
-/* Footer on the landing and tool pages */
-.foot{
-  position:relative;z-index:1;
-  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
-  padding:20px clamp(16px,4vw,32px) calc(20px + env(safe-area-inset-bottom));
-  font:400 12px var(--mono);color:var(--faint);
-}
-.foot a{text-decoration:none}
-.foot a:hover,.foot a:focus-visible{color:var(--fg)}
-.foot-links{display:flex;flex-wrap:wrap;gap:8px 18px}
-
 /* Buttons */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:10px;
@@ -96,18 +68,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 .btn svg{width:16px;height:16px;flex:0 0 auto}
 .btn:hover{transform:translateY(-1px)}
 .btn:active{transform:translateY(0)}
-.btn:focus-visible,.icon-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.btn:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
 .btn-primary{color:#080a12;background:var(--grad);box-shadow:0 10px 32px -8px rgba(168,85,247,.55)}
 .btn-primary:hover{box-shadow:0 14px 40px -8px rgba(168,85,247,.75)}
 .btn-ghost{border-color:var(--line);background:var(--panel)}
 .btn-ghost:hover{border-color:rgba(255,255,255,.2)}
 
-.icon-btn{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:40px;height:40px;border-radius:10px;
-  border:1px solid var(--line);background:var(--panel);
-}
-.icon-btn svg{width:16px;height:16px}
 
 .panel{
   background:var(--panel);

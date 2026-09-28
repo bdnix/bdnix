@@ -52,3 +52,32 @@ export async function listen(page){
   });
 }
 export const heard = (page) => page.evaluate(() => window.heard.splice(0));
+
+// What's wrong with the sounds the page's game can play, shared and its own
+// (empty when nothing is): every tone well formed, every sound loud enough
+// to hear on a phone, and no tones that add up past full scale.
+export function soundProblems(page){
+  return page.evaluate(() => {
+    const S = window.bdnixSound, problems = [];
+    const waves = ['sine', 'square', 'triangle', 'sawtooth', 'noise'];
+    // How loud a tone is for its peak level: a square wave is as loud as
+    // its peak, the others less so.
+    const weight = { square: 1, sine: Math.SQRT1_2, triangle: 1 / Math.sqrt(3), sawtooth: 1 / Math.sqrt(3), noise: 1 / Math.sqrt(3) };
+    for (const [name, tones] of Object.entries(S.SOUNDS)) {
+      if (!tones.length) problems.push(name + ' has no tones');
+      for (const n of tones) {
+        if (!waves.includes(n.type)) problems.push(name + ' wave');
+        if (!(n.d > 0 && n.d <= 1.5)) problems.push(name + ' length');
+        if (!(n.t >= 0 && n.t < 1)) problems.push(name + ' start');
+        if (!(n.v > 0 && n.v <= 1)) problems.push(name + ' loudness');
+        // Exponential slides can't start or end at 0 Hz.
+        if (n.type !== 'noise' && !(n.f > 20 && n.to > 20 && n.f < 5000 && n.to < 5000)) problems.push(name + ' pitch');
+        // The most tones are sounding just as one starts.
+        const together = tones.filter((m) => m.t <= n.t && n.t < m.t + m.d).reduce((sum, m) => sum + m.v * S.VOLUME, 0);
+        if (together > 1) problems.push(name + ' clips');
+      }
+      if (Math.max(...tones.map((n) => n.v * S.VOLUME * (weight[n.type] || 0))) < 0.1) problems.push(name + ' is too quiet');
+    }
+    return [...new Set(problems)];
+  });
+}

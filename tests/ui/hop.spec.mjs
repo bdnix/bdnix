@@ -1,5 +1,5 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
-import { openGame, press, tap, listen, heard } from './games.mjs';
+import { openGame, press, tap, listen, heard, soundProblems } from './games.mjs';
 
 // With Math.random fixed at 0 the lanes are the same every time: grass on
 // rows 0 and 1, a road on row 2, grass on 3 and 4, a river on 5, grass on 6
@@ -340,4 +340,8 @@ test('falling in the river splashes', async ({ page }) => {
   await press(page, 'ArrowUp');
   await waitForGameOver(page);
   expect((await heard(page)).slice(-3)).toEqual(['hop', 'splash', 'best']);
+});
+
+test('its sounds are well formed and loud enough', async ({ page }) => {
+  expect(await soundProblems(page)).toEqual([]);
 });

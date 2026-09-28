@@ -37,6 +37,13 @@
   var world = F.create(), carry = 0, clock = 0;
   var best = 0;
   var sound = window.bdnixSound;
+  // This game's sounds, beside the ones every game shares (sound.js).
+  var tone = sound.tone, notes = sound.notes;
+  sound.add({
+    eat: [tone(660, 990, 0.08, 'square', 0.16)],
+    hit: [tone(0, 0, 0.18, 'noise', 0.3), tone(180, 50, 0.25, 'triangle', 0.45)],
+    win: notes([523, 659, 784, 1047, 1319, 1568], 0.08, 0.16, 'square', 0.17)
+  });
 
   try { best = parseInt(localStorage.getItem('bdnix_snake_best'), 10) || 0; } catch (e) {}
 

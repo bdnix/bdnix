@@ -76,6 +76,18 @@
   var pac, ghosts, wanted;
   var score = 0, best = 0, level = 1, lives = 3, extraLifeGiven = false;
   var sound = window.bdnixSound;
+  // This game's sounds, beside the ones every game shares (sound.js).
+  var tone = sound.tone, notes = sound.notes;
+  sound.add({
+    chomp: [tone(480, 240, 0.07, 'square', 0.14)],
+    chomp2: [tone(240, 480, 0.07, 'square', 0.14)],
+    power: [tone(200, 800, 0.3, 'sawtooth', 0.22)],
+    ghost: [tone(300, 1400, 0.22, 'square', 0.18)],
+    fruit: notes([784, 1047, 1319], 0.05, 0.08, 'sine', 0.35),
+    life: notes([1047, 1319, 1047, 1319], 0.08, 0.1, 'sine', 0.35),
+    die: [tone(880, 110, 1.2, 'square', 0.18)],
+    level: notes([659, 784, 988, 1319], 0.08, 0.12, 'square', 0.16)
+  });
   var modeIndex, modeTime, frightTime, frightCombo, lifeTime, freeze;
   var fruit, popups;
 

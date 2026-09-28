@@ -30,7 +30,7 @@ The search box on the home page narrows the list as you type: try "pdf", "photo"
 | [Flap](https://www.bdnix.com/flap/) | Tap to fly through the gaps in the pipes and earn medals. |
 | [Road Hop](https://www.bdnix.com/road-hop/) | Help a chicken hop across busy roads and ride logs over rivers, as far as it can go. |
 | [Snake](https://www.bdnix.com/snake/) | Steer the snake to the food and grow as long as you can without hitting a wall or your own tail. |
-| [Brick Bounce](https://www.bdnix.com/brick-bounce/) | Bounce a ball off your paddle to smash a wall of bricks, one wall after another, before your three balls run out. |
+| [Brick Bounce](https://www.bdnix.com/brick-bounce/) | Bounce a ball off your paddle to smash a wall of bricks, one wall after another, before your three balls run out. Catch the powers that fall from lettered bricks: multi-ball, fireball, laser and a wider paddle. |
 
 Every game plays with keyboard, mouse or touch, has sound effects (mute them with the speaker button or M), keeps your best score, and saves a game in progress so you can pick up where you left off, even days later.
 

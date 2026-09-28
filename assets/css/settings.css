@@ -1,0 +1,9 @@
+/* A panel of settings: fieldsets, sliders and hints. */
+.settings{padding:18px;display:flex;flex-direction:column;gap:18px}
+.settings fieldset{margin:0;padding:0;border:0;min-width:0}
+.settings legend{padding:0;margin-bottom:8px}
+.settings input[type=range]{width:100%;accent-color:var(--violet);margin:0}
+.settings .hint{font-size:13px;color:var(--faint);min-height:1.3em}
+.settings .hint.error{color:var(--pink)}
+.settings :disabled + span{opacity:.5;cursor:default}
+.files .settings{margin-bottom:16px}

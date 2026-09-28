@@ -8,6 +8,15 @@
 
   // Bricks, top row pair to bottom, in the site's colours.
   var COLORS = ['#f472b6', '#f472b6', '#a855f7', '#a855f7', '#22d3ee', '#22d3ee', '#facc15', '#facc15'];
+  // Each power's colour, the letter on its capsule and brick, and its name
+  // under the paddle while it lasts.
+  var POWERS = {
+    multi: { color: '#22d3ee', mark: 'M' },
+    fire: { color: '#fb923c', mark: 'F', name: 'Fire' },
+    laser: { color: '#f43f5e', mark: 'L', name: 'Laser' },
+    wide: { color: '#4ade80', mark: 'W', name: 'Wide' },
+    life: { color: '#facc15', mark: '+' }
+  };
   // A few ways to say the game is over; one is picked at random.
   var ENDINGS = ['The last ball slipped by.', 'So close to the bottom row.', 'The wall wins this time.'];
 
@@ -39,6 +48,17 @@
   var held = { left: 0, right: 0 }; // move keys and buttons held down
   var best = 0;
   var sound = window.bdnixSound;
+  // This game's sounds, beside the ones every game shares (sound.js).
+  var tone = sound.tone, notes = sound.notes;
+  sound.add({
+    paddle: [tone(330, 330, 0.05, 'square', 0.14)],
+    wall: [tone(220, 220, 0.04, 'square', 0.1)],
+    brick: [tone(784, 1175, 0.06, 'square', 0.14)],
+    powerup: notes([523, 784, 1047], 0.05, 0.08, 'triangle', 0.35),
+    shot: [tone(1400, 700, 0.05, 'square', 0.1)],
+    level: notes([659, 784, 988, 1319], 0.08, 0.12, 'square', 0.16),
+    fall: [tone(700, 120, 0.5, 'triangle', 0.4)]
+  });
 
   try { best = parseInt(localStorage.getItem('bdnix_bricks_best'), 10) || 0; } catch (e) {}
 
@@ -76,10 +96,12 @@
     if (state !== 'playing') return;
     var ev = F.advance(world, dt);
     ev.bricks.forEach(function(i){ fading.push({ i: i, t: clock }); });
-    if (ev.bricks.length) sound.play('brick');
+    if (ev.powers.length) sound.play('powerup');
+    else if (ev.bricks.length) sound.play('brick');
+    else if (ev.shot) sound.play('shot');
     else if (ev.paddle) sound.play('paddle');
     else if (ev.wall) sound.play('wall');
-    if (ev.bricks.length || ev.lost || ev.cleared) updateHud();
+    if (ev.bricks.length || ev.powers.length || ev.lost || ev.cleared) updateHud();
     if (ev.end) return crash();
     if (ev.cleared) { fading = []; setState('ready'); sound.play('level'); persist(); }
     else if (ev.lost) { setState('ready'); sound.play('fall'); persist(); }
@@ -145,20 +167,39 @@
     if ((s !== 'ready' && s !== 'playing') || world.dead) return null;
     var w = world;
     if (w.stuck && w.level === 1 && w.lives === F.LIVES && w.score === 0) return null;
-    return { level: w.level, bricks: w.bricks, paddle: w.paddle, small: w.small, ball: w.ball, stuck: w.stuck, lives: w.lives, score: w.score };
+    return {
+      level: w.level, bricks: w.bricks, loot: w.loot, paddle: w.paddle, small: w.small, balls: w.balls, stuck: w.stuck,
+      lives: w.lives, score: w.score, drops: w.drops, shots: w.shots, fire: w.fire, laser: w.laser, wide: w.wide, reload: w.reload
+    };
   }
   var persist = window.bdnixSave.keep('bricks', snapshot);
 
   function restore(s){
-    var num = window.bdnixSave.num, b = s.ball, k = s.bricks;
+    var num = window.bdnixSave.num, k = s.bricks;
+    // Games saved before there were powers have one ball and none of the rest.
+    var balls = s.balls || (s.ball ? [s.ball] : null);
+    var loot = s.loot || (Array.isArray(k) ? k.map(function(){ return ''; }) : null);
+    var drops = s.drops || [], shots = s.shots || [];
+    var time = function(t, most){ return t === undefined || (num(t) && t >= 0 && t <= most); };
+    var ball = function(b){
+      return !!b && num(b.x) && num(b.y) && num(b.dx) && num(b.dy) &&
+        b.x >= F.R && b.x <= W - F.R && b.y >= F.R && b.y <= H + F.R &&
+        Math.abs(b.dx * b.dx + b.dy * b.dy - 1) < 1e-6;
+    };
     var ok = num(s.level) && s.level === Math.floor(s.level) && s.level >= 1 &&
       Array.isArray(k) && k.length === F.ROWS * F.COLS && k.every(function(v){ return v === 0 || v === 1; }) && k.indexOf(1) >= 0 &&
+      Array.isArray(loot) && loot.length === k.length && loot.every(function(v, i){ return v === '' || (k[i] === 1 && F.KINDS.indexOf(v) >= 0); }) &&
       typeof s.small === 'boolean' && typeof s.stuck === 'boolean' &&
-      num(s.lives) && s.lives === Math.floor(s.lives) && s.lives >= 1 && s.lives <= F.LIVES &&
+      num(s.lives) && s.lives === Math.floor(s.lives) && s.lives >= 1 && s.lives <= F.MAX_LIVES &&
       num(s.score) && s.score === Math.floor(s.score) &&
-      !!b && num(b.x) && num(b.y) && num(b.dx) && num(b.dy) &&
-      b.x >= F.R && b.x <= W - F.R && b.y >= F.R && b.y <= H + F.R &&
-      Math.abs(b.dx * b.dx + b.dy * b.dy - 1) < 1e-6 && num(s.paddle);
+      Array.isArray(balls) && balls.length >= 1 && balls.length <= F.MAX_BALLS && balls.every(ball) && num(s.paddle) &&
+      Array.isArray(drops) && drops.length <= F.LOOT.length && drops.every(function(p){
+        return !!p && num(p.x) && num(p.y) && p.x >= 0 && p.x <= W && p.y >= 0 && p.y <= H + F.DROP_H && F.KINDS.indexOf(p.kind) >= 0;
+      }) &&
+      Array.isArray(shots) && shots.length <= 100 && shots.every(function(p){
+        return !!p && num(p.x) && num(p.y) && p.x >= 0 && p.x <= W && p.y >= 0 && p.y <= F.PADDLE_Y;
+      }) &&
+      time(s.fire, F.FIRE_TIME) && time(s.laser, F.LASER_TIME) && time(s.wide, F.WIDE_TIME) && time(s.reload, F.SHOT_EVERY);
     if (!ok) return false;
     // The score counts at least the bricks broken in this wall, and exactly
     // them on the first wall.
@@ -168,16 +209,23 @@
     var w = F.create();
     w.level = s.level;
     w.bricks = k.slice();
+    w.loot = loot.slice();
     w.small = s.small;
     w.lives = s.lives;
     w.score = s.score;
+    w.fire = s.fire || 0;
+    w.laser = s.laser || 0;
+    w.wide = s.wide || 0;
+    w.reload = s.reload || 0;
     w.stuck = false;
     F.movePaddle(w, s.paddle);
     if (w.paddle !== s.paddle) return false;         // off the end of the board
     if (s.stuck) F.stick(w);
     else {
-      if (F.brickAt(w, b.x, b.y) >= 0) return false; // inside a brick
-      w.ball = { x: b.x, y: b.y, dx: b.dx, dy: b.dy };
+      if (balls.some(function(b){ return F.brickAt(w, b.x, b.y) >= 0; })) return false; // inside a brick
+      w.balls = balls.map(function(b){ return { x: b.x, y: b.y, dx: b.dx, dy: b.dy }; });
+      w.drops = drops.map(function(p){ return { x: p.x, y: p.y, kind: p.kind }; });
+      w.shots = shots.map(function(p){ return { x: p.x, y: p.y }; });
     }
     world = w;
     fading = [];
@@ -238,13 +286,16 @@
     ctx.save();
     if (state === 'dying' || state === 'over') ctx.globalAlpha = 1 - 0.55 * Math.min(1, state === 'over' ? 1 : stateTime / DEATH_TIME);
     drawBricks();
+    drawShots();
+    drawDrops();
     drawPaddle();
-    if (state !== 'over') drawBall();
+    if (state !== 'over') world.balls.forEach(drawBall);
+    drawTimers();
     ctx.restore();
 
     if (state === 'ready' || (state === 'paused' && pausedFrom === 'ready')) {
       var hint = compactMQ.matches ? 'Tap to launch' : 'Press Space or click to launch';
-      var title = world.level > 1 && world.lives === F.LIVES && !F.progress(world).broken ? 'Wall ' + world.level : 'Get ready';
+      var title = world.level > 1 && world.lives >= F.LIVES && !F.progress(world).broken ? 'Wall ' + world.level : 'Get ready';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = '800 30px Inter, system-ui, sans-serif';
       ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(8,10,18,.8)';
@@ -258,7 +309,8 @@
     }
   }
 
-  // Each brick with a lighter top edge; broken ones fade and swell away.
+  // Each brick with a lighter top edge, and the letter of the power it
+  // hides; broken ones fade and swell away.
   function drawBricks(){
     for (var i = 0; i < world.bricks.length; i++) {
       if (world.bricks[i]) drawBrick(i, 1, 0);
@@ -277,7 +329,48 @@
     ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,.28)';
     ctx.fillRect(r.x + 3, r.y + 2, r.w - 6, 2);
+    var p = world.bricks[i] && POWERS[world.loot[i]];
+    if (p) {
+      ctx.fillStyle = 'rgba(8,10,18,.72)';
+      ctx.beginPath(); ctx.arc(r.x + r.w / 2, r.y + r.h / 2, 5.5, 0, Math.PI * 2); ctx.fill();
+      mark(p, r.x + r.w / 2, r.y + r.h / 2);
+    }
     ctx.restore();
+  }
+  function mark(p, x, y){
+    ctx.fillStyle = p.color;
+    ctx.font = '800 8px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(p.mark, x, y + 0.5);
+  }
+
+  // Falling capsules, dark with a rim and letter in the power's colour.
+  function drawDrops(){
+    world.drops.forEach(function(d){
+      var p = POWERS[d.kind];
+      ctx.fillStyle = 'rgba(8,10,18,.85)';
+      roundRect(d.x - F.DROP_W / 2, d.y - F.DROP_H / 2, F.DROP_W, F.DROP_H, F.DROP_H / 2);
+      ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = p.color;
+      ctx.stroke();
+      mark(p, d.x, d.y);
+    });
+  }
+
+  function drawShots(){
+    ctx.fillStyle = POWERS.laser.color;
+    world.shots.forEach(function(s){ ctx.fillRect(s.x - 1.5, s.y, 3, F.SHOT_H); });
+  }
+
+  // How long each power has left, under the paddle.
+  function drawTimers(){
+    var on = ['fire', 'laser', 'wide'].filter(function(k){ return world[k] > 0; });
+    ctx.font = '600 10px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    on.forEach(function(k, i){
+      ctx.fillStyle = POWERS[k].color;
+      ctx.fillText(POWERS[k].name + ' ' + Math.ceil(world[k]), W / 2 + (i - (on.length - 1) / 2) * 80, 466);
+    });
   }
 
   function drawPaddle(){
@@ -287,14 +380,21 @@
     ctx.fillStyle = g;
     roundRect(world.paddle - pw / 2, F.PADDLE_Y, pw, F.PADDLE_H, F.PADDLE_H / 2);
     ctx.fill();
+    // The laser's two guns, one at each end.
+    if (world.laser > 0) {
+      ctx.fillStyle = POWERS.laser.color;
+      ctx.fillRect(world.paddle - pw / 2 + 2, F.PADDLE_Y - 4, 4, 6);
+      ctx.fillRect(world.paddle + pw / 2 - 6, F.PADDLE_Y - 4, 4, 6);
+    }
   }
 
-  function drawBall(){
-    var b = world.ball;
+  // A fireball glows orange.
+  function drawBall(b){
+    var fire = world.fire > 0;
     ctx.save();
-    ctx.fillStyle = 'rgba(238,241,248,.18)';
-    ctx.beginPath(); ctx.arc(b.x, b.y, F.R * 2.2, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#eef1f8';
+    ctx.fillStyle = fire ? 'rgba(251,146,60,.35)' : 'rgba(238,241,248,.18)';
+    ctx.beginPath(); ctx.arc(b.x, b.y, F.R * (fire ? 2.6 : 2.2), 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = fire ? '#fdba74' : '#eef1f8';
     ctx.beginPath(); ctx.arc(b.x, b.y, F.R, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }

@@ -2,7 +2,7 @@
 // canvas draws them into the chosen layout, so nothing is uploaded. The
 // layouts, shapes and sizes live in collage-core.js.
 (function(){
-  var T = window.bdnixPdf, I = window.bdnixImage, C = window.bdnixCollage;
+  var T = window.bdnixFiles, I = window.bdnixImages, C = window.bdnixCollage;
   var fmtSize = T.fmtSize, plural = T.plural;
 
   function $(id){ return document.getElementById(id); }
