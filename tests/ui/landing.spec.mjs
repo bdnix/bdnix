@@ -99,3 +99,91 @@ test('every page with a footer links to the GitHub repository and to the request
   await expect(page).toHaveURL(/\/#suggest$/);
   await expect(page.locator('#suggest')).toBeInViewport();
 });
+
+test('the search box filters the games and tools as you type', async ({ page }) => {
+  await page.goto('/');
+  const search = page.getByRole('searchbox', { name: 'Search games & tools' });
+  const status = page.locator('#search-status');
+  const empty = page.locator('#search-empty');
+  const games = page.getByRole('region', { name: 'Games' });
+  const tools = page.getByRole('region', { name: 'Tools' });
+  const shown = () => page.locator('.game-card:visible b').allTextContents();
+
+  await expect(page.locator('.game-card:visible')).toHaveCount(13);
+  await expect(status).toHaveText('');
+  await expect(empty).toBeHidden();
+
+  // Names, descriptions and keywords all count; the other section hides.
+  await search.fill('pdf');
+  expect(await shown()).toEqual(['Merge PDFs', 'Watermark a PDF', 'Redact a PDF']);
+  await expect(status).toHaveText('3 matches');
+  await expect(games).toBeHidden();
+  await expect(tools).toBeVisible();
+
+  await search.fill('ghosts');
+  expect(await shown()).toEqual(['Maze Chase']);
+  await expect(status).toHaveText('1 match');
+  await expect(tools).toBeHidden();
+
+  await search.fill('Photo');
+  expect(await shown()).toEqual(['Compress Images', 'Photo Collage', 'Fit to Frame']);
+
+  await search.fill('game');
+  expect(await shown()).toEqual(['Falling Blocks', 'Maze Chase', 'Flap', 'Road Hop', 'Snake', 'Brick Bounce']);
+
+  // Every word has to match.
+  await search.fill('photo grid');
+  expect(await shown()).toEqual(['Photo Collage']);
+
+  // Nothing left: both sections hide and the page asks for a request.
+  await search.fill('spreadsheet');
+  expect(await shown()).toEqual([]);
+  await expect(games).toBeHidden();
+  await expect(tools).toBeHidden();
+  await expect(status).toHaveText('0 matches');
+  await expect(empty).toBeVisible();
+  await expectNoSideScroll(page);
+  await empty.getByRole('link', { name: 'Ask for it' }).click();
+  await expect(page).toHaveURL(/\/#suggest$/);
+
+  // Escape clears the search and brings everything back.
+  await search.fill('snake');
+  expect(await shown()).toEqual(['Snake']);
+  await search.press('Escape');
+  await expect(search).toHaveValue('');
+  await expect(page.locator('.game-card:visible')).toHaveCount(13);
+  await expect(status).toHaveText('');
+  await expect(empty).toBeHidden();
+  await expectNoSideScroll(page);
+});
+
+test('"/" jumps to the search box, but types normally inside it', async ({ page }) => {
+  await page.goto('/');
+  const search = page.locator('#search');
+  await expect(search).not.toBeFocused();
+  await page.keyboard.press('/');
+  await expect(search).toBeFocused();
+  await expect(search).toHaveValue('');
+  await page.keyboard.type('mp4/');
+  await expect(search).toHaveValue('mp4/');
+  expect(await page.locator('.game-card:visible b').allTextContents()).toEqual(['MP4 to MP3']);
+
+  // Held with a modifier, it's left to the browser.
+  await search.blur();
+  await page.keyboard.press('Control+/');
+  await expect(search).not.toBeFocused();
+});
+
+test('a search already in the box when the page loads is applied', async ({ page }) => {
+  // As when the browser brings back what was typed: fill the box before the page's script runs.
+  await page.addInitScript(() => {
+    new MutationObserver((changes, watcher) => {
+      const box = document.getElementById('search');
+      if (box) { box.value = 'bounce'; watcher.disconnect(); }
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.goto('/');
+  await expect(page.locator('#search')).toHaveValue('bounce');
+  expect(await page.locator('.game-card:visible b').allTextContents()).toEqual(['Brick Bounce']);
+  await expect(page.locator('#search-status')).toHaveText('1 match');
+});

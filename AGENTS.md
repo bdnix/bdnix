@@ -8,7 +8,7 @@ The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub 
 
 | Page | Files |
 |---|---|
-| Landing `/` | `index.html`, `assets/css/style.css`, `assets/js/main.js` |
+| Landing `/` | `index.html`, `assets/css/style.css`, `assets/js/main.js`, `assets/js/search-core.js` |
 | Falling Blocks `/falling-blocks/` | `falling-blocks/index.html`, `assets/css/tetris.css`, `assets/js/tetris.js` |
 | Maze Chase `/maze-chase/` | `maze-chase/index.html`, `assets/css/pacman.css`, `assets/js/pacman.js` |
 | Flap `/flap/` | `flap/index.html`, `assets/css/flappy.css`, `assets/js/flappy.js`, `assets/js/flappy-core.js` |
@@ -56,7 +56,7 @@ Leave merging to the owner: don't merge the pull request yourself.
 - **Keep it dependency-free at runtime.** No frameworks and no bundler. `package.json` holds dev tooling only (tests, coverage, the cache-busting script).
 - **Match the existing code.** Each script is one IIFE, `(function(){ ... })();`, in ES5-style `var`/`function` code. A script that other scripts use exposes one `window.bdnix*` object. Comment density, naming and CSS style should match the file you're in.
 - **Reuse, don't duplicate.** Use the tokens in `base.css`, the layout in `tool.css`, and the helpers in `pdftools.js` / `profile.js`. If two pages need the same logic, move it into a shared file.
-- **Pure logic goes in its own file** (as in `watermark-layout.js`, `redact-core.js`, `flappy-core.js`, `hop-core.js`, `snake-core.js`, `bricks-core.js`, `audio-core.js`, `image-core.js`, `collage-core.js`, `frame-core.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
+- **Pure logic goes in its own file** (as in `watermark-layout.js`, `redact-core.js`, `flappy-core.js`, `hop-core.js`, `snake-core.js`, `bricks-core.js`, `audio-core.js`, `image-core.js`, `collage-core.js`, `frame-core.js`, `search-core.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
 - **Every game keeps a game in progress.** A game must survive a reload or a later visit and come back paused exactly where it was, as Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce do. Use `window.bdnixSave` from `assets/js/gamesave.js`:
   - Save through `bdnixSave.keep('<game>', snapshot)`. `snapshot()` returns the whole state as plain JSON, or `null` when no game is in progress. Call the function `keep()` returns when the game pauses, starts a new game or ends.
   - Restore at startup. Check every field of the loaded save before using it. Clear a save that doesn't make sense and show the normal start screen.

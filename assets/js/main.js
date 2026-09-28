@@ -18,6 +18,45 @@
     visits < 5   ? hello :
                    hello + ' Visit #' + visits + ', you’re a regular now.';
 
+  // Search: hide the cards that don't match, and a section with none left.
+  var S = window.bdnixSearch;
+  var search = document.getElementById('search');
+  var status = document.getElementById('search-status');
+  var empty = document.getElementById('search-empty');
+  var sections = document.querySelectorAll('.games');
+  function filter(){
+    var query = search.value, shown = 0;
+    for (var i = 0; i < sections.length; i++) {
+      var cards = sections[i].querySelectorAll('.game-card'), left = 0;
+      for (var j = 0; j < cards.length; j++) {
+        var card = cards[j];
+        var ok = S.matches(card.textContent + ' ' + (card.getAttribute('data-keywords') || ''), query);
+        card.hidden = !ok;
+        if (ok) left++;
+      }
+      sections[i].hidden = !left;
+      shown += left;
+    }
+    var searching = S.terms(query).length > 0;
+    status.textContent = !searching ? '' :
+      shown === 1 ? '1 match' : shown + ' matches';
+    empty.hidden = !searching || shown > 0;
+  }
+  search.addEventListener('input', filter);
+  search.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && search.value) { search.value = ''; filter(); e.preventDefault(); }
+  });
+  // "/" jumps to the search box from anywhere that isn't a text field.
+  document.addEventListener('keydown', function(e){
+    var t = e.target, tag = t && t.tagName;
+    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+    e.preventDefault();
+    search.focus();
+  });
+  // The browser may bring back what was typed when going back to the page.
+  filter();
+
   // Typewriter
   if (reduce) return;
   var lines = [
