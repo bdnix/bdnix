@@ -201,10 +201,11 @@
       }) &&
       time(s.fire, F.FIRE_TIME) && time(s.laser, F.LASER_TIME) && time(s.wide, F.WIDE_TIME) && time(s.reload, F.SHOT_EVERY);
     if (!ok) return false;
-    // The score counts at least the bricks broken in this wall, and exactly
-    // them on the first wall.
-    var points = 0;
-    k.forEach(function(v, i){ if (!v) points += F.POINTS[Math.floor(i / F.COLS)]; });
+    // The bricks are what's left of this wall's shape, and the score counts
+    // at least the bricks broken from it, exactly them on the first wall.
+    var shape = F.wall(s.level), points = 0;
+    if (k.some(function(v, i){ return v && !shape[i]; })) return false;
+    shape.forEach(function(v, i){ if (v && !k[i]) points += F.POINTS[Math.floor(i / F.COLS)]; });
     if (s.level === 1 ? s.score !== points : s.score < points) return false;
     var w = F.create();
     w.level = s.level;

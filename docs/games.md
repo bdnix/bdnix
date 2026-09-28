@@ -81,7 +81,7 @@ The snake waits until the first direction is pressed, then glides from cell to c
 | Launch the ball | Space, ↑ or W | Click | Tap, or the ↑ button |
 | Pause | P / Esc | ❚❚ | ❚❚ |
 
-Eight rows of bricks sit at the top of the board: the bottom two rows score 1 point a brick, then 3, 5 and 7 for the top two. The ball waits on the paddle until it's launched and bounces back off the paddle at an angle set by where it lands, straight up off the middle and steeper towards the ends. It speeds up after the 4th and 12th bricks of a wall and the first time it breaks into the upper and top rows. Once it reaches the top of the board the paddle shrinks for the rest of that wall.
+Each wall of bricks has its own shape: a house, a space invader, a heart, waves, a castle and a chessboard, then round again. The first, the house, is the gentlest: its bottom row is whole, so the first shots always find a brick. Bricks score by row: 1 point in the bottom two rows, then 3, 5 and 7 for the top two. The ball waits on the paddle until it's launched and bounces back off the paddle at an angle set by where it lands, straight up off the middle and steeper towards the ends. It starts slow and speeds up after the 10th and 25th bricks of a wall and the first time it breaks into the upper and top rows. Once it reaches the top of the board the paddle shrinks for the rest of that wall.
 
 There are three balls. Missing the ball with the paddle loses one, and the next waits on the paddle; losing the last ends the game. Clearing a wall puts up a new one with the paddle back to full size, and each new wall starts the ball a little faster.
 

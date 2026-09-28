@@ -32,19 +32,23 @@ async function openSaved(page, data){
   await page.addInitScript((d) => localStorage.setItem('bdnix_bricks_save', JSON.stringify({ v: 1, data: d })), data);
   await page.reload();
 }
-const full = () => Array(ROWS * COLS).fill(1);
-// Every brick gone but the ones listed.
-const only = (...keep) => full().map((_, i) => (keep.includes(i) ? 1 : 0));
+// Each wall's bricks, from the page (1 where there's a brick): the first
+// is a house whose bottom row (70 to 79) is whole.
+let WALLS;
+const full = (level = 1) => WALLS[level - 1].slice();
+// Every brick of the first wall gone but the ones listed.
+const only = (...keep) => full().map((b, i) => (b && keep.includes(i) ? 1 : 0));
 const onPaddle = (x = 180) => ({ x, y: PADDLE_Y - R, dx: 0, dy: -1 });
 const saved = (extra = {}) => ({ level: 1, bricks: full(), paddle: 180, small: false, balls: [onPaddle()], stuck: true, lives: 2, score: 0, ...extra });
-// Points for every brick broken in `bricks`.
-const points = (bricks) => bricks.reduce((n, b, i) => n + (b ? 0 : [7, 7, 5, 5, 3, 3, 1, 1][Math.floor(i / COLS)]), 0);
+// Points for every brick of wall `level` broken in `bricks`.
+const points = (bricks, level = 1) => full(level).reduce((n, b, i) => n + (b && !bricks[i] ? [7, 7, 5, 5, 3, 3, 1, 1][Math.floor(i / COLS)] : 0), 0);
 // A ball falling past the far left of the paddle, which is at the far right.
 const falling = { paddle: 300, balls: [{ x: 20, y: 400, dx: 0, dy: 1 }], stuck: false };
 
 test.beforeEach(async ({ page }) => {
   await openGame(page, '/brick-bounce/');
   await expect(page.locator('#ovTitle')).toHaveText('Brick Bounce');
+  WALLS = await page.evaluate(() => [1, 2, 3].map((n) => window.bdnixBricks.wall(n)));
   await page.clock.runFor(100);
 });
 
@@ -58,7 +62,7 @@ test('launches, breaks a brick, and ends when the last ball is lost', async ({ p
   await press(page, 'Space');
   await runUntil(page, scoreIs(page, 1));              // the bottom row is worth 1
   const s = await peek(page);
-  expect(s.bricks.indexOf(0)).toBeGreaterThanOrEqual((ROWS - 1) * COLS);
+  expect(full().findIndex((b, i) => b && !s.bricks[i])).toBeGreaterThanOrEqual((ROWS - 1) * COLS);
   expect(s.balls[0].dy).toBeGreaterThan(0);                // on its way back down
 
   // Nobody moves the paddle: sooner or later every ball is lost. Each new
@@ -133,7 +137,7 @@ test('keys, the mouse, dragging and the buttons all move the paddle', async ({ p
   await page.keyboard.down('KeyA');
   await page.clock.runFor(2000);
   await page.keyboard.up('KeyA');
-  expect((await peek(page)).paddle).toBe(32);         // as far left as it goes
+  expect((await peek(page)).paddle).toBe(40);         // as far left as it goes
 
   const box = await page.locator('#board').boundingBox();
   const scale = box.width / W;
@@ -160,7 +164,7 @@ test('keys, the mouse, dragging and the buttons all move the paddle', async ({ p
     await b.dispatchEvent('pointerup', { pointerType: 'touch', isPrimary: true });
   };
   await hold('right', 2000);
-  expect((await peek(page)).paddle).toBe(W - 32);
+  expect((await peek(page)).paddle).toBe(W - 40);
   await hold('left', 100);
   expect((await peek(page)).paddle).toBeLessThan(W - 50);
 
@@ -195,12 +199,13 @@ test('breaking the last brick puts up the next wall', async ({ page }) => {
   const bricks = only(last);
   const x = 12 + 4 * 33.6 + 16.8;                      // under the middle of that brick
   await openSaved(page, saved({ bricks, score: points(bricks), small: true, paddle: 100, balls: [{ x, y: 300, dx: 0, dy: -1 }], stuck: false }));
-  await expect(page.locator('#score')).toHaveText('319');
+  await expect(page.locator('#score')).toHaveText(String(points(bricks)));
   await page.locator('#startBtn').click();
   await runUntil(page, async () => (await page.locator('#level').textContent()) === '2');
-  await expect(page.locator('#score')).toHaveText('320');
+  await expect(page.locator('#score')).toHaveText(String(points(bricks) + 1));
   const s = await peek(page);
-  expect([s.level, s.stuck, s.small, s.lives, s.bricks.every((b) => b === 1)]).toEqual([2, true, false, 2, true]);
+  expect([s.level, s.stuck, s.small, s.lives]).toEqual([2, true, false, 2]);
+  expect(s.bricks).toEqual(full(2));                  // the next wall has its own shape
   await page.clock.runFor(1000);
   expect((await peek(page)).stuck).toBe(true);        // the new wall waits for a launch
 });
@@ -311,7 +316,8 @@ test('saves that do not make sense are thrown away', async ({ page }) => {
   for (const bad of [
     { bricks: [1] },                                                         // missing most fields
     { ...good, score: 11 },                                                  // score doesn't match the bricks broken
-    { ...good, level: 2, score: 9 },                                         // less than this wall's bricks are worth
+    { ...good, level: 2, bricks: full(2).map((b, i) => (i >= 70 ? 0 : b)), score: 1 }, // less than this wall's bricks are worth
+    { ...good, bricks: full().map((b, i) => (i === 0 ? 1 : b)) },            // a brick that isn't part of this wall
     { ...good, level: 0 },                                                   // no such wall
     { ...good, bricks: full().slice(1) },                                    // too few bricks
     { ...good, bricks: full().map(() => 0), score: 320 },                    // an empty wall
@@ -328,7 +334,8 @@ test('saves that do not make sense are thrown away', async ({ page }) => {
     await expect(page.locator('#ovTitle'), JSON.stringify(bad)).toHaveText('Brick Bounce');
     expect(await page.evaluate(() => localStorage.getItem('bdnix_bricks_save'))).toBeNull();
   }
-  await openSaved(page, { ...good, level: 3, score: 700, balls: [{ x: 180, y: 300, dx: 0, dy: 1 }], stuck: false }); // and a good one is kept
+  const third = full(3).map((b, i) => (i >= 70 ? 0 : b));                   // and a good one is kept
+  await openSaved(page, { ...good, level: 3, bricks: third, score: 700, balls: [{ x: 180, y: 300, dx: 0, dy: 1 }], stuck: false });
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
   await expect(page.locator('#level')).toHaveText('3');
 });
@@ -379,11 +386,14 @@ const aside = { x: 300, y: 300, dx: 1, dy: 0 };
 const none = () => full().map(() => '');
 
 test('a lettered brick drops its power, and the paddle catches it', async ({ page }) => {
-  // A new game hides its powers where the dice say: with them fixed, the top row.
+  // A new game hides its powers where the dice say: with them fixed, in the
+  // first bricks of the wall, the roof of the house.
   await page.getByRole('button', { name: 'Start game' }).click();
   await press(page, 'Space');
   await page.clock.runFor(100);
-  expect((await peek(page)).loot.slice(0, 7)).toEqual(['multi', 'fire', 'laser', 'wide', 'multi', 'life', '']);
+  const house = (await peek(page)).loot;
+  expect([4, 5, 13, 14, 15, 16].map((i) => house[i])).toEqual(['multi', 'fire', 'laser', 'wide', 'multi', 'life']);
+  expect(house.filter(Boolean)).toHaveLength(6);
 
   await listen(page);
   const i = (ROWS - 1) * COLS + 4, x = 12 + 4 * 33.6 + 16.8;
@@ -460,8 +470,8 @@ test('saved powers that do not make sense are thrown away', async ({ page }) => 
   const loot = (i, kind) => { const l = none(); l[i] = kind; return l; };
   for (const bad of [
     { ...good, loot: none().slice(1) },                                      // too few
-    { ...good, loot: loot(3, 'rocket') },                                    // no such power
-    { ...good, loot: loot(3, 'fire'), bricks: only(0) },                     // in a broken brick
+    { ...good, loot: loot(4, 'rocket') },                                    // no such power
+    { ...good, loot: loot(4, 'fire'), bricks: only(5) },                     // in a broken brick
     { ...good, balls: [] },                                                  // no ball
     { ...good, balls: Array(13).fill(aside) },                               // too many balls
     { ...good, balls: [aside, { x: 180, y: 70, dx: 0, dy: 1 }] },            // one inside a brick
