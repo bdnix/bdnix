@@ -53,7 +53,9 @@
     // Brick Bounce.
     paddle: [tone(330, 330, 0.05, 'square', 0.14)],
     wall: [tone(220, 220, 0.04, 'square', 0.1)],
-    brick: [tone(784, 1175, 0.06, 'square', 0.14)]
+    brick: [tone(784, 1175, 0.06, 'square', 0.14)],
+    powerup: notes([523, 784, 1047], 0.05, 0.08, 'triangle', 0.35),
+    shot: [tone(1400, 700, 0.05, 'square', 0.1)]
   };
 
   var muted = false;
