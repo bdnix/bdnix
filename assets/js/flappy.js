@@ -32,6 +32,13 @@
   var world = F.create(), carry = 0, wingTime = 0, hitFlash = 0, groundTime = 0;
   var best = 0;
   var sound = window.bdnixSound;
+  // This game's sounds, beside the ones every game shares (sound.js).
+  var tone = sound.tone;
+  sound.add({
+    flap: [tone(340, 640, 0.09, 'triangle', 0.4)],
+    point: [tone(988, 988, 0.06, 'square', 0.16), tone(1319, 1319, 0.14, 'square', 0.16, 0.06)],
+    hit: [tone(0, 0, 0.18, 'noise', 0.3), tone(180, 50, 0.25, 'triangle', 0.45)]
+  });
 
   try { best = parseInt(localStorage.getItem('bdnix_flappy_best'), 10) || 0; } catch (e) {}
 

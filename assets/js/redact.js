@@ -4,7 +4,7 @@
 // the result together. Everything runs in the browser; nothing is uploaded.
 (function(){
   var L = PDFLib;
-  var T = window.bdnixPdf;
+  var T = window.bdnixFiles, P = window.bdnixPdf;
   var R = window.bdnixRedact;
   function $(id){ return document.getElementById(id); }
 
@@ -286,7 +286,7 @@
     syncUi();
     hint('Searching…');
     var found = [], hits = 0, firstPage = -1, pictures = [];
-    T.loadPdfjs().then(function(lib){
+    P.loadPdfjs().then(function(lib){
       var chain = Promise.resolve();
       for (var i = 0; i < src.pages; i++) {
         chain = chain.then(pageText.bind(null, lib, i)).then(function(i, t){
@@ -324,7 +324,7 @@
   // ---- Choosing a file ----
   function openFile(file){
     if (!file || busy) return;
-    if (!T.isPdf(file)) return say('That isn’t a PDF file. Choose a .pdf to redact.', true);
+    if (!P.isPdf(file)) return say('That isn’t a PDF file. Choose a .pdf to redact.', true);
     busy = true;
     syncUi();
     say('Reading ' + file.name + '…');
@@ -349,7 +349,7 @@
       fileMeta.textContent = T.plural(src.pages, 'page') + ' · ' + T.fmtSize(file.size);
       say('');
       var current = src;
-      T.loadPdfjs().then(function(lib){
+      P.loadPdfjs().then(function(lib){
         if (!lib) throw new Error('pdf.js did not load');
         // pdf.js takes ownership of the buffer it's given, so hand it a copy.
         current.viewTask = lib.getDocument({ data: new Uint8Array(bytes.slice(0)), isEvalSupported: false });
@@ -423,7 +423,7 @@
 
     // A new file, so nothing from the original (its title, author, bookmarks
     // or attachments) comes along except the pages themselves.
-    Promise.all([T.loadPdfjs(), L.PDFDocument.create()]).then(function(r){
+    Promise.all([P.loadPdfjs(), L.PDFDocument.create()]).then(function(r){
       lib = r[0];
       out = r[1];
       return out.copyPages(src.doc, kept);

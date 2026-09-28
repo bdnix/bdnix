@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { load, plain, fakeStorage, fakeDocument } from './load.mjs';
+import { load, fakeStorage, fakeDocument } from './load.mjs';
 
 const FILE = 'assets/js/profile.js';
 
@@ -48,28 +48,6 @@ test('initial: first character, uppercased, emoji-safe', () => {
   assert.equal(P.initial(''), '?');
 });
 
-test('scores come from the keys the games write', () => {
-  const { P } = setup({ bdnix_tetris_best: '12450', bdnix_pacman_best: '3120', bdnix_flappy_best: '27', bdnix_hop_best: '42', bdnix_snake_best: '57', bdnix_bricks_best: '320' });
-  assert.deepEqual(plain(P.scores()), [
-    { id: 'tetris', name: 'Falling Blocks', href: '/falling-blocks/', best: 12450 },
-    { id: 'pacman', name: 'Maze Chase', href: '/maze-chase/', best: 3120 },
-    { id: 'flappy', name: 'Flap', href: '/flap/', best: 27 },
-    { id: 'hop', name: 'Road Hop', href: '/road-hop/', best: 42 },
-    { id: 'snake', name: 'Snake', href: '/snake/', best: 57 },
-    { id: 'bricks', name: 'Brick Bounce', href: '/brick-bounce/', best: 320 }
-  ]);
-});
-
-test('missing or junk scores count as not played', () => {
-  const { P } = setup({ bdnix_tetris_best: 'abc', bdnix_pacman_best: '-5' });
-  assert.deepEqual(plain(P.scores()).map((s) => s.best), [0, 0, 0, 0, 0, 0]);
-});
-
-test('visits come from the landing page counter', () => {
-  assert.equal(setup({ bdnix_visits: '7' }).P.visits(), 7);
-  assert.equal(setup().P.visits(), 0);
-});
-
 test('fill writes the name and initial into the page', () => {
   const { P, document } = setup({ bdnix_name: 'musa' });
   assert.equal(document.elements['[data-profile-name]'][0].textContent, 'musa', 'filled on load');
@@ -84,5 +62,4 @@ test('blocked storage (e.g. private mode) falls back quietly', () => {
   const w = load(FILE, { localStorage: broken, document: fakeDocument(), addEventListener(){} });
   assert.equal(w.bdnixProfile.getName(), 'User');
   assert.equal(w.bdnixProfile.setName('Musa'), 'Musa');
-  assert.deepEqual(plain(w.bdnixProfile.scores()).map((s) => s.best), [0, 0, 0, 0, 0, 0]);
 });

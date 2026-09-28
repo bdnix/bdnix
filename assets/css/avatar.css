@@ -1,0 +1,7 @@
+/* The visitor's initial in a circle (the profile chip and the profile page). */
+.avatar{
+  display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  width:28px;height:28px;border-radius:50%;
+  background:var(--grad);color:#080a12;
+  font:800 13px/1 var(--sans);
+}

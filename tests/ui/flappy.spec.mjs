@@ -1,5 +1,5 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
-import { openGame, press, tap, listen, heard } from './games.mjs';
+import { openGame, press, tap, listen, heard, soundProblems } from './games.mjs';
 
 // With Math.random fixed at 0 every gap is at the same height: 64 to 188 on
 // the 288 x 512 board. The bird hovers at 220 until the first flap.
@@ -237,4 +237,8 @@ test('flapping, scoring and crashing each have a sound', async ({ page }) => {
   await press(page, 'Space');
   for (let s = 0; s < 20 && !(await overlay.isVisible()); s++) await page.clock.runFor(250);
   expect(await heard(page)).toEqual(['start', 'flap', 'hit', 'over']);
+});
+
+test('its sounds are well formed and loud enough', async ({ page }) => {
+  expect(await soundProblems(page)).toEqual([]);
 });

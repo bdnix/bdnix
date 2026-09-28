@@ -3,7 +3,7 @@
 // saves it, so nothing is uploaded. Where the image goes is worked out in
 // frame-core.js; formats and file names come from image-core.js.
 (function(){
-  var T = window.bdnixPdf, I = window.bdnixImage, F = window.bdnixFrame;
+  var T = window.bdnixFiles, I = window.bdnixImages, F = window.bdnixFrame;
   var fmtSize = T.fmtSize, plural = T.plural;
 
   var drop = document.getElementById('drop');

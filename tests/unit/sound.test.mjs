@@ -86,16 +86,29 @@ test('every sound is loud enough to hear on a phone, without clipping', () => {
   }
 });
 
-test('the games have the sounds they play', () => {
+test('every game plays start, over and best; a game adds the rest itself', () => {
   const { S } = setup();
-  const used = ['start', 'over', 'best', 'level', 'point', 'hit', 'move', 'rotate', 'drop', 'lock', 'hold', 'clear',
-    'bigclear', 'chomp', 'chomp2', 'power', 'ghost', 'fruit', 'life', 'die', 'flap', 'hop', 'crash', 'splash', 'fall', 'eat', 'win', 'paddle', 'wall', 'brick',
-    'powerup', 'shot'];
-  assert.deepEqual(Object.keys(S.SOUNDS).sort(), used.sort());
+  assert.deepEqual(Object.keys(S.SOUNDS).sort(), ['best', 'over', 'start']);
+  S.add({ ding: [S.tone(880, 880, 0.1, 'sine', 0.3)], tune: S.notes([440, 660], 0.1, 0.1, 'square', 0.2) });
+  assert.deepEqual(Object.keys(S.SOUNDS).sort(), ['best', 'ding', 'over', 'start', 'tune']);
+  assert.deepEqual(plain(S.SOUNDS.ding), [{ f: 880, to: 880, d: 0.1, type: 'sine', v: 0.3, t: 0 }]);
+  assert.deepEqual(plain(S.SOUNDS.tune.map((n) => [n.f, n.to, n.t])), [[440, 440, 0], [660, 660, 0.1]]);
 });
+
+// Sounds a game might add, for the tests below.
+function withGameSounds(S){
+  S.add({
+    point: [S.tone(988, 988, 0.06, 'square', 0.16), S.tone(1319, 1319, 0.14, 'square', 0.16, 0.06)],
+    drop: [S.tone(0, 0, 0.07, 'noise', 0.2), S.tone(320, 90, 0.1, 'triangle', 0.4)],
+    hit: [S.tone(0, 0, 0.18, 'noise', 0.3), S.tone(180, 50, 0.25, 'triangle', 0.45)],
+    chomp: [S.tone(480, 240, 0.07, 'square', 0.14)]
+  });
+  return S;
+}
 
 test('playing a sound schedules its tones from now', () => {
   const { S, audio } = setup();
+  withGameSounds(S);
   assert.equal(S.play('point'), true);
   const ctx = audio.AudioContext.contexts[0];
   assert.equal(ctx.state, 'running');                    // a suspended context is woken up
@@ -113,6 +126,7 @@ test('playing a sound schedules its tones from now', () => {
 
 test('a sliding tone ramps its pitch, and noise uses one shared buffer', () => {
   const { S, audio } = setup();
+  withGameSounds(S);
   S.play('drop');
   S.play('hit');
   const osc = audio.made.find((n) => n.kind === 'osc');
@@ -215,7 +229,7 @@ test('every press wakes the audio, ready for sounds played from the game loop', 
   document.press('click');                               // already running: left alone
   assert.equal(ctx.resumed, 3);
   assert.equal(audio.AudioContext.contexts.length, 1);
-  assert.equal(S.play('chomp'), true);
+  assert.equal(withGameSounds(S).play('chomp'), true);
 });
 
 test('presses while muted leave the audio alone, and unmuting wakes it', () => {

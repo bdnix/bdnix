@@ -1,19 +1,9 @@
-// The visitor's profile: a display name plus the scores the games already
-// keep in localStorage. It lives only in this browser; nothing is sent anywhere.
+// The visitor's display name, shown in the profile chip on every page that
+// has one. It lives only in this browser; nothing is sent anywhere.
 (function(){
   var NAME_KEY = 'bdnix_name';
   var DEFAULT_NAME = 'User';
   var MAX_NAME = 24;
-
-  // Keys written by the games (see tetris.js, pacman.js, flappy.js, hop.js, snake.js and bricks.js) and main.js.
-  var GAMES = [
-    { id: 'tetris', name: 'Falling Blocks', key: 'bdnix_tetris_best', href: '/falling-blocks/' },
-    { id: 'pacman', name: 'Maze Chase', key: 'bdnix_pacman_best', href: '/maze-chase/' },
-    { id: 'flappy', name: 'Flap', key: 'bdnix_flappy_best', href: '/flap/' },
-    { id: 'hop', name: 'Road Hop', key: 'bdnix_hop_best', href: '/road-hop/' },
-    { id: 'snake', name: 'Snake', key: 'bdnix_snake_best', href: '/snake/' },
-    { id: 'bricks', name: 'Brick Bounce', key: 'bdnix_bricks_best', href: '/brick-bounce/' }
-  ];
 
   function read(key){
     try { return localStorage.getItem(key); } catch (e) { return null; }
@@ -43,17 +33,6 @@
     return (Array.from(name)[0] || '?').toUpperCase();
   }
 
-  function scores(){
-    return GAMES.map(function(g){
-      var best = parseInt(read(g.key), 10);
-      return { id: g.id, name: g.name, href: g.href, best: best > 0 ? best : 0 };
-    });
-  }
-
-  function visits(){
-    return parseInt(read('bdnix_visits'), 10) || 0;
-  }
-
   // Fills every [data-profile-name] / [data-profile-initial] on the page.
   function fill(){
     var name = getName();
@@ -63,8 +42,7 @@
 
   window.bdnixProfile = {
     DEFAULT_NAME: DEFAULT_NAME, MAX_NAME: MAX_NAME,
-    getName: getName, setName: setName, initial: initial,
-    scores: scores, visits: visits, fill: fill
+    getName: getName, setName: setName, initial: initial, fill: fill
   };
 
   fill();

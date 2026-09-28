@@ -1,0 +1,13 @@
+/* Profile chip in the top bar (landing and tool pages), filled in by
+   profile.js. Its picture is an .avatar (avatar.css). */
+.profile-chip{
+  display:inline-flex;align-items:center;gap:8px;min-width:0;max-width:60vw;
+  padding:4px 12px 4px 4px;border:1px solid var(--line);border-radius:999px;
+  background:var(--panel);text-decoration:none;
+  font:600 13px/1 var(--sans);color:var(--muted);
+  transition:border-color .2s ease,color .2s ease;
+}
+.profile-chip:hover{border-color:rgba(168,85,247,.45);color:var(--fg)}
+.profile-chip:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.profile-chip span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:480px){ .profile-chip{max-width:50vw} }

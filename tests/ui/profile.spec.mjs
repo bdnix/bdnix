@@ -41,6 +41,22 @@ test('shows the best scores the games saved', async ({ page }) => {
   ]);
 });
 
+test('junk scores count as not played, and the landing page’s visits are counted', async ({ page }) => {
+  await page.goto('/profile/');
+  await expect(page.locator('#visits')).toHaveText('');
+  await page.evaluate(() => {
+    localStorage.setItem('bdnix_tetris_best', 'abc');
+    localStorage.setItem('bdnix_pacman_best', '-5');
+    localStorage.setItem('bdnix_visits', '1');
+  });
+  await page.reload();
+  expect((await scores(page)).slice(0, 2).map((s) => s.best)).toEqual(['Not played yet', 'Not played yet']);
+  await expect(page.locator('#visits')).toHaveText('You’ve visited bdnix once.');
+  await page.evaluate(() => localStorage.setItem('bdnix_visits', '1234'));
+  await page.reload();
+  await expect(page.locator('#visits')).toHaveText('You’ve visited bdnix 1,234 times.');
+});
+
 test('a score saved in another tab shows up straight away', async ({ page, context }) => {
   await page.goto('/profile/');
   const game = await context.newPage();
@@ -86,4 +102,14 @@ test('Escape cancels, an empty name goes back to "User", names stop at 24 charac
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.locator('h1')).toHaveText('User');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_name'))).toBeNull();
+});
+
+test('works without storage, showing no scores', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', { get(){ throw new Error('blocked'); } });
+  });
+  await page.goto('/profile/');
+  await expect(page.locator('h1')).toHaveText('User');
+  expect((await scores(page)).every((s) => s.best === 'Not played yet')).toBe(true);
+  await expect(page.locator('#visits')).toHaveText('');
 });

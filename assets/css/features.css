@@ -1,0 +1,6 @@
+/* What a tool does, as a short list under the lede */
+.lede:has(+ .features){margin-bottom:14px}
+.features{margin:0 0 28px;padding:0 0 0 18px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.5;color:var(--muted);max-width:62ch}
+.features li::marker{color:var(--violet)}
+.features b{color:var(--fg);font-weight:600}
+.features code{font:400 13px var(--mono);color:var(--fg)}

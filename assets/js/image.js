@@ -2,7 +2,7 @@
 // canvas saves it again at the chosen format, quality and size, so nothing
 // is uploaded. The rules for names, sizes and formats live in image-core.js.
 (function(){
-  var T = window.bdnixPdf, I = window.bdnixImage;
+  var T = window.bdnixFiles, Images = window.bdnixImages, I = window.bdnixImage;
   var fmtSize = T.fmtSize, plural = T.plural;
 
   var drop = document.getElementById('drop');
@@ -57,7 +57,7 @@
     tile.className = 'thumb';
     tile.width = tile.height = TILE;
     decode(f).then(function(img){
-      var c = I.cover(img.naturalWidth, img.naturalHeight);
+      var c = Images.cover(img.naturalWidth, img.naturalHeight);
       tile.getContext('2d').drawImage(img, c.x, c.y, c.size, c.size, 0, 0, TILE, TILE);
     }, function(){
       // A format the browser can't show gets a blank tile instead.
@@ -69,8 +69,8 @@
   function addFiles(fileList){
     if (busy) return;
     var incoming = Array.prototype.slice.call(fileList);
-    var skipped = incoming.filter(function(f){ return !I.isImage(f); });
-    incoming.filter(I.isImage).forEach(function(file){
+    var skipped = incoming.filter(function(f){ return !Images.isImage(f); });
+    incoming.filter(Images.isImage).forEach(function(file){
       var f = { id: nextId++, file: file, src: URL.createObjectURL(file), state: 'ready' };
       f.tile = thumbnail(f);
       files.push(f);
@@ -157,7 +157,7 @@
   function showSettings(){
     var s = settings();
     qualityOut.textContent = s.quality + '%';
-    var targets = files.map(function(f){ return I.target(s.format, f.file); });
+    var targets = files.map(function(f){ return Images.target(s.format, f.file); });
     qualityField.hidden = targets.every(function(t){ return t === 'png'; });
     hint.textContent = targets.indexOf('png') >= 0
       ? 'PNG keeps every pixel, so quality doesn’t apply to it. To make a PNG much smaller, choose a smaller size, or save it as JPEG or WebP.'
@@ -174,13 +174,13 @@
   }
 
   function encode(canvas, format, quality){
-    return new Promise(function(resolve){ canvas.toBlob(resolve, I.FORMATS[format].type, quality / 100); });
+    return new Promise(function(resolve){ canvas.toBlob(resolve, Images.FORMATS[format].type, quality / 100); });
   }
 
   function compress(f, opts){
     f.state = 'working';
     render();
-    var format = I.target(opts.format, f.file), unreadable = {};
+    var format = Images.target(opts.format, f.file), unreadable = {};
     return decode(f).catch(function(){ throw unreadable; }).then(function(img){
       var size = I.fit(img.naturalWidth, img.naturalHeight, opts.longest);
       var canvas = document.createElement('canvas');
@@ -197,13 +197,13 @@
       return encode(canvas, format, opts.quality).then(function(blob){
         canvas.width = canvas.height = 0;
         // Browsers that can't save a format quietly save a PNG instead.
-        if (!blob || blob.type !== I.FORMATS[format].type) {
-          throw new Error('your browser can’t save ' + I.FORMATS[format].name + ' images. Choose another format.');
+        if (!blob || blob.type !== Images.FORMATS[format].type) {
+          throw new Error('your browser can’t save ' + Images.FORMATS[format].name + ' images. Choose another format.');
         }
         f.kept = I.keepOriginal(f.file, format, blob.size, size.scaled);
         var out = f.kept ? f.file : blob;
         f.url = URL.createObjectURL(out);
-        f.out = I.outName(f.file.name, format);
+        f.out = Images.outName(f.file.name, format, 'compressed');
         f.outSize = out.size;
         f.width = size.width;
         f.height = size.height;

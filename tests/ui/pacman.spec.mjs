@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.mjs';
-import { openGame, press, tap, listen, heard } from './games.mjs';
+import { openGame, press, tap, listen, heard, soundProblems } from './games.mjs';
 
 // The player starts low in the maze, heading left. Each dot is 10 points and a
 // power pellet 50. The game waits 2.2 seconds on "Ready" before it moves.
@@ -170,4 +170,8 @@ test('eating a ghost or fruit, an extra life and clearing the maze each have a s
   await press(page, 'ArrowUp');
   await page.clock.runFor(800);
   expect((await heard(page)).slice(-1)).toEqual(['level']);   // after the last chomp
+});
+
+test('its sounds are well formed and loud enough', async ({ page }) => {
+  expect(await soundProblems(page)).toEqual([]);
 });

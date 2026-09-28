@@ -13,7 +13,7 @@
   };
 
   // The largest width or height that can be typed in. The canvas area
-  // limit (bdnixImage.MAX_AREA) still applies on top of it.
+  // limit (bdnixImages.MAX_AREA) still applies on top of it.
   var MAX_SIDE = 10000;
 
   // Space around the image goes up to a quarter of the frame on each side.
@@ -45,7 +45,7 @@
   //   the image keeps its size and space is added to two of its sides.
   // opts.margin: extra space on every side, as a percentage (0 to
   //   MAX_MARGIN) of the frame's shorter side.
-  // opts.area: the most pixels the frame may have (bdnixImage.MAX_AREA by
+  // opts.area: the most pixels the frame may have (bdnixImages.MAX_AREA by
   //   default in the page); a bigger frame is scaled down, image and all.
   function layout(width, height, frameW, frameH, opts){
     opts = opts || {};

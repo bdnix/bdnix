@@ -2,7 +2,7 @@
 // lamejs encodes the MP3, so nothing is uploaded. The encoding itself lives
 // in audio-core.js.
 (function(){
-  var T = window.bdnixPdf, A = window.bdnixAudio;
+  var T = window.bdnixFiles, A = window.bdnixAudio;
   var fmtSize = T.fmtSize, plural = T.plural, readBytes = T.readBytes;
 
   // Audio decoded whole is resampled to this rate, which MP3 and WAV both

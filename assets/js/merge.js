@@ -1,8 +1,8 @@
 // PDF merger. Runs entirely in the browser with pdf-lib; nothing is uploaded.
 (function(){
   var PDFDocument = PDFLib.PDFDocument;
-  var T = window.bdnixPdf;
-  var fmtSize = T.fmtSize, plural = T.plural, parseRange = T.parseRange, isPdf = T.isPdf, readBytes = T.readBytes;
+  var T = window.bdnixFiles, P = window.bdnixPdf;
+  var fmtSize = T.fmtSize, plural = T.plural, parseRange = P.parseRange, isPdf = P.isPdf, readBytes = T.readBytes;
 
   var drop = document.getElementById('drop');
   var picker = document.getElementById('picker');

@@ -1,5 +1,5 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
-import { openGame, press, tap, listen, heard } from './games.mjs';
+import { openGame, press, tap, listen, heard, soundProblems } from './games.mjs';
 
 // The snake starts three long with its head at (6, 8), heading right, and the
 // first food is straight ahead at (12, 8). With Math.random fixed at 0 each
@@ -367,4 +367,8 @@ test('eating, crashing and filling the board each have a sound', async ({ page }
   await page.locator('#startBtn').click();
   await waitForGameOver(page);
   expect(await heard(page)).toEqual(['eat', 'win', 'best']);
+});
+
+test('its sounds are well formed and loud enough', async ({ page }) => {
+  expect(await soundProblems(page)).toEqual([]);
 });

@@ -1,5 +1,5 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
-import { openGame, press, tap, inkOn, listen, heard } from './games.mjs';
+import { openGame, press, tap, inkOn, listen, heard, soundProblems } from './games.mjs';
 
 // The board is 360 × 480 units. A new ball waits on the middle of the paddle
 // at (180, 435); with Math.random fixed at 0 it's launched up and to the
@@ -481,4 +481,8 @@ test('saved powers that do not make sense are thrown away', async ({ page }) => 
   }
   await openSaved(page, { ...good, lives: 5 });                                // five balls is fine
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
+});
+
+test('its sounds are well formed and loud enough', async ({ page }) => {
+  expect(await soundProblems(page)).toEqual([]);
 });

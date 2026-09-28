@@ -6,6 +6,18 @@
   var LOCK_DELAY = 500, MAX_LOCK_RESETS = 15;
   var DAS = 160, ARR = 45;
   var sound = window.bdnixSound;
+  // This game's sounds, beside the ones every game shares (sound.js).
+  var tone = sound.tone, notes = sound.notes;
+  sound.add({
+    move: [tone(260, 260, 0.03, 'square', 0.1)],
+    rotate: [tone(440, 660, 0.05, 'square', 0.1)],
+    drop: [tone(0, 0, 0.07, 'noise', 0.2), tone(320, 90, 0.1, 'triangle', 0.4)],
+    lock: [tone(150, 90, 0.07, 'triangle', 0.35)],
+    hold: [tone(520, 390, 0.08, 'sine', 0.35)],
+    clear: notes([523, 659, 784], 0.05, 0.1, 'square', 0.16),
+    bigclear: notes([523, 659, 784, 1047, 1319], 0.05, 0.12, 'square', 0.17),
+    level: notes([659, 784, 988, 1319], 0.08, 0.12, 'square', 0.16)
+  });
 
   var board = document.getElementById('board');
   var ctx = board.getContext('2d');

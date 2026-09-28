@@ -48,6 +48,17 @@
   var held = { left: 0, right: 0 }; // move keys and buttons held down
   var best = 0;
   var sound = window.bdnixSound;
+  // This game's sounds, beside the ones every game shares (sound.js).
+  var tone = sound.tone, notes = sound.notes;
+  sound.add({
+    paddle: [tone(330, 330, 0.05, 'square', 0.14)],
+    wall: [tone(220, 220, 0.04, 'square', 0.1)],
+    brick: [tone(784, 1175, 0.06, 'square', 0.14)],
+    powerup: notes([523, 784, 1047], 0.05, 0.08, 'triangle', 0.35),
+    shot: [tone(1400, 700, 0.05, 'square', 0.1)],
+    level: notes([659, 784, 988, 1319], 0.08, 0.12, 'square', 0.16),
+    fall: [tone(700, 120, 0.5, 'triangle', 0.4)]
+  });
 
   try { best = parseInt(localStorage.getItem('bdnix_bricks_best'), 10) || 0; } catch (e) {}
 

@@ -1,6 +1,7 @@
 // Sound effects for the games. Every sound is made on the spot with the Web
-// Audio API from the short recipes below, so there are no audio files to
-// download. Sound is on until the visitor mutes it (the speaker button in a
+// Audio API from short recipes, so there are no audio files to download.
+// This file has the sounds every game plays; each game adds its own with
+// add(). Sound is on until the visitor mutes it (the speaker button in a
 // game's top bar, or M); the choice is kept in localStorage as bdnix_sound
 // and applies to every game.
 (function(){
@@ -16,47 +17,17 @@
     return freqs.map(function(f, i){ return tone(f, f, d, type, v, i * step); });
   }
 
+  // The sounds every game plays. A game adds its own with add().
   var SOUNDS = {
-    // Shared by every game.
     start: notes([392, 523, 659, 784], 0.07, 0.1, 'square', 0.16),
     over: notes([494, 415, 349, 262], 0.16, 0.24, 'triangle', 0.4),
-    best: notes([523, 659, 784, 1047, 784, 1047], 0.09, 0.14, 'square', 0.17),
-    level: notes([659, 784, 988, 1319], 0.08, 0.12, 'square', 0.16),
-    point: [tone(988, 988, 0.06, 'square', 0.16), tone(1319, 1319, 0.14, 'square', 0.16, 0.06)],
-    hit: [tone(0, 0, 0.18, 'noise', 0.3), tone(180, 50, 0.25, 'triangle', 0.45)],
-    // Falling Blocks.
-    move: [tone(260, 260, 0.03, 'square', 0.1)],
-    rotate: [tone(440, 660, 0.05, 'square', 0.1)],
-    drop: [tone(0, 0, 0.07, 'noise', 0.2), tone(320, 90, 0.1, 'triangle', 0.4)],
-    lock: [tone(150, 90, 0.07, 'triangle', 0.35)],
-    hold: [tone(520, 390, 0.08, 'sine', 0.35)],
-    clear: notes([523, 659, 784], 0.05, 0.1, 'square', 0.16),
-    bigclear: notes([523, 659, 784, 1047, 1319], 0.05, 0.12, 'square', 0.17),
-    // Maze Chase.
-    chomp: [tone(480, 240, 0.07, 'square', 0.14)],
-    chomp2: [tone(240, 480, 0.07, 'square', 0.14)],
-    power: [tone(200, 800, 0.3, 'sawtooth', 0.22)],
-    ghost: [tone(300, 1400, 0.22, 'square', 0.18)],
-    fruit: notes([784, 1047, 1319], 0.05, 0.08, 'sine', 0.35),
-    life: notes([1047, 1319, 1047, 1319], 0.08, 0.1, 'sine', 0.35),
-    die: [tone(880, 110, 1.2, 'square', 0.18)],
-    // Flap.
-    flap: [tone(340, 640, 0.09, 'triangle', 0.4)],
-    // Road Hop.
-    hop: [tone(520, 820, 0.06, 'square', 0.12)],
-    crash: [tone(0, 0, 0.3, 'noise', 0.35), tone(120, 40, 0.3, 'sawtooth', 0.25)],
-    splash: [tone(0, 0, 0.45, 'noise', 0.3), tone(600, 150, 0.35, 'sine', 0.3)],
-    fall: [tone(700, 120, 0.5, 'triangle', 0.4)],
-    // Snake.
-    eat: [tone(660, 990, 0.08, 'square', 0.16)],
-    win: notes([523, 659, 784, 1047, 1319, 1568], 0.08, 0.16, 'square', 0.17),
-    // Brick Bounce.
-    paddle: [tone(330, 330, 0.05, 'square', 0.14)],
-    wall: [tone(220, 220, 0.04, 'square', 0.1)],
-    brick: [tone(784, 1175, 0.06, 'square', 0.14)],
-    powerup: notes([523, 784, 1047], 0.05, 0.08, 'triangle', 0.35),
-    shot: [tone(1400, 700, 0.05, 'square', 0.1)]
+    best: notes([523, 659, 784, 1047, 784, 1047], 0.09, 0.14, 'square', 0.17)
   };
+
+  // Adds a game's own sounds: { name: [tones] }, made with tone() and notes().
+  function add(recipes){
+    for (var name in recipes) SOUNDS[name] = recipes[name];
+  }
 
   var muted = false;
   try { muted = localStorage.getItem(KEY) === 'off'; } catch (e) {}
@@ -139,7 +110,7 @@
   // Calls fn(muted) whenever sound is muted or unmuted.
   function onChange(fn){ listeners.push(fn); }
 
-  window.bdnixSound = { VOLUME: VOLUME, SOUNDS: SOUNDS, play: play, isMuted: isMuted, setMuted: setMuted, toggle: toggle, onChange: onChange };
+  window.bdnixSound = { VOLUME: VOLUME, SOUNDS: SOUNDS, tone: tone, notes: notes, add: add, play: play, isMuted: isMuted, setMuted: setMuted, toggle: toggle, onChange: onChange };
 
   if (typeof document !== 'undefined') {
     ['pointerdown', 'touchend', 'keydown', 'click'].forEach(function(type){

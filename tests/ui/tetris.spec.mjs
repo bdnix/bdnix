@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.mjs';
-import { openGame, press, inkOn, tap, listen, heard } from './games.mjs';
+import { openGame, press, inkOn, tap, listen, heard, soundProblems } from './games.mjs';
 
 // Pieces always come O, T, J, L, S, Z, I (see games.mjs). They spawn in the
 // middle of the top row and, on an empty board, a hard drop moves the flat
@@ -211,4 +211,8 @@ test('clearing four rows at once and reaching the next level have their own soun
   await page.clock.runFor(300);                     // the rows flash, then go
   expect(await heard(page)).toEqual(['level']);
   await expect(page.locator('#level')).toHaveText('2');
+});
+
+test('its sounds are well formed and loud enough', async ({ page }) => {
+  expect(await soundProblems(page)).toEqual([]);
 });
