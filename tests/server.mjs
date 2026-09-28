@@ -1,6 +1,10 @@
 // Tiny static file server for the UI tests (and `npm run serve`), so the
 // site can be served without Python or extra packages. Mirrors GitHub Pages
 // closely enough: /dir/ serves /dir/index.html, and .mjs is JavaScript.
+// With SERVED_LOG set, it also appends one line per request to that file:
+// the spec that asked (the x-bdnix-spec header tests/ui/fixtures.mjs adds),
+// a tab, and the repository file it served or looked for. The UI result
+// cache (scripts/ui-cache.mjs) reads it to learn which files each spec uses.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -8,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const port = Number(process.env.PORT) || 4173;
+const log = process.env.SERVED_LOG;
 const types = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
@@ -19,6 +24,7 @@ http.createServer((req, res) => {
   let file = path.join(root, decodeURIComponent(new URL(req.url, 'http://x').pathname));
   if (!file.startsWith(root)) { res.writeHead(403).end(); return; }
   if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
+  if (log) fs.appendFileSync(log, `${req.headers['x-bdnix-spec'] || ''}\t${path.relative(root, file).split(path.sep).join('/')}\n`);
   fs.readFile(file, (err, data) => {
     if (err) { res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found'); return; }
     res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream' }).end(data);

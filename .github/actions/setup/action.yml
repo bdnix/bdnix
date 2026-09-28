@@ -2,6 +2,10 @@ name: Set up Node and dependencies
 description: >
   Node 22, with node_modules restored from the cache. npm ci runs only when
   package-lock.json (or the Node version) has changed since the last cache.
+outputs:
+  node-version:
+    description: The Node version installed, for cache keys.
+    value: ${{ steps.node.outputs.node-version }}
 runs:
   using: composite
   steps:

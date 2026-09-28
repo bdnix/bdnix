@@ -5,6 +5,11 @@ on:
     branches: [master]
   pull_request:
   workflow_dispatch:
+    inputs:
+      full:
+        description: Run every test, ignoring cached results
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -19,21 +24,37 @@ jobs:
   # The unit and UI tests run in parallel, each with coverage. Once both
   # pass, the coverage job uploads their reports to Codecov together (see
   # codecov.yml), so Codecov never builds a report from one suite alone.
+  #
+  # Tests whose inputs haven't changed since they last passed aren't run
+  # again: their cached result and coverage are used instead. The unit tests
+  # are cached as a whole; the UI tests spec by spec (scripts/ui-cache.mjs).
+  # Run the workflow by hand with "full" ticked to ignore the cache.
   unit:
     name: Unit tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
+      - id: setup
+        uses: ./.github/actions/setup
       # Every page links its scripts and styles with ?v=<hash of the file>.
       # Fails if a change to assets/js or assets/css wasn't followed by
       # `npm run build`, which would let browsers keep a stale copy.
       - name: Cache-busting hashes are up to date
         run: npm run build:check
+      # The unit tests only read these files, so if none has changed since
+      # a run that passed, that run's coverage stands for this one. Saved
+      # only when the job passes.
+      - id: results
+        name: Restore unit test results from cache
+        if: ${{ !inputs.full }}
+        uses: actions/cache@v6
+        with:
+          path: coverage/unit/lcov.info
+          key: unit-results-${{ runner.os }}-node-${{ steps.setup.outputs.node-version }}-${{ hashFiles('assets/js/**', 'assets/vendor/**', 'tests/unit/**', 'tests/coverage/**', 'package.json', 'package-lock.json') }}
       # Runs even if the hash check failed, so one run reports both.
       - name: Unit tests with coverage
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.results.outputs.cache-hit != 'true' }}
         run: npm run coverage:unit
       - name: Save coverage
         uses: actions/upload-artifact@v7
@@ -49,25 +70,50 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+      # The newest cache from this branch, or else from master. It holds the
+      # result, coverage and inputs of every spec that passed recently.
+      - name: Restore UI test results from cache
+        if: ${{ !inputs.full }}
+        uses: actions/cache/restore@v6
+        with:
+          path: .test-cache/ui
+          key: ui-results-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ui-results-
+      - id: plan
+        name: Find the specs to run
+        run: npm run coverage:ui:cached -- --plan
+      # Chromium is only needed if some spec has to run.
       - id: playwright
+        if: steps.plan.outputs.run != '0'
         name: Playwright version
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
       - id: browsers
+        if: steps.plan.outputs.run != '0'
         name: Restore Chromium from cache
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - name: Install Chromium
-        if: steps.browsers.outputs.cache-hit != 'true'
+        if: steps.plan.outputs.run != '0' && steps.browsers.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
       # The browser comes from the cache; the system libraries it needs are
       # apt packages, which can't be cached, so install just those.
       - name: Install Chromium's system libraries
-        if: steps.browsers.outputs.cache-hit == 'true'
+        if: steps.plan.outputs.run != '0' && steps.browsers.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
+      # Runs the specs the plan found, brings back the others' coverage,
+      # and adds every spec that passed to the cache.
       - name: UI tests with coverage
-        run: npm run coverage:ui
+        run: npm run coverage:ui:cached
+      # Saved even when a spec failed, so the ones that passed needn't run
+      # again after the fix.
+      - name: Save UI test results to cache
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@v6
+        with:
+          path: .test-cache/ui
+          key: ui-results-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Save coverage
         uses: actions/upload-artifact@v7
         with:
