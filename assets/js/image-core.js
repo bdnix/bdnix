@@ -43,11 +43,12 @@
   }
 
   // photo.png saved as a JPEG is photo-compressed.jpg, so it doesn't
-  // replace the original in the downloads folder.
-  function outName(name, format){
+  // replace the original in the downloads folder. Other tools pass their
+  // own word for what they did (fit-to-frame uses 'framed').
+  function outName(name, format, suffix){
     var dot = name.lastIndexOf('.');
     var base = dot > 0 ? name.slice(0, dot) : name;
-    return base + '-compressed.' + FORMATS[format].ext;
+    return base + '-' + (suffix || 'compressed') + '.' + FORMATS[format].ext;
   }
 
   // The size to draw a width x height image at: its longest side no more

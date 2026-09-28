@@ -52,6 +52,11 @@ test('outName: adds -compressed and the new extension', () => {
   assert.equal(I.outName('.hidden', 'png'), '.hidden-compressed.png');
 });
 
+test('outName: other tools pass their own suffix', () => {
+  assert.equal(I.outName('holiday photo.png', 'png', 'framed'), 'holiday photo-framed.png');
+  assert.equal(I.outName('IMG_0001.HEIC', 'jpeg', 'framed'), 'IMG_0001-framed.jpg');
+});
+
 test('fit: limits the longest side, keeping the shape', () => {
   assert.deepEqual(plain(I.fit(4000, 3000, 1920)), { width: 1920, height: 1440, scaled: true });
   assert.deepEqual(plain(I.fit(3000, 4000, 1920)), { width: 1440, height: 1920, scaled: true });

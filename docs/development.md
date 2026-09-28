@@ -38,7 +38,7 @@ npm run test:unit
 npm run test:ui
 ```
 
-- **Unit tests** (`tests/unit/`) use Node's built-in test runner. They load the site's scripts into a sandbox and cover pure logic: page-range parsing, the profile, saved games, game sounds, watermark placement, redaction search and geometry, audio encoding and MP4 parsing, image compression rules, photo collage layouts, and the Flap, Road Hop, Snake and Brick Bounce game rules.
+- **Unit tests** (`tests/unit/`) use Node's built-in test runner. They load the site's scripts into a sandbox and cover pure logic: page-range parsing, the profile, saved games, game sounds, watermark placement, redaction search and geometry, audio encoding and MP4 parsing, image compression rules, photo collage layouts, where Fit to Frame places an image, and the Flap, Road Hop, Snake and Brick Bounce game rules.
 - **UI tests** (`tests/ui/`) use Playwright to drive the real pages in Chromium at desktop and phone size. They check downloaded output (PDFs are opened and inspected, audio and images are decoded), play every game on a frozen clock with fixed randomness so scores are exact, and fail on any uncaught JavaScript error or sideways scrolling on a phone. Test PDFs, audio, video and images are generated in code, so no binary fixtures are committed.
 
 The test MP4s carry FLAC audio because the Chromium build Playwright runs can't decode AAC; Chrome, Edge, Firefox and Safari can.

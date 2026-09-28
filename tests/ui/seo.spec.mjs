@@ -3,7 +3,7 @@ import { test, expect } from './fixtures.mjs';
 const LIVE = 'https://www.bdnix.com';
 // Pages search engines should list. The profile only shows what's saved in
 // the visitor's own browser, so it's kept out of the index.
-const listed = ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/mp4-to-mp3/', '/compress-image/', '/photo-collage/'];
+const listed = ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/mp4-to-mp3/', '/compress-image/', '/photo-collage/', '/fit-to-frame/'];
 const pages = [...listed, '/profile/'];
 
 const meta = (page, attr, name) => page.locator(`head meta[${attr}="${name}"]`);

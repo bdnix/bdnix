@@ -1,0 +1,43 @@
+/* Fit to Frame (fit-to-frame): size and colour settings, the preview's size line and the thumbnails in the file list. Page layout, the editor and the file list live in tool.css. */
+.files .editor{margin:0 0 16px}
+.files .editor .settings{margin-bottom:0}
+
+/* The frame's edge, so a black frame still shows against the stage */
+.preview-stage canvas{outline:1px solid rgba(255,255,255,.12)}
+.preview-size{margin:0;text-align:center;font:400 12px var(--mono);color:var(--faint)}
+.preview-size:empty{display:none}
+
+/* Width × height */
+.dims{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:8px}
+.dims input{width:100%;font:400 15px var(--mono)}
+.dims-x{padding-bottom:10px;color:var(--faint)}
+.settings .hint:empty{display:none}
+
+/* Colour swatches, then the browser's colour picker */
+.swatches{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.swatches button{
+  width:34px;height:34px;padding:0;border-radius:8px;cursor:pointer;
+  border:1px solid var(--line);
+  transition:transform .15s ease,box-shadow .2s ease;
+}
+.swatches button[data-color="#ffffff"]{background:#fff}
+.swatches button[data-color="#000000"]{background:#000}
+.swatches button[data-color="#e5e7eb"]{background:#e5e7eb}
+.swatches button:hover{transform:translateY(-1px)}
+.swatches button.on{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--violet)}
+.swatches button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.swatches .pick{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);cursor:pointer}
+.swatches .pick input{
+  width:56px;height:34px;padding:2px;border-radius:8px;
+  border:1px solid var(--line);background:rgba(8,10,18,.6);cursor:pointer;
+}
+
+/* Thumbnails, which show that image in the preview */
+.thumb-btn{flex:0 0 auto;padding:0;border:0;border-radius:8px;background:none;cursor:pointer;line-height:0}
+.thumb-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.track .thumb{width:44px;height:44px;border-radius:8px;background:rgba(255,255,255,.06)}
+.track.current .thumb{box-shadow:0 0 0 2px var(--violet)}
+
+@media (max-width:480px){
+  .track .file-info{flex-basis:calc(100% - 108px)}
+}
