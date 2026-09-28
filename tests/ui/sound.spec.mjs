@@ -4,7 +4,7 @@ import { openGame, press, listen, heard } from './games.mjs';
 // What each game's own sound tests don't cover: the mute button every game
 // has in its top bar, and the choice carrying over between games.
 const btn = (page) => page.locator('#soundBtn');
-const games = ['/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/'];
+const games = ['/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/'];
 
 test('every game has a mute button, and muting one mutes them all', async ({ page }) => {
   await listen(page);
@@ -34,7 +34,7 @@ test('every game has a mute button, and muting one mutes them all', async ({ pag
   await press(page, 'KeyM');
   await expect(btn(page)).toHaveAttribute('aria-label', 'Mute sound');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_sound'))).toBe('on');
-  await press(page, 'KeyP');                           // Snake is on "Get ready": pause it
+  await press(page, 'KeyP');                           // Brick Bounce is on "Get ready": pause it
   await page.getByRole('button', { name: 'New game' }).click();
   expect(await heard(page)).toEqual(['start']);
   await press(page, 'KeyM');
