@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 
 test('shows the games and tools, with no under-construction wording', async ({ page }) => {
@@ -61,7 +60,7 @@ test('every page links its own scripts and styles with a content hash, and they 
   }
 });
 
-test('asks for tool and game requests by email or GitHub issue, and says the site is open source', async ({ page }) => {
+test('asks for tool and game requests by email or GitHub issue, and says the site is open source', async ({ page, request }) => {
   await page.goto('/');
   const suggest = page.getByRole('region', { name: 'Want a tool or game that isn’t here?' });
   await expect(suggest).toBeVisible();
@@ -75,8 +74,10 @@ test('asks for tool and game requests by email or GitHub issue, and says the sit
 
   const issue = suggest.getByRole('link', { name: 'Open a GitHub issue' });
   await expect(issue).toHaveAttribute('href', 'https://github.com/bdnix/bdnix/issues/new?template=request.yml');
-  // The link picks the issue form by file name, so it has to exist.
-  expect(fs.existsSync(new URL('../../.github/ISSUE_TEMPLATE/request.yml', import.meta.url))).toBe(true);
+  // The link picks the issue form by file name, so it has to exist. (Asked
+  // of the test server, which serves the whole repository, so the UI result
+  // cache knows this test depends on it.)
+  expect((await request.get('/.github/ISSUE_TEMPLATE/request.yml')).ok()).toBe(true);
 
   await expect(suggest.locator('.oss')).toHaveText('bdnix is open source. Read the code, report a bug or send a pull request on GitHub.');
   await expect(suggest.locator('.oss').getByRole('link', { name: 'GitHub' })).toHaveAttribute('href', 'https://github.com/bdnix/bdnix');

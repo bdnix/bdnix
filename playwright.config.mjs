@@ -14,7 +14,12 @@ export default defineConfig({
   // Playwright uses half the CPUs by default. The tests are deterministic
   // (frozen clocks, fixed randomness), so CI can use all of them.
   workers: process.env.CI ? '100%' : undefined,
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  reporter: [
+    ['list'],
+    ...(process.env.CI ? [['html', { open: 'never' }]] : []),
+    // scripts/ui-cache.mjs reads which specs passed from this report.
+    ...(process.env.UI_RESULTS ? [['json', { outputFile: process.env.UI_RESULTS }]] : [])
+  ],
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: 'retain-on-failure'
@@ -26,7 +31,9 @@ export default defineConfig({
   webServer: {
     command: 'node tests/server.mjs',
     env: { PORT: String(PORT) },
-    url: `http://localhost:${PORT}`,
+    // Waits for the port to open rather than fetching a page, which the
+    // server would log as a request no spec made (see scripts/ui-cache.mjs).
+    port: PORT,
     reuseExistingServer: !process.env.CI
   }
 });

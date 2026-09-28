@@ -74,7 +74,7 @@ Leave merging to the owner: don't merge the pull request yourself.
 **Every new feature and every bug fix must come with tests in the same change.** A pull request that adds or changes behaviour without tests isn't done.
 
 - **Unit tests** (`tests/unit/*.test.mjs`, Node's built-in `node:test`) are for pure logic: parsing, maths, data rules. They load a script into a sandbox with `load()` from `tests/unit/load.mjs`, which also provides fake `localStorage` and `document`. New pure logic needs unit tests covering its normal cases, edge cases and errors.
-- **UI tests** (`tests/ui/*.spec.mjs`, Playwright) are for what a visitor sees and does. Import `test` and `expect` from `tests/ui/fixtures.mjs`, not from `@playwright/test`: the fixture fails the test on any uncaught page error, keeps the tests offline and records coverage. Each test runs at desktop and phone size. Build test files in code (see `tests/ui/pdfs.mjs`, `tests/ui/media.mjs` and `tests/ui/images.mjs`) rather than committing binaries, and check real output: open downloaded PDFs and assert on their contents.
+- **UI tests** (`tests/ui/*.spec.mjs`, Playwright) are for what a visitor sees and does. Import `test` and `expect` from `tests/ui/fixtures.mjs`, not from `@playwright/test`: the fixture fails the test on any uncaught page error, keeps the tests offline and records coverage and which files each spec loads. Read repository files through the test server (`request.get('/path')`), not `fs`, so the CI result cache (see [CI](#ci)) notices when they change. Each test runs at desktop and phone size. Build test files in code (see `tests/ui/pdfs.mjs`, `tests/ui/media.mjs` and `tests/ui/images.mjs`) rather than committing binaries, and check real output: open downloaded PDFs and assert on their contents.
 - **A bug fix needs a test that fails without the fix.** Check that it does before relying on it.
 - **Tests must be deterministic.** Don't assert on values that vary between runs (file sizes that include dates, real timings); wait for the state you need with `expect(...).toBe...` instead of fixed sleeps. Never skip, disable or loosen a test to get CI green. Find the cause instead; "flaky" isn't a cause.
 - **Games and anything animated:** open the page with `openGame()` from `tests/ui/games.mjs`. It fixes `Math.random` (Falling Blocks then deals O, T, J, L, S, Z, I every bag) and freezes the clock *before* the page loads, so time only moves when the test calls `page.clock.runFor()`, and scores and positions come out exact. Don't install a clock after the page has loaded and then pause it: that races with the clock's real-time updates and occasionally steps time backwards, which stalls the game loops.
@@ -124,6 +124,13 @@ npm run serve          # the site at http://localhost:4173
 - **Coverage:** once both pass, uploads their coverage to Codecov together.
 
 Codecov then posts **codecov/project** and **codecov/patch** (see [Coverage must not drop](#coverage-must-not-drop)). `node_modules` and Playwright's Chromium are cached; see `.github/actions/setup`.
+
+Tests whose inputs haven't changed since they last passed don't run again; CI reuses their cached result and coverage:
+
+- **Unit tests** are cached as a whole, keyed on `assets/js`, `assets/vendor`, `tests/unit`, `tests/coverage`, `package.json` and `package-lock.json`.
+- **UI tests** are cached spec by spec by `scripts/ui-cache.mjs` (`npm run coverage:ui:cached`). The test server logs every file it serves and which spec asked for it (`tests/ui/fixtures.mjs` adds an `x-bdnix-spec` header to each request), so a spec runs again only when it, a file it loaded, or the shared test code (`tests/ui/*.mjs` helpers, `tests/coverage`, `tests/server.mjs`, `playwright.config.mjs`, the lock file) changes. A spec that fails is never cached.
+- So a UI test must get every repository file it depends on **through the test server** (`page.goto`, `request.get`, ...), never by reading it with `fs`, or the cache won't see a change to it.
+- Run the workflow by hand with **full** ticked to ignore the cache. Locally, `npm test` and `npm run coverage` always run everything.
 
 ## Commit messages
 

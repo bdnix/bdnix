@@ -60,6 +60,8 @@ npm run coverage     # both suites, combined into coverage/report/index.html
 
 [.github/workflows/tests.yml](../.github/workflows/tests.yml) runs on every pull request and push to `master`: the cache-busting check and unit tests, the UI tests, then a combined coverage upload. `node_modules` (keyed on `package-lock.json` and the Node version) and Playwright's Chromium (keyed on the Playwright version) are cached; see [.github/actions/setup](../.github/actions/setup/action.yml).
 
+Tests that can't have changed aren't run again. The unit tests are cached as a whole, keyed on the scripts and tests they read. The UI tests are cached spec by spec by [scripts/ui-cache.mjs](../scripts/ui-cache.mjs): the test server logs every file it serves to each spec, and when a spec passes, the cache keeps that list with a hash of the files and the spec's coverage. On the next run, a spec whose spec file, served files and shared test code are all unchanged is skipped and its coverage copied back, so Codecov still gets the full picture. When no spec needs to run, Chromium isn't even installed. For this to be safe, UI tests read repository files through the test server (`request.get('/path')`), never with `fs`. To ignore the cache, run the workflow by hand with **full** ticked; `npm run coverage:ui:cached` does the same thing locally, keeping its cache in `.test-cache/`.
+
 ## Deploying
 
 Anything merged to `master` goes live once GitHub Pages rebuilds.

@@ -13,6 +13,7 @@
     "coverage": "npm run coverage:unit && npm run coverage:ui && npm run coverage:report",
     "coverage:unit": "mcr -c tests/coverage/unit.config.mjs node --test \"tests/unit/*.test.mjs\"",
     "coverage:ui": "COVERAGE=1 playwright test",
+    "coverage:ui:cached": "node scripts/ui-cache.mjs",
     "coverage:report": "mcr merge -c tests/coverage/report.config.mjs",
     "og-image": "node scripts/og-image.mjs"
   },
