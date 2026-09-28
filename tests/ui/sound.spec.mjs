@@ -67,3 +67,64 @@ test('on a phone held sideways the top bar still fits beside the board', async (
     await expectNoSideScroll(page);
   }
 });
+
+// Makes audio behave as it does in Safari on an iPhone: it only starts, or
+// starts again, while the page is handling a tap or key press. Every audio
+// context the page makes is kept in window.audio.
+async function likeSafari(page){
+  await page.addInitScript(() => {
+    const pressing = () => !!window.event && window.event.isTrusted && /^(pointer|touch|key|click|mouse)/.test(window.event.type);
+    const Real = window.AudioContext;
+    window.audio = [];
+    window.AudioContext = class extends Real {
+      constructor(){ super(); this.awake = pressing(); window.audio.push(this); }
+      get state(){ return this.awake ? 'running' : 'suspended'; }
+      resume(){ if (pressing()) this.awake = true; return Promise.resolve(); }
+    };
+  });
+}
+const audioStates = (page) => page.evaluate(() => window.audio.map((c) => c.state));
+
+test('on Safari, resuming a saved game still has sound, even when every sound comes from the game loop', async ({ page }) => {
+  await likeSafari(page);
+  await listen(page);
+  await openGame(page, '/maze-chase/');
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await page.clock.runFor(2300 + 500);                 // eats a few dots
+  await press(page, 'KeyP');
+  await page.reload();                                 // comes back paused, with no sound yet
+  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
+  await heard(page);
+
+  await press(page, 'Enter');                          // Resume: makes no sound of its own
+  await page.clock.runFor(1000);
+  expect(await heard(page)).toContain('chomp');
+  expect(await audioStates(page)).toEqual(['running']);
+
+  // Locking the phone puts the audio to sleep; the next steer wakes it.
+  await page.evaluate(() => window.audio.forEach((c) => { c.awake = false; }));
+  await press(page, 'ArrowUp');
+  expect(await audioStates(page)).toEqual(['running']);
+});
+
+test('on Safari, a resumed Brick Bounce game still has its bounce sounds', async ({ page }) => {
+  await likeSafari(page);
+  await listen(page);
+  await openGame(page, '/brick-bounce/');
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await press(page, 'Space');                          // launch the ball
+  await page.clock.runFor(200);
+  await press(page, 'KeyP');
+  await page.reload();                                 // comes back paused, with no sound yet
+  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
+  await heard(page);
+
+  await press(page, 'Enter');                          // Resume: makes no sound of its own
+  let sounds = [];
+  for (let t = 0; t < 10000 && !sounds.length; t += 50) {
+    await page.clock.runFor(50);
+    sounds = await heard(page);
+  }
+  expect(['brick', 'paddle', 'wall']).toContain(sounds[0]);
+  expect(await audioStates(page)).toEqual(['running']);
+});

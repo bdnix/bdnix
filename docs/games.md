@@ -91,7 +91,7 @@ Every game has sound effects: a jingle when a game starts, sounds for the main m
 
 The speaker button beside pause in the top bar, or **M**, turns sound off and on. The choice applies to every game and is remembered in the browser (`bdnix_sound`). Sound is on until it's turned off.
 
-The sounds are made in the browser with the Web Audio API, so there are no audio files to download. Browsers only let a page play sound after the visitor has pressed a key or tapped, so the first sound comes with the first press.
+The sounds are made in the browser with the Web Audio API, so there are no audio files to download. Browsers only let a page play sound after the visitor has pressed a key or tapped, so the first sound comes with the first press. Safari also stops a page's sound when the phone locks or another app takes over the sound; every tap and key press starts it again, so sounds that come from the game itself (a dot eaten, a ghost catching you) keep playing. On an iPhone, the sounds follow the ring/silent switch: with it on silent they don't play. Safari also stops a page's sound when the phone locks or another app takes over the sound; every tap and key press starts it again, so sounds that come from the game itself (a dot eaten, a ghost catching you) keep playing. On an iPhone, the sounds follow the ring/silent switch: with it on silent they don't play.
 
 ## Scores and saved games
 
