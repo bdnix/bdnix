@@ -15,7 +15,8 @@ test('a new visitor is "User" with no scores yet', async ({ page }) => {
     { game: 'Maze Chase', best: 'Not played yet', link: 'Play /maze-chase/' },
     { game: 'Flap', best: 'Not played yet', link: 'Play /flap/' },
     { game: 'Road Hop', best: 'Not played yet', link: 'Play /road-hop/' },
-    { game: 'Snake', best: 'Not played yet', link: 'Play /snake/' }
+    { game: 'Snake', best: 'Not played yet', link: 'Play /snake/' },
+    { game: 'Brick Bounce', best: 'Not played yet', link: 'Play /brick-bounce/' }
   ]);
 });
 
@@ -27,6 +28,7 @@ test('shows the best scores the games saved', async ({ page }) => {
     localStorage.setItem('bdnix_flappy_best', '27');
     localStorage.setItem('bdnix_hop_best', '42');
     localStorage.setItem('bdnix_snake_best', '57');
+    localStorage.setItem('bdnix_bricks_best', '320');
   });
   await page.reload();
   expect(await scores(page)).toEqual([
@@ -34,7 +36,8 @@ test('shows the best scores the games saved', async ({ page }) => {
     { game: 'Maze Chase', best: '3,120', link: 'Play again /maze-chase/' },
     { game: 'Flap', best: '27', link: 'Play again /flap/' },
     { game: 'Road Hop', best: '42', link: 'Play again /road-hop/' },
-    { game: 'Snake', best: '57', link: 'Play again /snake/' }
+    { game: 'Snake', best: '57', link: 'Play again /snake/' },
+    { game: 'Brick Bounce', best: '320', link: 'Play again /brick-bounce/' }
   ]);
 });
 

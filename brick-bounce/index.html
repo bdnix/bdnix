@@ -3,26 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Snake — Play free in your browser | bdnix</title>
-  <meta name="description" content="Play Snake free in your browser: steer the snake to the food, grow longer with every bite and don’t hit the walls or your own tail. Beat your best, nothing to install.">
-  <link rel="canonical" href="https://www.bdnix.com/snake/">
+  <title>Brick Bounce — Play free in your browser | bdnix</title>
+  <meta name="description" content="Play Brick Bounce free in your browser: bounce the ball off your paddle to smash a wall of bricks, row by row, before your three balls run out. Nothing to install.">
+  <link rel="canonical" href="https://www.bdnix.com/brick-bounce/">
   <meta property="og:site_name" content="bdnix">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://www.bdnix.com/snake/">
-  <meta property="og:title" content="Snake — Play free in your browser | bdnix">
-  <meta property="og:description" content="Play Snake free in your browser: steer the snake to the food, grow longer with every bite and don’t hit the walls or your own tail. Beat your best, nothing to install.">
+  <meta property="og:url" content="https://www.bdnix.com/brick-bounce/">
+  <meta property="og:title" content="Brick Bounce — Play free in your browser | bdnix">
+  <meta property="og:description" content="Play Brick Bounce free in your browser: bounce the ball off your paddle to smash a wall of bricks, row by row, before your three balls run out. Nothing to install.">
   <meta property="og:image" content="https://www.bdnix.com/assets/img/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="bdnix: Play a little. Get things done.">
   <meta name="twitter:card" content="summary_large_image">
-  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Snake", "url": "https://www.bdnix.com/snake/", "description": "Play Snake free in your browser: steer the snake to the food, grow longer with every bite and don’t hit the walls or your own tail. Beat your best, nothing to install.", "applicationCategory": "GameApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Brick Bounce", "url": "https://www.bdnix.com/brick-bounce/", "description": "Play Brick Bounce free in your browser: bounce the ball off your paddle to smash a wall of bricks, row by row, before your three balls run out. Nothing to install.", "applicationCategory": "GameApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/base.css?v=f674399bef">
   <link rel="stylesheet" href="/assets/css/game.css?v=26bcba7631">
-  <link rel="stylesheet" href="/assets/css/snake.css?v=2cc5378c2b">
+  <link rel="stylesheet" href="/assets/css/bricks.css?v=188a34f8c6">
   <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
@@ -32,7 +32,7 @@
   <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
 
   <header class="bar">
-    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ snake</span></a>
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ brick bounce</span></a>
     <div class="bar-actions">
       <button id="soundBtn" class="icon-btn" aria-label="Mute sound"></button>
       <button id="pauseBtn" class="icon-btn" aria-label="Pause">
@@ -45,36 +45,37 @@
     <section class="panel box stats">
       <div><span class="label">Score</span><b id="score">0</b></div>
       <div><span class="label">Best</span><b id="best">0</b></div>
+      <div><span class="label">Balls</span><b id="lives">3</b></div>
+      <div><span class="label">Wall</span><b id="level">1</b></div>
     </section>
 
     <div class="board-wrap">
-      <canvas id="board" aria-label="Snake board"></canvas>
+      <canvas id="board" aria-label="Brick Bounce board"></canvas>
       <div id="overlay" class="overlay">
         <p class="label" id="ovKicker">bdnix arcade</p>
-        <h1 id="ovTitle">Snake</h1>
-        <p id="ovText">Eat the berries to grow. Steer clear of the walls and your own tail.</p>
+        <h1 id="ovTitle">Brick Bounce</h1>
+        <p id="ovText">Bounce the ball off your paddle to break every brick. Don’t let it past you.</p>
         <div class="ov-actions">
           <button id="startBtn" class="btn btn-primary">Start game</button>
           <button id="newBtn" class="btn btn-ghost" hidden>New game</button>
         </div>
-        <p class="keys only-keys">Arrow keys or WASD to turn · P pause</p>
-        <p class="keys only-touch">Swipe to turn, or use the buttons below.</p>
-        <p class="credit">Inspired by Blockade, created by Gremlin in 1976, and the snake games that followed. Blockade is a trademark of its owner; bdnix isn’t affiliated with or endorsed by them.</p>
+        <p class="keys only-keys">← → or the mouse to move · Space or click to launch · P pause</p>
+        <p class="keys only-touch">Drag anywhere to move, tap to launch, or use the buttons below.</p>
+        <p class="credit">Inspired by Breakout, created by Atari in 1976. Breakout is a trademark of its owner; bdnix isn’t affiliated with or endorsed by them.</p>
       </div>
     </div>
   </main>
 
   <nav class="touch" aria-label="Game controls">
     <button data-dir="left" aria-label="Left"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-    <button data-dir="up" aria-label="Up"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button>
-    <button data-dir="down" aria-label="Down"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg></button>
+    <button data-dir="launch" aria-label="Launch"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M6 11l6-6 6 6"/></svg></button>
     <button data-dir="right" aria-label="Right"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
   </nav>
 
   <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
   <script src="/assets/js/gamesave.js?v=fb243d7a1b"></script>
   <script src="/assets/js/sound.js?v=590b4ab372"></script>
-  <script src="/assets/js/snake-core.js?v=6c2e92c2dc"></script>
-  <script src="/assets/js/snake.js?v=bdd74fa9b2"></script>
+  <script src="/assets/js/bricks-core.js?v=d349b80cb0"></script>
+  <script src="/assets/js/bricks.js?v=51449794e9"></script>
 </body>
 </html>

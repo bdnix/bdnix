@@ -49,7 +49,11 @@
     fall: [tone(700, 120, 0.5, 'triangle', 0.4)],
     // Snake.
     eat: [tone(660, 990, 0.08, 'square', 0.16)],
-    win: notes([523, 659, 784, 1047, 1319, 1568], 0.08, 0.16, 'square', 0.17)
+    win: notes([523, 659, 784, 1047, 1319, 1568], 0.08, 0.16, 'square', 0.17),
+    // Brick Bounce.
+    paddle: [tone(330, 330, 0.05, 'square', 0.14)],
+    wall: [tone(220, 220, 0.04, 'square', 0.1)],
+    brick: [tone(784, 1175, 0.06, 'square', 0.14)]
   };
 
   var muted = false;
