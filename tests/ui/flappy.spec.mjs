@@ -1,5 +1,5 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
-import { openGame, press, tap } from './games.mjs';
+import { openGame, press, tap, listen, heard } from './games.mjs';
 
 // With Math.random fixed at 0 every gap is at the same height: 64 to 188 on
 // the 288 x 512 board. The bird hovers at 220 until the first flap.
@@ -216,4 +216,25 @@ test('a save that does not make sense is thrown away', async ({ page }) => {
   await page.reload();
   await expect(page.locator('#ovTitle')).toHaveText('Flap');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_flappy_save'))).toBeNull();
+});
+
+test('flapping, scoring and crashing each have a sound', async ({ page }) => {
+  await listen(page);
+  await page.reload();
+  await page.getByRole('button', { name: 'Start game' }).click();
+  expect(await heard(page)).toEqual(['start']);
+  await press(page, 'Space');
+  expect(await heard(page)).toEqual(['flap']);
+  await flyThrough(page, 1, () => press(page, 'Space'));
+  const sounds = await heard(page);
+  expect(sounds.pop()).toBe('point');
+  expect(new Set(sounds)).toEqual(new Set(['flap']));
+
+  const overlay = page.locator('#overlay');
+  for (let s = 0; s < 20 && !(await overlay.isVisible()); s++) await page.clock.runFor(250);
+  expect(await heard(page)).toEqual(['hit', 'best']);
+  await page.getByRole('button', { name: 'Play again' }).click();
+  await press(page, 'Space');
+  for (let s = 0; s < 20 && !(await overlay.isVisible()); s++) await page.clock.runFor(250);
+  expect(await heard(page)).toEqual(['start', 'flap', 'hit', 'over']);
 });

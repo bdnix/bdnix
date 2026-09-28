@@ -23,7 +23,7 @@ python3 -m http.server 8000   # http://localhost:8000
 
 - Each page lives in its own directory (`falling-blocks/`, `merge-pdf/`, …) as an `index.html`, with its stylesheet in `assets/css/` and its script in `assets/js/`.
 - Shared styles: `base.css` (colour tokens and common components), `game.css` (game layout) and `tool.css` (tool and profile layout).
-- Shared scripts expose one `window.bdnix*` object each: the falling-block backdrop, PDF and file helpers, the profile, saved games and analytics.
+- Shared scripts expose one `window.bdnix*` object each: the falling-block backdrop, PDF and file helpers, the profile, saved games, game sounds and analytics.
 - Pure logic (layout maths, parsing, encoding, game rules) is kept in separate `*-core.js` style files so it can be unit tested without a browser.
 - Third-party libraries are vendored in `assets/vendor/`, each with its licence file.
 
@@ -38,7 +38,7 @@ npm run test:unit
 npm run test:ui
 ```
 
-- **Unit tests** (`tests/unit/`) use Node's built-in test runner. They load the site's scripts into a sandbox and cover pure logic: page-range parsing, the profile, saved games, watermark placement, redaction search and geometry, audio encoding and MP4 parsing, image compression rules, and the Flap, Road Hop and Snake game rules.
+- **Unit tests** (`tests/unit/`) use Node's built-in test runner. They load the site's scripts into a sandbox and cover pure logic: page-range parsing, the profile, saved games, game sounds, watermark placement, redaction search and geometry, audio encoding and MP4 parsing, image compression rules, and the Flap, Road Hop and Snake game rules.
 - **UI tests** (`tests/ui/`) use Playwright to drive the real pages in Chromium at desktop and phone size. They check downloaded output (PDFs are opened and inspected, audio and images are decoded), play every game on a frozen clock with fixed randomness so scores are exact, and fail on any uncaught JavaScript error or sideways scrolling on a phone. Test PDFs, audio, video and images are generated in code, so no binary fixtures are committed.
 
 The test MP4s carry FLAC audio because the Chromium build Playwright runs can't decode AAC; Chrome, Edge, Firefox and Safari can.

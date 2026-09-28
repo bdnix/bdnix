@@ -1,5 +1,5 @@
-/* Shared by every game page: board frame, overlay, stat panels and touch
-   buttons. Page layout lives in each game's own stylesheet. */
+/* Shared by every game page: top-bar buttons, board frame, overlay, stat panels
+   and touch buttons. Page layout lives in each game's own stylesheet. */
 body.play{
   height:var(--vh);
   overflow:hidden;
@@ -7,6 +7,8 @@ body.play{
   -webkit-user-select:none;user-select:none;
   -webkit-tap-highlight-color:transparent;
 }
+
+.bar-actions{display:flex;gap:8px}
 
 .box{display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 10px}
 .box canvas{display:block}
@@ -67,6 +69,8 @@ body.play{
   }
 }
 @media (orientation:landscape) and (max-height:520px){
+  /* The bar is narrow beside the board: the game's name is on the board already. */
+  .bar .wordmark span{display:none}
   .overlay .keys{display:none}
   .overlay #ovKicker{display:none}
   .touch button{height:52px}

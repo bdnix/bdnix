@@ -32,3 +32,23 @@ export async function tap(locator){
   await locator.dispatchEvent('pointerdown', { pointerType: 'touch', isPrimary: true });
   await locator.dispatchEvent('pointerup', { pointerType: 'touch', isPrimary: true });
 }
+
+// Records the name of every sound the page plays from its next load on
+// (sounds skipped while muted aren't recorded). Read them with heard(), which
+// also forgets them, so each call returns only what played since the last.
+export async function listen(page){
+  await page.addInitScript(() => {
+    let sound;
+    window.heard = [];
+    Object.defineProperty(window, 'bdnixSound', {
+      configurable: true,
+      get: () => sound,
+      set: (s) => {
+        const play = s.play;
+        s.play = (name) => { const ok = play(name); if (ok) window.heard.push(name); return ok; };
+        sound = s;
+      }
+    });
+  });
+}
+export const heard = (page) => page.evaluate(() => window.heard.splice(0));

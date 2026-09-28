@@ -5,6 +5,7 @@
   var LINE_SCORES = [0, 100, 300, 500, 800];
   var LOCK_DELAY = 500, MAX_LOCK_RESETS = 15;
   var DAS = 160, ARR = 45;
+  var sound = window.bdnixSound;
 
   var board = document.getElementById('board');
   var ctx = board.getContext('2d');
@@ -130,7 +131,7 @@
 
   function move(dx){
     if (!collides(piece.m, piece.x + dx, piece.y)) {
-      piece.x += dx; touchedMove(); return true;
+      piece.x += dx; touchedMove(); sound.play('move'); return true;
     }
     return false;
   }
@@ -141,7 +142,7 @@
     for (var i = 0; i < kicks.length; i++) {
       var nx = piece.x + kicks[i][0], ny = piece.y + kicks[i][1];
       if (!collides(m, nx, ny)) {
-        piece.m = m; piece.x = nx; piece.y = ny; touchedMove(); return;
+        piece.m = m; piece.x = nx; piece.y = ny; touchedMove(); sound.play('rotate'); return;
       }
     }
   }
@@ -155,6 +156,7 @@
     var d = 0;
     while (!collides(piece.m, piece.x, piece.y + 1)) { piece.y++; d++; }
     score += d * 2;
+    sound.play('drop');
     lock();
   }
   function hold(){
@@ -164,6 +166,7 @@
     held = t;
     canHold = false;
     resetTimers();
+    sound.play('hold');
   }
   function ghostY(){
     var y = piece.y;
@@ -197,6 +200,7 @@
     for (var y = 0; y < ROWS; y++) {
       if (grid[y].every(Boolean)) full.push(y);
     }
+    sound.play(full.length === 4 ? 'bigclear' : full.length ? 'clear' : 'lock');
     if (full.length) {
       clearing = { rows: full, t: 0 };
       piece = null;
@@ -215,7 +219,9 @@
     clearing = null;
     lines += n;
     score += LINE_SCORES[n] * level;
+    var was = level;
     level = Math.floor(lines / 10) + 1;
+    if (level > was) sound.play('level');
     updateHud();
     spawn();
   }
@@ -240,6 +246,7 @@
     startBtn.blur();
     pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.setAttribute('aria-label', 'Pause');
     lastTime = performance.now();
+    sound.play('start');
     persist();
   }
   function gameOver(){
@@ -250,6 +257,7 @@
       try { localStorage.setItem('bdnix_tetris_best', best); } catch (e) {}
     }
     updateHud();
+    sound.play(score >= best && score > 0 ? 'best' : 'over');
     ovTitle.textContent = 'Game over';
     ovText.textContent = 'Score ' + score + (score >= best && score > 0 ? ' — new best!' : ' · Best ' + best);
     startBtn.textContent = 'Play again';

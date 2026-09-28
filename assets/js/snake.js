@@ -36,6 +36,7 @@
   var state = 'idle', pausedFrom = null, stateTime = 0;
   var world = F.create(), carry = 0, clock = 0;
   var best = 0;
+  var sound = window.bdnixSound;
 
   try { best = parseInt(localStorage.getItem('bdnix_snake_best'), 10) || 0; } catch (e) {}
 
@@ -51,6 +52,7 @@
     startBtn.blur();
     pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.setAttribute('aria-label', 'Pause');
     updateHud();
+    sound.play('start');
     persist();
   }
   // The snake waits on "Get ready" until the first direction is pressed;
@@ -75,9 +77,11 @@
     clock += dt;
     if (state === 'dying' && stateTime > DEATH_TIME) gameOver();
     if (state !== 'playing') return;
+    var ate = world.score;
     var r = F.advance(world, dt, carry);
     carry = r.carry;
     if (r.steps) updateHud();
+    if (world.score > ate) sound.play('eat');
     if (r.end) crash();
   }
 
@@ -85,6 +89,7 @@
   // are settled straight away, and the score shows once the crash has played.
   function crash(){
     setState('dying');
+    sound.play(world.dead === 'full' ? 'win' : 'hit');
     if (world.score > best) {
       best = world.score;
       try { localStorage.setItem('bdnix_snake_best', best); } catch (e) {}
@@ -97,6 +102,7 @@
     stale = true;                       // one last frame of the faded snake
     var score = world.score;
     var lines = ENDINGS[world.dead];
+    sound.play(score >= best && score > 0 ? 'best' : 'over');
     ovKicker.textContent = lines[Math.min(lines.length - 1, Math.floor(Math.random() * lines.length))];
     ovTitle.textContent = world.dead === 'full' ? 'You win!' : 'Game over';
     ovText.textContent = 'Score ' + score + (score >= best && score > 0 ? ' — new best!' : ' · Best ' + best);

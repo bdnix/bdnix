@@ -75,6 +75,7 @@
   var dots, dotsLeft, dotsEaten, totalDots;
   var pac, ghosts, wanted;
   var score = 0, best = 0, level = 1, lives = 3, extraLifeGiven = false;
+  var sound = window.bdnixSound;
   var modeIndex, modeTime, frightTime, frightCombo, lifeTime, freeze;
   var fruit, popups;
 
@@ -141,6 +142,7 @@
     startBtn.blur();
     pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.setAttribute('aria-label', 'Pause');
     updateHud();
+    sound.play('start');
     persist();
   }
   function setState(s){ state = s; stateTime = 0; }
@@ -300,16 +302,19 @@
     if (v) {
       dots[y][x] = 0; dotsLeft--; dotsEaten++;
       addScore(v === 2 ? 50 : 10);
+      // Dots alternate between two chomps; a power pellet has its own sound.
+      sound.play(v === 2 ? 'power' : dotsEaten % 2 ? 'chomp' : 'chomp2');
       if (v === 2) {
         frightTime = frightDuration(); frightCombo = 0;
         ghosts.forEach(function(g){ if (g.state === 'active') { g.fright = true; reverse(g); } });
       }
       if (dotsEaten === 70 || dotsEaten === 170) fruit = { x: 13.5, y: 17, t: 9.5 };
-      if (dotsLeft === 0) { setState('cleared'); return; }
+      if (dotsLeft === 0) { setState('cleared'); sound.play('level'); return; }
     }
     if (fruit && Math.abs(pac.x - fruit.x) < 0.8 && Math.abs(pac.y - fruit.y) < 0.6) {
       var pts = Math.min(5000, 100 * level);
       addScore(pts);
+      sound.play('fruit');
       popups.push({ x: fruit.x, y: fruit.y, text: pts, t: 0, color: '#f472b6' });
       fruit = null;
     }
@@ -327,9 +332,11 @@
         addScore(pts);
         popups.push({ x: g.x, y: g.y, text: pts, t: 0, color: '#22d3ee' });
         g.fright = false; g.state = 'eaten';
+        sound.play('ghost');
         freeze = 0.45;
       } else {
         setState('dying');
+        sound.play('die');
         return;
       }
     }
@@ -352,7 +359,7 @@
   }
   function addScore(n){
     score += n;
-    if (!extraLifeGiven && score >= 10000) { extraLifeGiven = true; lives++; }
+    if (!extraLifeGiven && score >= 10000) { extraLifeGiven = true; lives++; sound.play('life'); }
     updateHud();
   }
   function gameOver(){
@@ -362,6 +369,7 @@
       try { localStorage.setItem('bdnix_pacman_best', best); } catch (e) {}
     }
     updateHud();
+    sound.play(score >= best && score > 0 ? 'best' : 'over');
     ovTitle.textContent = 'Game over';
     ovText.textContent = 'Score ' + score + (score >= best && score > 0 ? ' — new best!' : ' · Best ' + best);
     startBtn.textContent = 'Play again';

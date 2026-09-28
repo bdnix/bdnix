@@ -1,5 +1,5 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
-import { openGame, press, tap } from './games.mjs';
+import { openGame, press, tap, listen, heard } from './games.mjs';
 
 // The snake starts three long with its head at (6, 8), heading right, and the
 // first food is straight ahead at (12, 8). With Math.random fixed at 0 each
@@ -342,4 +342,29 @@ test('saves that do not make sense are thrown away', async ({ page }) => {
   }
   await openSaved(page, { ...good, queue: ['up'] });                             // and a good one is kept
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
+});
+
+test('eating, crashing and filling the board each have a sound', async ({ page }) => {
+  await listen(page);
+  await page.reload();
+  await page.getByRole('button', { name: 'Start game' }).click();
+  expect(await heard(page)).toEqual(['start']);
+  await press(page, 'ArrowRight');
+  for (let i = 0; i < 40 && (await page.locator('#score').textContent()) !== '1'; i++) await page.clock.runFor(50);
+  expect(await heard(page)).toEqual(['eat']);
+  await waitForGameOver(page);
+  expect(await heard(page)).toEqual(['hit', 'best']);
+
+  await page.getByRole('button', { name: 'Play again' }).click();
+  await press(page, 'ArrowUp');
+  await waitForGameOver(page);
+  expect(await heard(page)).toEqual(['start', 'hit', 'over']);
+
+  // The last berry fills the board, as in the test above.
+  const path = [];
+  for (let y = 0; y < ROWS; y++) for (let i = 0; i < COLS; i++) path.push({ x: y % 2 ? COLS - 1 - i : i, y });
+  await openSaved(page, saved(path.slice(0, -1).reverse(), { food: path[path.length - 1] }));
+  await page.locator('#startBtn').click();
+  await waitForGameOver(page);
+  expect(await heard(page)).toEqual(['eat', 'win', 'best']);
 });
