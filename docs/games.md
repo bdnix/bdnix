@@ -83,21 +83,21 @@ The snake waits until the first direction is pressed, then glides from cell to c
 
 Each wall of bricks has its own shape: a house, a space invader, a heart, waves, a castle and a chessboard, then round again. The first, the house, is the gentlest: its bottom row is whole, so the first shots always find a brick. Bricks score by row: 1 point in the bottom two rows, then 3, 5 and 7 for the top two. The ball waits on the paddle until it's launched and bounces back off the paddle at an angle set by where it lands, straight up off the middle and steeper towards the ends. It starts slow and speeds up after the 10th and 25th bricks of a wall and the first time it breaks into the upper and top rows. Once it reaches the top of the board the paddle shrinks for the rest of that wall.
 
-There are three balls. Missing the ball with the paddle loses one, and the next waits on the paddle; losing the last ends the game. Clearing a wall puts up a new one with the paddle back to full size, and each new wall starts the ball a little faster.
+There are three balls. Missing the ball with the paddle loses one: the board shakes, the bottom flashes red, the ball bursts into sparks where it fell, the ball count flashes and a sinking tune plays. The next ball waits on the paddle; losing the last ends the game. Clearing a wall puts up a new one with the paddle back to full size, and each new wall starts the ball a little faster.
 
 ### Powers
 
-Six bricks in every wall, picked at random, hide a power and show its letter. Breaking one drops a capsule; catch it with the paddle to turn the power on. A capsule the paddle misses is gone.
+Six bricks in every wall, picked at random, hide a power: they glow and pulse in the power's colour, a shine sweeps across them now and then, and they show the power's icon. Breaking one drops a glowing capsule with the same icon; catch it with the paddle to turn the power on. A capsule the paddle misses is gone.
 
-| Letter | Power | What it does |
+| Icon | Power | What it does |
 |---|---|---|
-| M | Multi-ball | Every ball in play splits in three (up to 12 balls). A ball is only lost when the last one in play goes past the paddle. |
-| F | Fireball | For 8 seconds the balls burn straight through every brick they touch instead of bouncing off. |
-| L | Laser | For 8 seconds the paddle fires a shot from each end every 0.4 seconds; each shot breaks the first brick above it. |
-| W | Wide paddle | For 12 seconds the paddle is half as wide again. |
-| + | Extra ball | One more ball, up to five. |
+| Three balls (cyan) | Multi-ball | Every ball in play splits in three (up to 12 balls). A ball is only lost when the last one in play goes past the paddle; an extra ball that drains away just pops. |
+| Flame (orange) | Fireball | For 8 seconds the balls burn straight through every brick they touch instead of bouncing off. |
+| Lightning bolt (red) | Laser | For 8 seconds the paddle fires a shot from each end every 0.4 seconds; each shot breaks the first brick above it. |
+| Double arrow (green) | Wide paddle | For 12 seconds the paddle is half as wide again. |
+| Heart (yellow) | Extra ball | One more ball, up to five. |
 
-Each wall hides two multi-balls and one of each of the others. The seconds left of the fireball, laser and wide paddle show under the paddle. Losing a ball or clearing a wall ends every power and clears away falling capsules and shots.
+Each wall hides two multi-balls and one of each of the others. The seconds left of the fireball, laser and wide paddle show under the paddle, beside their icons. Losing a ball or clearing a wall ends every power and clears away falling capsules and shots.
 
 ## Sound
 

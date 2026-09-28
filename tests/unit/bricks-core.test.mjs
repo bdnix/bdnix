@@ -342,8 +342,10 @@ test('losing one of several balls plays on; losing the last loses a life and eve
   w.balls.push({ x: 180, y: 200, dx: 0, dy: -1 });
   let ev = runUntil(w, (m) => m.balls.length === 1);
   assert.deepEqual([ev.lost, w.lives, w.stuck], [false, 3, false]);
+  assert.deepEqual(plain(ev.gone), [20], 'where it fell off');
   w.balls[0] = { x: 20, y: 460, dx: 0, dy: 1 };
   ev = runUntil(w, (_, e) => e.lost);
+  assert.deepEqual(plain(ev.gone), [20]);
   assert.deepEqual([w.lives, w.stuck, w.fire, w.laser, w.wide, w.drops.length, w.shots.length], [2, true, 0, 0, 0, 0, 0]);
   assert.equal(w.balls.length, 1);
 });

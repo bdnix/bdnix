@@ -50,3 +50,10 @@
   .touch [data-dir=right]{grid-area:b-r}
   .touch [data-dir=launch]{grid-area:b-go}
 }
+
+/* The ball count flashes red when a ball is lost */
+.stats .hit b{display:inline-block;animation:lost .9s ease-out}
+@keyframes lost{
+  0%,25%{color:#f43f5e;transform:scale(1.6)}
+  100%{color:inherit;transform:none}
+}

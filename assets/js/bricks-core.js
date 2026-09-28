@@ -379,16 +379,21 @@
 
   // Runs the game for `dt` seconds. Returns what happened: the bricks broken
   // (by index), whether a ball bounced off the paddle or a wall, whether the
-  // paddle shrank, the powers caught, whether the laser fired, a ball was
-  // lost, the wall was cleared, and how the game ended, if it did.
+  // paddle shrank, the powers caught, whether the laser fired, where any
+  // balls fell off the bottom, whether that lost a ball (the last one in
+  // play), the wall was cleared, and how the game ended, if it did.
   function advance(w, dt){
-    var ev = { bricks: [], paddle: false, wall: false, shrink: false, powers: [], shot: false, lost: false, cleared: false, end: null };
+    var ev = { bricks: [], paddle: false, wall: false, shrink: false, powers: [], shot: false, gone: [], lost: false, cleared: false, end: null };
     if (w.dead || w.stuck) return ev;
     var dist = speed(w) * dt;
     var n = Math.ceil(dist / SUBSTEP);
     for (var i = 0; i < n; i++) {
       w.balls.forEach(function(b){ move(w, b, dist / n, ev); });
-      w.balls = w.balls.filter(function(b){ return b.y - R <= H; });
+      w.balls = w.balls.filter(function(b){
+        if (b.y - R <= H) return true;
+        ev.gone.push(b.x);                    // where it fell off the board
+        return false;
+      });
       if (settle(w, ev)) return ev;
     }
     stepPowers(w, dt, ev);
