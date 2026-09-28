@@ -16,6 +16,7 @@ There's nothing to install and no account to create. Files you open in a tool ar
 | [Redact PDF](https://www.bdnix.com/redact-pdf/) | Permanently black out text and areas. Search for words or draw boxes; the covered content is removed, not just hidden. |
 | [MP4 to MP3](https://www.bdnix.com/mp4-to-mp3/) | Extract the audio from videos and audio files as MP3 or WAV, at the quality and channel layout you choose. |
 | [Compress Images](https://www.bdnix.com/compress-image/) | Shrink photos and images as JPEG, WebP or PNG, optionally resizing them. Camera metadata such as location is stripped. |
+| [Photo Collage](https://www.bdnix.com/photo-collage/) | Put 3, 6 or 9 photos into one picture: choose a layout and shape, the spacing, corners and background, and download a JPEG or PNG. |
 
 ## Games
 

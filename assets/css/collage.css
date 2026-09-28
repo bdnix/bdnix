@@ -1,0 +1,45 @@
+/* Photo collage (photo-collage): the layout picker and the photo list. The preview-and-settings editor lives in tool.css. */
+.preview-stage canvas{max-height:70vh;width:auto;cursor:pointer}
+
+/* Layouts, each drawn as a small icon */
+.layout-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px}
+.layout-opt{position:relative}
+.layout-opt input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.layout-opt span{
+  display:flex;align-items:center;justify-content:center;padding:8px;cursor:pointer;
+  border:1px solid var(--line);border-radius:10px;background:rgba(8,10,18,.4);
+  transition:background .2s ease,border-color .2s ease;
+}
+.layout-opt svg{width:100%;max-width:44px;height:auto;fill:var(--faint)}
+.layout-opt input:checked + span{background:rgba(168,85,247,.22);border-color:rgba(168,85,247,.55)}
+.layout-opt input:checked + span svg{fill:var(--fg)}
+.layout-opt input:focus-visible + span{outline:2px solid var(--cyan);outline-offset:2px}
+.layout-opt input:disabled + span{opacity:.5;cursor:default}
+
+/* Photos, in collage order: tap two to swap them */
+.preview .files-head{margin:0}
+.photos{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}
+.photo{position:relative}
+.photo-btn{
+  position:relative;display:block;width:100%;padding:0;aspect-ratio:1;
+  border:2px solid transparent;border-radius:10px;overflow:hidden;
+  background:rgba(255,255,255,.06);cursor:pointer;
+}
+.photo-btn canvas{display:block;width:100%;height:100%}
+.photo-btn[aria-pressed=true]{border-color:var(--violet)}
+.photo-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.photo-btn:disabled{cursor:default}
+.photo .num{
+  position:absolute;left:4px;bottom:4px;min-width:18px;padding:1px 5px;border-radius:6px;
+  background:rgba(8,10,18,.8);font:600 11px var(--mono);color:var(--fg);
+}
+.photo .rm{
+  position:absolute;top:2px;right:2px;width:26px;height:26px;
+  background:rgba(8,10,18,.8);
+}
+.photo .rm svg{width:12px;height:12px}
+.photo .rm:not(:disabled):hover{color:var(--pink)}
+.photos-hint{margin:0;font-size:13px;color:var(--faint)}
+
+.settings .actions{margin-top:0}
+.settings .actions .btn{flex:1 1 100%;justify-content:center}
