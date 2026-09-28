@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Fit to Frame — Add space to fit any size, free | bdnix</title>
+  <meta name="description" content="Make a photo fit a post, story or banner without cropping it: add white or coloured space to its sides or top and bottom. Runs in your browser; your images are never uploaded.">
+  <link rel="canonical" href="https://www.bdnix.com/fit-to-frame/">
+  <meta property="og:site_name" content="bdnix">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.bdnix.com/fit-to-frame/">
+  <meta property="og:title" content="Fit to Frame — Add space to fit any size, free | bdnix">
+  <meta property="og:description" content="Make a photo fit a post, story or banner without cropping it: add white or coloured space to its sides or top and bottom. Runs in your browser; your images are never uploaded.">
+  <meta property="og:image" content="https://www.bdnix.com/assets/img/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="bdnix: Play a little. Get things done.">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Fit to Frame", "url": "https://www.bdnix.com/fit-to-frame/", "description": "Make a photo fit a post, story or banner without cropping it: add white or coloured space to its sides or top and bottom. Runs in your browser; your images are never uploaded.", "applicationCategory": "MultimediaApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/base.css?v=f674399bef">
+  <link rel="stylesheet" href="/assets/css/tool.css?v=a4dba4339c">
+  <link rel="stylesheet" href="/assets/css/frame.css?v=353a96d257">
+  <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
+  <meta name="theme-color" content="#080a12">
+</head>
+<body>
+  <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
+
+  <header class="bar">
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ fit-to-frame</span></a>
+    <a class="profile-chip" href="/profile/" title="Your profile"><span class="avatar" data-profile-initial aria-hidden="true">U</span><span data-profile-name>User</span></a>
+  </header>
+
+  <main class="tool wide">
+    <p class="kicker">// tools</p>
+    <h1>Fit to Frame</h1>
+    <p class="lede">Make a photo fit a post, a story or a banner without cropping any of it. Space is added around the image, in the colour you choose, until it’s the right shape. Everything happens in your browser. Your images are never uploaded.</p>
+    <ul class="features" aria-label="What it does">
+      <li><b>Social media shapes.</b> Square, portrait 4:5, story 9:16, landscape, widescreen and more, or type your own width and height.</li>
+      <li><b>Nothing cropped.</b> The whole image stays in view, in the middle, with space added to its sides or to its top and bottom.</li>
+      <li><b>Any colour.</b> White, black, grey, or pick any colour for the space around the image, and add a margin all round if you like.</li>
+      <li><b>Full quality or an exact size.</b> Keep every pixel of the original, or get exactly the size in pixels a site asks for.</li>
+      <li><b>Private.</b> Location, camera and other hidden details are removed from the saved images.</li>
+    </ul>
+
+    <label class="drop panel" id="drop">
+      <input type="file" id="picker" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif,.heic,.heif" multiple>
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <b>Drop images here</b>
+      <span>JPEG, PNG, WebP, GIF, AVIF and more, or <u>choose images</u></span>
+    </label>
+
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+    <section class="files" id="filesWrap" hidden>
+      <div class="editor">
+        <div class="preview panel">
+          <div class="preview-stage" id="stage">
+            <canvas id="previewCanvas" aria-label="Preview of the framed image" hidden></canvas>
+            <p class="preview-note" id="previewNote">Loading preview…</p>
+          </div>
+          <p class="preview-size" id="previewSize"></p>
+          <div class="preview-nav" id="previewNav">
+            <button class="icon-btn" id="prevImage" type="button" aria-label="Previous image"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg></button>
+            <span class="label" id="imageLabel">Image 1 of 1</span>
+            <button class="icon-btn" id="nextImage" type="button" aria-label="Next image"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg></button>
+          </div>
+        </div>
+
+        <form class="settings panel" id="settings" autocomplete="off">
+          <label class="field">
+            <span class="label">Shape</span>
+            <select name="shape" id="shape">
+              <option value="square" selected>Square 1:1 · Instagram post</option>
+              <option value="portrait">Portrait 4:5 · Instagram, Facebook</option>
+              <option value="story">Story 9:16 · Stories, Reels, TikTok</option>
+              <option value="landscape">Landscape 1.91:1 · Facebook, LinkedIn</option>
+              <option value="wide">Widescreen 16:9 · YouTube, X</option>
+              <option value="tall">Tall 2:3 · Pinterest</option>
+              <option value="custom">Custom size</option>
+            </select>
+          </label>
+          <div class="field">
+            <div class="dims">
+              <label class="field">
+                <span class="label">Width</span>
+                <input type="text" name="width" id="width" inputmode="numeric" spellcheck="false" value="1080">
+              </label>
+              <span class="dims-x" aria-hidden="true">×</span>
+              <label class="field">
+                <span class="label">Height</span>
+                <input type="text" name="height" id="height" inputmode="numeric" spellcheck="false" value="1080">
+              </label>
+            </div>
+            <span class="hint" id="dimsHint"></span>
+          </div>
+
+          <fieldset class="seg">
+            <legend class="label">Size</legend>
+            <label><input type="radio" name="size" value="keep" checked><span>Keep full size</span></label>
+            <label><input type="radio" name="size" value="exact"><span id="exactLabel">Exactly 1080 × 1080</span></label>
+          </fieldset>
+
+          <fieldset class="field">
+            <legend class="label">Colour</legend>
+            <div class="swatches" id="swatches">
+              <button type="button" data-color="#ffffff" aria-label="White" title="White"></button>
+              <button type="button" data-color="#000000" aria-label="Black" title="Black"></button>
+              <button type="button" data-color="#e5e7eb" aria-label="Light grey" title="Light grey"></button>
+              <label class="pick" title="Any colour"><input type="color" name="color" id="color" value="#ffffff" aria-label="Any colour"><span>Any colour</span></label>
+            </div>
+          </fieldset>
+
+          <label class="field">
+            <span class="label">Margin <output id="marginOut">0%</output></span>
+            <input type="range" name="margin" id="margin" min="0" max="25" step="1" value="0">
+          </label>
+
+          <label class="field">
+            <span class="label">Save as</span>
+            <select name="format" id="format">
+              <option value="same" selected>Same as original</option>
+              <option value="jpeg">JPEG · best for photos</option>
+              <option value="webp">WebP · smallest</option>
+              <option value="png">PNG · lossless</option>
+            </select>
+          </label>
+        </form>
+      </div>
+
+      <div class="files-head">
+        <span class="label" id="summary"></span>
+        <button class="link-btn" id="clearBtn" type="button">Clear all</button>
+      </div>
+      <ol class="track-list" id="list"></ol>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="fitBtn" type="button">
+          <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="12" rx="1.5"/><rect x="5" y="5.5" width="6" height="5" rx=".5"/></svg>
+          <span id="fitLabel">Fit to frame</span>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>© <span id="year">2026</span> bdnix · <a href="https://github.com/bdnix/bdnix">Open source on GitHub</a></span>
+    <span class="foot-links"><a href="/#suggest">Suggest a tool or game</a><a href="mailto:root@bdnix.com">root@bdnix.com</a></span>
+  </footer>
+
+  <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
+  <script src="/assets/js/profile.js?v=b5253a5e91"></script>
+  <script src="/assets/js/pdftools.js?v=ca90f587a4"></script>
+  <script src="/assets/js/image-core.js?v=80ee92bbc9"></script>
+  <script src="/assets/js/frame-core.js?v=076e816af1"></script>
+  <script src="/assets/js/frame.js?v=c1c3f75e5a"></script>
+</body>
+</html>

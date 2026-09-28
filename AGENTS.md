@@ -20,14 +20,15 @@ The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub 
 | Redact `/redact-pdf/` | `redact-pdf/index.html`, `assets/css/redact.css`, `assets/js/redact.js`, `assets/js/redact-core.js` |
 | MP4 to MP3 `/mp4-to-mp3/` | `mp4-to-mp3/index.html`, `assets/css/audio.css`, `assets/js/audio.js`, `assets/js/audio-core.js` |
 | Compress Images `/compress-image/` | `compress-image/index.html`, `assets/css/image.css`, `assets/js/image.js`, `assets/js/image-core.js` |
+| Fit to Frame `/fit-to-frame/` | `fit-to-frame/index.html`, `assets/css/frame.css`, `assets/js/frame.js`, `assets/js/frame-core.js` (and `image-core.js` for formats and file names) |
 | Profile `/profile/` | `profile/index.html`, `assets/css/profile.css`, `assets/js/profile-page.js` |
 
 Shared across pages:
 - `assets/css/base.css`: colour tokens and shared components (header, buttons, panels, profile chip).
 - `assets/css/game.css`: the game pages' shared layout.
-- `assets/css/tool.css`: the tool and profile pages' shared layout, including the preview-and-settings editor used by the watermark and redact pages, the feature list under a tool's intro, and the file list with a download per file used by the audio and image pages.
+- `assets/css/tool.css`: the tool and profile pages' shared layout, including the preview-and-settings editor used by the watermark and redact pages, the feature list under a tool's intro, and the file list with a download per file used by the audio, image and fit-to-frame pages.
 - `assets/js/blocks.js`: the falling-block backdrop (`window.bdnix`).
-- `assets/js/pdftools.js`: page-range parsing, file helpers, dropping files on the page, and the on-demand PDF.js loader (`window.bdnixPdf`). The audio converter and image compressor use its file helpers too.
+- `assets/js/pdftools.js`: page-range parsing, file helpers, dropping files on the page, and the on-demand PDF.js loader (`window.bdnixPdf`). The audio converter, image compressor and Fit to Frame use its file helpers too.
 - `assets/js/profile.js`: the visitor's name and scores (`window.bdnixProfile`).
 - `assets/js/gamesave.js`: saves a game in progress and loads it back paused (`window.bdnixSave`). Each game snapshots its own state, checks a loaded save before using it, and throws away one that doesn't make sense.
 - `assets/js/sound.js`: the games' sound effects (`window.bdnixSound`), made with the Web Audio API from short recipes in the file, so there are no audio files. `bdnixSound.play('<name>')` plays one unless sound is muted. It also runs the mute button (`#soundBtn` in a game's top bar, beside pause) and the M key.
@@ -54,7 +55,7 @@ Leave merging to the owner: don't merge the pull request yourself.
 - **Keep it dependency-free at runtime.** No frameworks and no bundler. `package.json` holds dev tooling only (tests, coverage, the cache-busting script).
 - **Match the existing code.** Each script is one IIFE, `(function(){ ... })();`, in ES5-style `var`/`function` code. A script that other scripts use exposes one `window.bdnix*` object. Comment density, naming and CSS style should match the file you're in.
 - **Reuse, don't duplicate.** Use the tokens in `base.css`, the layout in `tool.css`, and the helpers in `pdftools.js` / `profile.js`. If two pages need the same logic, move it into a shared file.
-- **Pure logic goes in its own file** (as in `watermark-layout.js`, `redact-core.js`, `flappy-core.js`, `hop-core.js`, `snake-core.js`, `bricks-core.js`, `audio-core.js`, `image-core.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
+- **Pure logic goes in its own file** (as in `watermark-layout.js`, `redact-core.js`, `flappy-core.js`, `hop-core.js`, `snake-core.js`, `bricks-core.js`, `audio-core.js`, `image-core.js`, `frame-core.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
 - **Every game keeps a game in progress.** A game must survive a reload or a later visit and come back paused exactly where it was, as Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce do. Use `window.bdnixSave` from `assets/js/gamesave.js`:
   - Save through `bdnixSave.keep('<game>', snapshot)`. `snapshot()` returns the whole state as plain JSON, or `null` when no game is in progress. Call the function `keep()` returns when the game pauses, starts a new game or ends.
   - Restore at startup. Check every field of the loaded save before using it. Clear a save that doesn't make sense and show the normal start screen.
