@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/base.css?v=f674399bef">
-  <link rel="stylesheet" href="/assets/css/game.css?v=086e9f17f8">
+  <link rel="stylesheet" href="/assets/css/game.css?v=26bcba7631">
   <link rel="stylesheet" href="/assets/css/flappy.css?v=adb01402ed">
   <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
@@ -33,9 +33,12 @@
 
   <header class="bar">
     <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ flap</span></a>
-    <button id="pauseBtn" class="icon-btn" aria-label="Pause">
-      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2h3v12H4zM9 2h3v12H9z"/></svg>
-    </button>
+    <div class="bar-actions">
+      <button id="soundBtn" class="icon-btn" aria-label="Mute sound"></button>
+      <button id="pauseBtn" class="icon-btn" aria-label="Pause">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2h3v12H4zM9 2h3v12H9z"/></svg>
+      </button>
+    </div>
   </header>
 
   <main class="game" id="game">
@@ -63,7 +66,8 @@
 
   <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
   <script src="/assets/js/gamesave.js?v=fb243d7a1b"></script>
+  <script src="/assets/js/sound.js?v=e8b366f58c"></script>
   <script src="/assets/js/flappy-core.js?v=340ba24352"></script>
-  <script src="/assets/js/flappy.js?v=54077dbeb6"></script>
+  <script src="/assets/js/flappy.js?v=8725243c2a"></script>
 </body>
 </html>

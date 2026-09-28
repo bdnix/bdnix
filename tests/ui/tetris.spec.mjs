@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.mjs';
-import { openGame, press, inkOn, tap } from './games.mjs';
+import { openGame, press, inkOn, tap, listen, heard } from './games.mjs';
 
 // Pieces always come O, T, J, L, S, Z, I (see games.mjs). They spawn in the
 // middle of the top row and, on an empty board, a hard drop moves the flat
@@ -158,4 +158,57 @@ test('a reload while a row is clearing finishes the clear on resume', async ({ p
   await page.locator('#startBtn').click();
   await page.clock.runFor(300);
   expect(await hud(page)).toEqual({ score: '242', lines: '1', level: '1' });
+});
+
+test('moves, drops, clears and the end of the game each have a sound', async ({ page }) => {
+  await listen(page);
+  await page.reload();                              // paused, from the save
+  await page.getByRole('button', { name: 'New game' }).click();
+  expect(await heard(page)).toEqual(['start']);
+  await press(page, 'ArrowLeft');
+  await press(page, 'ArrowUp');                     // the O doesn't turn, so no sound
+  expect(await heard(page)).toEqual(['move']);
+  await press(page, 'KeyC');                        // hold the O
+  await press(page, 'ArrowUp');                     // the T turns
+  await press(page, 'Space');
+  expect(await heard(page)).toEqual(['hold', 'rotate', 'drop', 'lock']);
+
+  // The route from the first test fills the bottom row.
+  await page.getByRole('button', { name: 'Pause' }).click();
+  await page.getByRole('button', { name: 'New game' }).click();
+  await press(page, 'ArrowLeft', 4); await press(page, 'Space');
+  await press(page, 'ArrowLeft'); await press(page, 'Space');
+  await press(page, 'ArrowRight', 2); await press(page, 'Space');
+  await press(page, 'ArrowUp'); await press(page, 'ArrowRight', 4);
+  await heard(page);
+  await press(page, 'Space');
+  expect(await heard(page)).toEqual(['drop', 'clear']);
+  await page.clock.runFor(300);                     // the cleared row flashes before it goes
+
+  const overlay = page.locator('#overlay');
+  for (let i = 0; i < 40 && !(await overlay.isVisible()); i++) await press(page, 'Space');
+  expect((await heard(page)).pop()).toBe('best');   // a new best score
+  await page.getByRole('button', { name: 'Play again' }).click();
+  for (let i = 0; i < 40 && !(await overlay.isVisible()); i++) await press(page, 'Space');
+  expect((await heard(page)).pop()).toBe('over');   // the same score isn't a new best
+});
+
+test('clearing four rows at once and reaching the next level have their own sounds', async ({ page }) => {
+  // A real save, changed to four rows filled all but the right-hand column,
+  // an upright I above the gap and one line short of level 2.
+  await press(page, 'KeyP');
+  const save = JSON.parse(await page.evaluate(() => localStorage.getItem('bdnix_tetris_save')));
+  const d = save.data;
+  d.grid = d.grid.map((row, y) => row.map((c, x) => (y >= 16 && x < 9 ? 'O' : null)));
+  d.piece = { type: 'I', m: [[0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0]], x: 7, y: 0 };
+  d.lines = 9;
+  await page.addInitScript(s => localStorage.setItem('bdnix_tetris_save', s), JSON.stringify(save));
+  await listen(page);
+  await page.reload();
+  await press(page, 'Enter');
+  await press(page, 'Space');
+  expect(await heard(page)).toEqual(['drop', 'bigclear']);
+  await page.clock.runFor(300);                     // the rows flash, then go
+  expect(await heard(page)).toEqual(['level']);
+  await expect(page.locator('#level')).toHaveText('2');
 });

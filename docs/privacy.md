@@ -20,6 +20,7 @@ In `localStorage`:
 | `bdnix_visits` | Landing page visit count |
 | `bdnix_tetris_best`, `bdnix_pacman_best`, `bdnix_flappy_best`, `bdnix_hop_best`, `bdnix_snake_best` | Best scores |
 | `bdnix_tetris_save`, `bdnix_pacman_save`, `bdnix_flappy_save`, `bdnix_hop_save`, `bdnix_snake_save` | Games in progress |
+| `bdnix_sound` | Whether game sounds are on (`on`) or muted (`off`) |
 | `bdnix_watermark_v1` | Watermark tool settings |
 | `bdnix_analytics` | Analytics consent choice |
 

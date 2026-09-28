@@ -31,6 +31,7 @@
   var state = 'idle', pausedFrom = null, stateTime = 0;
   var world = F.create(), carry = 0, wingTime = 0, hitFlash = 0, groundTime = 0;
   var best = 0;
+  var sound = window.bdnixSound;
 
   try { best = parseInt(localStorage.getItem('bdnix_flappy_best'), 10) || 0; } catch (e) {}
 
@@ -46,6 +47,7 @@
     startBtn.blur();
     pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.setAttribute('aria-label', 'Pause');
     updateHud();
+    sound.play('start');
     persist();
   }
   function flap(){
@@ -53,6 +55,7 @@
     if (state !== 'playing') return;
     F.flap(world);
     wingTime = 0;
+    sound.play('flap');
   }
 
   function update(dt){
@@ -77,8 +80,8 @@
     var r = F.advance(world, dt, carry);
     carry = r.carry;
     for (var i = 0; i < r.events.length; i++) {
-      if (r.events[i] === 'score') updateHud();
-      if (r.events[i] === 'hit') { hitFlash = 0.18; groundTime = 0; setState('dying'); }
+      if (r.events[i] === 'score') { updateHud(); sound.play('point'); }
+      if (r.events[i] === 'hit') { hitFlash = 0.18; groundTime = 0; setState('dying'); sound.play('hit'); }
     }
   }
 
@@ -90,6 +93,7 @@
       try { localStorage.setItem('bdnix_flappy_best', best); } catch (e) {}
     }
     updateHud();
+    sound.play(score >= best && score > 0 ? 'best' : 'over');
     var medal = F.medal(score);
     ovKicker.textContent = medal ? MEDALS[medal] : 'bdnix arcade';
     ovTitle.textContent = 'Game over';

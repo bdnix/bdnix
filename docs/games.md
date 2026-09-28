@@ -7,6 +7,7 @@ All five games work with a keyboard, mouse or touch screen, and at phone size.
 - [Flap](#flap)
 - [Road Hop](#road-hop)
 - [Snake](#snake)
+- [Sound](#sound)
 - [Scores and saved games](#scores-and-saved-games)
 - [Credits](#credits)
 
@@ -68,6 +69,14 @@ Each new row the chicken reaches scores a point. Lanes of grass, roads and river
 | Pause | P / Esc | ❚❚ |
 
 The snake waits until the first direction is pressed, then glides from cell to cell at about four and a half cells a second. Each piece of food scores a point and makes the snake one longer and a little faster, up to ten cells a second. Hitting a wall or the snake's own body ends the round; filling the whole board wins it. Two quick presses make two turns on the next two steps, so a U-turn is easy.
+
+## Sound
+
+Every game has sound effects: a jingle when a game starts, sounds for the main moves (moving, turning and dropping pieces, eating dots and power pellets, flapping, hopping, eating food), for scoring and clearing lines, for each way a round can end (a car, the river, a crash), and a tune at game over, a brighter one for a new best score.
+
+The speaker button beside pause in the top bar, or **M**, turns sound off and on. The choice applies to every game and is remembered in the browser (`bdnix_sound`). Sound is on until it's turned off.
+
+The sounds are made in the browser with the Web Audio API, so there are no audio files to download. Browsers only let a page play sound after the visitor has pressed a key or tapped, so the first sound comes with the first press.
 
 ## Scores and saved games
 

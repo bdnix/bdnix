@@ -1,5 +1,5 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
-import { openGame, press, tap } from './games.mjs';
+import { openGame, press, tap, listen, heard } from './games.mjs';
 
 // With Math.random fixed at 0 the lanes are the same every time: grass on
 // rows 0 and 1, a road on row 2, grass on 3 and 4, a river on 5, grass on 6
@@ -303,4 +303,41 @@ test('side-by-side roads, trees and trucks from a saved round are drawn', async 
   const lanes = (await peek(page)).lanes;
   expect(lanes[4 - s.base].trees).toEqual([0, 4, 8]);
   expect(lanes[2 - s.base].items[0].pos).toBeGreaterThan(5);  // the truck drove on
+});
+
+test('hops and each way of losing have a sound', async ({ page }) => {
+  await listen(page);
+  await page.reload();
+  await start(page);
+  expect(await heard(page)).toEqual(['start', 'hop']);
+  await press(page, 'ArrowDown');                       // back to the start
+  await press(page, 'ArrowDown');                       // the hedge is in the way: no hop, no sound
+  expect(await heard(page)).toEqual(['hop']);
+
+  // Hit by traffic, as in the first test.
+  await hopTo(page, 6);
+  await press(page, 'ArrowUp');
+  await press(page, 'ArrowUp');
+  await waitForGameOver(page);
+  let sounds = await heard(page);
+  expect(sounds.slice(-2)).toEqual(['crash', 'best']);
+  expect(new Set(sounds.slice(0, -2))).toEqual(new Set(['hop']));
+
+  // Left behind: a worse round.
+  await page.getByRole('button', { name: 'Play again' }).click();
+  await press(page, 'ArrowRight');
+  await waitForGameOver(page);
+  expect(await heard(page)).toEqual(['start', 'hop', 'fall', 'over']);
+});
+
+test('falling in the river splashes', async ({ page }) => {
+  await listen(page);
+  await page.reload();
+  await start(page);
+  await hopTo(page, 4);
+  const clear = (d) => d.lanes[5 - d.base].items.every((it) => d.chicken.x + 0.5 < it.pos - MARGIN - 0.2 || d.chicken.x + 0.5 > it.pos - MARGIN + it.len + 0.2);
+  for (let i = 0; i < 400 && !clear(await peek(page)); i++) await page.clock.runFor(50);
+  await press(page, 'ArrowUp');
+  await waitForGameOver(page);
+  expect((await heard(page)).slice(-3)).toEqual(['hop', 'splash', 'best']);
 });

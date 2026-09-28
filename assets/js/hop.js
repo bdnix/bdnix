@@ -41,6 +41,9 @@
   var view = world.camera;      // the camera as drawn, easing after the real one
   var hopT = 0, from = null;    // the hop being drawn, and where it started
   var best = 0;
+  var sound = window.bdnixSound;
+  // The sound for each way a round can end.
+  var CRASH_SOUNDS = { car: 'crash', water: 'splash', swept: 'fall', behind: 'fall' };
 
   try { best = parseInt(localStorage.getItem('bdnix_hop_best'), 10) || 0; } catch (e) {}
 
@@ -56,6 +59,7 @@
     startBtn.blur();
     pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.setAttribute('aria-label', 'Pause');
     updateHud();
+    sound.play('start');
     persist();
   }
   function hop(dir){
@@ -64,6 +68,7 @@
     if (!F.hop(world, dir)) return;
     if (state === 'ready') setState('playing');
     from = before; hopT = HOP_TIME;
+    sound.play('hop');
     updateHud();
     if (world.dead) crash();
   }
@@ -90,6 +95,7 @@
   // save are settled straight away, and the score shows once the crash has played.
   function crash(){
     setState('dying');
+    sound.play(CRASH_SOUNDS[world.dead]);
     if (world.score > best) {
       best = world.score;
       try { localStorage.setItem('bdnix_hop_best', best); } catch (e) {}
@@ -101,6 +107,7 @@
     setState('over');
     var score = world.score;
     var lines = ENDINGS[world.dead];
+    sound.play(score >= best && score > 0 ? 'best' : 'over');
     ovKicker.textContent = lines[Math.min(lines.length - 1, Math.floor(Math.random() * lines.length))];
     ovTitle.textContent = 'Game over';
     ovText.textContent = 'Score ' + score + (score >= best && score > 0 ? ' — new best!' : ' · Best ' + best);

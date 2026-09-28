@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.mjs';
-import { openGame, press, tap } from './games.mjs';
+import { openGame, press, tap, listen, heard } from './games.mjs';
 
 // The player starts low in the maze, heading left. Each dot is 10 points and a
 // power pellet 50. The game waits 2.2 seconds on "Ready" before it moves.
@@ -127,4 +127,43 @@ test('a save from a different maze is thrown away', async ({ page }) => {
   await page.reload();
   await expect(page.locator('#ovTitle')).toHaveText('Maze Chase');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_pacman_save'))).toBeNull();
+});
+
+test('dots, power pellets and getting caught each have a sound', async ({ page }) => {
+  await listen(page);
+  await page.reload();                              // paused, from the save
+  await page.getByRole('button', { name: 'New game' }).click();
+  await page.clock.runFor(2300 + 2000);             // left to the corner: 11 dots and a pellet
+  const chomps = Array.from({ length: 11 }, (_, i) => (i % 2 ? 'chomp2' : 'chomp'));
+  expect(await heard(page)).toEqual(['start', ...chomps, 'power']);
+
+  // Stuck in the corner, a ghost catches it.
+  let sounds = [];
+  for (let s = 0; s < 60 && !sounds.includes('die'); s++) {
+    await page.clock.runFor(500);
+    sounds = sounds.concat(await heard(page));
+  }
+  expect(sounds).toContain('die');
+});
+
+test('eating a ghost or fruit, an extra life and clearing the maze each have a sound', async ({ page }) => {
+  // A real save from just before the power pellet in the corner, changed so
+  // that the pellet takes the score past 10,000 and the dot above it is the
+  // last one, with a frightened ghost and a fruit right where the player is.
+  await page.clock.runFor(1500);
+  await press(page, 'KeyP');
+  const save = JSON.parse(await page.evaluate(() => localStorage.getItem('bdnix_pacman_save')));
+  const d = save.data, at = { x: d.pac.x, y: d.pac.y };
+  Object.assign(d, { dotsLeft: 2, score: 9995, extraLifeGiven: false, frightTime: 5, fruit: { ...at, t: 5 } });
+  Object.assign(d.ghosts[0], at, { state: 'active', fright: true, dir: d.pac.dir });
+  await page.addInitScript(s => localStorage.setItem('bdnix_pacman_save', s), JSON.stringify(save));
+  await listen(page);
+  await page.reload();
+  await press(page, 'Enter');
+  await page.clock.runFor(1000);
+  const sounds = await heard(page);
+  for (const s of ['ghost', 'power', 'life', 'fruit']) expect(sounds, s).toContain(s);
+  await press(page, 'ArrowUp');
+  await page.clock.runFor(800);
+  expect((await heard(page)).slice(-1)).toEqual(['level']);   // after the last chomp
 });
