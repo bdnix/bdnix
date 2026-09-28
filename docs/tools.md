@@ -7,6 +7,7 @@ Every tool runs entirely in the browser. Files are never uploaded, and all proce
 - [Redact PDF](#redact-pdf)
 - [MP4 to MP3](#mp4-to-mp3)
 - [Compress Images](#compress-images)
+- [Photo Collage](#photo-collage)
 - [Fit to Frame](#fit-to-frame)
 
 ## Merge PDFs
@@ -90,6 +91,32 @@ Drop in photos or other images (JPEG, PNG, WebP, GIF, BMP, AVIF, and HEIC where 
 Several images can be compressed at once, and each gets its own download named after the original (`photo.png` saved as JPEG becomes `photo-compressed.jpg`, so it doesn't replace the original). Each row shows the new dimensions and file size and how much smaller it is, and the message under the drop zone shows the total. Changing a setting clears earlier results so they can be compressed again.
 
 The browser decodes each image (turning phone photos upright) and a canvas saves it again, so the hidden details a camera stores (location, camera model, date) aren't carried over. If the result is no smaller than the original, in the same format and at the same size, the original is returned unchanged. Images larger than 16.7 megapixels (4096 × 4096) are scaled down to fit, because iPhones and iPads can't draw larger canvases. An image the browser can't open, or a format it can't save (Safari can't save WebP), is marked in the list with a message.
+
+## Photo Collage
+
+`/photo-collage/`
+
+Drop in 3, 6 or 9 photos (any image the browser can open, as for [Compress Images](#compress-images)), pick a layout and style, and download the collage. With any other number of photos the preview says how many to add or remove, for example "Add 2 more for a collage of 6, or remove 1 for a collage of 3". A collage holds 9 photos at most; any more dropped at once are left out, with a message.
+
+Layouts:
+
+| Photos | Layouts |
+|---|---|
+| 3 | Side by side, Stacked, Big left, Big top |
+| 6 | Grid 3 across, Grid 2 across, Feature (one big photo with five around it), Steps (rows of 1, 2 and 3), Columns (2 beside 4) |
+| 9 | Grid, Feature (one big photo with eight around it), Steps (rows of 2, 3 and 4), Mosaic |
+
+Settings:
+
+- **Shape:** square 1:1, portrait 4:5 (social media feeds), story 9:16 (a phone screen), landscape 3:2 (photo prints) or widescreen 16:9.
+- **Spacing** between the photos and around the edge, and **Corners** to round each photo. Both are shown in pixels at the chosen size and scale with it, so the preview looks the same as the download.
+- **Background:** the colour behind the photos, white by default.
+- **Size:** the longest side, 1080, 2048 (default) or 4096 px. The exact size is shown under the settings.
+- **Save as** JPEG (quality 92%) or PNG. The file is `collage.jpg` or `collage.png`.
+
+Photos fill the layout in the order listed under the preview. Tap one photo, in the list or in the preview, then another to swap them; tap it again to cancel. Each photo is cropped from its middle to fill its space, without stretching. The layout chosen for each number of photos is remembered while the page is open.
+
+The preview draws small copies of the photos, so moving a slider stays quick. The download decodes the photos again one at a time at full size, so nine phone photos aren't all held in memory at once. As with Compress Images, the browser turns phone photos upright and a camera's hidden details (location, camera model, date) aren't carried over. A photo the browser can't open is taken off the list, with a message.
 
 ## Fit to Frame
 
