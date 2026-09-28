@@ -131,6 +131,12 @@ test('the search box filters the games and tools as you type', async ({ page }) 
   await search.fill('game');
   expect(await shown()).toEqual(['Falling Blocks', 'Maze Chase', 'Flap', 'Road Hop', 'Snake', 'Brick Bounce']);
 
+  // Plurals find the singular.
+  await search.fill('games');
+  expect(await shown()).toEqual(['Falling Blocks', 'Maze Chase', 'Flap', 'Road Hop', 'Snake', 'Brick Bounce']);
+  await search.fill('photos');
+  expect(await shown()).toEqual(['Compress Images', 'Photo Collage', 'Fit to Frame']);
+
   // Every word has to match.
   await search.fill('photo grid');
   expect(await shown()).toEqual(['Photo Collage']);

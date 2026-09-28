@@ -12,11 +12,14 @@
       .trim();
   }
 
-  // The words of a search, without repeats.
+  // The words of a search, without repeats. A final "s" is dropped so a
+  // plural finds the singular ("games" finds "game"); since a word only has
+  // to start a word of the text, "bricks" still finds "bricks".
   function terms(query){
     var words = fold(query).split(' '), out = [];
     for (var i = 0; i < words.length; i++) {
-      if (words[i] && out.indexOf(words[i]) < 0) out.push(words[i]);
+      var word = words[i].length > 2 ? words[i].replace(/s$/, '') : words[i];
+      if (word && out.indexOf(word) < 0) out.push(word);
     }
     return out;
   }

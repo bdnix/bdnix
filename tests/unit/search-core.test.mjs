@@ -21,6 +21,11 @@ test('terms: the words of a search, once each', () => {
   assert.deepEqual(plain(S.terms('  ')), []);
   assert.deepEqual(plain(S.terms('--')), []);
   assert.deepEqual(plain(S.terms(null)), []);
+  // A final "s" goes, on words of three letters or more.
+  assert.deepEqual(plain(S.terms('Games tools')), ['game', 'tool']);
+  assert.deepEqual(plain(S.terms('game games')), ['game']);
+  assert.deepEqual(plain(S.terms('is as ss')), ['is', 'as', 'ss']);
+  assert.deepEqual(plain(S.terms('compress')), ['compres']);
 });
 
 test('matches: every word starts a word of the text', () => {
@@ -36,6 +41,22 @@ test('matches: every word starts a word of the text', () => {
   assert.equal(S.matches('Compress Images', 'comp im'), true);
   assert.equal(S.matches('MP4 to MP3', 'mp3'), true);
   assert.equal(S.matches('Café', 'cafe'), true);
+});
+
+test('matches: a plural finds the singular, as "games" finds "game"', () => {
+  const games = 'Snake Eat, grow game arcade classic';
+  assert.equal(S.matches(games, 'game'), true);
+  assert.equal(S.matches(games, 'games'), true);
+  assert.equal(S.matches(games, 'GAMES'), true);
+  assert.equal(S.matches('Merge PDFs tool pdf', 'tools pdfs'), true);
+  assert.equal(S.matches('Photo Collage image photo picture', 'photos images pictures'), true);
+  // Words that end in "s" still find themselves.
+  assert.equal(S.matches('Brick Bounce Smash the bricks', 'bricks'), true);
+  assert.equal(S.matches('Compress Images', 'compress'), true);
+  assert.equal(S.matches('Snake', 'snakes'), true);
+  // Only a final "s" is dropped.
+  assert.equal(S.matches('Snake game', 'gamez'), false);
+  assert.equal(S.matches('Snake game', 'sgame'), false);
 });
 
 test('matches: an empty search matches everything', () => {
