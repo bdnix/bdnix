@@ -4,6 +4,7 @@
   var COLS = F.COLS, ROWS = F.ROWS;
   var CELL = 32;                // world units per cell
   var W = COLS * CELL, H = ROWS * CELL;
+  var SIDEWAYS_ROWS = 9;        // rows on screen on a phone held sideways, so cells are bigger
   var HOP_TIME = 0.1;           // how long a hop takes to draw
   var DEATH_TIME = 0.9;         // how long the crash plays before the score shows
 
@@ -36,6 +37,10 @@
   var ICON_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2.5v11a.5.5 0 0 0 .77.42l8.5-5.5a.5.5 0 0 0 0-.84l-8.5-5.5A.5.5 0 0 0 4 2.5z"/></svg>';
 
   var SCALE = 1;                // CSS pixels per world unit
+  // What the screen shows: `rows` rows, and `side` cells of the lanes beyond
+  // each edge of the board, where cars and logs come and go. Held sideways
+  // the screen shows fewer rows, bigger, and the lanes run out to its edges.
+  var shown = { rows: ROWS, side: 0 };
   var state = 'idle', pausedFrom = null, stateTime = 0;
   var world = F.create(), carry = 0, clock = 0;
   var view = world.camera;      // the camera as drawn, easing after the real one
@@ -206,8 +211,8 @@
     var padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
     var padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
     var gap = parseFloat(cs.rowGap) || 0;
-    var availW, availH;
-    if (landscapeMQ.matches) {
+    var availW, availH, sideways = landscapeMQ.matches;
+    if (sideways) {
       var bs = getComputedStyle(document.body);
       availH = document.body.clientHeight - parseFloat(bs.paddingTop) - parseFloat(bs.paddingBottom);
       availW = window.innerWidth - 2 * 170;
@@ -218,27 +223,41 @@
       availW = gameEl.clientWidth - padX - 128 * 2 - (parseFloat(cs.columnGap) || 0) * 2;
       availH = gameEl.clientHeight - padY;
     }
-    SCALE = Math.max(0.5, Math.min(1.6, Math.floor(Math.min((availW - 2) / W, (availH - 2) / H) * 100) / 100));
-    sizeCanvas(board, ctx, Math.round(W * SCALE), Math.round(H * SCALE));
+    var rows = sideways ? SIDEWAYS_ROWS : ROWS;
+    SCALE = Math.max(0.5, Math.min(sideways ? 2.4 : 1.6, Math.floor(Math.min((availW - 2) / W, (availH - 2) / (rows * CELL)) * 100) / 100));
+    // Any width to spare shows the lanes beyond the board, up to where cars wrap.
+    var side = sideways ? Math.min(F.MARGIN, Math.floor(((availW - 2) / SCALE - W) / CELL) / 2) : 0;
+    shown = { rows: rows, side: side };
+    sizeCanvas(board, ctx, Math.round((W + side * 2 * CELL) * SCALE), Math.round(rows * CELL * SCALE));
     board.parentNode.style.setProperty('--cell', Math.max(16, 24 * SCALE) + 'px');
     render();
   }
 
   // ---------- Drawing ----------
   // Screen y of the top of a row.
-  function rowY(row){ return H - (row - view + 1) * CELL; }
+  function rowY(row){ return (shown.rows - row + view - 1) * CELL; }
 
   function render(){
     var dpr = window.devicePixelRatio || 1;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, W * SCALE, H * SCALE);
-    ctx.setTransform(dpr * SCALE, 0, 0, dpr * SCALE, 0, 0);
+    ctx.clearRect(0, 0, board.width, board.height);
+    ctx.setTransform(dpr * SCALE, 0, 0, dpr * SCALE, dpr * SCALE * shown.side * CELL, 0);
 
-    var lo = Math.floor(view) - 1, hi = Math.ceil(view) + ROWS;
+    var lo = Math.floor(view) - 1, hi = Math.ceil(view) + shown.rows;
     for (var r = lo; r <= hi; r++) drawGround(r);
     for (r = lo; r <= hi; r++) drawThings(r);
     drawChicken();
     for (r = lo; r <= hi; r++) drawTrees(r);
+    if (shown.side) {
+      // Shade the lanes beyond the board: the chicken can't go there.
+      var sw = shown.side * CELL, sh = shown.rows * CELL;
+      ctx.fillStyle = 'rgba(8,10,18,.55)';
+      ctx.fillRect(-sw, 0, sw, sh);
+      ctx.fillRect(W, 0, sw, sh);
+      ctx.fillStyle = 'rgba(168,85,247,.5)';
+      ctx.fillRect(-1, 0, 2, sh);
+      ctx.fillRect(W - 1, 0, 2, sh);
+    }
 
     if (state !== 'idle' && state !== 'over') drawScore();
     if (state === 'ready' || (state === 'paused' && pausedFrom === 'ready')) {
@@ -259,22 +278,22 @@
     var lane = F.laneAt(world, row), y = rowY(row);
     if (lane.type === 'grass') {
       ctx.fillStyle = row % 2 ? '#0f2a24' : '#12302a';
-      ctx.fillRect(0, y, W, CELL);
+      ctx.fillRect(-shown.side * CELL, y, W + shown.side * 2 * CELL, CELL);
     } else if (lane.type === 'road') {
       ctx.fillStyle = '#161a2e';
-      ctx.fillRect(0, y, W, CELL);
+      ctx.fillRect(-shown.side * CELL, y, W + shown.side * 2 * CELL, CELL);
       // Dashes between two roads side by side
       if (F.laneAt(world, row + 1).type === 'road') {
         ctx.fillStyle = 'rgba(238,241,248,.35)';
-        for (var x = 6; x < W; x += 32) ctx.fillRect(x, y - 1, 18, 2);
+        for (var x = 6 - 64; x < W + shown.side * CELL; x += 32) ctx.fillRect(x, y - 1, 18, 2);
       }
     } else {
       ctx.fillStyle = '#0b2d4a';
-      ctx.fillRect(0, y, W, CELL);
+      ctx.fillRect(-shown.side * CELL, y, W + shown.side * 2 * CELL, CELL);
       // Ripples drift with the current
       ctx.fillStyle = 'rgba(34,211,238,.18)';
       var shift = ((clock * lane.speed * CELL * 0.5) % 48 + 48) % 48;
-      for (var rx = -48 + shift; rx < W; rx += 48) {
+      for (var rx = -48 * 3 + shift; rx < W + shown.side * CELL; rx += 48) {
         ctx.fillRect(rx, y + 9, 14, 2);
         ctx.fillRect(rx + 24, y + 22, 10, 2);
       }
@@ -285,7 +304,7 @@
     var lane = F.laneAt(world, row), y = rowY(row);
     for (var i = 0; i < lane.items.length; i++) {
       var it = lane.items[i], x = F.left(it) * CELL, w = it.len * CELL;
-      if (x > W || x + w < 0) continue;
+      if (x > W + shown.side * CELL || x + w < -shown.side * CELL) continue;
       if (lane.type === 'road') drawCar(x, y, w, it, lane.speed > 0);
       else drawLog(x, y, w);
     }

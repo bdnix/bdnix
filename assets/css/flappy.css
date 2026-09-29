@@ -29,21 +29,21 @@
   .board-wrap{align-self:center}
 }
 
-/* ---- Phones held sideways: scores beside the board ---- */
+/* ---- Phones held sideways: scores beside a board as wide as the screen ---- */
 @media (orientation:landscape) and (max-height:520px){
   body.play{
     display:grid;
-    grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+    grid-template-columns:auto minmax(0,1fr);
     grid-template-rows:auto auto 1fr;
     grid-template-areas:
-      "bar   board ."
-      "stats board ."
-      ".     board .";
+      "bar   board"
+      "stats board"
+      ".     board";
     gap:8px;
     padding:8px max(16px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
   }
   body.play > .game{display:contents}
   .bar{grid-area:bar;padding:0}
-  .board-wrap{grid-area:board;align-self:center}
+  .board-wrap{grid-area:board;align-self:center;justify-self:center}
   .stats{grid-template-columns:repeat(2,1fr);gap:8px}
 }

@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { openGame, press, inkOn, tap, listen, heard, soundProblems } from './games.mjs';
 
 // Pieces always come O, T, J, L, S, Z, I (see games.mjs). They spawn in the
@@ -215,4 +215,29 @@ test('clearing four rows at once and reaching the next level have their own soun
 
 test('its sounds are well formed and loud enough', async ({ page }) => {
   expect(await soundProblems(page)).toEqual([]);
+});
+
+test('turning a phone sideways mid-game fits the board to the height, controls beside it, and play goes on', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => (await page.locator('#board').boundingBox()).width).toBeLessThan(390);
+  await tap(page.locator('.touch [data-act=down]'));
+  await tap(page.locator('.touch [data-act=down]'));   // 1 point a row
+  await expect(page.locator('#score')).toHaveText('2');
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(async () => (await page.locator('#board').boundingBox()).height).toBeGreaterThan(330);
+  const board = await page.locator('#board').boundingBox();
+  const stats = await page.locator('.stats').boundingBox();
+  expect(board.y).toBeGreaterThanOrEqual(0);
+  expect(board.y + board.height).toBeLessThanOrEqual(390);   // the whole well, top to bottom
+  expect(stats.x + stats.width).toBeLessThanOrEqual(board.x); // beside it, not above
+  for (const b of await page.locator('.touch button').all()) {
+    const box = await b.boundingBox();
+    expect(box.y + box.height).toBeLessThanOrEqual(390);
+    expect(box.x + box.width <= board.x || box.x >= board.x + board.width).toBe(true); // not over the board
+  }
+  await expectNoSideScroll(page);
+
+  await tap(page.locator('.touch [data-act=drop]'));   // the O falls the 16 rows left: 2 points a row
+  await expect(page.locator('#score')).toHaveText('34');
 });
