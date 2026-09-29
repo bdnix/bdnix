@@ -1,10 +1,8 @@
 // Flap rules: the bird, the pipes, collisions and scoring. No DOM, so
 // it can be unit tested; flappy.js draws the world and handles input.
-// Distances are in world units on a board 512 high and 288 wide (wider on a
-// phone held sideways), times in seconds.
+// Distances are in world units on a 288 x 512 board, times in seconds.
 (function(){
   var W = 288, H = 512;
-  var MAX_W = 960;              // the widest board, on a phone held sideways
   var GROUND = 432;             // top of the ground strip
   var BIRD_X = 80, BIRD_R = 12;
   var GRAVITY = 1500, FLAP = -420, MAX_FALL = 620;
@@ -14,6 +12,7 @@
   var GAP_MARGIN = 64;          // keeps each gap this far from the top and the ground
   var KNOCK_X = -70, KNOCK_Y = -210; // the bounce off a pipe
   var DRAG = 0.97;              // per step, slows the bounce back
+  var FIRST_PIPE = W + 40;
   var STEP = 1 / 120;           // fixed physics step
 
   // Top of a pipe's gap, from a random number in [0, 1).
@@ -22,20 +21,13 @@
     return Math.round(lo + Math.min(Math.max(r, 0), 1) * (hi - lo));
   }
 
-  // A board `width` units wide, from W to MAX_W.
-  function fitWidth(width){
-    return Math.max(W, Math.min(MAX_W, Math.floor(width) || W));
-  }
-
-  // A new round. `rand` picks the gap heights (Math.random if omitted);
-  // `width` is the board's width (W if omitted).
-  function create(rand, width){
+  // A new round. `rand` picks the gap heights (Math.random if omitted).
+  function create(rand){
     return {
       rand: rand || Math.random,
-      width: fitWidth(width),
       bird: { x: BIRD_X, y: 220, vx: 0, vy: 0 },
       pipes: [],
-      nextPipe: fitWidth(width) + 40, // where the next pipe appears
+      nextPipe: FIRST_PIPE,     // where the next pipe appears, relative to the right edge
       score: 0,
       dead: false,
       landed: false,
@@ -156,8 +148,7 @@
     var dx = SPEED * STEP;
     w.distance += dx;
     w.nextPipe -= dx;
-    // A loop, in case the board has just grown wider.
-    while (w.nextPipe <= w.width) {
+    if (w.nextPipe <= W) {
       w.pipes.push({ x: w.nextPipe, top: gapTop(w.rand()), scored: false });
       w.nextPipe += SPACING;
     }
@@ -190,9 +181,9 @@
   }
 
   window.bdnixFlappy = {
-    W: W, H: H, MAX_W: MAX_W, GROUND: GROUND, BIRD_X: BIRD_X, BIRD_R: BIRD_R,
+    W: W, H: H, GROUND: GROUND, BIRD_X: BIRD_X, BIRD_R: BIRD_R,
     PIPE_W: PIPE_W, CAP_H: CAP_H, LIP: LIP, GAP: GAP, SPACING: SPACING, SPEED: SPEED, STEP: STEP, FLAP: FLAP,
-    gapTop: gapTop, fitWidth: fitWidth, create: create, flap: flap, tick: tick, advance: advance,
+    gapTop: gapTop, create: create, flap: flap, tick: tick, advance: advance,
     hitsPipe: hitsPipe, pushOut: pushOut, circleHitsRect: circleHitsRect, medal: medal
   };
 })();

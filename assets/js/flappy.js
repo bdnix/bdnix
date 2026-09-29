@@ -28,9 +28,8 @@
   var MEDALS = { bronze: 'Bronze medal', silver: 'Silver medal', gold: 'Gold medal', platinum: 'Platinum medal' };
 
   var SCALE = 1;                // CSS pixels per world unit
-  var fieldW = W;               // the board's width: wider on a phone held sideways
   var state = 'idle', pausedFrom = null, stateTime = 0;
-  var world = F.create(null, fieldW), carry = 0, wingTime = 0, hitFlash = 0, groundTime = 0;
+  var world = F.create(), carry = 0, wingTime = 0, hitFlash = 0, groundTime = 0;
   var HIT_TIME = 0.4;           // how long the shake and the burst of a crash last
   var hitTime = 0, tilt = 0;    // time left of the crash effects; the bird's angle
   var best = 0;
@@ -48,7 +47,7 @@
   // ---------- Game flow ----------
   function setState(s){ state = s; stateTime = 0; }
   function newGame(){
-    world = F.create(null, fieldW);
+    world = F.create();
     carry = 0; hitFlash = 0; hitTime = 0; tilt = 0;
     setState('ready');
     pausedFrom = null;
@@ -167,7 +166,7 @@
       Array.isArray(s.pipes) && s.pipes.every(function(p){ return p && num(p.x) && num(p.top); }) &&
       [s.stateTime, s.carry, s.groundTime, s.wingTime, s.nextPipe, s.score, s.distance].every(num);
     if (!ok) return false;
-    world = F.create(null, fieldW);
+    world = F.create();
     world.bird = { x: b.x === undefined ? F.BIRD_X : b.x, y: b.y, vx: b.vx || 0, vy: b.vy };
     world.pipes = s.pipes.map(function(p){ return { x: p.x, top: p.top, scored: !!p.scored }; });
     world.nextPipe = s.nextPipe; world.score = s.score; world.distance = s.distance;
@@ -193,13 +192,11 @@
     var padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
     var padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
     var gap = parseFloat(cs.rowGap) || 0;
-    var availW, availH, sideways = landscapeMQ.matches;
-    if (sideways) {
-      // Held sideways, the board fills the screen beside the scores.
+    var availW, availH;
+    if (landscapeMQ.matches) {
       var bs = getComputedStyle(document.body);
       availH = document.body.clientHeight - parseFloat(bs.paddingTop) - parseFloat(bs.paddingBottom);
-      availW = document.body.clientWidth - parseFloat(bs.paddingRight) - (parseFloat(bs.columnGap) || 0) -
-        document.querySelector('.stats').getBoundingClientRect().right;
+      availW = window.innerWidth - 2 * 170;
     } else if (compactMQ.matches) {
       availW = gameEl.clientWidth - padX;
       availH = gameEl.clientHeight - padY - document.querySelector('.stats').offsetHeight - gap;
@@ -208,9 +205,7 @@
       availH = gameEl.clientHeight - padY;
     }
     SCALE = Math.max(0.5, Math.min(1.6, Math.floor(Math.min((availW - 2) / W, (availH - 2) / H) * 100) / 100));
-    fieldW = sideways ? F.fitWidth((availW - 2) / SCALE) : W;
-    world.width = fieldW;
-    sizeCanvas(board, ctx, Math.round(fieldW * SCALE), Math.round(H * SCALE));
+    sizeCanvas(board, ctx, Math.round(W * SCALE), Math.round(H * SCALE));
     board.parentNode.style.setProperty('--cell', Math.max(16, 24 * SCALE) + 'px');
     render();
   }
@@ -219,7 +214,7 @@
   function render(){
     var dpr = window.devicePixelRatio || 1;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, fieldW * SCALE, H * SCALE);
+    ctx.clearRect(0, 0, W * SCALE, H * SCALE);
     ctx.setTransform(dpr * SCALE, 0, 0, dpr * SCALE, 0, 0);
 
     // A crash shakes the world for a moment.
@@ -238,14 +233,14 @@
       ctx.fillStyle = '#eef1f8';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = '800 30px Inter, system-ui, sans-serif';
-      ctx.fillText('Get ready', fieldW / 2, 130);
+      ctx.fillText('Get ready', W / 2, 130);
       ctx.fillStyle = '#8e97ab';
       ctx.font = '600 13px "JetBrains Mono", monospace';
-      ctx.fillText(compactMQ.matches ? 'Tap to flap' : 'Space, ↑ or click to flap', fieldW / 2, 300);
+      ctx.fillText(compactMQ.matches ? 'Tap to flap' : 'Space, ↑ or click to flap', W / 2, 300);
     }
     if (hitFlash > 0) {
       ctx.fillStyle = 'rgba(255,255,255,' + (hitFlash / 0.18 * 0.6).toFixed(3) + ')';
-      ctx.fillRect(0, 0, fieldW, H);
+      ctx.fillRect(0, 0, W, H);
     }
   }
 
@@ -254,9 +249,9 @@
   function drawSkyline(){
     var shift = (world.distance * 0.25) % (TOWERS.length * 24);
     ctx.fillStyle = 'rgba(168,85,247,.10)';
-    for (var i = 0; i * 24 - shift < fieldW; i++) {
+    for (var i = 0; i < TOWERS.length * 2; i++) {
       var x = i * 24 - shift, h = TOWERS[i % TOWERS.length];
-      if (x < -24) continue;
+      if (x > W || x < -24) continue;
       ctx.fillRect(x, GROUND - h, 20, h);
     }
   }
@@ -278,19 +273,19 @@
   }
   function drawGround(){
     ctx.fillStyle = '#141934';
-    ctx.fillRect(-8, GROUND, fieldW + 16, H - GROUND + 8);
+    ctx.fillRect(-8, GROUND, W + 16, H - GROUND + 8);
     ctx.save();
-    ctx.beginPath(); ctx.rect(-8, GROUND + 3, fieldW + 16, 14); ctx.clip();
+    ctx.beginPath(); ctx.rect(-8, GROUND + 3, W + 16, 14); ctx.clip();
     ctx.fillStyle = 'rgba(168,85,247,.35)';
     var shift = world.distance % 16;
-    for (var x = -16 - shift; x < fieldW + 16; x += 16) {
+    for (var x = -16 - shift; x < W + 16; x += 16) {
       ctx.beginPath();
       ctx.moveTo(x, GROUND + 17); ctx.lineTo(x + 8, GROUND + 3); ctx.lineTo(x + 16, GROUND + 3); ctx.lineTo(x + 8, GROUND + 17);
       ctx.closePath(); ctx.fill();
     }
     ctx.restore();
     ctx.fillStyle = '#a855f7';
-    ctx.fillRect(-8, GROUND, fieldW + 16, 3);
+    ctx.fillRect(-8, GROUND, W + 16, 3);
   }
   function drawBird(){
     var b = world.bird, r = F.BIRD_R;
@@ -349,9 +344,9 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = '800 40px Inter, system-ui, sans-serif';
     ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(8,10,18,.8)';
-    ctx.strokeText(world.score, fieldW / 2, 56);
+    ctx.strokeText(world.score, W / 2, 56);
     ctx.fillStyle = '#eef1f8';
-    ctx.fillText(world.score, fieldW / 2, 56);
+    ctx.fillText(world.score, W / 2, 56);
   }
 
   var last = performance.now();
@@ -380,6 +375,7 @@
     }
   });
   window.addEventListener('blur', function(){ if (state === 'ready' || state === 'playing' || state === 'dying') togglePause(); });
+  window.bdnixUpright.onTurn(function(){ if (state === 'ready' || state === 'playing' || state === 'dying') togglePause(); });
   document.addEventListener('visibilitychange', function(){
     if (document.hidden && (state === 'ready' || state === 'playing' || state === 'dying')) togglePause();
   });

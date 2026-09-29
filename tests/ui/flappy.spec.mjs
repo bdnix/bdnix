@@ -2,12 +2,12 @@ import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { openGame, press, tap, listen, heard, soundProblems } from './games.mjs';
 
 // With Math.random fixed at 0 every gap is at the same height: 64 to 188 on
-// a board 512 high. The bird hovers at 220 until the first flap.
+// the 288 x 512 board. The bird hovers at 220 until the first flap.
 
 // The bird's height on the board, found from its yellow pixels.
 function birdY(page){
   return page.locator('#board').evaluate((c) => {
-    const s = c.height / 512;
+    const s = c.width / 288;
     const x0 = Math.floor(68 * s), w = Math.ceil(24 * s);
     const d = c.getContext('2d').getImageData(x0, 0, w, c.height).data;
     let sum = 0, n = 0;
@@ -136,26 +136,6 @@ test('a saved best score shows on load', async ({ page }) => {
   await expect(page.locator('#best')).toHaveText('12');
 });
 
-test('a phone held sideways gets a wide board filling the screen, scores beside it', async ({ page }) => {
-  await page.setViewportSize({ width: 844, height: 390 });
-  await page.reload();
-  const board = await page.locator('#board').boundingBox();
-  const stats = await page.locator('.stats').boundingBox();
-  expect(board.y).toBeGreaterThanOrEqual(0);
-  expect(board.y + board.height).toBeLessThanOrEqual(390);
-  expect(board.height).toBeGreaterThan(300);                 // uses most of the height
-  expect(board.width).toBeGreaterThan(board.height);         // wider than it is high
-  expect(stats.x + stats.width).toBeLessThanOrEqual(board.x); // to the left, not above
-  expect(board.x + board.width).toBeGreaterThan(844 - 40);   // out to the right edge
-  await expectNoSideScroll(page);
-
-  // Still plays: a tap flaps.
-  await page.getByRole('button', { name: 'Start game' }).click();
-  await tap(page.locator('#game'));
-  await page.clock.runFor(150);
-  expect(await birdY(page)).toBeLessThan(200);
-});
-
 // What's on the board, in world units: where the bird's yellow body is, and
 // the left edge of the pipes.
 function scan(page){
@@ -209,7 +189,6 @@ test('crashing into a pipe bounces the bird off it, and it tumbles down beside t
   await expect(page.locator('#ovTitle')).toHaveText('Game over');
   expect(s.bird.bottom).toBeGreaterThan(428);                         // on the ground
   expect(s.bird.right).toBeLessThan(80);                              // a little way back from where it flew
-
 });
 
 test('a reload keeps the round, paused where it was', async ({ page }) => {
@@ -315,24 +294,4 @@ test('flapping, scoring and crashing each have a sound', async ({ page }) => {
 
 test('its sounds are well formed and loud enough', async ({ page }) => {
   expect(await soundProblems(page)).toEqual([]);
-});
-
-test('turning the phone mid-round widens the board and carries on', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.reload();
-  await page.getByRole('button', { name: 'Start game' }).click();
-  await flyThrough(page, 1, () => tap(page.locator('#game')));
-  const narrow = await page.locator('#board').boundingBox();
-  expect(narrow.width).toBeLessThan(narrow.height);
-
-  await page.setViewportSize({ width: 844, height: 390 });
-  await expect.poll(async () => (await page.locator('#board').boundingBox()).width).toBeGreaterThan(500);
-  await expectNoSideScroll(page);
-  // Pipes fill the new space ahead of the bird, and the round goes on.
-  await flyThrough(page, 3, () => tap(page.locator('#game')));
-
-  // And back upright: the narrow board again.
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect.poll(async () => (await page.locator('#board').boundingBox()).width).toBeLessThan(390);
-  await flyThrough(page, 4, () => tap(page.locator('#game')));
 });
