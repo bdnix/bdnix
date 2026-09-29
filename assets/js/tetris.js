@@ -478,6 +478,7 @@
     held_keys = {};
     if (state === 'playing') togglePause();
   });
+  window.bdnixUpright.onTurn(function(){ if (state === 'playing') togglePause(); });
   document.addEventListener('visibilitychange', function(){
     if (document.hidden && state === 'playing') togglePause();
   });

@@ -54,7 +54,7 @@ test('the games play without storage, with sound on', async ({ page }) => {
   await expect(btn(page)).toHaveAttribute('aria-label', 'Unmute sound');
 });
 
-test('on a phone held sideways the top bar still fits beside the board', async ({ page }) => {
+test('in a short, wide window the top bar still fits beside the board', async ({ page }) => {
   await page.setViewportSize({ width: 844, height: 390 });
   for (const url of games) {
     await page.goto(url);

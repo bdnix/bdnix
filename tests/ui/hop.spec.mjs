@@ -221,24 +221,6 @@ test('a saved best score shows on load', async ({ page }) => {
   await expect(page.locator('#best')).toHaveText('31');
 });
 
-test('a phone held sideways shows fewer, bigger rows across a wide board, controls beside it', async ({ page }) => {
-  await page.setViewportSize({ width: 844, height: 390 });
-  await page.reload();
-  const board = await page.locator('#board').boundingBox();
-  const stats = await page.locator('.stats').boundingBox();
-  expect(board.y).toBeGreaterThanOrEqual(0);
-  expect(board.y + board.height).toBeLessThanOrEqual(390);
-  expect(board.height).toBeGreaterThan(300);                 // uses most of the height
-  expect(board.height / 9).toBeGreaterThan(38);              // nine rows, each bigger than 13 would allow
-  expect(board.width).toBeGreaterThan(board.height);         // the lanes run on past the board's edges
-  expect(stats.x + stats.width).toBeLessThanOrEqual(board.x); // to the left, not above
-  await expectNoSideScroll(page);
-
-  await page.getByRole('button', { name: 'Start game' }).click();
-  await tap(page.locator('#game'));
-  await expect(page.locator('#score')).toHaveText('1');
-});
-
 test('a reload keeps the round, paused where it was', async ({ page }) => {
   await start(page);
   const s = await hopTo(page, 3);
@@ -345,25 +327,4 @@ test('falling in the river splashes', async ({ page }) => {
 
 test('its sounds are well formed and loud enough', async ({ page }) => {
   expect(await soundProblems(page)).toEqual([]);
-});
-
-test('turning the phone mid-round keeps the round going', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.reload();
-  await start(page);
-  await hopTo(page, 3);
-  const upright = await page.locator('#board').boundingBox();
-  expect(upright.width).toBeLessThan(upright.height);
-
-  await page.setViewportSize({ width: 844, height: 390 });
-  await expect.poll(async () => (await page.locator('#board').boundingBox()).width).toBeGreaterThan(400);
-  await expectNoSideScroll(page);
-  await expect(page.locator('#score')).toHaveText('3');
-  await hopTo(page, 6);
-  await expect(page.locator('#score')).toHaveText('6');
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect.poll(async () => (await page.locator('#board').boundingBox()).width).toBeLessThan(390);
-  await hopTo(page, 8);
-  await expect(page.locator('#score')).toHaveText('8');
 });

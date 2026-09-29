@@ -75,3 +75,17 @@ body.play{
   .overlay #ovKicker{display:none}
   .touch button{height:52px}
 }
+
+/* Covers the page on a phone held sideways (upright.js): the games only
+   work in portrait mode. */
+.upright{
+  position:fixed;inset:0;z-index:60;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  padding:24px max(24px,env(safe-area-inset-right)) 24px max(24px,env(safe-area-inset-left));
+  text-align:center;
+  background:var(--bg);
+}
+.upright[hidden]{display:none}
+.upright svg{width:56px;height:56px;color:var(--cyan)}
+.upright h2{margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.upright p{margin:0;max-width:36ch;font-size:14px;line-height:1.5;color:var(--muted)}

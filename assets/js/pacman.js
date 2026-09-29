@@ -715,6 +715,7 @@
     if (d) { steer(d); e.preventDefault(); }
   });
   window.addEventListener('blur', function(){ if (state !== 'paused' && state !== 'idle' && state !== 'over') togglePause(); });
+  window.bdnixUpright.onTurn(function(){ if (state !== 'paused' && state !== 'idle' && state !== 'over') togglePause(); });
   document.addEventListener('visibilitychange', function(){
     if (document.hidden && state !== 'paused' && state !== 'idle' && state !== 'over') togglePause();
   });
