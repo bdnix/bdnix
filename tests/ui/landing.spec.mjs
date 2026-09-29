@@ -194,7 +194,7 @@ test('a search already in the box when the page loads is applied', async ({ page
   await expect(page.locator('#search-status')).toHaveText('1 match');
 });
 
-test('the cards fill a wide screen in three columns, and stack on a phone', async ({ page }) => {
+test('the cards fill a laptop in three columns, a wide monitor in four, and stack on a phone', async ({ page }) => {
   const columns = () => page.locator('#games .game-card').evaluateAll((els) => new Set(els.map((e) => e.getBoundingClientRect().left)).size);
   const spare = () => page.evaluate(() => {
     const main = document.querySelector('.hero').getBoundingClientRect();
@@ -208,6 +208,12 @@ test('the cards fill a wide screen in three columns, and stack on a phone', asyn
   // Only the page's side padding is left beside the cards.
   expect(await spare()).toBeLessThanOrEqual(32);
   await expectNoSideScroll(page);
+
+  // A wide monitor gets a wider page with four columns.
+  await page.setViewportSize({ width: 2560, height: 1440 });
+  expect(await columns()).toBe(4);
+  expect(await spare()).toBeLessThanOrEqual(32);
+  expect(await page.locator('.hero').evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(1500);
 
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await columns()).toBe(1);
