@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { openGame, press, tap, listen, heard, soundProblems } from './games.mjs';
 
 // The player starts low in the maze, heading left. Each dot is 10 points and a
@@ -174,4 +174,29 @@ test('eating a ghost or fruit, an extra life and clearing the maze each have a s
 
 test('its sounds are well formed and loud enough', async ({ page }) => {
   expect(await soundProblems(page)).toEqual([]);
+});
+
+test('turning a phone sideways mid-game fits the maze to the height, controls beside it, and play goes on', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => (await page.locator('#board').boundingBox()).width).toBeLessThan(390);
+  await page.clock.runFor(1000);
+  const before = Number(await page.locator('#score').textContent());
+  expect(before).toBeGreaterThan(0);
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(async () => (await page.locator('#board').boundingBox()).height).toBeGreaterThan(330);
+  const board = await page.locator('#board').boundingBox();
+  const stats = await page.locator('.stats').boundingBox();
+  expect(board.y).toBeGreaterThanOrEqual(0);
+  expect(board.y + board.height).toBeLessThanOrEqual(390);   // the whole maze, top to bottom
+  expect(stats.x + stats.width).toBeLessThanOrEqual(board.x); // beside it, not above
+  for (const b of await page.locator('.touch button').all()) {
+    const box = await b.boundingBox();
+    expect(box.y + box.height).toBeLessThanOrEqual(390);
+    expect(box.x + box.width <= board.x || box.x >= board.x + board.width).toBe(true); // not over the board
+  }
+  await expectNoSideScroll(page);
+
+  await page.clock.runFor(1000);                       // still eating its way along
+  expect(Number(await page.locator('#score').textContent())).toBeGreaterThan(before);
 });

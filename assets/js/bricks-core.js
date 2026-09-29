@@ -1,14 +1,15 @@
 // Brick Bounce rules: the walls of bricks, the paddle, the balls bouncing
 // between them, and the powers that fall from some of the bricks. No DOM,
-// so it can be unit tested; bricks.js draws the board and handles input. Positions are in world units on a board W wide and H
-// tall, with x counting right from 0 and y counting down from 0 at the top;
+// so it can be unit tested; bricks.js draws the board and handles input. Positions are in world units on a board H tall and
+// W wide (wider on a phone held sideways: the bricks and the paddle widen with it), with x counting right from 0 and y counting down from 0 at the top;
 // times are in seconds.
 (function(){
   var W = 360, H = 480;
+  var MAX_W = 720;                      // the widest board, on a phone held sideways
   var COLS = 10, ROWS = 8;
   var SIDE = 12;                        // space between the wall of bricks and the sides
   var TOP = 64;                         // where the top row of bricks starts
-  var BW = (W - SIDE * 2) / COLS;       // one brick's slot, gap included
+  var BW = (W - SIDE * 2) / COLS;       // one brick's slot, gap included, on a board W wide
   var BH = 16;
   var GAP = 3;
   var POINTS = [7, 7, 5, 5, 3, 3, 1, 1]; // per row, top to bottom
@@ -101,10 +102,18 @@
     return b;
   }
 
-  // Where brick `i` is drawn: { x, y, w, h }.
-  function brickRect(i){
-    var col = i % COLS, row = Math.floor(i / COLS);
-    return { x: SIDE + col * BW + GAP / 2, y: TOP + row * BH + GAP / 2, w: BW - GAP, h: BH - GAP };
+  // A board `width` units wide, from W to MAX_W.
+  function fitWidth(width){
+    return Math.max(W, Math.min(MAX_W, Math.floor(width) || W));
+  }
+
+  // One brick's slot, gap included, across a board `width` wide (W if omitted).
+  function slot(width){ return ((width || W) - SIDE * 2) / COLS; }
+
+  // Where brick `i` is drawn on a board `width` wide (W if omitted): { x, y, w, h }.
+  function brickRect(i, width){
+    var col = i % COLS, row = Math.floor(i / COLS), bw = slot(width);
+    return { x: SIDE + col * bw + GAP / 2, y: TOP + row * BH + GAP / 2, w: bw - GAP, h: BH - GAP };
   }
 
   // Where each power is hidden in the wall `bricks`: '' for most bricks, a
@@ -119,7 +128,8 @@
     return loot;
   }
 
-  function paddleWidth(w){ return (w.small ? SMALL_W : PADDLE_W) * (w.wide > 0 ? WIDE_GROW : 1); }
+  // The paddle widens with the board, so a wider board is no harder to cover.
+  function paddleWidth(w){ return (w.small ? SMALL_W : PADDLE_W) * (w.wide > 0 ? WIDE_GROW : 1) * w.width / W; }
 
   // How many bricks of the current wall have been broken, and the highest
   // row pair reached: 1 once a brick in the middle-top pair (rows 2 and 3)
@@ -164,14 +174,16 @@
   }
 
   // A new game. `rand` picks where the powers hide and which way each ball
-  // is launched (Math.random if omitted).
-  function create(rand){
+  // is launched (Math.random if omitted); `width` is the board's width (W if
+  // omitted).
+  function create(rand, width){
     var w = {
       rand: rand || Math.random,
+      width: fitWidth(width),
       level: 1,                 // which wall this is, from 1
       bricks: null,
       loot: null,               // the power hidden in each brick, or ''
-      paddle: W / 2,            // the middle of the paddle
+      paddle: fitWidth(width) / 2, // the middle of the paddle
       small: false,
       balls: null,              // { x, y, dx, dy } for each ball in play
       stuck: true,              // the ball sits on the paddle until it's launched
@@ -196,8 +208,21 @@
   function movePaddle(w, x){
     if (w.dead) return;
     var half = paddleWidth(w) / 2;
-    w.paddle = Math.max(half, Math.min(W - half, x));
+    w.paddle = Math.max(half, Math.min(w.width - half, x));
     if (w.stuck) w.balls[0].x = w.paddle;
+  }
+
+  // Makes the board `width` wide mid-game, as when the phone is turned: the
+  // wall widens and everything on the board keeps its place across it.
+  function setWidth(w, width){
+    var k = fitWidth(width) / w.width;
+    if (k === 1) return;
+    w.width = fitWidth(width);
+    w.paddle *= k;
+    w.balls.forEach(function(b){ b.x = Math.max(R, Math.min(w.width - R, b.x * k)); });
+    w.drops.forEach(function(p){ p.x *= k; });
+    w.shots.forEach(function(s){ s.x *= k; });
+    movePaddle(w, w.paddle);
   }
 
   // Launches the ball off the paddle, up and to one side. Returns whether it went.
@@ -213,13 +238,14 @@
   // The brick the ball at (x, y) overlaps, or -1.
   function brickAt(w, x, y){
     // Only the bricks around the ball can be touching it.
-    var c0 = Math.max(0, Math.floor((x - R - SIDE) / BW)), c1 = Math.min(COLS - 1, Math.floor((x + R - SIDE) / BW));
+    var bw = slot(w.width);
+    var c0 = Math.max(0, Math.floor((x - R - SIDE) / bw)), c1 = Math.min(COLS - 1, Math.floor((x + R - SIDE) / bw));
     var r0 = Math.max(0, Math.floor((y - R - TOP) / BH)), r1 = Math.min(ROWS - 1, Math.floor((y + R - TOP) / BH));
     for (var r = r0; r <= r1; r++) {
       for (var c = c0; c <= c1; c++) {
         var i = r * COLS + c;
         if (!w.bricks[i]) continue;
-        var b = brickRect(i);
+        var b = brickRect(i, w.width);
         var nx = Math.max(b.x, Math.min(x, b.x + b.w)), ny = Math.max(b.y, Math.min(y, b.y + b.h));
         if ((x - nx) * (x - nx) + (y - ny) * (y - ny) < R * R) return i;
       }
@@ -229,7 +255,7 @@
 
   // Breaks brick `i`: it scores, and drops the power it hid.
   function breakBrick(w, i, ev){
-    var r = brickRect(i);
+    var r = brickRect(i, w.width);
     w.bricks[i] = 0;
     w.score += POINTS[Math.floor(i / COLS)];
     ev.bricks.push(i);
@@ -245,7 +271,7 @@
     b.x += b.dx * d; b.y += b.dy * d;
 
     if (b.x < R) { b.x = R; b.dx = Math.abs(b.dx); ev.wall = true; }
-    if (b.x > W - R) { b.x = W - R; b.dx = -Math.abs(b.dx); ev.wall = true; }
+    if (b.x > w.width - R) { b.x = w.width - R; b.dx = -Math.abs(b.dx); ev.wall = true; }
     if (b.y < R) {
       b.y = R; b.dy = Math.abs(b.dy); ev.wall = true;
       if (!w.small) { w.small = true; ev.shrink = true; }
@@ -257,7 +283,7 @@
       for (; hit >= 0; hit = brickAt(w, b.x, b.y)) breakBrick(w, hit, ev);
     }
     if (hit >= 0) {
-      var r = brickRect(hit);
+      var r = brickRect(hit, w.width);
       // It bounces off the side it came in through: off the top or bottom
       // when it was level with the brick across, otherwise off an end.
       if (px >= r.x && px <= r.x + r.w) b.dy = py < r.y + r.h / 2 ? -Math.abs(b.dy) : Math.abs(b.dy);
@@ -308,7 +334,7 @@
 
   // The brick a shot's tip at (x, y) is in, or -1.
   function shotHit(w, x, y){
-    var c = Math.floor((x - SIDE) / BW), r = Math.floor((y - TOP) / BH);
+    var c = Math.floor((x - SIDE) / slot(w.width)), r = Math.floor((y - TOP) / BH);
     if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return -1;
     return w.bricks[r * COLS + c] ? r * COLS + c : -1;
   }
@@ -402,13 +428,13 @@
   }
 
   window.bdnixBricks = {
-    W: W, H: H, COLS: COLS, ROWS: ROWS, SIDE: SIDE, TOP: TOP, BW: BW, BH: BH, GAP: GAP, POINTS: POINTS,
+    W: W, H: H, MAX_W: MAX_W, COLS: COLS, ROWS: ROWS, SIDE: SIDE, TOP: TOP, BW: BW, BH: BH, GAP: GAP, POINTS: POINTS,
     PADDLE_Y: PADDLE_Y, PADDLE_H: PADDLE_H, PADDLE_W: PADDLE_W, SMALL_W: SMALL_W, R: R, LIVES: LIVES,
     BASE: BASE, BOOST: BOOST, MAX: MAX, MAX_ANGLE: MAX_ANGLE, SERVE: SERVE,
     KINDS: KINDS, LOOT: LOOT, FIRE_TIME: FIRE_TIME, LASER_TIME: LASER_TIME, WIDE_TIME: WIDE_TIME, WIDE_GROW: WIDE_GROW,
     MAX_BALLS: MAX_BALLS, SPLIT: SPLIT, MIN_DY: MIN_DY, MAX_LIVES: MAX_LIVES, DROP_W: DROP_W, DROP_H: DROP_H,
     DROP_SPEED: DROP_SPEED, SHOT_SPEED: SHOT_SPEED, SHOT_EVERY: SHOT_EVERY, SHOT_H: SHOT_H,
-    SHAPES: SHAPES, create: create, wall: wall, fullWall: fullWall, hideLoot: hideLoot, brickRect: brickRect, paddleWidth: paddleWidth, progress: progress,
+    SHAPES: SHAPES, fitWidth: fitWidth, slot: slot, setWidth: setWidth, create: create, wall: wall, fullWall: fullWall, hideLoot: hideLoot, brickRect: brickRect, paddleWidth: paddleWidth, progress: progress,
     speed: speed, stick: stick, movePaddle: movePaddle, launch: launch, brickAt: brickAt, power: power, advance: advance
   };
 })();
