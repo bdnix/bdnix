@@ -114,7 +114,7 @@ Settings:
 - **Size:** the longest side, 1080, 2048 (default) or 4096 px. The exact size is shown under the settings.
 - **Save as** JPEG (quality 92%) or PNG. The file is `collage.jpg` or `collage.png`.
 
-Photos fill the layout in the order listed under the preview. Tap one photo, in the list or in the preview, then another to swap them; tap it again to cancel. Each photo is cropped from its middle to fill its space, without stretching. The layout chosen for each number of photos is remembered while the page is open.
+Photos fill the layout in the order listed under the preview. Tap one photo, in the list or in the preview, then another to swap them; tap it again to cancel. Each photo is cropped to fill its space, without stretching, from its middle to begin with; drag it in the preview (with a mouse or a finger) to move it within its space and choose which part shows. It stops at the photo's edges, and a photo keeps its place when it's swapped or the layout, shape or size changes. The layout chosen for each number of photos is remembered while the page is open.
 
 The preview draws small copies of the photos, so moving a slider stays quick. The download decodes the photos again one at a time at full size, so nine phone photos aren't all held in memory at once. As with Compress Images, the browser turns phone photos upright and a camera's hidden details (location, camera model, date) aren't carried over. A photo the browser can't open is taken off the list, with a message.
 

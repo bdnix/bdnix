@@ -247,6 +247,65 @@ test('each photo is cropped from its middle to fill its place', async ({ page })
   expect(near(img.colours[1], [220, 40, 40, 255], 4)).toBe(true);
 });
 
+test('dragging a photo in the preview moves it within its place', async ({ page }) => {
+  // A photo with thin blue and green edges on a red middle. In the tall
+  // first place only its middle two thirds show at first.
+  const BLUE = [40, 70, 220, 255], RED = [220, 40, 40, 255], GREEN = [40, 180, 60, 255];
+  const wide = { name: 'wide.png', mimeType: 'image/png', buffer: png(100, 200, (x) => (x < 12 ? BLUE : x < 88 ? RED : GREEN)) };
+  await add(page, [wide, photo(3), photo(4)]);
+  await ready(page);
+  await page.locator('#gap').fill('0');
+  await page.locator('label:has(input[value=png])').click();
+  const canvas = page.locator('#previewCanvas');
+  let box = await canvas.boundingBox();
+  const drag = async (fromX, toX) => {
+    await canvas.scrollIntoViewIfNeeded();
+    box = await canvas.boundingBox();
+    await page.mouse.move(box.x + fromX, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + toX, box.y + box.height / 2, { steps: 5 });
+    await page.mouse.up();
+  };
+
+  let img = await inspect(page, (await download(page)).bytes, [[0.01, 0.5], [0.32, 0.5]]);
+  expect(near(img.colours[0], RED, 4)).toBe(true);
+  expect(near(img.colours[1], RED, 4)).toBe(true);
+
+  // Dragging right shows the left of the photo, as far as its edge.
+  await drag(box.width / 6, box.width / 3 - 2);
+  // A drag isn't a tap: nothing is picked.
+  await expect(page.getByRole('button', { name: 'Photo 1: wide.png' })).toHaveAttribute('aria-pressed', 'false');
+  img = await inspect(page, (await download(page)).bytes, [[0.01, 0.5], [0.32, 0.5], [0.5, 0.5]]);
+  expect(near(img.colours[0], BLUE, 4)).toBe(true);
+  expect(near(img.colours[1], RED, 4)).toBe(true);
+  // The photo beside it didn't move.
+  expect(near(img.colours[2], rgba(3), 4)).toBe(true);
+
+  // Dragging left, past the other edge, shows the right of it.
+  await drag(box.width / 6, 2);
+  await drag(box.width / 6, 2);
+  img = await inspect(page, (await download(page)).bytes, [[0.01, 0.5], [0.32, 0.5]]);
+  expect(near(img.colours[0], RED, 4)).toBe(true);
+  expect(near(img.colours[1], GREEN, 4)).toBe(true);
+
+  // A photo keeps its place when it's swapped into another box.
+  await page.getByRole('button', { name: 'Photo 1: wide.png' }).click();
+  await page.getByRole('button', { name: 'Photo 2: photo 4.png' }).click();
+  img = await inspect(page, (await download(page)).bytes, [[1 / 6, 0.5], [0.37, 0.5], [0.63, 0.5]]);
+  expect(near(img.colours[0], rgba(3), 4)).toBe(true);
+  expect(near(img.colours[1], RED, 4)).toBe(true);
+  expect(near(img.colours[2], GREEN, 4)).toBe(true);
+
+  // Dragging from the spacing moves nothing.
+  await page.locator('#gap').fill('40');
+  await drag(2, box.width / 2);
+  img = await inspect(page, (await download(page)).bytes, [[1 / 6, 0.5], [0.37, 0.5], [0.63, 0.5]]);
+  expect(near(img.colours[0], rgba(3), 4)).toBe(true);
+  expect(near(img.colours[1], RED, 4)).toBe(true);
+  expect(near(img.colours[2], GREEN, 4)).toBe(true);
+  await expect(page.locator('.photo-btn[aria-pressed=true]')).toHaveCount(0);
+});
+
 test('fits a phone screen with 9 photos', async ({ page }) => {
   await add(page, photos(9));
   await ready(page);

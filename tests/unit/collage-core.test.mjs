@@ -101,6 +101,32 @@ test('cover: crops the middle of a photo to the box’s shape', () => {
   assert.deepEqual(plain(C.cover(400, 100, 100, 100)), { sx: 150, sy: 0, sw: 100, sh: 100 });
   assert.deepEqual(plain(C.cover(100, 400, 200, 100)), { sx: 0, sy: 175, sw: 100, sh: 50 });
   assert.deepEqual(plain(C.cover(300, 200, 600, 400)), { sx: 0, sy: 0, sw: 300, sh: 200 });
+  // Or another part of it: the left edge, the bottom, a quarter of the way.
+  assert.deepEqual(plain(C.cover(400, 100, 100, 100, { x: 0, y: 0.5 })), { sx: 0, sy: 0, sw: 100, sh: 100 });
+  assert.deepEqual(plain(C.cover(400, 100, 100, 100, { x: 1, y: 0.5 })), { sx: 300, sy: 0, sw: 100, sh: 100 });
+  assert.deepEqual(plain(C.cover(100, 400, 200, 100, { x: 0.5, y: 1 })), { sx: 0, sy: 350, sw: 100, sh: 50 });
+  assert.deepEqual(plain(C.cover(400, 100, 100, 100, { x: 0.25, y: 0.5 })), { sx: 75, sy: 0, sw: 100, sh: 100 });
+});
+
+test('pan: the photo follows the drag and stops at its edges', () => {
+  const mid = { x: 0.5, y: 0.5 };
+  // A 400 x 100 photo in a 100 x 100 box: 300 px cropped off, drawn at full size.
+  // Dragging right 75 px shows 75 px more of the left.
+  assert.deepEqual(plain(C.pan(mid, 400, 100, 100, 100, 75, 0)), { x: 0.25, y: 0.5 });
+  assert.deepEqual(plain(C.pan(mid, 400, 100, 100, 100, -150, 0)), { x: 1, y: 0.5 });
+  assert.deepEqual(plain(C.pan(mid, 400, 100, 100, 100, 1000, 0)), { x: 0, y: 0.5 });
+  assert.deepEqual(plain(C.pan(mid, 400, 100, 100, 100, -1000, 0)), { x: 1, y: 0.5 });
+  // Drawn at half size: a drag moves it twice as far through the photo.
+  assert.deepEqual(plain(C.pan(mid, 800, 200, 100, 100, 75, 0)), { x: 0.25, y: 0.5 });
+  // Nothing is cropped top or bottom, so it can't move up or down, and
+  // keeps its pos for a box that does crop it.
+  assert.deepEqual(plain(C.pan({ x: 0.5, y: 0.2 }, 400, 100, 100, 100, 0, 40)), { x: 0.5, y: 0.2 });
+  // A tall photo in a wide box moves up and down.
+  assert.deepEqual(plain(C.pan(mid, 100, 400, 200, 100, 0, -50)), { x: 0.5, y: 0.5 + 25 / 350 });
+  const c = C.cover(100, 400, 200, 100, C.pan(mid, 100, 400, 200, 100, 0, -50));
+  assert.ok(close(c.sy, 175 + 25), 'up 50 box px is 25 photo px');
+  // A photo the same shape as its box stays put.
+  assert.deepEqual(plain(C.pan(mid, 300, 200, 600, 400, 50, 50)), mid);
 });
 
 test('hit: which box a point is in', () => {
