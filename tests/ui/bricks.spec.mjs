@@ -253,7 +253,7 @@ test('a saved best score shows on load', async ({ page }) => {
   await expect(page.locator('#best')).toHaveText('640');
 });
 
-test('a phone held sideways gets a wide board, controls beside it', async ({ page }) => {
+test('a phone held sideways fits the whole board on screen, controls beside it', async ({ page }) => {
   await page.setViewportSize({ width: 844, height: 390 });
   await page.reload();
   const board = await page.locator('#board').boundingBox();
@@ -261,7 +261,7 @@ test('a phone held sideways gets a wide board, controls beside it', async ({ pag
   expect(board.y).toBeGreaterThanOrEqual(0);
   expect(board.y + board.height).toBeLessThanOrEqual(390);
   expect(board.height).toBeGreaterThan(300);                 // uses most of the height
-  expect(board.width).toBeGreaterThan(board.height);         // wider than it is high
+  expect(board.width / board.height).toBeCloseTo(0.75, 1);
   expect(stats.x + stats.width).toBeLessThanOrEqual(board.x); // to the left, not above
   await expectNoSideScroll(page);
 
@@ -450,7 +450,7 @@ test('a reload keeps the powers, the balls and everything in flight', async ({ p
   await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
   await expect(page.locator('#lives')).toHaveText('4');
   await page.locator('#startBtn').click();
-  expect(await peek(page)).toEqual({ ...game, width: W }); // exactly as it was, nothing moved
+  expect(await peek(page)).toEqual(game);               // exactly as it was, nothing moved
   await page.clock.runFor(200);
   const s = await peek(page);
   expect(s.fire).toBeLessThan(3.5);
@@ -585,55 +585,4 @@ test('an extra ball draining away just pops, and costs nothing', async ({ page }
   expect(await heard(page)).not.toContain('lose');
   await expect(page.locator('#lives')).toHaveText('2');
   await expect(page.locator('#lives').locator('..')).not.toHaveClass(/hit/);
-});
-
-test('turning the phone mid-game widens the wall and keeps the ball where it was across it', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.reload();
-  await openSaved(page, saved({ balls: [{ x: 90, y: 300, dx: 0.6, dy: 0.8 }], stuck: false, paddle: 270 }));
-  await expect(page.locator('#ovTitle')).toHaveText('Paused');
-  let s = await peek(page);
-  expect(s.width).toBe(W);
-
-  await page.setViewportSize({ width: 844, height: 390 });
-  await expect.poll(async () => (await page.locator('#board').boundingBox()).width).toBeGreaterThan(400);
-  await expectNoSideScroll(page);
-  // Just after a resize the page can take a moment to get key presses, so
-  // this waits for the save to catch up.
-  const wide = () => page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_bricks_save')).data.width);
-  await press(page, 'KeyP', 2);
-  await expect.poll(wide).toBeGreaterThan(W * 1.4);
-  s = await peek(page);
-  const k = s.width / W;
-  expect(s.balls[0].x).toBeCloseTo(90 * k, 6);
-  expect(s.paddle).toBeCloseTo(270 * k, 6);
-  // The wall's bricks are drawn right across the wider board.
-  expect(await inkOn(page, '#board')).toBeTruthy();
-
-  // A game saved on the wide board comes back on it, and turned back
-  // upright, fits the narrow one again.
-  await openSaved(page, s);
-  await expect(page.locator('#ovTitle')).toHaveText('Paused');
-  await press(page, 'KeyP', 2);
-  await expect.poll(wide).toBe(s.width);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect.poll(async () => (await page.locator('#board').boundingBox()).width).toBeLessThan(390);
-  await press(page, 'KeyP', 2);
-  await expect.poll(wide).toBe(W);
-  s = await peek(page);
-  expect(s.balls[0].x).toBeCloseTo(90, 6);
-  await page.locator('#startBtn').click();
-  await page.clock.runFor(500);
-  await expect(page.locator('#overlay')).toBeHidden();
-});
-
-test('a save with a board width that does not make sense is thrown away', async ({ page }) => {
-  for (const width of [100, 5000, 'wide', 400.5]) {
-    await openSaved(page, saved({ width }));
-    await expect(page.locator('#ovTitle')).toHaveText('Brick Bounce');
-    expect(await page.evaluate(() => localStorage.getItem('bdnix_bricks_save'))).toBeNull();
-  }
-  // A ball beyond the side of the board it was saved on.
-  await openSaved(page, saved({ width: 500, balls: [{ x: 600, y: 300, dx: 0, dy: 1 }], stuck: false }));
-  await expect(page.locator('#ovTitle')).toHaveText('Brick Bounce');
 });

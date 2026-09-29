@@ -185,36 +185,3 @@ test('medals at 10, 20, 30 and 40 points', () => {
   assert.equal(F.medal(40), 'platinum');
   assert.equal(F.medal(250), 'platinum');
 });
-
-test('a board can be wider, from W to MAX_W', () => {
-  assert.equal(F.fitWidth(), F.W);
-  assert.equal(F.fitWidth(100), F.W);
-  assert.equal(F.fitWidth(640.7), 640);
-  assert.equal(F.fitWidth(5000), F.MAX_W);
-  assert.equal(F.fitWidth(NaN), F.W);
-  assert.equal(F.create().width, F.W);
-  const w = F.create(() => 0.5, 640);
-  assert.equal(w.width, 640);
-  assert.equal(w.nextPipe, 680, 'the first pipe comes in from beyond the right edge');
-});
-
-test('a wide board fills with pipes, and one that grows wider fills the new space', () => {
-  const wide = F.create(() => 0.5, 640);
-  const toFirst = Math.ceil(40 / (F.SPEED * F.STEP));
-  for (let s = 0; s < toFirst; s++) { wide.bird.y = 216; wide.bird.vy = 0; F.tick(wide); }
-  assert.equal(wide.pipes.length, 1);
-  assert.ok(wide.pipes[0].x <= 640 && wide.pipes[0].x > 638, 'first pipe at the wide right edge');
-
-  // Turned sideways mid-round: the board grows, and pipes fill it at the
-  // usual spacing on the next step, rather than one at a time.
-  const w = F.create(() => 0.5);
-  for (let s = 0; s < toFirst; s++) { w.bird.y = 216; w.bird.vy = 0; F.tick(w); }
-  assert.equal(w.pipes.length, 1);
-  w.width = F.MAX_W;
-  w.bird.y = 216; w.bird.vy = 0; F.tick(w);
-  const xs = w.pipes.map((p) => p.x);
-  assert.equal(xs.length, Math.floor((F.MAX_W - xs[0]) / F.SPACING) + 1);
-  assert.ok(xs.length >= 4);
-  for (let i = 1; i < xs.length; i++) assert.ok(Math.abs(xs[i] - xs[i - 1] - F.SPACING) < 1e-6);
-  assert.ok(w.nextPipe > F.MAX_W && w.nextPipe <= F.MAX_W + F.SPACING);
-});

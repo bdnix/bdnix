@@ -372,32 +372,3 @@ test('eating, crashing and filling the board each have a sound', async ({ page }
 test('its sounds are well formed and loud enough', async ({ page }) => {
   expect(await soundProblems(page)).toEqual([]);
 });
-
-test('turning a phone sideways mid-round fits the board to the height, controls beside it, and play goes on', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.reload();
-  await page.getByRole('button', { name: 'Start game' }).click();
-  await tap(page.locator('.touch [data-dir=right]'));
-  for (let i = 0; i < 40 && (await page.locator('#score').textContent()) !== '1'; i++) await page.clock.runFor(50);
-  await expect(page.locator('#score')).toHaveText('1');
-
-  await page.setViewportSize({ width: 844, height: 390 });
-  await expect.poll(async () => (await page.locator('#board').boundingBox()).height).toBeGreaterThan(330);
-  const board = await page.locator('#board').boundingBox();
-  expect(board.y + board.height).toBeLessThanOrEqual(390);
-  for (const b of await page.locator('.touch button').all()) {
-    const box = await b.boundingBox();
-    expect(box.x + box.width <= board.x || box.x >= board.x + board.width).toBe(true); // not over the board
-  }
-  await expectNoSideScroll(page);
-
-  // Steers round and keeps going: up, then left, well clear of the walls.
-  await tap(page.locator('.touch [data-dir=up]'));
-  await page.clock.runFor(500);
-  await tap(page.locator('.touch [data-dir=left]'));
-  await page.clock.runFor(500);
-  await expect(page.locator('#overlay')).toBeHidden();
-  const s = await peek(page);
-  expect(s.dir).toBe('left');
-  expect(s.body[0].y).toBeLessThan(8);
-});

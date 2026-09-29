@@ -45,8 +45,7 @@
 
   var SCALE = 1;                // CSS pixels per world unit
   var state = 'idle', pausedFrom = null, stateTime = 0;
-  var fieldW = W;               // the board's width: wider on a phone held sideways
-  var world = F.create(null, fieldW), clock = 0;
+  var world = F.create(), clock = 0;
   var fading = [];              // bricks just broken: { i, t }
   var bursts = [];              // balls that fell off the bottom: { x, t, lost }
   var shaken = -1;              // when the board last shook (clock time)
@@ -74,7 +73,7 @@
   // ---------- Game flow ----------
   function setState(s){ state = s; stateTime = 0; }
   function newGame(){
-    world = F.create(null, fieldW);
+    world = F.create();
     fading = [];
     bursts = [];
     setState('ready');
@@ -103,7 +102,7 @@
     if (state === 'dying' && stateTime > DEATH_TIME) gameOver();
     if (state !== 'ready' && state !== 'playing') return;
     var dir = (held.right ? 1 : 0) - (held.left ? 1 : 0);
-    if (dir) F.movePaddle(world, world.paddle + dir * PADDLE_SPEED * world.width / W * dt);
+    if (dir) F.movePaddle(world, world.paddle + dir * PADDLE_SPEED * dt);
     if (state !== 'playing') return;
     var ev = F.advance(world, dt);
     ev.bricks.forEach(function(i){ fading.push({ i: i, t: clock }); });
@@ -193,8 +192,7 @@
     if (w.stuck && w.level === 1 && w.lives === F.LIVES && w.score === 0) return null;
     return {
       level: w.level, bricks: w.bricks, loot: w.loot, paddle: w.paddle, small: w.small, balls: w.balls, stuck: w.stuck,
-      lives: w.lives, score: w.score, drops: w.drops, shots: w.shots, fire: w.fire, laser: w.laser, wide: w.wide, reload: w.reload,
-      width: w.width
+      lives: w.lives, score: w.score, drops: w.drops, shots: w.shots, fire: w.fire, laser: w.laser, wide: w.wide, reload: w.reload
     };
   }
   var persist = window.bdnixSave.keep('bricks', snapshot);
@@ -205,15 +203,13 @@
     var balls = s.balls || (s.ball ? [s.ball] : null);
     var loot = s.loot || (Array.isArray(k) ? k.map(function(){ return ''; }) : null);
     var drops = s.drops || [], shots = s.shots || [];
-    // The board's width when it was saved; games saved before boards could be wider were W.
-    var width = s.width === undefined ? W : s.width;
     var time = function(t, most){ return t === undefined || (num(t) && t >= 0 && t <= most); };
     var ball = function(b){
       return !!b && num(b.x) && num(b.y) && num(b.dx) && num(b.dy) &&
-        b.x >= F.R && b.x <= width - F.R && b.y >= F.R && b.y <= H + F.R &&
+        b.x >= F.R && b.x <= W - F.R && b.y >= F.R && b.y <= H + F.R &&
         Math.abs(b.dx * b.dx + b.dy * b.dy - 1) < 1e-6;
     };
-    var ok = num(width) && width === F.fitWidth(width) && num(s.level) && s.level === Math.floor(s.level) && s.level >= 1 &&
+    var ok = num(s.level) && s.level === Math.floor(s.level) && s.level >= 1 &&
       Array.isArray(k) && k.length === F.ROWS * F.COLS && k.every(function(v){ return v === 0 || v === 1; }) && k.indexOf(1) >= 0 &&
       Array.isArray(loot) && loot.length === k.length && loot.every(function(v, i){ return v === '' || (k[i] === 1 && F.KINDS.indexOf(v) >= 0); }) &&
       typeof s.small === 'boolean' && typeof s.stuck === 'boolean' &&
@@ -221,10 +217,10 @@
       num(s.score) && s.score === Math.floor(s.score) &&
       Array.isArray(balls) && balls.length >= 1 && balls.length <= F.MAX_BALLS && balls.every(ball) && num(s.paddle) &&
       Array.isArray(drops) && drops.length <= F.LOOT.length && drops.every(function(p){
-        return !!p && num(p.x) && num(p.y) && p.x >= 0 && p.x <= width && p.y >= 0 && p.y <= H + F.DROP_H && F.KINDS.indexOf(p.kind) >= 0;
+        return !!p && num(p.x) && num(p.y) && p.x >= 0 && p.x <= W && p.y >= 0 && p.y <= H + F.DROP_H && F.KINDS.indexOf(p.kind) >= 0;
       }) &&
       Array.isArray(shots) && shots.length <= 100 && shots.every(function(p){
-        return !!p && num(p.x) && num(p.y) && p.x >= 0 && p.x <= width && p.y >= 0 && p.y <= F.PADDLE_Y;
+        return !!p && num(p.x) && num(p.y) && p.x >= 0 && p.x <= W && p.y >= 0 && p.y <= F.PADDLE_Y;
       }) &&
       time(s.fire, F.FIRE_TIME) && time(s.laser, F.LASER_TIME) && time(s.wide, F.WIDE_TIME) && time(s.reload, F.SHOT_EVERY);
     if (!ok) return false;
@@ -234,7 +230,7 @@
     if (k.some(function(v, i){ return v && !shape[i]; })) return false;
     shape.forEach(function(v, i){ if (v && !k[i]) points += F.POINTS[Math.floor(i / F.COLS)]; });
     if (s.level === 1 ? s.score !== points : s.score < points) return false;
-    var w = F.create(null, width);
+    var w = F.create();
     w.level = s.level;
     w.bricks = k.slice();
     w.loot = loot.slice();
@@ -255,8 +251,6 @@
       w.drops = drops.map(function(p){ return { x: p.x, y: p.y, kind: p.kind }; });
       w.shots = shots.map(function(p){ return { x: p.x, y: p.y }; });
     }
-    // Fits the board on this screen, which may be held the other way now.
-    F.setWidth(w, fieldW);
     world = w;
     fading = [];
     bursts = [];
@@ -279,8 +273,8 @@
     var padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
     var padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
     var gap = parseFloat(cs.rowGap) || 0;
-    var availW, availH, sideways = landscapeMQ.matches;
-    if (sideways) {
+    var availW, availH;
+    if (landscapeMQ.matches) {
       var bs = getComputedStyle(document.body);
       availH = document.body.clientHeight - parseFloat(bs.paddingTop) - parseFloat(bs.paddingBottom);
       availW = window.innerWidth - 2 * 170;
@@ -292,10 +286,7 @@
       availH = gameEl.clientHeight - padY;
     }
     SCALE = Math.max(0.5, Math.min(1.6, Math.floor(Math.min((availW - 2) / W, (availH - 2) / H) * 100) / 100));
-    // Held sideways, the board widens to fill the screen beside the controls.
-    fieldW = sideways ? F.fitWidth((availW - 2) / SCALE) : W;
-    F.setWidth(world, fieldW);
-    sizeCanvas(board, ctx, Math.round(fieldW * SCALE), Math.round(H * SCALE));
+    sizeCanvas(board, ctx, Math.round(W * SCALE), Math.round(H * SCALE));
     board.parentNode.style.setProperty('--cell', Math.max(16, 24 * SCALE) + 'px');
     render();
   }
@@ -337,13 +328,13 @@
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = '800 30px Inter, system-ui, sans-serif';
       ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(8,10,18,.8)';
-      ctx.strokeText(title, world.width / 2, 290);
+      ctx.strokeText(title, W / 2, 290);
       ctx.fillStyle = '#eef1f8';
-      ctx.fillText(title, world.width / 2, 290);
+      ctx.fillText(title, W / 2, 290);
       ctx.font = '600 13px "JetBrains Mono", monospace';
-      ctx.strokeText(hint, world.width / 2, 322);
+      ctx.strokeText(hint, W / 2, 322);
       ctx.fillStyle = '#c3c9d8';
-      ctx.fillText(hint, world.width / 2, 322);
+      ctx.fillText(hint, W / 2, 322);
     }
   }
 
@@ -358,7 +349,7 @@
     });
   }
   function drawBrick(i, alpha, grow){
-    var r = F.brickRect(i, world.width), row = Math.floor(i / F.COLS);
+    var r = F.brickRect(i), row = Math.floor(i / F.COLS);
     var p = world.bricks[i] && POWERS[world.loot[i]];
     ctx.save();
     ctx.globalAlpha *= alpha;
@@ -478,7 +469,7 @@
     ctx.font = '600 10px "JetBrains Mono", monospace';
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     on.forEach(function(k, i){
-      var x = world.width / 2 + (i - (on.length - 1) / 2) * 56;
+      var x = W / 2 + (i - (on.length - 1) / 2) * 56;
       ctx.fillStyle = ctx.strokeStyle = POWERS[k].color;
       icon(k, x - 8, 466, 10);
       ctx.fillText(String(Math.ceil(world[k])), x + 1, 466.5);
@@ -496,7 +487,7 @@
         g.addColorStop(0, 'rgba(244,63,94,' + (0.55 * (1 - k)) + ')');
         g.addColorStop(1, 'rgba(244,63,94,0)');
         ctx.fillStyle = g;
-        ctx.fillRect(0, H - 140, world.width, 140);
+        ctx.fillRect(0, H - 140, W, 140);
       }
       ctx.globalAlpha *= 1 - k;
       ctx.fillStyle = b.lost ? '#f472b6' : '#eef1f8';

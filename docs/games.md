@@ -2,12 +2,6 @@
 
 All six games work with a keyboard, mouse or touch screen, and at phone size.
 
-On a phone held sideways, the scores and touch buttons move beside the board, and the board fills the height of the screen. The phone can be turned mid-game: the game carries on where it was.
-
-- **Flap** and **Brick Bounce** get a wider board that fills the screen: Flap shows more pipes ahead, and Brick Bounce's wall and paddle widen with it.
-- **Road Hop** shows fewer rows, much bigger, and the lanes run out past both edges of the board, so you see the traffic and logs coming. The chicken can’t go into the shaded strips at the sides.
-- **Falling Blocks**, **Maze Chase** and **Snake** keep their shape (a 10 × 20 well, a fixed maze and a square grid), as tall as the screen allows.
-
 - [Falling Blocks](#falling-blocks)
 - [Maze Chase](#maze-chase)
 - [Flap](#flap)
