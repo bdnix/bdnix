@@ -5,17 +5,19 @@
   var PADDLE_SPEED = 420;       // units a second while a move key or button is held
   var DEATH_TIME = 0.8;         // how long the last ball falls before the score shows
   var FADE = 0.25;              // how long a broken brick takes to fade away
+  var SPARKS = 0.9;             // how long the sparks of a ball falling off the bottom last
+  var SHAKE = 0.45;             // how long the board shakes when a ball is lost
 
   // Bricks, top row pair to bottom, in the site's colours.
   var COLORS = ['#f472b6', '#f472b6', '#a855f7', '#a855f7', '#22d3ee', '#22d3ee', '#facc15', '#facc15'];
-  // Each power's colour, the letter on its capsule and brick, and its name
-  // under the paddle while it lasts.
+  // Each power's colour. Its icon (see icon()) is drawn on its brick, its
+  // capsule and, while it lasts, under the paddle.
   var POWERS = {
-    multi: { color: '#22d3ee', mark: 'M' },
-    fire: { color: '#fb923c', mark: 'F', name: 'Fire' },
-    laser: { color: '#f43f5e', mark: 'L', name: 'Laser' },
-    wide: { color: '#4ade80', mark: 'W', name: 'Wide' },
-    life: { color: '#facc15', mark: '+' }
+    multi: { color: '#22d3ee' },
+    fire: { color: '#fb923c' },
+    laser: { color: '#f43f5e' },
+    wide: { color: '#4ade80' },
+    life: { color: '#facc15' }
   };
   // A few ways to say the game is over; one is picked at random.
   var ENDINGS = ['The last ball slipped by.', 'So close to the bottom row.', 'The wall wins this time.'];
@@ -45,6 +47,8 @@
   var state = 'idle', pausedFrom = null, stateTime = 0;
   var world = F.create(), clock = 0;
   var fading = [];              // bricks just broken: { i, t }
+  var bursts = [];              // balls that fell off the bottom: { x, t, lost }
+  var shaken = -1;              // when the board last shook (clock time)
   var held = { left: 0, right: 0 }; // move keys and buttons held down
   var best = 0;
   var sound = window.bdnixSound;
@@ -57,7 +61,11 @@
     powerup: notes([523, 784, 1047], 0.05, 0.08, 'triangle', 0.35),
     shot: [tone(1400, 700, 0.05, 'square', 0.1)],
     level: notes([659, 784, 988, 1319], 0.08, 0.12, 'square', 0.16),
-    fall: [tone(700, 120, 0.5, 'triangle', 0.4)]
+    // A ball lost: a sinking wah-wah over a thud. An extra ball draining away
+    // is just a pop.
+    lose: [tone(0, 0, 0.3, 'noise', 0.3), tone(150, 50, 0.35, 'triangle', 0.4)].concat(
+      [[440, 415], [370, 349], [311, 294], [262, 196]].map(function(n, i){ return tone(n[0], n[1], i === 3 ? 0.5 : 0.16, 'square', 0.13, 0.12 + i * 0.17); })),
+    drain: [tone(520, 180, 0.18, 'triangle', 0.35)]
   });
 
   try { best = parseInt(localStorage.getItem('bdnix_bricks_best'), 10) || 0; } catch (e) {}
@@ -67,6 +75,7 @@
   function newGame(){
     world = F.create();
     fading = [];
+    bursts = [];
     setState('ready');
     pausedFrom = null;
     overlay.hidden = true;
@@ -89,6 +98,7 @@
     stateTime += dt;
     clock += dt;
     fading = fading.filter(function(f){ return clock - f.t < FADE; });
+    bursts = bursts.filter(function(b){ return clock - b.t < SPARKS; });
     if (state === 'dying' && stateTime > DEATH_TIME) gameOver();
     if (state !== 'ready' && state !== 'playing') return;
     var dir = (held.right ? 1 : 0) - (held.left ? 1 : 0);
@@ -96,6 +106,9 @@
     if (state !== 'playing') return;
     var ev = F.advance(world, dt);
     ev.bricks.forEach(function(i){ fading.push({ i: i, t: clock }); });
+    ev.gone.forEach(function(x){ bursts.push({ x: x, t: clock, lost: ev.lost }); });
+    if (ev.lost) ballLost();
+    else if (ev.gone.length) sound.play('drain');
     if (ev.powers.length) sound.play('powerup');
     else if (ev.bricks.length) sound.play('brick');
     else if (ev.shot) sound.play('shot');
@@ -104,7 +117,18 @@
     if (ev.bricks.length || ev.powers.length || ev.lost || ev.cleared) updateHud();
     if (ev.end) return crash();
     if (ev.cleared) { fading = []; setState('ready'); sound.play('level'); persist(); }
-    else if (ev.lost) { setState('ready'); sound.play('fall'); persist(); }
+    else if (ev.lost) { setState('ready'); persist(); }
+  }
+
+  // Missing the last ball in play: the board shakes, the bottom flashes red,
+  // the ball bursts into sparks where it fell, and the ball count flashes.
+  function ballLost(){
+    shaken = clock;
+    sound.play('lose');
+    var stat = el.lives.parentNode;
+    stat.classList.remove('hit');
+    void stat.offsetWidth;              // so the flash starts over each time
+    stat.classList.add('hit');
   }
 
   // The game ends the moment the last ball is lost: the best score and the
@@ -112,7 +136,6 @@
   // fallen away.
   function crash(){
     setState('dying');
-    sound.play('fall');
     if (world.score > best) {
       best = world.score;
       try { localStorage.setItem('bdnix_bricks_best', best); } catch (e) {}
@@ -201,10 +224,11 @@
       }) &&
       time(s.fire, F.FIRE_TIME) && time(s.laser, F.LASER_TIME) && time(s.wide, F.WIDE_TIME) && time(s.reload, F.SHOT_EVERY);
     if (!ok) return false;
-    // The score counts at least the bricks broken in this wall, and exactly
-    // them on the first wall.
-    var points = 0;
-    k.forEach(function(v, i){ if (!v) points += F.POINTS[Math.floor(i / F.COLS)]; });
+    // The bricks are what's left of this wall's shape, and the score counts
+    // at least the bricks broken from it, exactly them on the first wall.
+    var shape = F.wall(s.level), points = 0;
+    if (k.some(function(v, i){ return v && !shape[i]; })) return false;
+    shape.forEach(function(v, i){ if (v && !k[i]) points += F.POINTS[Math.floor(i / F.COLS)]; });
     if (s.level === 1 ? s.score !== points : s.score < points) return false;
     var w = F.create();
     w.level = s.level;
@@ -229,6 +253,7 @@
     }
     world = w;
     fading = [];
+    bursts = [];
     state = s.stuck ? 'ready' : 'playing'; stateTime = 0;
     togglePause();
     ovText.textContent = 'Picked up where you left off.';
@@ -284,12 +309,16 @@
     ctx.setTransform(dpr * SCALE, 0, 0, dpr * SCALE, 0, 0);
 
     ctx.save();
+    // A lost ball shakes the board, less and less.
+    var k = (clock - shaken) / SHAKE;
+    if (shaken >= 0 && k < 1) ctx.translate(Math.sin(k * 40) * 6 * (1 - k), Math.cos(k * 33) * 3 * (1 - k));
     if (state === 'dying' || state === 'over') ctx.globalAlpha = 1 - 0.55 * Math.min(1, state === 'over' ? 1 : stateTime / DEATH_TIME);
     drawBricks();
     drawShots();
     drawDrops();
     drawPaddle();
     if (state !== 'over') world.balls.forEach(drawBall);
+    drawBursts();
     drawTimers();
     ctx.restore();
 
@@ -309,8 +338,7 @@
     }
   }
 
-  // Each brick with a lighter top edge, and the letter of the power it
-  // hides; broken ones fade and swell away.
+  // Each brick with a lighter top edge; broken ones fade and swell away.
   function drawBricks(){
     for (var i = 0; i < world.bricks.length; i++) {
       if (world.bricks[i]) drawBrick(i, 1, 0);
@@ -322,38 +350,111 @@
   }
   function drawBrick(i, alpha, grow){
     var r = F.brickRect(i), row = Math.floor(i / F.COLS);
+    var p = world.bricks[i] && POWERS[world.loot[i]];
     ctx.save();
     ctx.globalAlpha *= alpha;
     ctx.fillStyle = COLORS[row];
     roundRect(r.x - grow, r.y - grow, r.w + grow * 2, r.h + grow * 2, 3);
+    if (p) {
+      // A power brick glows in its power's colour, pulsing.
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 5 + 4 * pulse(3, i);
+    }
     ctx.fill();
+    ctx.shadowBlur = 0;
     ctx.fillStyle = 'rgba(255,255,255,.28)';
     ctx.fillRect(r.x + 3, r.y + 2, r.w - 6, 2);
-    var p = world.bricks[i] && POWERS[world.loot[i]];
-    if (p) {
-      ctx.fillStyle = 'rgba(8,10,18,.72)';
-      ctx.beginPath(); ctx.arc(r.x + r.w / 2, r.y + r.h / 2, 5.5, 0, Math.PI * 2); ctx.fill();
-      mark(p, r.x + r.w / 2, r.y + r.h / 2);
-    }
+    if (p) powerBrick(i, r, p);
     ctx.restore();
   }
-  function mark(p, x, y){
-    ctx.fillStyle = p.color;
-    ctx.font = '800 8px Inter, system-ui, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(p.mark, x, y + 0.5);
+  // A power brick: a rim in the power's colour, a shine sweeping across it
+  // now and then, and its icon on a dark plate in the middle.
+  function powerBrick(i, r, p){
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = p.color;
+    roundRect(r.x + 0.75, r.y + 0.75, r.w - 1.5, r.h - 1.5, 3);
+    ctx.stroke();
+    ctx.save();
+    ctx.clip();
+    var sweep = ((clock * 0.6 + i * 0.137) % 1.6) - 0.3;   // across, then a rest
+    var sx = r.x + sweep * r.w;
+    ctx.fillStyle = 'rgba(255,255,255,.45)';
+    ctx.beginPath();
+    ctx.moveTo(sx, r.y); ctx.lineTo(sx + 5, r.y); ctx.lineTo(sx - 1, r.y + r.h); ctx.lineTo(sx - 6, r.y + r.h);
+    ctx.fill();
+    ctx.restore();
+    var cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+    ctx.fillStyle = 'rgba(8,10,18,.8)';
+    roundRect(cx - 8, cy - 5, 16, 10, 3);
+    ctx.fill();
+    ctx.fillStyle = ctx.strokeStyle = p.color;
+    icon(world.loot[i], cx, cy, 8);
+  }
+  // 0 to 1 and back, `per` times a second; `seed` sets things apart.
+  function pulse(per, seed){ return 0.5 + 0.5 * Math.sin(clock * per + (seed || 0)); }
+
+  // A power's icon, `s` across, centred on (x, y), in the current fill and
+  // stroke colours: three balls, a flame, a lightning bolt, a double arrow
+  // or a heart.
+  function icon(kind, x, y, s){
+    var h = s / 2;
+    ctx.beginPath();
+    if (kind === 'multi') {
+      [[-0.55, 0.35], [0.55, 0.35], [0, -0.45]].forEach(function(c){
+        ctx.moveTo(x + c[0] * h + s * 0.2, y + c[1] * h);
+        ctx.arc(x + c[0] * h, y + c[1] * h, s * 0.2, 0, Math.PI * 2);
+      });
+      ctx.fill();
+    } else if (kind === 'fire') {
+      ctx.moveTo(x, y - h);
+      ctx.bezierCurveTo(x + h * 0.4, y - h * 0.3, x + h * 1.1, y + h * 0.1, x + h * 0.7, y + h * 0.7);
+      ctx.quadraticCurveTo(x, y + h * 1.2, x - h * 0.7, y + h * 0.7);
+      ctx.bezierCurveTo(x - h, y + h * 0.2, x - h * 0.4, y, x - h * 0.2, y - h * 0.4);
+      ctx.quadraticCurveTo(x - h * 0.1, y - h * 0.1, x, y - h);
+      ctx.fill();
+    } else if (kind === 'laser') {
+      ctx.moveTo(x + h * 0.3, y - h);
+      ctx.lineTo(x - h * 0.6, y + h * 0.15);
+      ctx.lineTo(x - h * 0.05, y + h * 0.15);
+      ctx.lineTo(x - h * 0.3, y + h);
+      ctx.lineTo(x + h * 0.6, y - h * 0.15);
+      ctx.lineTo(x + h * 0.05, y - h * 0.15);
+      ctx.closePath();
+      ctx.fill();
+    } else if (kind === 'wide') {
+      ctx.lineWidth = s * 0.16;
+      ctx.moveTo(x - h * 0.7, y); ctx.lineTo(x + h * 0.7, y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - h * 1.1, y); ctx.lineTo(x - h * 0.45, y - h * 0.55); ctx.lineTo(x - h * 0.45, y + h * 0.55); ctx.closePath();
+      ctx.moveTo(x + h * 1.1, y); ctx.lineTo(x + h * 0.45, y - h * 0.55); ctx.lineTo(x + h * 0.45, y + h * 0.55); ctx.closePath();
+      ctx.fill();
+    } else {
+      // An extra ball: a heart.
+      ctx.moveTo(x, y + h * 0.9);
+      ctx.bezierCurveTo(x - h * 1.3, y, x - h * 0.7, y - h * 1.1, x, y - h * 0.4);
+      ctx.bezierCurveTo(x + h * 0.7, y - h * 1.1, x + h * 1.3, y, x, y + h * 0.9);
+      ctx.fill();
+    }
   }
 
-  // Falling capsules, dark with a rim and letter in the power's colour.
+  // Falling capsules: a glowing pill in the power's colour, bobbing a
+  // little, with its icon in dark.
   function drawDrops(){
-    world.drops.forEach(function(d){
-      var p = POWERS[d.kind];
-      ctx.fillStyle = 'rgba(8,10,18,.85)';
-      roundRect(d.x - F.DROP_W / 2, d.y - F.DROP_H / 2, F.DROP_W, F.DROP_H, F.DROP_H / 2);
+    world.drops.forEach(function(d, n){
+      var p = POWERS[d.kind], grow = 1 + 0.08 * pulse(8, n);
+      var w = F.DROP_W * grow, h = F.DROP_H * grow;
+      ctx.save();
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 10;
+      var g = ctx.createLinearGradient(0, d.y - h / 2, 0, d.y + h / 2);
+      g.addColorStop(0, '#fff'); g.addColorStop(0.45, p.color); g.addColorStop(1, p.color);
+      ctx.fillStyle = g;
+      roundRect(d.x - w / 2, d.y - h / 2, w, h, h / 2);
       ctx.fill();
-      ctx.lineWidth = 2; ctx.strokeStyle = p.color;
-      ctx.stroke();
-      mark(p, d.x, d.y);
+      ctx.restore();
+      ctx.fillStyle = ctx.strokeStyle = '#080a12';
+      icon(d.kind, d.x, d.y + 0.5, 8);
     });
   }
 
@@ -362,14 +463,42 @@
     world.shots.forEach(function(s){ ctx.fillRect(s.x - 1.5, s.y, 3, F.SHOT_H); });
   }
 
-  // How long each power has left, under the paddle.
+  // How long each power has left, under the paddle: its icon and the seconds.
   function drawTimers(){
     var on = ['fire', 'laser', 'wide'].filter(function(k){ return world[k] > 0; });
     ctx.font = '600 10px "JetBrains Mono", monospace';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     on.forEach(function(k, i){
-      ctx.fillStyle = POWERS[k].color;
-      ctx.fillText(POWERS[k].name + ' ' + Math.ceil(world[k]), W / 2 + (i - (on.length - 1) / 2) * 80, 466);
+      var x = W / 2 + (i - (on.length - 1) / 2) * 56;
+      ctx.fillStyle = ctx.strokeStyle = POWERS[k].color;
+      icon(k, x - 8, 466, 10);
+      ctx.fillText(String(Math.ceil(world[k])), x + 1, 466.5);
+    });
+  }
+
+  // A ball that fell off the bottom: sparks flying up from where it went,
+  // and when that lost the ball, a red flash rising from the bottom.
+  function drawBursts(){
+    bursts.forEach(function(b){
+      var t = clock - b.t, k = t / SPARKS;
+      ctx.save();
+      if (b.lost) {
+        var g = ctx.createLinearGradient(0, H, 0, H - 140);
+        g.addColorStop(0, 'rgba(244,63,94,' + (0.55 * (1 - k)) + ')');
+        g.addColorStop(1, 'rgba(244,63,94,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, H - 140, W, 140);
+      }
+      ctx.globalAlpha *= 1 - k;
+      ctx.fillStyle = b.lost ? '#f472b6' : '#eef1f8';
+      var n = b.lost ? 16 : 8, speed = b.lost ? 220 : 140;
+      for (var i = 0; i < n; i++) {
+        var a = Math.PI * (0.1 + 0.8 * i / (n - 1));          // fanned out upwards
+        var v = speed * (0.6 + 0.4 * ((i * 7) % n) / n);
+        var px = b.x + Math.cos(a) * v * t, py = H - Math.sin(a) * v * t + 260 * t * t;
+        ctx.beginPath(); ctx.arc(px, py, b.lost ? 2.4 : 1.8, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
     });
   }
 
@@ -406,7 +535,7 @@
     update(dt);
     // Nothing moves while the overlay is up, so the board isn't redrawn
     // under it (redrawing under its blur is costly on phones).
-    if (state === 'ready' || state === 'playing' || state === 'dying' || fading.length || stale) render();
+    if (state === 'ready' || state === 'playing' || state === 'dying' || fading.length || bursts.length || stale) render();
     stale = false;
     requestAnimationFrame(loop);
   }

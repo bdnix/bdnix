@@ -7,6 +7,7 @@ const F = load('assets/js/bricks-core.js').bdnixBricks;
 // A game with the ball in flight at (x, y), heading along (dx, dy).
 function flying(x, y, dx, dy, extra = {}){
   const w = F.create(() => 0);
+  w.bricks = F.fullWall();               // every brick, unless a test says otherwise
   w.loot = w.loot.map(() => '');         // no powers unless a test hides some
   Object.assign(w, extra);
   w.stuck = false;
@@ -25,10 +26,10 @@ function runUntil(w, done, frames = 2000){
 const center = (i) => { const r = F.brickRect(i); return { x: r.x + r.w / 2, y: r.y + r.h / 2 }; };
 const close = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-9, `${msg}: ${a} is not ${b}`);
 
-test('a new game: a full wall, three balls, the ball waiting on the middle of the paddle', () => {
+test('a new game: the first wall, three balls, the ball waiting on the middle of the paddle', () => {
   const w = F.create(() => 0);
-  assert.equal(w.bricks.length, F.ROWS * F.COLS);
-  assert.ok(w.bricks.every((b) => b === 1));
+  assert.deepEqual(plain(w.bricks), plain(F.wall(1)));
+  assert.equal(w.bricks.filter(Boolean).length, 56, 'a house, not a full wall');
   assert.deepEqual([w.level, w.lives, w.score, w.small, w.stuck, w.dead], [1, 3, 0, false, true, null]);
   assert.deepEqual(plain([w.drops, w.shots, w.fire, w.laser, w.wide, w.reload]), [[], [], 0, 0, 0, 0], 'no powers yet');
   assert.equal(w.paddle, F.W / 2);
@@ -182,21 +183,42 @@ test('clearing the wall puts up a new one, with a full-size paddle and the ball 
   const ev = runUntil(w, (_, e) => e.cleared);
   assert.deepEqual(plain(ev.bricks), [i]);
   assert.deepEqual([w.level, w.score, w.small, w.stuck, w.lives], [2, 320, false, true, 3]);
-  assert.ok(w.bricks.every((b) => b === 1));
+  assert.deepEqual(plain(w.bricks), plain(F.wall(2)), 'the second wall’s shape');
 });
 
-test('the ball speeds up after 4 and 12 bricks, in the upper rows, and on each new wall', () => {
+test('every wall has its own shape, eight rows of ten, and they come round again', () => {
+  assert.ok(F.SHAPES.length >= 5);
+  const seen = new Set();
+  F.SHAPES.forEach((shape, n) => {
+    assert.equal(shape.length, F.ROWS, `wall ${n + 1} rows`);
+    assert.ok(shape.every((row) => row.length === F.COLS && /^[#.]+$/.test(row)), `wall ${n + 1} columns`);
+    const bricks = F.wall(n + 1);
+    assert.equal(bricks.length, F.ROWS * F.COLS);
+    assert.ok(bricks.filter(Boolean).length >= F.LOOT.length * 3, `wall ${n + 1} has room for its powers`);
+    assert.ok(bricks.filter(Boolean).length < F.ROWS * F.COLS, `wall ${n + 1} isn’t just a full wall`);
+    seen.add(bricks.join(''));
+  });
+  assert.equal(seen.size, F.SHAPES.length, 'no two alike');
+  assert.deepEqual(plain(F.wall(F.SHAPES.length + 1)), plain(F.wall(1)));
+  // The first wall's bottom row is whole, so the first shots always find a brick.
+  assert.ok(F.wall(1).slice((F.ROWS - 1) * F.COLS).every(Boolean));
+});
+
+test('the ball speeds up after 10 and 25 bricks, in the upper rows, and on each new wall', () => {
   const w = F.create(() => 0);
   assert.equal(F.speed(w), F.BASE);
   const breakAt = (...idx) => idx.forEach((i) => { w.bricks[i] = 0; });
-  breakAt(70, 71, 72);
+  breakAt(70, 71, 72, 73, 74, 75, 76, 77, 78);
   assert.equal(F.speed(w), F.BASE);
-  breakAt(73);
-  assert.equal(F.speed(w), F.BASE + F.BOOST, 'the 4th brick');
-  breakAt(74, 75, 76, 77, 78, 79, 60, 61);
-  assert.equal(F.speed(w), F.BASE + F.BOOST * 2, 'the 12th brick');
-  breakAt(30);
-  assert.deepEqual(plain(F.progress(w)), { broken: 13, reach: 1 });
+  breakAt(79);
+  assert.equal(F.speed(w), F.BASE + F.BOOST, 'the 10th brick');
+  breakAt(60, 61, 63, 64, 65, 66, 68, 69, 50, 51, 53, 54, 55, 56);
+  assert.equal(F.speed(w), F.BASE + F.BOOST, 'the 24th brick');
+  breakAt(58);
+  assert.equal(F.speed(w), F.BASE + F.BOOST * 2, 'the 25th brick');
+  w.bricks[0] = 0;                                      // not part of this wall: doesn't count
+  breakAt(31);
+  assert.deepEqual(plain(F.progress(w)), { broken: 26, reach: 1 });
   assert.equal(F.speed(w), F.BASE + F.BOOST * 3, 'into the upper rows');
   breakAt(5);
   assert.equal(F.progress(w).reach, 2);
@@ -218,10 +240,11 @@ test('the ball moves at its speed, however the time is split up', () => {
 
 test('brickAt finds the brick under the ball, and only one that is still there', () => {
   const w = F.create(() => 0);
-  const c = center(12);
-  assert.equal(F.brickAt(w, c.x, c.y), 12);
+  const c = center(14);
+  assert.equal(F.brickAt(w, c.x, c.y), 14);
   assert.equal(F.brickAt(w, 180, 300), -1);
-  w.bricks[12] = 0;
+  assert.equal(F.brickAt(w, center(12).x, center(12).y), -1, 'not part of the first wall');
+  w.bricks[14] = 0;
   assert.equal(F.brickAt(w, c.x, c.y), -1);
 });
 
@@ -230,21 +253,27 @@ const only = (...keep) => F.fullWall().map((_, i) => (keep.includes(i) ? 1 : 0))
 const noLoot = () => F.fullWall().map(() => '');
 
 test('each wall hides its powers in different bricks, where the dice say', () => {
-  const low = F.hideLoot(() => 0);
+  const low = F.hideLoot(() => 0, F.fullWall());
   assert.deepEqual(plain(low.slice(0, F.LOOT.length)), plain(F.LOOT), 'the first free brick each time');
   assert.equal(low.filter(Boolean).length, F.LOOT.length);
-  const high = F.hideLoot(() => 0.99999);
+  const high = F.hideLoot(() => 0.99999, F.fullWall());
   assert.deepEqual(plain(high.slice(-F.LOOT.length)), plain(F.LOOT).reverse(), 'the last free brick each time');
-  const cut = F.hideLoot(() => 1);                       // a rand of exactly 1 still lands on a brick
+  const cut = F.hideLoot(() => 1, F.fullWall());         // a rand of exactly 1 still lands on a brick
   assert.equal(cut.filter(Boolean).length, F.LOOT.length);
   assert.equal(cut.length, F.ROWS * F.COLS);
-  assert.deepEqual(plain(F.create(() => 0).loot), plain(low));
+
+  // Only in the wall's bricks: the first wall's first six are 4, 5 and 13 to 16.
+  const house = F.create(() => 0).loot;
+  assert.deepEqual(plain([4, 5, 13, 14, 15, 16].map((i) => house[i])), plain(F.LOOT));
+  assert.equal(house.filter(Boolean).length, F.LOOT.length);
+  const shaped = F.hideLoot(Math.random, F.wall(2));
+  assert.ok(shaped.every((kind, i) => !kind || F.wall(2)[i]), 'never in an empty slot');
 
   // A cleared wall hides a new set.
   const i = (F.ROWS - 1) * F.COLS + 2;
   const w = flying(center(i).x, 300, 0, -1, { bricks: only(i) });
   runUntil(w, (_, e) => e.cleared);
-  assert.deepEqual(plain(w.loot), plain(low));
+  assert.deepEqual(plain(w.loot), plain(F.hideLoot(() => 0, F.wall(2))));
 });
 
 test('a brick with a power drops it; the capsule falls and the paddle catches it', () => {
@@ -313,8 +342,10 @@ test('losing one of several balls plays on; losing the last loses a life and eve
   w.balls.push({ x: 180, y: 200, dx: 0, dy: -1 });
   let ev = runUntil(w, (m) => m.balls.length === 1);
   assert.deepEqual([ev.lost, w.lives, w.stuck], [false, 3, false]);
+  assert.deepEqual(plain(ev.gone), [20], 'where it fell off');
   w.balls[0] = { x: 20, y: 460, dx: 0, dy: 1 };
   ev = runUntil(w, (_, e) => e.lost);
+  assert.deepEqual(plain(ev.gone), [20]);
   assert.deepEqual([w.lives, w.stuck, w.fire, w.laser, w.wide, w.drops.length, w.shots.length], [2, true, 0, 0, 0, 0, 0]);
   assert.equal(w.balls.length, 1);
 });

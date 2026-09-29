@@ -1,6 +1,6 @@
-// Brick Bounce rules: the wall of bricks, the paddle, the balls bouncing
-// between them, and the powers that fall from some of the bricks. No DOM, so it can be unit tested; bricks.js draws the board
-// and handles input. Positions are in world units on a board W wide and H
+// Brick Bounce rules: the walls of bricks, the paddle, the balls bouncing
+// between them, and the powers that fall from some of the bricks. No DOM,
+// so it can be unit tested; bricks.js draws the board and handles input. Positions are in world units on a board W wide and H
 // tall, with x counting right from 0 and y counting down from 0 at the top;
 // times are in seconds.
 (function(){
@@ -14,10 +14,10 @@
   var POINTS = [7, 7, 5, 5, 3, 3, 1, 1]; // per row, top to bottom
   var PADDLE_Y = 440;                   // the paddle's top edge
   var PADDLE_H = 10;
-  var PADDLE_W = 64, SMALL_W = 40;      // the paddle shrinks once the ball reaches the top
+  var PADDLE_W = 80, SMALL_W = 56;      // the paddle shrinks once the ball reaches the top
   var R = 5;                            // the ball's radius
   var LIVES = 3;
-  var BASE = 250, BOOST = 25, MAX = 450; // ball speed in units a second
+  var BASE = 190, BOOST = 20, MAX = 400; // ball speed in units a second
   var MAX_ANGLE = Math.PI / 3;          // off the paddle's very edge, 60° from straight up
   var SERVE = Math.PI / 6;              // a new ball leaves at 30° from straight up
   var SUBSTEP = 3;                      // the ball moves at most this far between checks
@@ -35,7 +35,66 @@
   var DROP_W = 26, DROP_H = 12, DROP_SPEED = 110; // a falling capsule
   var SHOT_SPEED = 520, SHOT_EVERY = 0.4, SHOT_H = 8; // the laser's shots
 
-  // A full wall: 1 where there's a brick, row by row from the top.
+  // The shape of each wall, row by row from the top: # for a brick. The
+  // first is the easiest: its bottom row is whole, so the first shots
+  // always find a brick. After the last they come round again.
+  var SHAPES = [
+    ['....##....',              // a house
+     '...####...',
+     '..######..',
+     '.########.',
+     '##########',
+     '##.####.##',
+     '##.####.##',
+     '##########'],
+    ['..#....#..',              // a space invader
+     '...#..#...',
+     '..######..',
+     '.##.##.##.',
+     '##########',
+     '#.######.#',
+     '#.#....#.#',
+     '...#..#...'],
+    ['.###..###.',              // a heart
+     '##########',
+     '##########',
+     '##########',
+     '.########.',
+     '..######..',
+     '...####...',
+     '....##....'],
+    ['##......##',              // waves
+     '.##....##.',
+     '..##..##..',
+     '...####...',
+     '##......##',
+     '.##....##.',
+     '..##..##..',
+     '...####...'],
+    ['#.#.##.#.#',              // a castle
+     '##########',
+     '##..##..##',
+     '##########',
+     '###....###',
+     '###.##.###',
+     '###.##.###',
+     '##########'],
+    ['#.#.#.#.#.',              // a chessboard
+     '.#.#.#.#.#',
+     '#.#.#.#.#.',
+     '.#.#.#.#.#',
+     '#.#.#.#.#.',
+     '.#.#.#.#.#',
+     '#.#.#.#.#.',
+     '.#.#.#.#.#']
+  ];
+
+  // Wall `level` (from 1): 1 where there's a brick, row by row from the top.
+  function wall(level){
+    return SHAPES[(level - 1) % SHAPES.length].join('').split('').map(function(c){ return c === '#' ? 1 : 0; });
+  }
+
+  // A full wall, every slot a brick.
   function fullWall(){
     var b = [];
     for (var i = 0; i < ROWS * COLS; i++) b.push(1);
@@ -48,11 +107,11 @@
     return { x: SIDE + col * BW + GAP / 2, y: TOP + row * BH + GAP / 2, w: BW - GAP, h: BH - GAP };
   }
 
-  // Where each power is hidden in a new wall: '' for most bricks, a kind for
-  // the few that hold one, picked by `rand`.
-  function hideLoot(rand){
+  // Where each power is hidden in the wall `bricks`: '' for most bricks, a
+  // kind for the few that hold one, picked by `rand`.
+  function hideLoot(rand, bricks){
     var loot = [], free = [];
-    for (var i = 0; i < ROWS * COLS; i++) { loot.push(''); free.push(i); }
+    for (var i = 0; i < ROWS * COLS; i++) { loot.push(''); if (bricks[i]) free.push(i); }
     LOOT.forEach(function(kind){
       var j = Math.min(free.length - 1, Math.floor(rand() * free.length));
       loot[free.splice(j, 1)[0]] = kind;
@@ -66,9 +125,9 @@
   // row pair reached: 1 once a brick in the middle-top pair (rows 2 and 3)
   // is gone, 2 once one in the top pair is.
   function progress(w){
-    var broken = 0, reach = 0;
+    var broken = 0, reach = 0, shape = wall(w.level);
     for (var i = 0; i < w.bricks.length; i++) {
-      if (w.bricks[i]) continue;
+      if (w.bricks[i] || !shape[i]) continue;
       broken++;
       var row = Math.floor(i / COLS);
       if (row < 2) reach = 2; else if (row < 4 && reach < 1) reach = 1;
@@ -76,12 +135,12 @@
     return { broken: broken, reach: reach };
   }
 
-  // The ball picks up speed after the 4th and 12th bricks of a wall, when it
-  // first breaks into the upper rows and again into the top rows, and with
-  // each new wall.
+  // The ball picks up speed after the 10th and 25th bricks of a wall, when
+  // it first breaks into the upper rows and again into the top rows, and
+  // with each new wall.
   function speed(w){
     var p = progress(w);
-    var boosts = (p.broken >= 4 ? 1 : 0) + (p.broken >= 12 ? 1 : 0) + p.reach + (w.level - 1);
+    var boosts = (p.broken >= 10 ? 1 : 0) + (p.broken >= 25 ? 1 : 0) + p.reach + (w.level - 1);
     return Math.min(MAX, BASE + BOOST * boosts);
   }
 
@@ -91,10 +150,10 @@
     w.balls = [{ x: w.paddle, y: PADDLE_Y - R, dx: 0, dy: -1 }];
   }
 
-  // A new wall of bricks, with its powers hidden in it.
+  // The wall for this level, with its powers hidden in it.
   function build(w){
-    w.bricks = fullWall();
-    w.loot = hideLoot(w.rand);
+    w.bricks = wall(w.level);
+    w.loot = hideLoot(w.rand, w.bricks);
   }
 
   // Turns every power off, and takes away falling capsules and shots in flight.
@@ -320,16 +379,21 @@
 
   // Runs the game for `dt` seconds. Returns what happened: the bricks broken
   // (by index), whether a ball bounced off the paddle or a wall, whether the
-  // paddle shrank, the powers caught, whether the laser fired, a ball was
-  // lost, the wall was cleared, and how the game ended, if it did.
+  // paddle shrank, the powers caught, whether the laser fired, where any
+  // balls fell off the bottom, whether that lost a ball (the last one in
+  // play), the wall was cleared, and how the game ended, if it did.
   function advance(w, dt){
-    var ev = { bricks: [], paddle: false, wall: false, shrink: false, powers: [], shot: false, lost: false, cleared: false, end: null };
+    var ev = { bricks: [], paddle: false, wall: false, shrink: false, powers: [], shot: false, gone: [], lost: false, cleared: false, end: null };
     if (w.dead || w.stuck) return ev;
     var dist = speed(w) * dt;
     var n = Math.ceil(dist / SUBSTEP);
     for (var i = 0; i < n; i++) {
       w.balls.forEach(function(b){ move(w, b, dist / n, ev); });
-      w.balls = w.balls.filter(function(b){ return b.y - R <= H; });
+      w.balls = w.balls.filter(function(b){
+        if (b.y - R <= H) return true;
+        ev.gone.push(b.x);                    // where it fell off the board
+        return false;
+      });
       if (settle(w, ev)) return ev;
     }
     stepPowers(w, dt, ev);
@@ -344,7 +408,7 @@
     KINDS: KINDS, LOOT: LOOT, FIRE_TIME: FIRE_TIME, LASER_TIME: LASER_TIME, WIDE_TIME: WIDE_TIME, WIDE_GROW: WIDE_GROW,
     MAX_BALLS: MAX_BALLS, SPLIT: SPLIT, MIN_DY: MIN_DY, MAX_LIVES: MAX_LIVES, DROP_W: DROP_W, DROP_H: DROP_H,
     DROP_SPEED: DROP_SPEED, SHOT_SPEED: SHOT_SPEED, SHOT_EVERY: SHOT_EVERY, SHOT_H: SHOT_H,
-    create: create, fullWall: fullWall, hideLoot: hideLoot, brickRect: brickRect, paddleWidth: paddleWidth, progress: progress,
+    SHAPES: SHAPES, create: create, wall: wall, fullWall: fullWall, hideLoot: hideLoot, brickRect: brickRect, paddleWidth: paddleWidth, progress: progress,
     speed: speed, stick: stick, movePaddle: movePaddle, launch: launch, brickAt: brickAt, power: power, advance: advance
   };
 })();
