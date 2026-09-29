@@ -136,23 +136,26 @@ test('a saved best score shows on load', async ({ page }) => {
   await expect(page.locator('#best')).toHaveText('12');
 });
 
-// What's on the board, in world units: where the bird's yellow body is, and
-// the left edge of the pipes.
+// What's on the left of the board, sampled once per world unit: where the
+// bird's yellow body is, and the left edge of the pipes.
 function scan(page){
   return page.locator('#board').evaluate((c) => {
-    const s = c.height / 512;
-    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-    const bird = { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity, n: 0 };
+    const s = c.width / 288;
+    const d = c.getContext('2d').getImageData(0, 0, Math.ceil(160 * s), c.height).data, row = Math.ceil(160 * s);
+    const bird = { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity };
     let pipeLeft = Infinity;
-    for (let i = 0; i < d.length; i += 4) {
-      const x = (i / 4) % c.width / s, y = Math.floor(i / 4 / c.width) / s;
-      const [r, g, b, a] = [d[i], d[i + 1], d[i + 2], d[i + 3]];
-      if (a > 200 && Math.abs(r - 250) < 12 && Math.abs(g - 204) < 12 && Math.abs(b - 21) < 12) {
-        bird.left = Math.min(bird.left, x); bird.right = Math.max(bird.right, x);
-        bird.top = Math.min(bird.top, y); bird.bottom = Math.max(bird.bottom, y); bird.n++;
+    for (let y = 0; y < 512; y++) {
+      for (let x = 0; x < 160; x++) {
+        const i = (Math.floor(y * s) * row + Math.floor(x * s)) * 4;
+        const [r, g, b, a] = [d[i], d[i + 1], d[i + 2], d[i + 3]];
+        if (a > 200 && Math.abs(r - 250) < 12 && Math.abs(g - 204) < 12 && Math.abs(b - 21) < 12) {
+          bird.left = Math.min(bird.left, x); bird.right = Math.max(bird.right, x);
+          bird.top = Math.min(bird.top, y); bird.bottom = Math.max(bird.bottom, y);
+        }
+        if (a > 200 && r < 40 && g > 90 && b > 100 && y < 420) pipeLeft = Math.min(pipeLeft, x);
       }
-      if (a > 200 && r < 40 && g > 90 && b > 100 && y < 420) pipeLeft = Math.min(pipeLeft, x);
     }
+    bird.y = (bird.top + bird.bottom) / 2;
     return { bird, pipeLeft };
   });
 }
@@ -163,19 +166,18 @@ test('crashing into a pipe bounces the bird off it, and it tumbles down beside t
   await page.getByRole('button', { name: 'Start game' }).click();
   await press(page, 'Space');
   // Keeps the bird below the gaps (64 to 188) until it flies into the bottom pipe.
-  let prev = await birdY(page), before;
+  let prev = 220, before;
   for (let i = 0; i < 400; i++) {
     const s = await scan(page);
-    if (s.bird.left < 68 - 0.5) break;                                 // knocked back from x 80
+    if (s.bird.left < 67) break;                                       // knocked back from x 80
     before = s;
-    const y = await birdY(page);
-    if (y > 320 && y >= prev) await press(page, 'Space');
-    prev = y;
-    await page.clock.runFor(16);
+    if (s.bird.y > 320 && s.bird.y >= prev) await press(page, 'Space');
+    prev = s.bird.y;
+    await page.clock.runFor(32);
   }
   expect(before.bird.right).toBeLessThanOrEqual(before.pipeLeft + 1);
   const hit = await scan(page);
-  expect(hit.bird.left).toBeLessThan(68 - 0.5);
+  expect(hit.bird.left).toBeLessThan(67);
   await expect.poll(async () => (await heard(page)).includes('hit')).toBe(true);
 
   // Frame by frame to game over: never in the pipe, and down to the ground.
