@@ -3,7 +3,8 @@
   position:relative;z-index:1;
   flex:1;
   display:flex;flex-direction:column;justify-content:center;
-  width:100%;max-width:960px;margin:0 auto;
+  /* Grows with wide monitors, up to four columns of cards. */
+  width:100%;max-width:min(1600px,max(1120px,72vw));margin:0 auto;
   padding:40px clamp(16px,4vw,32px) 56px;
 }
 .kicker{margin:0 0 20px;font:400 13px var(--mono);color:var(--faint)}
@@ -30,7 +31,7 @@
 }
 @keyframes blink{50%{opacity:0}}
 
-.search{margin-top:36px;max-width:612px}
+.search{margin-top:36px;max-width:680px}
 .search .label{display:block}
 .search-box{position:relative;margin-top:12px}
 .search-box svg{position:absolute;left:14px;top:50%;width:16px;height:16px;margin-top:-8px;z-index:1;color:var(--faint);pointer-events:none}
@@ -50,7 +51,9 @@
 .games{margin-top:40px}
 .search-empty + .games{margin-top:24px}
 .games[hidden],.game-card[hidden]{display:none}
-.game-cards{display:grid;grid-template-columns:repeat(2,minmax(0,300px));gap:12px;margin-top:12px}
+/* As many columns as fit: four on a wide monitor, three on a laptop, two on
+   a tablet, one on a phone. */
+.game-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px}
 .game-card{
   display:flex;align-items:center;gap:14px;
   padding:14px 16px;text-decoration:none;
@@ -64,15 +67,23 @@
 .gc-text span{font-size:13px;color:var(--muted)}
 .gc-arrow{width:16px;height:16px;color:var(--faint);transition:transform .15s ease,color .2s ease}
 .game-card:hover .gc-arrow{transform:translateX(3px);color:var(--fg)}
-.suggest{margin-top:32px;padding:22px 24px;max-width:612px}
+.suggest{
+  /* Words on the left, buttons on the right; stacked on narrower screens. */
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:32px;
+  margin-top:32px;padding:22px 24px;
+}
 .suggest h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
 .suggest p{margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--muted)}
-.suggest-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.suggest-actions{grid-column:2;grid-row:1/span 3;display:flex;flex-wrap:wrap;gap:10px}
 .suggest .oss{margin-top:16px;font-size:13px;color:var(--faint)}
 .suggest .oss a{color:var(--muted)}
 .suggest .oss a:hover{color:var(--fg)}
 .visit{margin:22px 0 0;font-size:14px;color:var(--faint);min-height:1.4em}
 
+@media (max-width:860px){
+  .suggest{display:block}
+  .suggest-actions{margin-top:16px}
+}
 @media (max-width:560px){
   .game-cards{grid-template-columns:1fr}
   .suggest{padding:20px}
