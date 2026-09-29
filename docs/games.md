@@ -2,6 +2,8 @@
 
 All six games work with a keyboard, mouse or touch screen, and at phone size.
 
+On a phone, the games are played upright. Turning the phone sideways pauses the game and shows a note asking for it to be turned back; the game then waits, paused, for Resume. On a computer, a short, wide window still shows the game, with the scores and buttons beside the board.
+
 - [Falling Blocks](#falling-blocks)
 - [Maze Chase](#maze-chase)
 - [Flap](#flap)

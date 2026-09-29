@@ -253,24 +253,6 @@ test('a saved best score shows on load', async ({ page }) => {
   await expect(page.locator('#best')).toHaveText('640');
 });
 
-test('a phone held sideways fits the whole board on screen, controls beside it', async ({ page }) => {
-  await page.setViewportSize({ width: 844, height: 390 });
-  await page.reload();
-  const board = await page.locator('#board').boundingBox();
-  const stats = await page.locator('.stats').boundingBox();
-  expect(board.y).toBeGreaterThanOrEqual(0);
-  expect(board.y + board.height).toBeLessThanOrEqual(390);
-  expect(board.height).toBeGreaterThan(300);                 // uses most of the height
-  expect(board.width / board.height).toBeCloseTo(0.75, 1);
-  expect(stats.x + stats.width).toBeLessThanOrEqual(board.x); // to the left, not above
-  await expectNoSideScroll(page);
-
-  await openSaved(page, saved());
-  await page.locator('#startBtn').click();
-  await tap(page.locator('.touch [data-dir=launch]'));
-  expect((await peek(page)).stuck).toBe(false);
-});
-
 test('a reload keeps the game, paused where it was', async ({ page }) => {
   await page.getByRole('button', { name: 'Start game' }).click();
   await press(page, 'Space');

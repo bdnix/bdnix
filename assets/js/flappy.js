@@ -328,6 +328,7 @@
     }
   });
   window.addEventListener('blur', function(){ if (state === 'ready' || state === 'playing' || state === 'dying') togglePause(); });
+  window.bdnixUpright.onTurn(function(){ if (state === 'ready' || state === 'playing' || state === 'dying') togglePause(); });
   document.addEventListener('visibilitychange', function(){
     if (document.hidden && (state === 'ready' || state === 'playing' || state === 'dying')) togglePause();
   });
