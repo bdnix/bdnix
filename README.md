@@ -38,7 +38,7 @@ Your display name and best scores are shown on your [profile](https://www.bdnix.
 
 ## Privacy
 
-- **No uploads.** Files are read and processed by your browser. There is no server-side processing, and libraries are served from this site rather than third-party CDNs.
+- **No uploads.** Files are read and processed by your browser. There is no server-side processing, and libraries and fonts are served from this site rather than third-party CDNs.
 - **No accounts.** Your name, scores and saved settings stay in your browser's local storage.
 - **Optional analytics.** The site counts page views with Google Analytics only if you accept the cookie banner. You can change your choice at any time on the profile page.
 
