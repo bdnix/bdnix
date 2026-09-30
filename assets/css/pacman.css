@@ -26,20 +26,19 @@
   .stats{justify-self:stretch;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px 6px}
   .stats div{justify-content:space-between}
   .board-wrap{align-self:center}
-  .touch{grid-template-columns:repeat(4,1fr)}
 }
 
 /* ---- Phones held sideways: controls flank the board ---- */
 @media (orientation:landscape) and (max-height:520px){
   body.play{
     display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr)) auto repeat(2,minmax(0,1fr));
+    grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
     grid-template-rows:auto auto 1fr auto;
     grid-template-areas:
-      "bar   bar   board .    ."
-      "stats stats board .    ."
-      ".     .     board .    ."
-      "b-l   b-r   board b-u  b-d";
+      "bar   board stats"
+      ".     board stats"
+      ".     board ."
+      "dpad  board .";
     gap:8px;
     padding:8px max(16px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
   }
@@ -47,8 +46,5 @@
   .bar{grid-area:bar;padding:0}
   .board-wrap{grid-area:board;align-self:center}
   .stats{grid-template-columns:repeat(2,1fr);gap:8px}
-  .touch [data-dir=left]{grid-area:b-l}
-  .touch [data-dir=right]{grid-area:b-r}
-  .touch [data-dir=up]{grid-area:b-u}
-  .touch [data-dir=down]{grid-area:b-d}
+  .dpad{grid-area:dpad;justify-self:center}
 }

@@ -1,0 +1,81 @@
+/* The on-screen gamepad under the board on phones: a D-pad on the left and
+   round action buttons, each with its name, on the right. Markup:
+     <nav class="touch">
+       <div class="dpad"> <button class="up|left|right|down"> </div>
+       <div class="face"> <button class="a|b"><svg/><span>Name</span></button> </div>
+     </nav>
+   A D-pad on its own sits in the middle; .dpad.row has only left and right. */
+.touch{display:none;--k:50px}
+.touch button{
+  display:flex;align-items:center;justify-content:center;
+  padding:0;color:var(--fg);
+  border:1px solid rgba(255,255,255,.14);
+  background:linear-gradient(180deg,rgba(38,44,72,.95),rgba(20,24,44,.95));
+  touch-action:none;
+}
+.touch svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.touch button:active,.touch button.on{
+  color:#fff;
+  background:linear-gradient(180deg,rgba(168,85,247,.5),rgba(168,85,247,.3));
+  border-color:rgba(168,85,247,.7);
+}
+
+/* D-pad: four arms of one cross around a fixed hub */
+.dpad{
+  display:grid;
+  grid-template-columns:repeat(3,var(--k));
+  grid-template-rows:repeat(3,var(--k));
+  grid-template-areas:". up ." "left hub right" ". down .";
+  filter:drop-shadow(0 8px 14px rgba(0,0,0,.45));
+}
+.dpad::before{
+  content:"";grid-area:hub;
+  background:
+    radial-gradient(circle,rgba(0,0,0,.35) 0 9px,transparent 10px),
+    rgba(26,30,54,.95);
+}
+.dpad .up{grid-area:up;border-bottom:0;border-radius:10px 10px 0 0}
+.dpad .down{grid-area:down;border-top:0;border-radius:0 0 10px 10px}
+.dpad .left{grid-area:left;border-right:0;border-radius:10px 0 0 10px}
+.dpad .right{grid-area:right;border-left:0;border-radius:0 10px 10px 0}
+.dpad.row{grid-template-rows:var(--k);grid-template-areas:"left hub right"}
+
+/* Face buttons: A up on the right, B down on the left, as on a gamepad */
+.face{
+  position:relative;
+  width:148px;height:calc(var(--k) * 3);
+}
+.dpad.row + .face{height:90px}
+.face button{
+  position:absolute;
+  width:64px;height:64px;border-radius:50%;
+  box-shadow:0 8px 16px -4px rgba(0,0,0,.5),inset 0 -3px 0 rgba(0,0,0,.3);
+}
+.face .a{top:4px;right:0}
+.face .b{bottom:20px;left:0}
+.face .a:only-child{top:auto;bottom:20px;right:auto;left:42px}
+.face span{
+  position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);
+  font:600 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);white-space:nowrap;
+}
+.face .a{border-color:rgba(34,211,238,.45)}
+.face .a svg{color:var(--cyan)}
+.face .b{border-color:rgba(244,114,182,.4)}
+.face .b svg{color:var(--pink)}
+.face button:active svg,.face button.on svg{color:#fff}
+
+@media (max-width:700px),(pointer:coarse){
+  .touch{
+    position:relative;z-index:2;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:6px 24px calc(12px + env(safe-area-inset-bottom));
+  }
+  .dpad:only-child{margin:0 auto}
+}
+@media (max-width:360px){
+  .touch{--k:44px;padding-left:16px;padding-right:16px}
+}
+@media (orientation:landscape) and (max-height:520px){
+  .touch{--k:44px}
+}
