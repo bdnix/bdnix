@@ -136,6 +136,63 @@ test('a saved best score shows on load', async ({ page }) => {
   await expect(page.locator('#best')).toHaveText('12');
 });
 
+// What's on the left of the board, sampled once per world unit: where the
+// bird's yellow body is, and the left edge of the pipes.
+function scan(page){
+  return page.locator('#board').evaluate((c) => {
+    const s = c.width / 288;
+    const d = c.getContext('2d').getImageData(0, 0, Math.ceil(160 * s), c.height).data, row = Math.ceil(160 * s);
+    const bird = { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity };
+    let pipeLeft = Infinity;
+    for (let y = 0; y < 512; y++) {
+      for (let x = 0; x < 160; x++) {
+        const i = (Math.floor(y * s) * row + Math.floor(x * s)) * 4;
+        const [r, g, b, a] = [d[i], d[i + 1], d[i + 2], d[i + 3]];
+        if (a > 200 && Math.abs(r - 250) < 12 && Math.abs(g - 204) < 12 && Math.abs(b - 21) < 12) {
+          bird.left = Math.min(bird.left, x); bird.right = Math.max(bird.right, x);
+          bird.top = Math.min(bird.top, y); bird.bottom = Math.max(bird.bottom, y);
+        }
+        if (a > 200 && r < 40 && g > 90 && b > 100 && y < 420) pipeLeft = Math.min(pipeLeft, x);
+      }
+    }
+    bird.y = (bird.top + bird.bottom) / 2;
+    return { bird, pipeLeft };
+  });
+}
+
+test('crashing into a pipe bounces the bird off it, and it tumbles down beside the pipe', async ({ page }) => {
+  await listen(page);
+  await page.reload();
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await press(page, 'Space');
+  // Keeps the bird below the gaps (64 to 188) until it flies into the bottom pipe.
+  let prev = 220, before;
+  for (let i = 0; i < 400; i++) {
+    const s = await scan(page);
+    if (s.bird.left < 67) break;                                       // knocked back from x 80
+    before = s;
+    if (s.bird.y > 320 && s.bird.y >= prev) await press(page, 'Space');
+    prev = s.bird.y;
+    await page.clock.runFor(32);
+  }
+  expect(before.bird.right).toBeLessThanOrEqual(before.pipeLeft + 1);
+  const hit = await scan(page);
+  expect(hit.bird.left).toBeLessThan(67);
+  await expect.poll(async () => (await heard(page)).includes('hit')).toBe(true);
+
+  // Frame by frame to game over: never in the pipe, and down to the ground.
+  const overlay = page.locator('#overlay');
+  let s = hit;
+  for (let i = 0; i < 200 && !(await overlay.isVisible()); i++) {
+    expect(s.bird.right, 'frame ' + i).toBeLessThanOrEqual(s.pipeLeft + 1);
+    await page.clock.runFor(16);
+    s = await scan(page);
+  }
+  await expect(page.locator('#ovTitle')).toHaveText('Game over');
+  expect(s.bird.bottom).toBeGreaterThan(428);                         // on the ground
+  expect(s.bird.right).toBeLessThan(80);                              // a little way back from where it flew
+});
+
 test('a reload keeps the round, paused where it was', async ({ page }) => {
   await page.getByRole('button', { name: 'Start game' }).click();
   await flyThrough(page, 1, () => press(page, 'Space'));
@@ -191,12 +248,29 @@ test('before the first flap there is nothing to keep', async ({ page }) => {
   await expect(page.locator('#ovTitle')).toHaveText('Flap');
 });
 
-test('a save that does not make sense is thrown away', async ({ page }) => {
-  // Written as the page loads, after the game in progress has saved itself.
-  await page.addInitScript(() => localStorage.setItem('bdnix_flappy_save', JSON.stringify({ v: 1, data: { state: 'playing', bird: {} } })));
+test('a round saved before the bird could bounce back still loads', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('bdnix_flappy_save', JSON.stringify({ v: 1, data: {
+    state: 'playing', stateTime: 1, carry: 0, groundTime: 0, wingTime: 1, bird: { y: 300, vy: 0 },
+    pipes: [], nextPipe: 300, score: 2, dead: false, landed: false, distance: 500
+  } })));
   await page.reload();
-  await expect(page.locator('#ovTitle')).toHaveText('Flap');
-  expect(await page.evaluate(() => localStorage.getItem('bdnix_flappy_save'))).toBeNull();
+  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
+  await expect(page.locator('#score')).toHaveText('2');
+  expect(Math.abs(await birdY(page) - 300)).toBeLessThan(1);          // found where birds fly, at x 80
+});
+
+test('a save that does not make sense is thrown away', async ({ page }) => {
+  const round = {
+    state: 'dying', stateTime: 1, carry: 0, groundTime: 0, wingTime: 1, pipes: [],
+    nextPipe: 300, score: 2, dead: true, landed: false, distance: 500
+  };
+  for (const bird of [{}, { x: 'far', y: 300, vx: 0, vy: 0 }, { x: 60, y: 300, vx: null, vy: 0 }]) {
+    // Written as the page loads, after the game in progress has saved itself.
+    await page.addInitScript((data) => localStorage.setItem('bdnix_flappy_save', JSON.stringify({ v: 1, data })), { ...round, bird });
+    await page.reload();
+    await expect(page.locator('#ovTitle')).toHaveText('Flap');
+    expect(await page.evaluate(() => localStorage.getItem('bdnix_flappy_save'))).toBeNull();
+  }
 });
 
 test('flapping, scoring and crashing each have a sound', async ({ page }) => {

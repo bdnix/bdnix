@@ -51,6 +51,8 @@ The maze is the site's own design. A game saved on an earlier maze doesn't fit i
 
 Each pipe passed scores a point. 10, 20, 30 and 40 points earn bronze, silver, gold and platinum medals.
 
+Hitting a pipe (its wider end caps count too) ends the round with a jolt: the board shakes, a burst marks the spot, and the bird bounces back off the pipe, dazed, and tumbles down beside it, or onto the pipe below, never through it.
+
 ## Road Hop
 
 `/road-hop/`

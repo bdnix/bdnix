@@ -30,6 +30,8 @@
   var SCALE = 1;                // CSS pixels per world unit
   var state = 'idle', pausedFrom = null, stateTime = 0;
   var world = F.create(), carry = 0, wingTime = 0, hitFlash = 0, groundTime = 0;
+  var HIT_TIME = 0.4;           // how long the shake and the burst of a crash last
+  var hitTime = 0, tilt = 0;    // time left of the crash effects; the bird's angle
   var best = 0;
   var sound = window.bdnixSound;
   // This game's sounds, beside the ones every game shares (sound.js).
@@ -46,7 +48,7 @@
   function setState(s){ state = s; stateTime = 0; }
   function newGame(){
     world = F.create();
-    carry = 0; hitFlash = 0;
+    carry = 0; hitFlash = 0; hitTime = 0; tilt = 0;
     setState('ready');
     pausedFrom = null;
     overlay.hidden = true;
@@ -70,25 +72,32 @@
     stateTime += dt;
     wingTime += dt;
     hitFlash = Math.max(0, hitFlash - dt);
+    hitTime = Math.max(0, hitTime - dt);
     if (state === 'over') return;
     if (state === 'idle' || state === 'ready') {
       // Hover in place while the ground keeps scrolling.
       world.bird.y = 220 + Math.sin(stateTime * 5) * 6;
       world.distance += F.SPEED * dt;
+      tilt = 0;
       return;
     }
     if (state === 'dying') {
-      // Falls to the ground, then lies there a moment before the score shows.
-      if (!world.landed) carry = F.advance(world, dt, carry).carry;
+      // Tumbles nose first to the ground, or onto a pipe, then lies there a
+      // moment before the score shows.
+      if (!world.landed) {
+        carry = F.advance(world, dt, carry).carry;
+        tilt = Math.min(Math.PI / 2, tilt + dt * 7);
+      }
       else if ((groundTime += dt) > 0.6) gameOver();
       return;
     }
 
     var r = F.advance(world, dt, carry);
     carry = r.carry;
+    tilt = Math.max(-0.45, Math.min(1.35, world.bird.vy / 450));
     for (var i = 0; i < r.events.length; i++) {
       if (r.events[i] === 'score') { updateHud(); sound.play('point'); }
-      if (r.events[i] === 'hit') { hitFlash = 0.18; groundTime = 0; setState('dying'); sound.play('hit'); }
+      if (r.events[i] === 'hit') { hitFlash = 0.18; hitTime = HIT_TIME; groundTime = 0; setState('dying'); sound.play('hit'); }
     }
   }
 
@@ -152,16 +161,19 @@
     var num = window.bdnixSave.num, b = s.bird;
     var ok = (s.state === 'playing' || s.state === 'dying') &&
       !!b && num(b.y) && num(b.vy) &&
+      // Rounds saved before the bird could bounce back have no x or vx.
+      (b.x === undefined || num(b.x)) && (b.vx === undefined || num(b.vx)) &&
       Array.isArray(s.pipes) && s.pipes.every(function(p){ return p && num(p.x) && num(p.top); }) &&
       [s.stateTime, s.carry, s.groundTime, s.wingTime, s.nextPipe, s.score, s.distance].every(num);
     if (!ok) return false;
     world = F.create();
-    world.bird = { y: b.y, vy: b.vy };
+    world.bird = { x: b.x === undefined ? F.BIRD_X : b.x, y: b.y, vx: b.vx || 0, vy: b.vy };
     world.pipes = s.pipes.map(function(p){ return { x: p.x, top: p.top, scored: !!p.scored }; });
     world.nextPipe = s.nextPipe; world.score = s.score; world.distance = s.distance;
     world.dead = !!s.dead; world.landed = !!s.landed;
     carry = s.carry; groundTime = s.groundTime; wingTime = s.wingTime;
     state = s.state; stateTime = s.stateTime;
+    tilt = s.state === 'dying' ? Math.PI / 2 : Math.max(-0.45, Math.min(1.35, b.vy / 450));
     togglePause();
     ovText.textContent = 'Picked up where you left off.';
     updateHud();
@@ -205,10 +217,16 @@
     ctx.clearRect(0, 0, W * SCALE, H * SCALE);
     ctx.setTransform(dpr * SCALE, 0, 0, dpr * SCALE, 0, 0);
 
+    // A crash shakes the world for a moment.
+    var k = hitTime / HIT_TIME;
+    ctx.save();
+    if (k > 0) ctx.translate(Math.sin(hitTime * 90) * 5 * k, Math.cos(hitTime * 70) * 4 * k);
     drawSkyline();
     world.pipes.forEach(drawPipe);
     drawGround();
     drawBird();
+    if (k > 0 && world.impact) drawImpact(world.impact, 1 - k);
+    ctx.restore();
 
     if (state !== 'idle' && state !== 'over' && !(state === 'paused' && pausedFrom === 'ready')) drawScore();
     if (state === 'ready' || (state === 'paused' && pausedFrom === 'ready')) {
@@ -238,13 +256,13 @@
     }
   }
   function drawPipe(p){
-    var lip = 4, capH = 22, bottom = p.top + F.GAP;
+    var lip = F.LIP, capH = F.CAP_H, bottom = p.top + F.GAP;
     var g = ctx.createLinearGradient(p.x, 0, p.x + F.PIPE_W, 0);
     g.addColorStop(0, '#0e7490');
     g.addColorStop(0.45, '#22d3ee');
     g.addColorStop(1, '#155e75');
     ctx.fillStyle = g;
-    ctx.fillRect(p.x, 0, F.PIPE_W, p.top - capH);
+    ctx.fillRect(p.x, -8, F.PIPE_W, p.top - capH + 8);
     ctx.fillRect(p.x, bottom + capH, F.PIPE_W, GROUND - bottom - capH);
     // Caps, a little wider than the pipe
     ctx.fillRect(p.x - lip, p.top - capH, F.PIPE_W + lip * 2, capH);
@@ -255,9 +273,9 @@
   }
   function drawGround(){
     ctx.fillStyle = '#141934';
-    ctx.fillRect(0, GROUND, W, H - GROUND);
+    ctx.fillRect(-8, GROUND, W + 16, H - GROUND + 8);
     ctx.save();
-    ctx.beginPath(); ctx.rect(0, GROUND + 3, W, 14); ctx.clip();
+    ctx.beginPath(); ctx.rect(-8, GROUND + 3, W + 16, 14); ctx.clip();
     ctx.fillStyle = 'rgba(168,85,247,.35)';
     var shift = world.distance % 16;
     for (var x = -16 - shift; x < W + 16; x += 16) {
@@ -267,16 +285,20 @@
     }
     ctx.restore();
     ctx.fillStyle = '#a855f7';
-    ctx.fillRect(0, GROUND, W, 3);
+    ctx.fillRect(-8, GROUND, W + 16, 3);
   }
   function drawBird(){
     var b = world.bird, r = F.BIRD_R;
-    var flying = state !== 'dying' && state !== 'over' && !(state === 'paused' && pausedFrom === 'dying');
-    var angle = state === 'ready' || state === 'idle' || (state === 'paused' && pausedFrom === 'ready') ? 0 :
-      Math.max(-0.45, Math.min(1.35, b.vy / 450));
+    var flying = !world.dead;
     ctx.save();
-    ctx.translate(F.BIRD_X, b.y);
-    ctx.rotate(angle);
+    ctx.translate(b.x, b.y);
+    // Squashed flat against whatever it hit, springing back.
+    var squash = hitTime > HIT_TIME - 0.15 && world.impact ? (hitTime - HIT_TIME + 0.15) / 0.15 * 0.3 : 0;
+    if (squash) {
+      var across = Math.abs(world.impact.nx) > Math.abs(world.impact.ny);
+      ctx.scale(across ? 1 - squash : 1 + squash * 0.7, across ? 1 + squash * 0.7 : 1 - squash);
+    }
+    ctx.rotate(tilt);
     ctx.fillStyle = BIRD_COLOR;
     ctx.shadowColor = 'rgba(250,204,21,.45)'; ctx.shadowBlur = 10;
     ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
@@ -287,10 +309,35 @@
     ctx.beginPath(); ctx.ellipse(-4, 2 + wing * 2, 7, 4 - Math.abs(wing) * 1.5, -0.2, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.beginPath(); ctx.arc(5, -4, 4, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#080a12';
-    ctx.beginPath(); ctx.arc(6.5, -4, 1.8, 0, Math.PI * 2); ctx.fill();
+    if (flying) {
+      ctx.fillStyle = '#080a12';
+      ctx.beginPath(); ctx.arc(6.5, -4, 1.8, 0, Math.PI * 2); ctx.fill();
+    } else {
+      // Dazed: a cross for an eye.
+      ctx.strokeStyle = '#080a12'; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(3.5, -6.5); ctx.lineTo(7.5, -1.5); ctx.moveTo(7.5, -6.5); ctx.lineTo(3.5, -1.5);
+      ctx.stroke();
+    }
     ctx.fillStyle = BEAK_COLOR;
     ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(17, 3); ctx.lineTo(9, 6); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  // A star of short lines around where the bird hit, spreading and fading.
+  // `t` runs from 0 at the moment of the crash to 1.
+  function drawImpact(c, t){
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.strokeStyle = 'rgba(255,255,255,' + (1 - t).toFixed(3) + ')';
+    ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    var inner = 8 + t * 16, outer = 14 + t * 22;
+    ctx.beginPath();
+    for (var i = 0; i < 8; i++) {
+      var a = (i + 0.5) * Math.PI / 4;
+      ctx.moveTo(Math.cos(a) * inner, Math.sin(a) * inner);
+      ctx.lineTo(Math.cos(a) * outer, Math.sin(a) * outer);
+    }
+    ctx.stroke();
     ctx.restore();
   }
   function drawScore(){
