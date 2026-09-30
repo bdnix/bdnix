@@ -309,6 +309,89 @@ test('dragging a photo in the preview moves it within its place', async ({ page 
   await expect(page.locator('.photo-btn[aria-pressed=true]')).toHaveCount(0);
 });
 
+test('zooming a photo in its place, with the slider, the mouse wheel or a pinch', async ({ page }) => {
+  // A blue photo with a red square in its middle. In the tall first place
+  // the top and bottom show blue; zoomed 4x only the red shows.
+  const BLUE = [40, 70, 220, 255], RED = [220, 40, 40, 255];
+  const target = { name: 'target.png', mimeType: 'image/png', buffer: png(100, 100, (x, y) => (x >= 30 && x < 70 && y >= 30 && y < 70 ? RED : BLUE)) };
+  await add(page, [target, photo(3), photo(4)]);
+  await ready(page);
+  await page.locator('#gap').fill('0');
+  await page.locator('label:has(input[value=png])').click();
+  const canvas = page.locator('#previewCanvas');
+  const slider = page.locator('#zoom');
+  const first = page.getByRole('button', { name: 'Photo 1: target.png' });
+  const colours = async () => (await inspect(page, (await download(page)).bytes, [[1 / 6, 0.02], [0.01, 0.98], [0.32, 0.02], [0.5, 0.5]])).colours;
+  const zoomedIn = async () => {
+    const c = await colours();
+    [0, 1, 2].forEach((i) => expect(near(c[i], RED, 4), `corner ${i}`).toBe(true));
+    // The photo beside it isn't zoomed.
+    expect(near(c[3], rgba(3), 4)).toBe(true);
+  };
+  const zoomedOut = async () => expect(near((await colours())[0], BLUE, 4)).toBe(true);
+  // The middle of the first place, in the page.
+  const middle = async () => {
+    await canvas.scrollIntoViewIfNeeded();
+    const box = await canvas.boundingBox();
+    return { x: box.x + box.width / 6, y: box.y + box.height / 2 };
+  };
+
+  // The slider is for the photo picked in the list.
+  await expect(page.locator('#zoomField')).toBeHidden();
+  await first.click();
+  await expect(page.locator('#zoomField')).toBeVisible();
+  await expect(page.locator('#zoomName')).toHaveText('Zoom photo 1');
+  await expect(page.locator('#zoomOut')).toHaveText('100%');
+  await zoomedOut();
+  await slider.fill('400');
+  await expect(page.locator('#zoomOut')).toHaveText('400%');
+  await zoomedIn();
+  await slider.fill('100');
+  await zoomedOut();
+  await first.click();
+  await expect(page.locator('#zoomField')).toBeHidden();
+
+  // The mouse wheel over a photo: up zooms in, as far as 4x, and down
+  // zooms out. The slider follows it.
+  await first.click();
+  let m = await middle();
+  await page.mouse.move(m.x, m.y);
+  for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -500);
+  await expect(page.locator('#zoomOut')).toHaveText('400%');
+  await first.click();
+  await zoomedIn();
+  await first.click();
+  m = await middle();
+  await page.mouse.move(m.x, m.y);
+  for (let i = 0; i < 8; i++) await page.mouse.wheel(0, 500);
+  await expect(page.locator('#zoomOut')).toHaveText('100%');
+  await first.click();
+  await zoomedOut();
+
+  // Two fingers moving apart on the photo zoom it in; it isn't picked.
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (type, points) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points.map(([x, y], id) => ({ x, y, id })) });
+  m = await middle();
+  await touch('touchStart', [[m.x, m.y - 10]]);
+  await touch('touchStart', [[m.x, m.y - 10], [m.x, m.y + 10]]);
+  for (const d of [15, 25, 40]) await touch('touchMove', [[m.x, m.y - d], [m.x, m.y + d]]);
+  // One finger lifts, then the other.
+  await touch('touchEnd', [[m.x, m.y - 40]]);
+  await touch('touchEnd', []);
+  await expect(first).toHaveAttribute('aria-pressed', 'false');
+  await first.click();
+  await expect(page.locator('#zoomOut')).toHaveText('400%');
+  await first.click();
+  await zoomedIn();
+
+  // The zoom goes with the photo when it's swapped.
+  await first.click();
+  await page.getByRole('button', { name: 'Photo 2: photo 4.png' }).click();
+  await page.getByRole('button', { name: 'Photo 2: target.png' }).click();
+  await expect(page.locator('#zoomName')).toHaveText('Zoom photo 2');
+  await expect(page.locator('#zoomOut')).toHaveText('400%');  await expectNoSideScroll(page);
+});
+
 test('fits a phone screen with 9 photos', async ({ page }) => {
   await add(page, photos(9));
   await ready(page);
