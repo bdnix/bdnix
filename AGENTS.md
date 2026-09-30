@@ -31,7 +31,7 @@ Stylesheets:
 - `assets/css/game.css`: the layout every game page uses.
 - `assets/css/page.css`: the one-column layout of the tool pages and the profile page.
 - `assets/css/tool.css`: what every tool page has: the lede, the drop zone, fields, the files area and the action buttons.
-- Components, linked only by the pages that show them: `icon-btn.css` (square icon buttons), `avatar.css` (the visitor's initial), `profile-chip.css` (the name chip in the top bar), `footer.css`, `features.css` (the feature list under a tool's lede), `file.css` (a file's name and details), `editor.css` (a preview beside a settings panel), `settings.css` (a panel of settings), `seg.css` (a two-way switch) and `tracks.css` (a list of files, each with its own download).
+- Components, linked only by the pages that show them: `icon-btn.css` (square icon buttons), `avatar.css` (the visitor's initial), `profile-chip.css` (the name chip in the top bar), `footer.css`, `features.css` (the feature list under a tool's lede), `file.css` (a file's name and details), `editor.css` (a preview beside a settings panel), `settings.css` (a panel of settings), `seg.css` (a two-way switch), `tracks.css` (a list of files, each with its own download) and `gamepad.css` (the on-screen D-pad and action buttons of the games played with buttons on a phone).
 
 Scripts, each exposing one `window.bdnix*` object:
 - `assets/js/blocks.js`: the falling-block backdrop (`window.bdnix`).

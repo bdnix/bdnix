@@ -22,8 +22,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/base.css?v=fecaaa2e57">
   <link rel="stylesheet" href="/assets/css/icon-btn.css?v=20fd350a8d">
-  <link rel="stylesheet" href="/assets/css/game.css?v=d9b4165a15">
-  <link rel="stylesheet" href="/assets/css/pacman.css?v=f2de2ef699">
+  <link rel="stylesheet" href="/assets/css/game.css?v=5d7bc45b69">
+  <link rel="stylesheet" href="/assets/css/gamepad.css?v=69efc55b7b">
+  <link rel="stylesheet" href="/assets/css/pacman.css?v=5521185d68">
   <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
@@ -60,18 +61,20 @@
           <button id="startBtn" class="btn btn-primary">Start game</button>
           <button id="newBtn" class="btn btn-ghost" hidden>New game</button>
         </div>
-        <p class="keys only-keys">Arrow keys or WASD to move · P pause</p>
-        <p class="keys only-touch">Swipe anywhere, or use the buttons below.</p>
+        <p class="keys only-keys"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>P</kbd> pause</p>
+        <p class="keys only-touch">Swipe anywhere, or use the D-pad below.</p>
         <p class="credit">Inspired by Pac-Man, the arcade classic created by Toru Iwatani at Namco in 1980. Pac-Man is a trademark of its owner; bdnix isn’t affiliated with or endorsed by them.</p>
       </div>
     </div>
   </main>
 
   <nav class="touch" aria-label="Game controls">
-    <button data-dir="left" aria-label="Left"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-    <button data-dir="up" aria-label="Up"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button>
-    <button data-dir="down" aria-label="Down"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg></button>
-    <button data-dir="right" aria-label="Right"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+    <div class="dpad">
+      <button class="up" data-dir="up" aria-label="Up"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button>
+      <button class="left" data-dir="left" aria-label="Left"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <button class="right" data-dir="right" aria-label="Right"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+      <button class="down" data-dir="down" aria-label="Down"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg></button>
+    </div>
   </nav>
 
   <script src="/assets/js/blocks.js?v=65771b7dfd"></script>

@@ -36,21 +36,19 @@
     grid-template-columns:repeat(4,1fr);gap:4px;
     padding:8px 6px;
   }
-
-  .touch{grid-template-columns:repeat(6,1fr)}
 }
 
 /* ---- Phones held sideways: controls flank the board ---- */
 @media (orientation:landscape) and (max-height:520px){
   body.play{
     display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr)) auto repeat(3,minmax(0,1fr));
+    grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
     grid-template-rows:auto auto 1fr auto;
     grid-template-areas:
-      "bar   bar   bar   board next  next  next"
-      "stats stats stats board hold  hold  hold"
-      ".     .     .     board .     .     ."
-      "b-l   b-r   b-d   board b-rot b-drp b-hld";
+      "bar   board next"
+      "stats board hold"
+      ".     board ."
+      "dpad  board face";
     gap:8px;
     padding:8px max(16px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
   }
@@ -59,10 +57,6 @@
   .board-wrap{grid-area:board;align-self:center}
   .hold,.next{flex-direction:row;justify-content:space-between;padding:8px 12px}
   .stats{grid-template-columns:repeat(2,1fr);gap:8px}
-  .touch [data-act=left]{grid-area:b-l}
-  .touch [data-act=right]{grid-area:b-r}
-  .touch [data-act=down]{grid-area:b-d}
-  .touch [data-act=rotate]{grid-area:b-rot}
-  .touch [data-act=drop]{grid-area:b-drp}
-  .touch [data-act=hold]{grid-area:b-hld}
+  .dpad{grid-area:dpad;justify-self:center}
+  .face{grid-area:face;justify-self:center}
 }
