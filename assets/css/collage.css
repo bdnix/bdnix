@@ -42,5 +42,8 @@
 .photo .rm:not(:disabled):hover{color:var(--pink)}
 .photos-hint{margin:0;font-size:13px;color:var(--faint)}
 
+/* Zooms the photo picked in the list or the preview */
+.zoom-field input[type=range]{width:100%;accent-color:var(--violet);margin:0}
+
 .settings .actions{margin-top:0}
 .settings .actions .btn{flex:1 1 100%;justify-content:center}
