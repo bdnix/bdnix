@@ -2,13 +2,20 @@
 //   assets/img/og.png               1200×630, shown when a page is shared
 //   assets/img/apple-touch-icon.png 180×180, the icon for a home-screen bookmark
 // Run `npm run og-image` after changing the design below, and commit the PNGs.
-// Needs Google Fonts reachable (Inter), or it falls back to the system font.
+// Uses the site's own fonts from assets/fonts.
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const fonts = '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;800&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">';
+const face = (family, weight, file) => `@font-face{font-family:'${family}';font-weight:${weight};src:url(data:font/woff2;base64,${
+  fs.readFileSync(path.join(root, 'assets/fonts', file)).toString('base64')}) format('woff2')}`;
+const fonts = '<style>' + [
+  face('Inter', 600, 'inter-latin-600-normal.woff2'),
+  face('Inter', 800, 'inter-latin-800-normal.woff2'),
+  face('JetBrains Mono', 400, 'jetbrains-mono-latin-400-normal.woff2')
+].join('') + '</style>';
 
 const og = `<!doctype html><html><head>${fonts}<style>
   html,body{margin:0;width:1200px;height:630px}
@@ -37,8 +44,6 @@ const icon = `<!doctype html><html><head>${fonts}<style>
 const browser = await chromium.launch();
 async function shot(html, width, height, file){
   const page = await browser.newPage({ viewport: { width, height } });
-  // Fetch the fonts from Node rather than Chromium, so a proxy or custom CA set up for Node works too.
-  await page.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, async (route) => route.fulfill({ response: await route.fetch() }));
   await page.setContent(html, { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: path.join(root, file) });

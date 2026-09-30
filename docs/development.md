@@ -81,6 +81,7 @@ A new page needs:
 - The analytics script linked in `<head>` (listed in `tests/ui/analytics.spec.mjs`).
 - A title, description, canonical URL on `https://www.bdnix.com`, Open Graph and Twitter tags, and [schema.org](https://schema.org) structured data (checked by `tests/ui/seo.spec.mjs`).
 - An entry in [sitemap.xml](../sitemap.xml).
+- A `role="img"` and an `aria-label` on every canvas but the backdrop, and a `type` on every button (listed in `tests/ui/a11y.spec.mjs`).
 - A mention in the [README](../README.md) and the relevant guide in this directory.
 
 The share image (`assets/img/og.png`, 1200×630) and `assets/img/apple-touch-icon.png` are drawn by [scripts/og-image.mjs](../scripts/og-image.mjs). To change them, edit the script, run `npm run og-image` and commit the PNGs.
@@ -93,5 +94,7 @@ The share image (`assets/img/og.png`, 1200×630) and `assets/img/apple-touch-ico
 | [@pdf-lib/fontkit](https://github.com/Hopding/fontkit) | 1.1.1 | MIT | Embedding uploaded fonts in watermarks (loaded only when needed) |
 | [PDF.js](https://mozilla.github.io/pdf.js/) (legacy build) | 6.3.289 | Apache 2.0 | Previews, text search and page rendering (loaded once a file is opened) |
 | [lamejs](https://github.com/zhuker/lamejs) | 1.2.1 | LGPL | MP3 encoding, included unmodified as its own file (loaded with the first MP3) |
+| [Inter](https://rsms.me/inter/) (from [Fontsource](https://fontsource.org/)) | 5.3.0 | OFL 1.1 | The site's text, weights 400, 600 and 800 |
+| [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (from Fontsource) | 5.3.0 | OFL 1.1 | Labels and code-style text, weights 400 and 600 |
 
-Each library's licence file sits beside it in [assets/vendor/](../assets/vendor/).
+Each library's licence file sits beside it in [assets/vendor/](../assets/vendor/); the fonts, Latin and Latin Extended subsets as WOFF2, are in [assets/fonts/](../assets/fonts/) with theirs. `base.css` declares them, and every page preloads Inter 400 and 800.
