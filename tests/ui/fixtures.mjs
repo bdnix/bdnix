@@ -1,6 +1,6 @@
 // Every UI test gets a page that fails the test on any uncaught JS error,
-// and that doesn't fetch Google Fonts or Google Analytics (not needed, and
-// keeps tests offline).
+// and that doesn't fetch Google Analytics (not needed, and keeps tests
+// offline).
 // With COVERAGE set, it also records which parts of the site's scripts ran
 // (see tests/coverage/ui.mjs).
 // Every request to the test server says which spec made it, so the UI result
@@ -20,7 +20,6 @@ export const test = base.extend({
   page: async ({ page }, use, testInfo) => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
-    await page.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, (route) => route.abort());
     await page.route(/^https:\/\/([\w-]+\.)*(googletagmanager|google-analytics)\.com\//, (route) => route.abort());
     if (coverage.enabled) await page.coverage.startJSCoverage({ resetOnNavigation: false });
     await use(page);

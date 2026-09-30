@@ -44,7 +44,7 @@ Scripts, each exposing one `window.bdnix*` object:
 - `assets/js/upright.js`: games are played with the phone upright (`window.bdnixUpright`). On a phone turned sideways it covers the page with a note asking for it to be turned back, and calls what each game passed to `bdnixUpright.onTurn()`, so the game pauses. Screens with a mouse are never covered, however short the window. Its styles are in `game.css`.
 - `assets/js/sound.js`: the sound engine for the games (`window.bdnixSound`), made with the Web Audio API from short recipes, so there are no audio files. It has only the sounds every game plays (`start`, `over` and `best`); each game adds its own with `bdnixSound.add({ name: [tones] })`, made with `bdnixSound.tone()` and `bdnixSound.notes()`. `bdnixSound.play('<name>')` plays one unless sound is muted. It also runs the mute button (`#soundBtn` in a game's top bar, beside pause) and the M key.
 
-Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit, lamejs), each with its licence file.
+Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit, lamejs), each with its licence file. The fonts (Inter and JetBrains Mono) are self-hosted in `assets/fonts/` and declared in `base.css`; never link a font service, since a page must contact nothing but bdnix.com until the visitor accepts analytics.
 
 ## Every change ends in a pull request with green CI
 
