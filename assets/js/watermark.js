@@ -178,6 +178,7 @@
   // pdf-lib places glyphs one after another without shaping, which is fine
   // for Latin, Greek, Cyrillic and CJK but garbles scripts like Bangla or
   // Arabic. Text with anything outside these ranges goes through the canvas.
+  // eslint-disable-next-line no-control-regex -- the range starts at U+0000 on purpose
   var NO_SHAPING = /^[\u0000-\u052F\u1E00-\u1FFF\u2000-\u206F\u20A0-\u20CF\u2100-\u214F\u3000-\u9FFF\uAC00-\uD7AF\uFF00-\uFFEF]*$/;
   function rotationOf(page){
     return ((page.getRotation().angle % 360) + 360) % 360;
