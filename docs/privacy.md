@@ -4,7 +4,7 @@ bdnix has no server-side application and no accounts. Everything the site keeps 
 
 ## Files opened in the tools
 
-Files are read and processed by the browser. They are never uploaded or sent anywhere, and neither is anything typed into a tool. Third-party libraries (pdf-lib, PDF.js, fontkit, lamejs) are served from this site, not from a CDN.
+Files are read and processed by the browser. They are never uploaded or sent anywhere, and neither is anything typed into a tool. Third-party libraries (pdf-lib, PDF.js, fontkit, lamejs) and the fonts (Inter and JetBrains Mono) are served from this site, not from a CDN or a font service, so until a visitor accepts analytics a page contacts nothing but bdnix.com (checked by `tests/ui/analytics.spec.mjs`).
 
 ## Content security policy
 

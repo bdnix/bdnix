@@ -1,7 +1,6 @@
 // Every UI test gets a page that fails the test on any uncaught JS error or
-// anything the content security policy blocks,
-// and that doesn't fetch Google Fonts or Google Analytics (not needed, and
-// keeps tests offline).
+// anything the content security policy blocks, and that doesn't fetch Google
+// Analytics (not needed, and keeps tests offline).
 // With COVERAGE set, it also records which parts of the site's scripts ran
 // (see tests/coverage/ui.mjs).
 // Every request to the test server says which spec made it, so the UI result
@@ -26,7 +25,6 @@ export const test = base.extend({
     const blocked = [];
     violations.set(page, blocked);
     page.on('console', (m) => { if (m.type() === 'error' && /Content Security Policy/.test(m.text())) blocked.push(m.text()); });
-    await page.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, (route) => route.abort());
     await page.route(/^https:\/\/([\w-]+\.)*(googletagmanager|google-analytics)\.com\//, (route) => route.abort());
     if (coverage.enabled) await page.coverage.startJSCoverage({ resetOnNavigation: false });
     await use(page);

@@ -24,14 +24,13 @@ export function schema(p){
 }
 
 // What a page may load, and from where. Everything is the site's own except
-// Google Analytics (only after the visitor accepts) and, for now, Google
-// Fonts. PDF.js decodes some images with WebAssembly; downloads, previews and
+// Google Analytics (only after the visitor accepts). PDF.js decodes some images with WebAssembly; downloads, previews and
 // decoded media are blob: and data: URLs. No inline scripts or styles.
 export const CSP = [
   "default-src 'self'",
   "script-src 'self' 'wasm-unsafe-eval' https://www.googletagmanager.com",
-  "style-src 'self' https://fonts.googleapis.com",
-  "font-src 'self' data: https://fonts.gstatic.com",
+  "style-src 'self'",
+  "font-src 'self' data:",
   "img-src 'self' data: blob: https://*.google-analytics.com https://*.googletagmanager.com",
   "connect-src 'self' data: blob: https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
   "media-src 'self' data: blob:",
