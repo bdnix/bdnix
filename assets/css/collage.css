@@ -1,5 +1,6 @@
 /* Photo collage (photo-collage): the layout picker and the photo list. The preview-and-settings editor lives in tool.css. */
-.preview-stage canvas{max-height:70vh;width:auto;cursor:pointer}
+/* Drag a photo in the preview to move it within its box; touch-action keeps the page from scrolling instead */
+.preview-stage canvas{max-height:70vh;width:auto;cursor:grab;touch-action:none}
 
 /* Layouts, each drawn as a small icon */
 .layout-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px}
