@@ -76,8 +76,10 @@ test('trademarked names of the games that inspired ours appear only in their cre
   const names = /tetris|pac-?man|flappy|crossy|blockade|breakout/i;
   const credit = /<p class="credit">[^<]*<\/p>/g;
   for (const url of pages) {
-    // Asset paths such as /assets/js/tetris.js are internal, so leave them out.
-    const html = (await (await request.get(url)).text()).replace(/\/assets\/[\w./-]+/g, '');
+    // Asset paths such as /assets/js/tetris.js and storage keys such as
+    // bdnix_tetris_best (on the profile page's score rows) are internal, so
+    // leave them out.
+    const html = (await (await request.get(url)).text()).replace(/\/assets\/[\w./-]+/g, '').replace(/\bbdnix_[a-z]+_best\b/g, '');
     expect(html.replace(credit, ''), url).not.toMatch(names);
     await page.goto(url);
     const text = await page.locator('body').evaluate((b) => {
