@@ -1,4 +1,4 @@
-/* Fit to Frame (fit-to-frame): size and colour settings, the preview's size line and the thumbnails in the file list. Page layout, the editor and the file list live in tool.css. */
+/* Resize Without Cropping (fit-to-frame): size and colour settings, the preview's size line and the thumbnails in the file list. Page layout, the editor and the file list live in tool.css. */
 .files .editor{margin:0 0 16px}
 .files .editor .settings{margin-bottom:0}
 

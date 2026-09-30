@@ -37,7 +37,7 @@ test('matches: every word starts a word of the text', () => {
   assert.equal(S.matches(merge, 'me'), true);
   assert.equal(S.matches(merge, 'erge'), false);
   assert.equal(S.matches(merge, 'merge photo'), false);
-  assert.equal(S.matches('Fit to Frame Add space to fit any shape', 'ape'), false);
+  assert.equal(S.matches('Resize Without Cropping Add space to fit any shape', 'ape'), false);
   assert.equal(S.matches('Compress Images', 'comp im'), true);
   assert.equal(S.matches('MP4 to MP3', 'mp3'), true);
   assert.equal(S.matches('Café', 'cafe'), true);

@@ -21,7 +21,7 @@ The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub 
 | MP4 to MP3 `/mp4-to-mp3/` | `mp4-to-mp3/index.html`, `assets/css/audio.css`, `assets/js/audio.js`, `assets/js/audio-core.js` |
 | Compress Images `/compress-image/` | `compress-image/index.html`, `assets/css/image.css`, `assets/js/image.js`, `assets/js/image-core.js` |
 | Photo Collage `/photo-collage/` | `photo-collage/index.html`, `assets/css/collage.css`, `assets/js/collage.js`, `assets/js/collage-core.js` |
-| Fit to Frame `/fit-to-frame/` | `fit-to-frame/index.html`, `assets/css/frame.css`, `assets/js/frame.js`, `assets/js/frame-core.js` |
+| Resize Without Cropping `/fit-to-frame/` | `fit-to-frame/index.html`, `assets/css/frame.css`, `assets/js/frame.js`, `assets/js/frame-core.js` |
 | Profile `/profile/` | `profile/index.html`, `assets/css/profile.css`, `assets/js/profile-page.js` |
 
 Shared files hold only what is truly common (see [Keep apps modular](#keep-apps-modular)). Each is one concern, and a page links only the ones it uses.

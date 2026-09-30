@@ -12,7 +12,7 @@ test('shows the games and tools, with no under-construction wording', async ({ p
   expect(links).toEqual([
     ['Falling Blocks', '/falling-blocks/'], ['Maze Chase', '/maze-chase/'], ['Flap', '/flap/'], ['Road Hop', '/road-hop/'], ['Snake', '/snake/'], ['Brick Bounce', '/brick-bounce/'],
     ['Merge PDFs', '/merge-pdf/'], ['Watermark a PDF', '/watermark-pdf/'], ['Redact a PDF', '/redact-pdf/'], ['MP4 to MP3', '/mp4-to-mp3/'],
-    ['Compress Images', '/compress-image/'], ['Photo Collage', '/photo-collage/'], ['Fit to Frame', '/fit-to-frame/']
+    ['Compress Images', '/compress-image/'], ['Photo Collage', '/photo-collage/'], ['Resize Without Cropping', '/fit-to-frame/']
   ]);
   await expectNoSideScroll(page);
 });
@@ -126,7 +126,7 @@ test('the search box filters the games and tools as you type', async ({ page }) 
   await expect(tools).toBeHidden();
 
   await search.fill('Photo');
-  expect(await shown()).toEqual(['Compress Images', 'Photo Collage', 'Fit to Frame']);
+  expect(await shown()).toEqual(['Compress Images', 'Photo Collage', 'Resize Without Cropping']);
 
   await search.fill('game');
   expect(await shown()).toEqual(['Falling Blocks', 'Maze Chase', 'Flap', 'Road Hop', 'Snake', 'Brick Bounce']);
@@ -135,7 +135,7 @@ test('the search box filters the games and tools as you type', async ({ page }) 
   await search.fill('games');
   expect(await shown()).toEqual(['Falling Blocks', 'Maze Chase', 'Flap', 'Road Hop', 'Snake', 'Brick Bounce']);
   await search.fill('photos');
-  expect(await shown()).toEqual(['Compress Images', 'Photo Collage', 'Fit to Frame']);
+  expect(await shown()).toEqual(['Compress Images', 'Photo Collage', 'Resize Without Cropping']);
 
   // Every word has to match.
   await search.fill('photo grid');
