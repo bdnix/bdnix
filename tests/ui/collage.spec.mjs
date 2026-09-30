@@ -53,7 +53,7 @@ test('puts 3 photos side by side in a square JPEG', async ({ page }) => {
   await add(page, photos(3));
   await ready(page);
   await expect(page.locator('#summary')).toHaveText('3 photos');
-  await expect(page.locator('.layout-opt input')).toHaveCount(4);
+  await expect(page.locator('.layout-opt input')).toHaveCount(7);
   await expect(page.getByRole('radio', { name: 'Side by side' })).toBeChecked();
   await expect(page.locator('#gapOut')).toHaveText('25 px');
   await expect(page.locator('#radiusOut')).toHaveText('Square');
@@ -78,7 +78,7 @@ test('puts 3 photos side by side in a square JPEG', async ({ page }) => {
 test('9 photos in the feature layout, as a story-shaped PNG on black', async ({ page }) => {
   await add(page, photos(9));
   await ready(page);
-  await expect(page.locator('.layout-opt input')).toHaveCount(4);
+  await expect(page.locator('.layout-opt input')).toHaveCount(10);
   await expect(page.getByRole('radio', { name: 'Grid' })).toBeChecked();
   await page.getByRole('radio', { name: 'Feature' }).check({ force: true });
   await page.locator('#shape').selectOption('story');
@@ -98,21 +98,24 @@ test('9 photos in the feature layout, as a story-shaped PNG on black', async ({ 
   img.colours.forEach((c, i) => expect(near(c, rgba(i), 4), `photo ${i + 1}`).toBe(true));
 });
 
-test('every layout puts each photo in its own place', async ({ page }) => {
-  for (const count of [3, 6, 9]) {
-    if (count > 3) await page.locator('#clearBtn').click();
+// One test per number of photos, each saving a small PNG per layout, so
+// the many layouts fit in a test's time.
+for (const count of [3, 6, 9]) {
+  test(`every layout for ${count} photos puts each photo in its own place`, async ({ page }) => {
     await add(page, photos(count));
     await ready(page);
+    await page.locator('#longest').selectOption('1080');
     await page.locator('label:has(input[value=png])').click();
     const ids = await page.locator('.layout-opt input').evaluateAll((els) => els.map((e) => e.value));
+    expect(ids.length).toBeGreaterThanOrEqual(7);
     for (const id of ids) {
       await page.locator(`.layout-opt input[value="${id}"]`).check({ force: true });
       const out = await download(page);
       const img = await inspect(page, out.bytes, middles(await cellsOf(page, count, id)));
       img.colours.forEach((c, i) => expect(near(c, rgba(i), 4), `${count} ${id}: photo ${i + 1}`).toBe(true));
     }
-  }
-});
+  });
+}
 
 test('tapping two photos swaps them, in the list or the preview', async ({ page }) => {
   await add(page, photos(3));
@@ -162,7 +165,7 @@ test('says how many photos to add or remove, and only makes 3, 6 or 9', async ({
   await page.getByRole('button', { name: 'Remove photo 2.png' }).click();
   await ready(page);
   await expect(note).toBeHidden();
-  await expect(page.locator('.layout-opt input')).toHaveCount(4);
+  await expect(page.locator('.layout-opt input')).toHaveCount(7);
   await expect(page.locator('.photo-btn')).toHaveText(['1', '2', '3']);
 
   // A collage holds 9 at most; the rest are left out.
@@ -197,7 +200,7 @@ test('skips files that aren’t images and photos the browser can’t open', asy
 test('spacing, rounded corners and the chosen layout for each count', async ({ page }) => {
   await add(page, photos(6));
   await ready(page);
-  await page.getByRole('radio', { name: 'Steps' }).check({ force: true });
+  await page.getByRole('radio', { name: 'Steps', exact: true }).check({ force: true });
   await page.locator('#longest').selectOption('1080');
   await page.locator('#gap').fill('40');
   await page.locator('#radius').fill('60');
@@ -230,7 +233,7 @@ test('spacing, rounded corners and the chosen layout for each count', async ({ p
   await expect(page.getByRole('radio', { name: 'Side by side' })).toBeChecked();
   await add(page, [photo(3), photo(4), photo(5)]);
   await ready(page);
-  await expect(page.getByRole('radio', { name: 'Steps' })).toBeChecked();
+  await expect(page.getByRole('radio', { name: 'Steps', exact: true })).toBeChecked();
 });
 
 test('each photo is cropped from its middle to fill its place', async ({ page }) => {

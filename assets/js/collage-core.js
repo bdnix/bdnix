@@ -21,28 +21,49 @@
     return rows(counts).map(function(c){ return [c[1], c[0], c[3], c[2]]; });
   }
 
+  // Cells laid out in the whole collage, fitted into the part of it at
+  // x, y that is w wide and h high.
+  function within(cells, x, y, w, h){
+    return cells.map(function(c){ return [x + c[0] * w, y + c[1] * h, c[2] * w, c[3] * h]; });
+  }
+
   // Each cell is [x, y, width, height] as fractions of the collage, in the
-  // order the photos fill them. Together they cover the collage exactly.
+  // order the photos fill them, the biggest first. Together they cover the
+  // collage exactly.
   var T = 1 / 3;
   var LAYOUTS = {
     3: [
       { id: 'row', name: 'Side by side', cells: rows([3]) },
       { id: 'stack', name: 'Stacked', cells: rows([1, 1, 1]) },
       { id: 'left', name: 'Big left', cells: [[0, 0, 2 * T, 1], [2 * T, 0, T, 0.5], [2 * T, 0.5, T, 0.5]] },
-      { id: 'top', name: 'Big top', cells: [[0, 0, 1, 2 * T], [0, 2 * T, 0.5, T], [0.5, 2 * T, 0.5, T]] }
+      { id: 'top', name: 'Big top', cells: [[0, 0, 1, 2 * T], [0, 2 * T, 0.5, T], [0.5, 2 * T, 0.5, T]] },
+      { id: 'right', name: 'Big right', cells: [[T, 0, 2 * T, 1], [0, 0, T, 0.5], [0, 0.5, T, 0.5]] },
+      { id: 'bottom', name: 'Big bottom', cells: [[0, T, 1, 2 * T], [0, 0, 0.5, T], [0.5, 0, 0.5, T]] },
+      { id: 'middle', name: 'Wide middle', cells: [[0.25, 0, 0.5, 1], [0, 0, 0.25, 1], [0.75, 0, 0.25, 1]] }
     ],
     6: [
       { id: 'grid', name: 'Grid, 3 across', cells: rows([3, 3]) },
       { id: 'tall', name: 'Grid, 2 across', cells: rows([2, 2, 2]) },
       { id: 'feature', name: 'Feature', cells: [[0, 0, 2 * T, 2 * T], [2 * T, 0, T, T], [2 * T, T, T, T]].concat(rows([3]).map(function(c){ return [c[0], 2 * T, c[2], T]; })) },
       { id: 'steps', name: 'Steps', cells: rows([1, 2, 3]) },
-      { id: 'columns', name: 'Columns', cells: columns([2, 4]) }
+      { id: 'columns', name: 'Columns', cells: columns([2, 4]) },
+      { id: 'top', name: 'Big top', cells: [[0, 0, 1, 2 * T]].concat(within(rows([5]), 0, 2 * T, 1, T)) },
+      { id: 'left', name: 'Big left', cells: [[0, 0, 2 * T, 1]].concat(within(rows([1, 1, 1, 1, 1]), 2 * T, 0, T, 1)) },
+      { id: 'pair', name: 'Two big', cells: [[0, 0, 0.5, 2 * T], [0.5, 0, 0.5, 2 * T]].concat(within(rows([4]), 0, 2 * T, 1, T)) },
+      { id: 'up', name: 'Steps up', cells: rows([3, 2, 1]) },
+      { id: 'mosaic', name: 'Mosaic', cells: [[0, 0, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5], [0.5, 0, 0.5, 0.25], [0.5, 0.25, 0.5, 0.25], [0, 0.5, 0.5, 0.25], [0, 0.75, 0.5, 0.25]] }
     ],
     9: [
       { id: 'grid', name: 'Grid', cells: rows([3, 3, 3]) },
       { id: 'feature', name: 'Feature', cells: [[0, 0, 2 * T, 0.5], [2 * T, 0, T, 0.25], [2 * T, 0.25, T, 0.25]].concat(rows([3, 3]).map(function(c){ return [c[0], 0.5 + c[1] / 2, c[2], c[3] / 2]; })) },
       { id: 'steps', name: 'Steps', cells: rows([2, 3, 4]) },
-      { id: 'mosaic', name: 'Mosaic', cells: [[0, 0, 0.5, 0.5], [0.5, 0, 0.25, 0.25], [0.75, 0, 0.25, 0.25], [0.5, 0.25, 0.25, 0.25], [0.75, 0.25, 0.25, 0.25], [0, 0.5, 0.25, 0.5], [0.25, 0.5, 0.25, 0.5], [0.5, 0.5, 0.5, 0.25], [0.5, 0.75, 0.5, 0.25]] }
+      { id: 'mosaic', name: 'Mosaic', cells: [[0, 0, 0.5, 0.5], [0.5, 0, 0.25, 0.25], [0.75, 0, 0.25, 0.25], [0.5, 0.25, 0.25, 0.25], [0.75, 0.25, 0.25, 0.25], [0, 0.5, 0.25, 0.5], [0.25, 0.5, 0.25, 0.5], [0.5, 0.5, 0.5, 0.25], [0.5, 0.75, 0.5, 0.25]] },
+      { id: 'top', name: 'Big top', cells: [[0, 0, 1, 0.5]].concat(within(rows([4, 4]), 0, 0.5, 1, 0.5)) },
+      { id: 'left', name: 'Big left', cells: [[0, 0, 0.5, 1]].concat(within(rows([2, 2, 2, 2]), 0.5, 0, 0.5, 1)) },
+      { id: 'middle', name: 'Big middle', cells: [[0.25, 0, 0.5, 1]].concat(within(rows([1, 1, 1, 1]), 0, 0, 0.25, 1), within(rows([1, 1, 1, 1]), 0.75, 0, 0.25, 1)) },
+      { id: 'pair', name: 'Two big', cells: [[0, 0, 0.5, 0.5], [0.5, 0, 0.5, 0.5]].concat(within(rows([3, 4]), 0, 0.5, 1, 0.5)) },
+      { id: 'up', name: 'Steps up', cells: rows([4, 3, 2]) },
+      { id: 'columns', name: 'Columns', cells: columns([2, 3, 4]) }
     ]
   };
 

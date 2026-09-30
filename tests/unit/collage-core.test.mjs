@@ -11,9 +11,14 @@ test('layouts: 3, 6 and 9 photos each have a choice, with one cell per photo', (
   assert.equal(C.MAX, 9);
   for (const n of C.COUNTS) {
     const list = C.layoutsFor(n);
-    assert.ok(list.length >= 4, `${n} photos have at least 4 layouts`);
+    assert.ok(list.length >= 7, `${n} photos have at least 7 layouts`);
     const ids = list.map((l) => l.id);
     assert.equal(new Set(ids).size, ids.length, `${n}: ids are unique`);
+    const names = list.map((l) => l.name);
+    assert.equal(new Set(names).size, names.length, `${n}: names are unique`);
+    // No two layouts put their photos in the same places, in any order.
+    const shapes = list.map((l) => l.cells.map((c) => c.map((v) => v.toFixed(6)).join()).sort().join(' '));
+    assert.equal(new Set(shapes).size, shapes.length, `${n}: layouts are all different`);
     for (const l of list) {
       assert.equal(l.cells.length, n, `${n} ${l.id}`);
       assert.ok(l.name);
@@ -43,7 +48,7 @@ test('layout: finds a layout by id, falls back to the first, and has none for ot
   assert.equal(C.layout(9, 'mosaic').name, 'Mosaic');
   assert.equal(C.layout(3, 'nope').id, 'row');
   assert.equal(C.layout(3, undefined).id, 'row');
-  assert.equal(C.layout(6, 'mosaic').id, 'grid');
+  assert.equal(C.layout(6, 'middle').id, 'grid');
   assert.equal(C.layout(4, 'grid'), null);
   assert.equal(C.layout(0), null);
   assert.deepEqual(plain(C.layoutsFor(10)), []);
@@ -56,6 +61,11 @@ test('layouts: rows and columns are laid out in reading order', () => {
   assert.deepEqual(plain(C.layout(6, 'columns').cells), [[0, 0, 0.5, 0.5], [0, 0.5, 0.5, 0.5], [0.5, 0, 0.5, 0.25], [0.5, 0.25, 0.5, 0.25], [0.5, 0.5, 0.5, 0.25], [0.5, 0.75, 0.5, 0.25]]);
   // Steps of 2, 3 and 4 photos.
   assert.deepEqual(plain(C.layout(9, 'steps').cells.map((c) => c[2])), [0.5, 0.5, 1 / 3, 1 / 3, 1 / 3, 0.25, 0.25, 0.25, 0.25]);
+  // The big photo comes first; the small ones fill the rest, top to bottom.
+  assert.deepEqual(plain(C.layout(9, 'left').cells.slice(0, 3)), [[0, 0, 0.5, 1], [0.5, 0, 0.25, 0.25], [0.75, 0, 0.25, 0.25]]);
+  assert.deepEqual(plain(C.layout(3, 'right').cells[0]), [1 / 3, 0, 2 / 3, 1]);
+  assert.deepEqual(plain(C.layout(9, 'middle').cells.map((c) => c[0])), [0.25, 0, 0, 0, 0, 0.75, 0.75, 0.75, 0.75]);
+  assert.deepEqual(plain(C.layout(6, 'up').cells.map((c) => c[2])), [1 / 3, 1 / 3, 1 / 3, 0.5, 0.5, 1]);
 });
 
 test('size: the longest side, in the shape’s proportions', () => {
