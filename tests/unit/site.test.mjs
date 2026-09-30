@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SITE, pages } from '../../scripts/site.mjs';
-import { schema, meta, footer, cards, scores, fill, sitemap, esc } from '../../scripts/parts.mjs';
+import { schema, meta, footer, cards, scores, fill, sitemap, esc, CSP } from '../../scripts/parts.mjs';
 
 // scripts/site.mjs lists every page; scripts/parts.mjs turns it into the
 // parts of the pages that scripts/build.mjs writes.
@@ -35,7 +35,8 @@ test('site: every game and tool has a card, and every game a best-score key', ()
 test('meta: title, description, canonical URL, share tags and structured data', () => {
   const p = { path: '/x/', title: 'X & Y — "fun" | bdnix', description: 'Plays <well>.', schema: 'WebApplication', category: 'GameApplication', app: { name: 'X' } };
   const tags = meta(p);
-  assert.equal(tags[0], '<title>X &amp; Y — &quot;fun&quot; | bdnix</title>');
+  assert.equal(tags[0], `<meta http-equiv="Content-Security-Policy" content="${CSP}">`);   // first, before anything loads
+  assert.equal(tags[1], '<title>X &amp; Y — &quot;fun&quot; | bdnix</title>');
   assert.ok(tags.includes('<meta name="description" content="Plays &lt;well&gt;.">'));
   assert.ok(tags.includes(`<link rel="canonical" href="${SITE}/x/">`));
   assert.ok(tags.includes(`<meta property="og:url" content="${SITE}/x/">`));
@@ -87,4 +88,16 @@ test('the footer and sitemap', () => {
   assert.deepEqual(locs, pages.filter((p) => !p.noindex).map((p) => SITE + p.path));
   assert.ok(!locs.includes(SITE + '/profile/'));
   assert.equal(esc('a&b<c>"d"'), 'a&amp;b&lt;c&gt;&quot;d&quot;');
+});
+
+test('the content security policy: the site\'s own files, Google Analytics, nothing inline', () => {
+  const rules = Object.fromEntries(CSP.split('; ').map((r) => { const [k, ...v] = r.split(' '); return [k, v]; }));
+  assert.deepEqual(rules['default-src'], ["'self'"]);
+  assert.deepEqual(rules['object-src'], ["'none'"]);
+  assert.ok(rules['script-src'].includes('https://www.googletagmanager.com'));
+  for (const [k, v] of Object.entries(rules)) {
+    assert.ok(!v.includes("'unsafe-inline'") && !v.includes("'unsafe-eval'"), k);
+    assert.ok(!v.includes('*') && !v.includes('https:'), k);        // no wide-open sources
+  }
+  assert.ok(!CSP.includes('"'));                                     // safe inside content="..."
 });

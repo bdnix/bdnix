@@ -6,6 +6,10 @@ bdnix has no server-side application and no accounts. Everything the site keeps 
 
 Files are read and processed by the browser. They are never uploaded or sent anywhere, and neither is anything typed into a tool. Third-party libraries (pdf-lib, PDF.js, fontkit, lamejs) are served from this site, not from a CDN.
 
+## Content security policy
+
+Every page tells the browser what it may load: its own files, and Google Analytics once the visitor accepts it. Scripts injected into a page, or loaded from anywhere else, don't run. The policy is in [scripts/parts.mjs](../scripts/parts.mjs) and checked by `tests/ui/csp.spec.mjs`.
+
 ## Profile
 
 The chip in the top right of the landing and tool pages links to `/profile/`. It shows the visitor's name ("User" until they set one, up to 24 characters), their best Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce scores, and the number of visits counted by the landing page. The profile page is marked `noindex`, since it only shows what's saved in the browser.
