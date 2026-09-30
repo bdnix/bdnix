@@ -8,7 +8,7 @@ Every tool runs entirely in the browser. Files are never uploaded, and all proce
 - [MP4 to MP3](#mp4-to-mp3)
 - [Compress Images](#compress-images)
 - [Photo Collage](#photo-collage)
-- [Fit to Frame](#fit-to-frame)
+- [Resize Without Cropping](#resize-without-cropping)
 
 ## Merge PDFs
 
@@ -118,13 +118,13 @@ Photos fill the layout in the order listed under the preview. Tap one photo, in 
 
 The preview draws small copies of the photos, so moving a slider stays quick. The download decodes the photos again one at a time at full size, so nine phone photos aren't all held in memory at once. As with Compress Images, the browser turns phone photos upright and a camera's hidden details (location, camera model, date) aren't carried over. A photo the browser can't open is taken off the list, with a message.
 
-## Fit to Frame
+## Resize Without Cropping
 
 `/fit-to-frame/`
 
-Makes an image fit a shape it doesn't have, such as a landscape photo for a square or 4:5 post, without cropping any of it: the whole image stays in the middle and space is added to its sides or to its top and bottom. Drop in one or more images (the same formats as Compress Images), choose the settings, and fit:
+Makes an image fit a shape it doesn't have, such as a landscape photo for a square or 4:5 post, without cropping any of it: the whole image stays in the middle and space is added to its sides or to its top and bottom. Drop in one or more images (the same formats as Compress Images), choose the settings, and press **Resize**:
 
-- **Shape:** Square 1:1 (1080 × 1080), Portrait 4:5 (1080 × 1350), Story 9:16 (1080 × 1920), Landscape 1.91:1 (1200 × 630), Widescreen 16:9 (1920 × 1080) or Tall 2:3 (1000 × 1500), or any **width** and **height** from 1 to 10000 px. Choosing a shape fills in its size; typing a size picks the shape it matches, or Custom. A size that isn't a whole number in range is marked and nothing can be fitted until it's fixed.
+- **Shape:** Square 1:1 (1080 × 1080), Portrait 4:5 (1080 × 1350), Story 9:16 (1080 × 1920), Landscape 1.91:1 (1200 × 630), Widescreen 16:9 (1920 × 1080) or Tall 2:3 (1000 × 1500), or any **width** and **height** from 1 to 10000 px. Choosing a shape fills in its size; typing a size picks the shape it matches, or Custom. A size that isn't a whole number in range is marked and nothing can be resized until it's fixed.
 - **Size:** *Keep full size* (the default) leaves the image at its own size and adds only the space the shape needs. *Exactly W × H* makes the result exactly the size typed, scaling the image up or down to fit.
 - **Colour** of the space: white (the default), black, light grey, or any colour from the browser's colour picker. Transparent parts of an image take this colour too.
 - **Margin:** 0 to 25% of the frame's shorter side, added on every side of the image.

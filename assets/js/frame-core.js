@@ -1,4 +1,4 @@
-// Fit to Frame (fit-to-frame): where an image goes in its new frame, kept
+// Resize Without Cropping (fit-to-frame): where an image goes in its new frame, kept
 // apart from the page so it can be unit tested. The browser does the
 // decoding, drawing and encoding (see frame.js).
 (function(){

@@ -15,7 +15,7 @@ async function fetchDownload(page, row){
 
 // Fits the one image on the list and downloads the result.
 async function fitOne(page){
-  await page.getByRole('button', { name: 'Fit 1 image' }).click();
+  await page.getByRole('button', { name: 'Resize 1 image' }).click();
   await expect(page.locator('#msg')).toHaveText('Done. 1 image ready to download.');
   return fetchDownload(page, page.locator('.track'));
 }
@@ -37,8 +37,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('describes what it does', async ({ page }) => {
-  await expect(page).toHaveTitle('Fit to Frame — Add space to fit any size, free | bdnix');
-  await expect(page.locator('h1')).toHaveText('Fit to Frame');
+  await expect(page).toHaveTitle('Resize Without Cropping — Fit any shape, free | bdnix');
+  await expect(page.locator('h1')).toHaveText('Resize Without Cropping');
   await expect(page.locator('.features li')).toHaveCount(5);
   await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /never uploaded/);
   await expect(page.locator('#filesWrap')).toBeHidden();
@@ -66,7 +66,7 @@ test('adds white space above and below a landscape photo to make it square', asy
   const out = await fitOne(page);
   await expect(page.locator('.track .file-meta')).toHaveText(/^600×600 · \d+ KB$/);
   await expect(page.getByRole('link', { name: 'Download holiday photo-framed.png' })).toBeFocused();
-  await expect(page.getByRole('button', { name: 'Fit to frame' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Resize images' })).toBeDisabled();
   expect(out.name).toBe('holiday photo-framed.png');
   expect(kind(out.bytes)).toBe('png');
   // The photo is 400 high, in rows 100 to 499.
@@ -198,8 +198,8 @@ test('several images: each is previewed and gets its own download', async ({ pag
   await expect(page.locator('#imageLabel')).toHaveText('Image 1 of 2');
   await expect(page.locator('#previewSize')).toHaveText('600 × 600 px');
 
-  await page.getByRole('button', { name: 'Fit 2 images' }).click();
-  await expect(page.locator('#fitLabel')).toHaveText('Fit to frame');
+  await page.getByRole('button', { name: 'Resize 2 images' }).click();
+  await expect(page.locator('#fitLabel')).toHaveText('Resize images');
   await expect(page.locator('#msg')).toHaveText('Done. 2 images ready to download.');
   const first = await fetchDownload(page, page.locator('.track').nth(0));
   const second = await fetchDownload(page, page.locator('.track').nth(1));
@@ -252,8 +252,8 @@ test('skips files that aren’t images, and marks images the browser can’t ope
   await expect(page.locator('#msg')).toHaveText('Skipped: a.md, b.txt aren’t images.');
   await expect(page.locator('#previewSize')).toHaveText('600 × 600 px');
 
-  await page.getByRole('button', { name: 'Fit 2 images' }).click();
-  await expect(page.locator('#msg')).toHaveText('1 image ready to download. 1 image couldn’t be fitted.');
+  await page.getByRole('button', { name: 'Resize 2 images' }).click();
+  await expect(page.locator('#msg')).toHaveText('1 image ready to download. 1 image couldn’t be resized.');
   await expect(page.locator('#msg')).toHaveClass(/error/);
   await expect(page.locator('.track').nth(0).locator('.file-meta')).toHaveText('Your browser can’t open this image');
   await expect(page.locator('.track').nth(0).locator('.file-meta')).toHaveClass(/error/);
@@ -272,9 +272,9 @@ test('says so when the browser can’t save the chosen format', async ({ page })
   await page.reload();
   await page.locator('#picker').setInputFiles([holiday()]);
   await page.locator('#format').selectOption('webp');
-  await page.getByRole('button', { name: 'Fit 1 image' }).click();
+  await page.getByRole('button', { name: 'Resize 1 image' }).click();
   await expect(page.locator('.track .file-meta')).toHaveText('Couldn’t fit: your browser can’t save WebP images. Choose another format.');
-  await expect(page.locator('#msg')).toHaveText('1 image couldn’t be fitted.');
+  await expect(page.locator('#msg')).toHaveText('1 image couldn’t be resized.');
 });
 
 test('saves WebP, and a changed setting clears the result', async ({ page }) => {
@@ -285,7 +285,7 @@ test('saves WebP, and a changed setting clears the result', async ({ page }) => 
   expect(kind(out.bytes)).toBe('webp');
   await page.getByRole('button', { name: 'Light grey' }).click();
   await expect(page.locator('.track .dl')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Fit 1 image' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Resize 1 image' })).toBeEnabled();
 });
 
 test('images dropped on the page are added', async ({ page }) => {

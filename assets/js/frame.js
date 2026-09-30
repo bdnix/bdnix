@@ -1,4 +1,4 @@
-// Fit to Frame (fit-to-frame). The browser decodes each image and a canvas
+// Resize Without Cropping (fit-to-frame). The browser decodes each image and a canvas
 // draws it in the middle of a frame of the chosen shape and colour, then
 // saves it, so nothing is uploaded. Where the image goes is worked out in
 // frame-core.js; formats and file names come from image-core.js.
@@ -206,7 +206,7 @@
     var valid = s.width && s.height;
     var ready = files.filter(function(f){ return f.state === 'ready'; }).length;
     summary.textContent = plural(files.length, 'image');
-    if (!busy) fitLabel.textContent = ready ? 'Fit ' + plural(ready, 'image') : 'Fit to frame';
+    if (!busy) fitLabel.textContent = ready ? 'Resize ' + plural(ready, 'image') : 'Resize images';
     fitBtn.disabled = busy || !ready || !valid;
     clearBtn.disabled = busy;
     picker.disabled = busy;
@@ -219,7 +219,7 @@
 
   function describe(f){
     if (f.state === 'error') return f.error;
-    if (f.state === 'working') return 'Fitting…';
+    if (f.state === 'working') return 'Resizing…';
     if (f.state !== 'done') return fmtSize(f.file.size);
     return f.width + '×' + f.height + ' · ' + fmtSize(f.outSize);
   }
@@ -319,7 +319,7 @@
     say('');
     todo.reduce(function(chain, f, i){
       return chain.then(function(){
-        fitLabel.textContent = 'Fitting ' + (i + 1) + ' of ' + todo.length + '…';
+        fitLabel.textContent = 'Resizing ' + (i + 1) + ' of ' + todo.length + '…';
         return fit(f, s);
       });
     }, Promise.resolve()).then(function(){
@@ -329,7 +329,7 @@
       var failed = todo.length - ok;
       var done = ok ? plural(ok, 'image') + ' ready to download.' : '';
       if (!failed) say('Done. ' + done);
-      else say((done ? done + ' ' : '') + plural(failed, 'image') + ' couldn’t be fitted.', true);
+      else say((done ? done + ' ' : '') + plural(failed, 'image') + ' couldn’t be resized.', true);
       var first = list.querySelector('.dl');
       if (first) first.focus();
     });
