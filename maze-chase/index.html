@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/css/base.css?v=fecaaa2e57">
+  <link rel="stylesheet" href="/assets/css/base.css?v=0033ed3e45">
   <link rel="stylesheet" href="/assets/css/icon-btn.css?v=20fd350a8d">
   <link rel="stylesheet" href="/assets/css/game.css?v=5d7bc45b69">
   <link rel="stylesheet" href="/assets/css/gamepad.css?v=69efc55b7b">
@@ -36,8 +36,8 @@
   <header class="bar">
     <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ maze chase</span></a>
     <div class="bar-actions">
-      <button id="soundBtn" class="icon-btn" aria-label="Mute sound"></button>
-      <button id="pauseBtn" class="icon-btn" aria-label="Pause">
+      <button type="button" id="soundBtn" class="icon-btn" aria-label="Mute sound"></button>
+      <button type="button" id="pauseBtn" class="icon-btn" aria-label="Pause">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2h3v12H4zM9 2h3v12H9z"/></svg>
       </button>
     </div>
@@ -48,18 +48,18 @@
       <div><span class="label">Score</span><b id="score">0</b></div>
       <div><span class="label">Best</span><b id="best">0</b></div>
       <div><span class="label">Level</span><b id="level">1</b></div>
-      <div><span class="label">Lives</span><canvas id="lives" aria-label="Lives"></canvas></div>
+      <div><span class="label">Lives</span><canvas id="lives" role="img" aria-label="Lives"></canvas></div>
     </section>
 
     <div class="board-wrap">
-      <canvas id="board"></canvas>
+      <canvas id="board" role="img" aria-label="Maze Chase board"></canvas>
       <div id="overlay" class="overlay">
         <p class="label" id="ovKicker">bdnix arcade</p>
         <h1 id="ovTitle">Maze Chase</h1>
         <p id="ovText">Eat every dot. Dodge the ghosts.</p>
         <div class="ov-actions">
-          <button id="startBtn" class="btn btn-primary">Start game</button>
-          <button id="newBtn" class="btn btn-ghost" hidden>New game</button>
+          <button type="button" id="startBtn" class="btn btn-primary">Start game</button>
+          <button type="button" id="newBtn" class="btn btn-ghost" hidden>New game</button>
         </div>
         <p class="keys only-keys"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>P</kbd> pause</p>
         <p class="keys only-touch">Swipe anywhere, or use the D-pad below.</p>
@@ -70,10 +70,10 @@
 
   <nav class="touch" aria-label="Game controls">
     <div class="dpad">
-      <button class="up" data-dir="up" aria-label="Up"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button>
-      <button class="left" data-dir="left" aria-label="Left"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <button class="right" data-dir="right" aria-label="Right"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
-      <button class="down" data-dir="down" aria-label="Down"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg></button>
+      <button type="button" class="up" data-dir="up" aria-label="Up"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button>
+      <button type="button" class="left" data-dir="left" aria-label="Left"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <button type="button" class="right" data-dir="right" aria-label="Right"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+      <button type="button" class="down" data-dir="down" aria-label="Down"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg></button>
     </div>
   </nav>
 
@@ -82,6 +82,6 @@
   <script src="/assets/js/sound.js?v=7a74a68ae2"></script>
   <script src="/assets/js/gamebar.js?v=aefe068990"></script>
   <script src="/assets/js/upright.js?v=280cffb58a"></script>
-  <script src="/assets/js/pacman.js?v=3d1307f301"></script>
+  <script src="/assets/js/pacman.js?v=7f3d0b2fc6"></script>
 </body>
 </html>

@@ -675,6 +675,9 @@
     var w = 60, h = 16;
     livesCtx.clearRect(0, 0, w, h);
     var spare = Math.max(0, lives - (state === 'idle' || state === 'over' ? 0 : 1));
+    // The canvas is a picture, so screen readers get the count from its label.
+    var label = 'Lives: ' + spare;
+    if (livesCanvas.getAttribute('aria-label') !== label) livesCanvas.setAttribute('aria-label', label);
     livesCtx.fillStyle = PAC_COLOR;
     for (var i = 0; i < Math.min(spare, 4); i++) {
       var cx = 8 + i * 15, cy = h / 2;

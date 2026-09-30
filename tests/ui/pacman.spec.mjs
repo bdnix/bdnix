@@ -18,6 +18,8 @@ test('eats its way to a power pellet, then loses its lives', async ({ page }) =>
   // is busy, so give it the extra time Playwright allows for slow tests.
   test.slow();
   const score = page.locator('#score');
+  const lives = page.locator('#lives');
+  await expect(lives).toHaveAttribute('aria-label', 'Lives: 2');   // two to spare, one in play
   await page.clock.runFor(2000);                    // left to the corner: 11 dots and a pellet
   await expect(score).toHaveText('160');
   await press(page, 'ArrowUp');
@@ -29,6 +31,7 @@ test('eats its way to a power pellet, then loses its lives', async ({ page }) =>
   for (let s = 0; s < 120 && !(await overlay.isVisible()); s++) await page.clock.runFor(1000);
   await expect(page.locator('#ovTitle')).toHaveText('Game over');
   await expect(page.locator('#ovText')).toHaveText('Score 190 — new best!');
+  await expect(lives).toHaveAttribute('aria-label', 'Lives: 0');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_pacman_best'))).toBe('190');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_pacman_save'))).toBeNull(); // nothing left to resume
   await expect(page.locator('#newBtn')).toBeHidden();
