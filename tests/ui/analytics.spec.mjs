@@ -49,6 +49,18 @@ test('on the live site every page asks first, and loads nothing until asked', as
   expect(google).toEqual([]);
 });
 
+test('until the visitor accepts, a page on the live site contacts nothing but bdnix.com', async ({ page }) => {
+  await serveLive(page);
+  const elsewhere = [];
+  page.on('request', (r) => { if (!r.url().startsWith(LIVE + '/') && !r.url().startsWith('data:')) elsewhere.push(r.url()); });
+  for (const url of pages) {
+    await page.goto(LIVE + url);
+    await page.evaluate(() => document.fonts.ready);
+    await expect(page.getByRole('region', { name: 'Cookie consent' }), url).toBeVisible();
+  }
+  expect(elsewhere).toEqual([]);
+});
+
 test('declining hides the banner for good and never loads Google\'s script', async ({ page }) => {
   const google = watchGoogle(page);
   await serveLive(page);
