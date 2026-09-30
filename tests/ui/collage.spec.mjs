@@ -98,21 +98,24 @@ test('9 photos in the feature layout, as a story-shaped PNG on black', async ({ 
   img.colours.forEach((c, i) => expect(near(c, rgba(i), 4), `photo ${i + 1}`).toBe(true));
 });
 
-test('every layout puts each photo in its own place', async ({ page }) => {
-  for (const count of [3, 6, 9]) {
-    if (count > 3) await page.locator('#clearBtn').click();
+// One test per number of photos, each saving a small PNG per layout, so
+// the many layouts fit in a test's time.
+for (const count of [3, 6, 9]) {
+  test(`every layout for ${count} photos puts each photo in its own place`, async ({ page }) => {
     await add(page, photos(count));
     await ready(page);
+    await page.locator('#longest').selectOption('1080');
     await page.locator('label:has(input[value=png])').click();
     const ids = await page.locator('.layout-opt input').evaluateAll((els) => els.map((e) => e.value));
+    expect(ids.length).toBeGreaterThanOrEqual(7);
     for (const id of ids) {
       await page.locator(`.layout-opt input[value="${id}"]`).check({ force: true });
       const out = await download(page);
       const img = await inspect(page, out.bytes, middles(await cellsOf(page, count, id)));
       img.colours.forEach((c, i) => expect(near(c, rgba(i), 4), `${count} ${id}: photo ${i + 1}`).toBe(true));
     }
-  }
-});
+  });
+}
 
 test('tapping two photos swaps them, in the list or the preview', async ({ page }) => {
   await add(page, photos(3));
