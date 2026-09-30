@@ -128,6 +128,20 @@ test('touching a pipe, above or below the gap, ends the round', () => {
   assert.equal(F.tick(w), null, 'through the middle of the gap is fine');
 });
 
+test('the caps at the ends of the pipes stick out, and hitting them counts', () => {
+  const at = (y) => {
+    const w = F.create(() => 0);
+    w.nextPipe = 1e9;
+    w.pipes.push({ x: F.BIRD_X + F.BIRD_R + 2, top: 160, scored: false }); // gap 160..284
+    w.bird.y = y;
+    return F.hitsPipe(w);
+  };
+  assert.equal(at(100), false, 'clear of the pipe itself');
+  assert.equal(at(160 - F.CAP_H / 2), true, 'the top cap');
+  assert.equal(at(284 + F.CAP_H / 2), true, 'the bottom cap');
+  assert.equal(at(360), false, 'clear of the pipe below its cap');
+});
+
 test('after a hit the world stops while the bird falls to the ground', () => {
   const w = F.create(() => 0);
   w.nextPipe = 1e9;
@@ -139,6 +153,93 @@ test('after a hit the world stops while the bird falls to the ground', () => {
   assert.deepEqual(events, [], 'landing after a hit isn’t a second hit');
   assert.equal(w.pipes[0].x, x);
   assert.equal(w.landed, true);
+});
+
+// Runs a dead bird until it lands, checking it never overlaps a pipe.
+function tumble(w){
+  for (let i = 0; i < 2000 && !w.landed; i++) {
+    assert.equal(F.tick(w), null, 'no second hit');
+    assert.equal(F.hitsPipe(w), false, 'inside a pipe at step ' + i);
+  }
+  assert.equal(w.landed, true);
+}
+
+test('flying into the front of a pipe bounces the bird back, and it falls beside the pipe', () => {
+  const w = F.create(() => 0);
+  w.nextPipe = 1e9;
+  const pipe = { x: F.BIRD_X + F.BIRD_R, top: 160, scored: false };   // top pipe down to 160
+  w.pipes.push(pipe);
+  w.bird.y = 100;
+  assert.equal(F.tick(w), 'hit');
+  assert.equal(w.impact.nx, -1, 'hit the front');
+  assert.equal(w.impact.ny, 0);
+  assert.equal(w.impact.x, pipe.x);
+  assert.ok(w.bird.vx < 0 && w.bird.vy < 0, 'bounces back and up');
+  assert.ok(w.bird.x <= pipe.x - F.BIRD_R, 'pushed out of the pipe');
+  tumble(w);
+  assert.equal(w.bird.y, F.GROUND - F.BIRD_R, 'down on the ground');
+  assert.ok(w.bird.x < F.BIRD_X - 5 && w.bird.x > F.BIRD_X - 40, 'a little way back');
+  assert.equal(w.bird.vx, 0);
+});
+
+test('falling onto the bottom pipe bounces, then lies on top of it', () => {
+  const w = F.create(() => 0);
+  w.nextPipe = 1e9;
+  w.pipes.push({ x: F.BIRD_X - 26, top: 160, scored: false });       // bottom pipe from 284
+  w.bird.y = 284 - F.BIRD_R;
+  w.bird.vy = 300;
+  assert.equal(F.tick(w), 'hit');
+  assert.equal(w.impact.ny, -1, 'hit the top of it');
+  assert.equal(w.impact.y, 284);
+  assert.ok(w.bird.vy < 0, 'bounces up');
+  tumble(w);
+  assert.ok(Math.abs(w.bird.y - (284 - F.BIRD_R)) < 1e-5, 'lying on the pipe, not the ground');
+  const at = { x: w.bird.x, y: w.bird.y };
+  run(w, 200);
+  assert.deepEqual({ x: w.bird.x, y: w.bird.y }, at, 'and stays there');
+});
+
+test('hitting the underside of the top pipe knocks the bird down', () => {
+  const w = F.create(() => 0);
+  w.nextPipe = 1e9;
+  w.pipes.push({ x: F.BIRD_X - 26, top: 160, scored: false });
+  w.bird.y = 160 + F.BIRD_R + 1;
+  w.bird.vy = -400;
+  assert.equal(F.tick(w), 'hit');
+  assert.equal(w.impact.ny, 1);
+  assert.ok(w.bird.vy > 0, 'heading down');
+  tumble(w);
+  assert.ok(Math.abs(w.bird.y - (284 - F.BIRD_R)) < 1e-5, 'down onto the bottom pipe');
+});
+
+test('a bird on the corner of a pipe slides off it', () => {
+  const w = F.create(() => 0);
+  w.nextPipe = 1e9;
+  w.dead = true;
+  w.pipes.push({ x: F.BIRD_X + 4, top: 160, scored: false });        // bottom pipe from 284
+  w.bird.y = 284 - 6;                                                 // over the corner
+  tumble(w);
+  assert.equal(w.bird.y, F.GROUND - F.BIRD_R, 'on the ground');
+  assert.ok(w.bird.x <= F.BIRD_X + 4 - F.BIRD_R + 1e-6, 'beside the pipe');
+});
+
+test('pushOut: a bird inside a pipe goes out through the nearest side', () => {
+  const inside = (x, y, c, to) => {
+    const w = F.create(() => 0);
+    w.pipes.push({ x: 100, top: 160, scored: false });                // x 100..152, bottom pipe from 284
+    w.bird.x = x; w.bird.y = y;
+    assert.deepEqual(plain(F.pushOut(w)), c);
+    assert.ok(Math.abs(w.bird.x - to[0]) < 1e-5 && Math.abs(w.bird.y - to[1]) < 1e-5, 'bird at ' + [w.bird.x, w.bird.y]);
+    assert.equal(F.hitsPipe(w), false);
+  };
+  inside(103, 50, { x: 100, y: 50, nx: -1, ny: 0 }, [100 - F.BIRD_R, 50]);
+  inside(150, 50, { x: 152, y: 50, nx: 1, ny: 0 }, [152 + F.BIRD_R, 50]);
+  inside(126, 157, { x: 126, y: 160, nx: 0, ny: 1 }, [126, 160 + F.BIRD_R]);
+  inside(126, 287, { x: 126, y: 284, nx: 0, ny: -1 }, [126, 284 - F.BIRD_R]);
+  const w = F.create(() => 0);
+  w.pipes.push({ x: 200, top: 160, scored: false });
+  assert.equal(F.pushOut(w), null, 'touching nothing');
+  assert.equal(w.bird.x, F.BIRD_X);
 });
 
 test('circleHitsRect: overlap, touching corners and misses', () => {
