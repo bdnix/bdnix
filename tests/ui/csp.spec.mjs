@@ -8,10 +8,12 @@ const pages = ['/', '/profile/', '/falling-blocks/', '/maze-chase/', '/flap/', '
 test('every page sets its policy before it loads anything', async ({ page }) => {
   for (const url of pages) {
     await page.goto(url);
-    const head = await page.locator('head > *').evaluateAll((els) => els.map((e) => e.outerHTML));
-    const at = head.findIndex((h) => h.startsWith('<meta http-equiv="Content-Security-Policy"'));
+    const head = await page.locator('head > *').evaluateAll((els) => els.map((e) => ({
+      tag: e.tagName, csp: e.getAttribute('http-equiv') === 'Content-Security-Policy', data: e.type === 'application/ld+json'
+    })));
+    const at = head.findIndex((h) => h.csp);
     expect(at, url).toBeGreaterThan(-1);
-    const first = head.findIndex((h) => /^<(link|script)\b/.test(h) && !/application\/ld\+json/.test(h));
+    const first = head.findIndex((h) => (h.tag === 'LINK' || h.tag === 'SCRIPT') && !h.data);
     expect(at, url).toBeLessThan(first);
     const policy = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content');
     expect(policy, url).toContain("default-src 'self'");
