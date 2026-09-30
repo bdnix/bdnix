@@ -104,29 +104,52 @@
     });
   }
 
+  // How far a photo can be zoomed into its box: 1 fills the box, 4 shows
+  // a quarter of that across.
+  var ZOOM_MAX = 4;
+
   // The part of a width x height photo that fills a boxW x boxH box
   // without stretching, cropped to the box's shape. pos says which part:
   // { x, y } from 0 (the left or top edge) to 1 (the right or bottom
-  // edge); the middle, { x: 0.5, y: 0.5 }, when it's left out.
-  function cover(width, height, boxW, boxH, pos){
-    var scale = Math.max(boxW / width, boxH / height);
+  // edge); the middle, { x: 0.5, y: 0.5 }, when it's left out. zoom (1 when
+  // left out) shows that much less of it, that much bigger.
+  function cover(width, height, boxW, boxH, pos, zoom){
+    var scale = Math.max(boxW / width, boxH / height) * (zoom || 1);
     var sw = boxW / scale, sh = boxH / scale;
     pos = pos || CENTRE;
     return { sx: (width - sw) * pos.x, sy: (height - sh) * pos.y, sw: sw, sh: sh };
   }
   var CENTRE = { x: 0.5, y: 0.5 };
 
+  // A side of a photo with less than half a pixel of the box cropped off
+  // can't move: it keeps its pos p for when a new layout, shape or zoom
+  // crops it. Otherwise the pos is kept between 0 and 1.
+  function place(p, next, spare, scale){
+    return spare * scale < 0.5 ? p : Math.min(1, Math.max(0, next));
+  }
+
   // Where a photo sits in its box after being dragged dx, dy pixels of the
   // box: the new pos for cover(). The photo moves with the drag and stops
-  // at its edges. A side with nothing cropped off can't move, so it keeps
-  // its pos for when a new layout or shape crops it.
-  function pan(pos, width, height, boxW, boxH, dx, dy){
-    var c = cover(width, height, boxW, boxH);
+  // at its edges.
+  function pan(pos, width, height, boxW, boxH, dx, dy, zoom){
+    var c = cover(width, height, boxW, boxH, null, zoom);
     var scale = boxW / c.sw;
-    function move(p, d, spare){
-      return spare * scale < 0.5 ? p : Math.min(1, Math.max(0, p - d / scale / spare));
-    }
+    function move(p, d, spare){ return place(p, p - d / scale / spare, spare, scale); }
     return { x: move(pos.x, dx, width - c.sw), y: move(pos.y, dy, height - c.sh) };
+  }
+
+  // A photo at pos and zoom, zoomed to `next` (kept from 1 to ZOOM_MAX)
+  // about the middle of what shows, as far as its edges allow: the new
+  // { zoom, pos }.
+  function zoomTo(pos, zoom, next, width, height, boxW, boxH){
+    next = next > 1 ? Math.min(ZOOM_MAX, next) : 1;
+    var was = cover(width, height, boxW, boxH, pos, zoom), now = cover(width, height, boxW, boxH, null, next);
+    var scale = boxW / now.sw;
+    function keep(p, s, w, n, size){ return place(p, (s + w / 2 - n / 2) / (size - n), size - n, scale); }
+    return {
+      zoom: next,
+      pos: { x: keep(pos.x, was.sx, was.sw, now.sw, width), y: keep(pos.y, was.sy, was.sh, now.sh, height) }
+    };
   }
 
   // Which box, if any, the point x, y is in: its index, or -1.
@@ -156,8 +179,8 @@
   }
 
   window.bdnixCollage = {
-    COUNTS: COUNTS, MAX: MAX, LAYOUTS: LAYOUTS, SHAPES: SHAPES, SIZES: SIZES, FORMATS: FORMATS,
+    COUNTS: COUNTS, MAX: MAX, ZOOM_MAX: ZOOM_MAX, LAYOUTS: LAYOUTS, SHAPES: SHAPES, SIZES: SIZES, FORMATS: FORMATS,
     layoutsFor: layoutsFor, layout: layout, size: size, scaled: scaled,
-    boxes: boxes, cover: cover, pan: pan, hit: hit, advice: advice, outName: outName
+    boxes: boxes, cover: cover, pan: pan, zoomTo: zoomTo, hit: hit, advice: advice, outName: outName
   };
 })();

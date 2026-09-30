@@ -129,6 +129,38 @@ test('pan: the photo follows the drag and stops at its edges', () => {
   assert.deepEqual(plain(C.pan(mid, 300, 200, 600, 400, 50, 50)), mid);
 });
 
+test('cover and pan: a zoomed photo shows less of itself, and moves further to reach its edges', () => {
+  assert.equal(C.ZOOM_MAX, 4);
+  assert.deepEqual(plain(C.cover(400, 100, 100, 100, { x: 0.5, y: 0.5 }, 2)), { sx: 175, sy: 25, sw: 50, sh: 50 });
+  assert.deepEqual(plain(C.cover(100, 100, 100, 100, null, 4)), { sx: 37.5, sy: 37.5, sw: 25, sh: 25 });
+  assert.deepEqual(plain(C.cover(100, 100, 100, 100, { x: 0, y: 1 }, 2)), { sx: 0, sy: 50, sw: 50, sh: 50 });
+  // Not zoomed, a square photo in a square box can't move; zoomed 2x it
+  // has 50 px to spare, drawn at twice the size, so 50 px of the box is half of it.
+  assert.deepEqual(plain(C.pan({ x: 0.5, y: 0.5 }, 100, 100, 100, 100, 50, 0)), { x: 0.5, y: 0.5 });
+  assert.deepEqual(plain(C.pan({ x: 0.5, y: 0.5 }, 100, 100, 100, 100, 50, -25, 2)), { x: 0, y: 0.75 });
+});
+
+test('zoomTo: zooms about the middle of what shows, as far as the photo’s edges', () => {
+  const mid = { x: 0.5, y: 0.5 };
+  assert.deepEqual(plain(C.zoomTo(mid, 1, 2, 100, 100, 100, 100)), { zoom: 2, pos: mid });
+  // Zoomed 2x into the top left quarter, whose middle is at 25, 25: at 4x
+  // that stays in the middle.
+  const z = C.zoomTo({ x: 0, y: 0 }, 2, 4, 100, 100, 100, 100);
+  assert.equal(z.zoom, 4);
+  const c = C.cover(100, 100, 100, 100, z.pos, z.zoom);
+  assert.ok(close(c.sx + c.sw / 2, 25) && close(c.sy + c.sh / 2, 25), 'the same middle');
+  // Zooming out near an edge stops at the edge rather than leaving a gap.
+  assert.deepEqual(plain(C.zoomTo({ x: 1, y: 1 }, 4, 2, 100, 100, 100, 100)), { zoom: 2, pos: { x: 1, y: 1 } });
+  // All the way out, nothing is cropped from a square photo, so it keeps its pos.
+  assert.deepEqual(plain(C.zoomTo({ x: 0.2, y: 0.9 }, 2, 1, 100, 100, 100, 100)), { zoom: 1, pos: { x: 0.2, y: 0.9 } });
+  // A wide photo: it was cropped left and right, and now top and bottom too.
+  assert.deepEqual(plain(C.zoomTo(mid, 1, 2, 400, 100, 100, 100)), { zoom: 2, pos: mid });
+  // Kept from 1 to 4.
+  assert.equal(C.zoomTo(mid, 1, 10, 100, 100, 100, 100).zoom, 4);
+  assert.equal(C.zoomTo(mid, 2, 0.5, 100, 100, 100, 100).zoom, 1);
+  assert.equal(C.zoomTo(mid, 2, NaN, 100, 100, 100, 100).zoom, 1);
+});
+
 test('hit: which box a point is in', () => {
   const boxes = [{ x: 0, y: 0, w: 10, h: 10 }, { x: 20, y: 0, w: 10, h: 10 }];
   assert.equal(C.hit(boxes, 5, 5), 0);

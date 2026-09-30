@@ -12,13 +12,15 @@
   var form = $('settings'), layoutField = $('layoutField'), layoutsEl = $('layouts');
   var gapOut = $('gapOut'), radiusOut = $('radiusOut'), sizeHint = $('sizeHint');
   var downloadBtn = $('downloadBtn'), downloadLabel = $('downloadLabel');
+  var zoomField = $('zoomField'), zoomName = $('zoomName'), zoomIn = $('zoom'), zoomOut = $('zoomOut');
 
   $('year').textContent = new Date().getFullYear();
 
-  // Each entry: { id, file, src, small, tile, pos }. src is an object URL
-  // of the file; small is a copy at most SMALL pixels across for the
-  // preview, set once the photo is decoded; tile is its thumbnail in the
-  // list; pos is which part of it shows in its box (see C.cover).
+  // Each entry: { id, file, src, small, tile, pos, zoom }. src is an
+  // object URL of the file; small is a copy at most SMALL pixels across for
+  // the preview, set once the photo is decoded; tile is its thumbnail in
+  // the list; pos and zoom are which part of it shows in its box, and how
+  // big (see C.cover).
   var photos = [];
   var nextId = 1;
   // The photo picked to swap with the next one tapped, or -1.
@@ -80,7 +82,7 @@
     if (skipped.length) problems.push('Skipped: ' + skipped.map(function(f){ return f.name; }).join(', ') + (skipped.length === 1 ? ' isn’t an image.' : ' aren’t images.'));
     if (left > 0) problems.push('A collage holds up to ' + C.MAX + ' photos, so ' + plural(left, 'photo') + (left === 1 ? ' was' : ' were') + ' left out.');
     images.slice(0, Math.max(0, room)).forEach(function(file){
-      var f = { id: nextId++, file: file, src: URL.createObjectURL(file), small: null, pos: { x: 0.5, y: 0.5 } };
+      var f = { id: nextId++, file: file, src: URL.createObjectURL(file), small: null, pos: { x: 0.5, y: 0.5 }, zoom: 1 };
       f.tile = document.createElement('canvas');
       f.tile.width = f.tile.height = TILE;
       photos.push(f);
@@ -125,6 +127,7 @@
     renderLayouts();
     showSettings();
     drawPreview();
+    showZoom();
     var s = settings();
     var ready = !!s.layout && photos.every(function(f){ return f.small; });
     downloadBtn.disabled = busy || !ready;
@@ -207,11 +210,11 @@
     sizeHint.textContent = size.width + ' × ' + size.height + ' px';
   }
 
-  // Draws a photo into its box, cropped to fill it at `pos`, with the
-  // corners rounded by `radius` pixels.
-  function paint(ctx, box, img, width, height, radius, pos){
+  // Draws a photo into its box, cropped to fill it at `pos` and `zoom`,
+  // with the corners rounded by `radius` pixels.
+  function paint(ctx, box, img, width, height, radius, pos, zoom){
     var r = Math.min(radius, box.w / 2, box.h / 2);
-    var c = C.cover(width, height, box.w, box.h, pos);
+    var c = C.cover(width, height, box.w, box.h, pos, zoom);
     ctx.save();
     if (r > 0) {
       ctx.beginPath();
@@ -252,7 +255,7 @@
     if (text) return;
     var f = frame(canvas, s, PREVIEW);
     f.boxes.forEach(function(box, i){
-      paint(f.ctx, box, photos[i].small, photos[i].small.width, photos[i].small.height, f.radius, photos[i].pos);
+      paint(f.ctx, box, photos[i].small, photos[i].small.width, photos[i].small.height, f.radius, photos[i].pos, photos[i].zoom);
     });
     if (selected >= 0) {
       var b = f.boxes[selected];
@@ -263,36 +266,107 @@
     previewBoxes = f.boxes;
   }
 
-  // In the preview, dragging a photo moves it within its box; tapping it
-  // without moving picks it, as in the list.
-  var drag = null, NUDGE = 5;
+  // Zooms a photo in its box of the preview to `zoom`, about the middle of
+  // what shows.
+  function zoomPhoto(f, box, zoom){
+    var z = C.zoomTo(f.pos, f.zoom, zoom, f.small.width, f.small.height, box.w, box.h);
+    f.zoom = z.zoom;
+    f.pos = z.pos;
+    drawPreview();
+    showZoom();
+  }
+
+  // The zoom slider is for the photo picked in the list or the preview.
+  function showZoom(){
+    var f = photos[selected];
+    zoomField.hidden = !f || !previewBoxes.length;
+    if (zoomField.hidden) return;
+    zoomName.textContent = 'Zoom photo ' + (selected + 1);
+    zoomIn.value = Math.round(f.zoom * 100);
+    zoomOut.textContent = Math.round(f.zoom * 100) + '%';
+    zoomIn.disabled = busy;
+  }
+  zoomIn.addEventListener('input', function(){
+    var f = photos[selected];
+    if (f && previewBoxes.length) zoomPhoto(f, previewBoxes[selected], zoomIn.value / 100);
+  });
+
+  // In the preview, dragging a photo moves it within its box, pinching it
+  // with two fingers or turning the mouse wheel over it zooms it, and
+  // tapping it without moving picks it, as in the list.
+  var drag = null, fingers = {}, NUDGE = 5;
   function point(e){
     var rect = canvas.getBoundingClientRect();
     return { x: (e.clientX - rect.left) * canvas.width / rect.width, y: (e.clientY - rect.top) * canvas.height / rect.height, scale: canvas.width / rect.width };
   }
+  function held(){
+    return Object.keys(fingers).map(function(id){ return fingers[id]; });
+  }
+  function apart(){
+    var p = held();
+    return Math.max(1, Math.sqrt(Math.pow(p[0].x - p[1].x, 2) + Math.pow(p[0].y - p[1].y, 2)));
+  }
   canvas.addEventListener('pointerdown', function(e){
-    if (busy || drag || e.button > 0) return;
-    var p = point(e), i = C.hit(previewBoxes, p.x, p.y);
+    if (busy) return;
+    var p = point(e);
+    if (drag) {
+      // A second finger on the photo being dragged starts a pinch.
+      if (held().length !== 1) return;
+      fingers[e.pointerId] = p;
+      drag.moved = true;
+      drag.pinch = { apart: apart(), zoom: photos[drag.i].zoom };
+      canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+    if (e.button > 0) return;
+    var i = C.hit(previewBoxes, p.x, p.y);
     if (i < 0) return;
-    drag = { i: i, x: p.x, y: p.y, pos: photos[i].pos, box: previewBoxes[i], moved: false };
+    fingers = {};
+    fingers[e.pointerId] = p;
+    drag = { i: i, x: p.x, y: p.y, pos: photos[i].pos, box: previewBoxes[i], moved: false, pinch: null };
     canvas.setPointerCapture(e.pointerId);
   });
   canvas.addEventListener('pointermove', function(e){
-    if (!drag) return;
-    var p = point(e), dx = p.x - drag.x, dy = p.y - drag.y;
+    if (!drag || !fingers[e.pointerId]) return;
+    var p = point(e), f = photos[drag.i];
+    fingers[e.pointerId] = p;
+    if (drag.pinch) {
+      if (held().length === 2) zoomPhoto(f, drag.box, drag.pinch.zoom * apart() / drag.pinch.apart);
+      return;
+    }
+    var dx = p.x - drag.x, dy = p.y - drag.y;
     if (!drag.moved && Math.max(Math.abs(dx), Math.abs(dy)) < NUDGE * p.scale) return;
     drag.moved = true;
-    var f = photos[drag.i];
-    f.pos = C.pan(drag.pos, f.small.width, f.small.height, drag.box.w, drag.box.h, dx, dy);
+    f.pos = C.pan(drag.pos, f.small.width, f.small.height, drag.box.w, drag.box.h, dx, dy, f.zoom);
     drawPreview();
   });
-  canvas.addEventListener('pointerup', function(){
-    if (!drag) return;
+  function lift(e){
+    if (!drag || !fingers[e.pointerId]) return;
+    delete fingers[e.pointerId];
+    var left = held();
+    if (left.length) {
+      // One finger of a pinch lifted: the other drags on from where it is.
+      drag.pinch = null;
+      drag.x = left[0].x;
+      drag.y = left[0].y;
+      drag.pos = photos[drag.i].pos;
+      return;
+    }
     var d = drag;
     drag = null;
-    if (!d.moved) pick(d.i);
-  });
-  canvas.addEventListener('pointercancel', function(){ drag = null; });
+    if (!d.moved && e.type === 'pointerup') pick(d.i);
+  }
+  canvas.addEventListener('pointerup', lift);
+  canvas.addEventListener('pointercancel', lift);
+  canvas.addEventListener('wheel', function(e){
+    if (busy || drag) return;
+    var p = point(e), i = C.hit(previewBoxes, p.x, p.y);
+    if (i < 0) return;
+    e.preventDefault();
+    // Scrolling down zooms out; a notch of the wheel is about 100.
+    var dy = e.deltaMode ? e.deltaY * 33 : e.deltaY;
+    zoomPhoto(photos[i], previewBoxes[i], photos[i].zoom * Math.pow(2, -dy / 500));
+  }, { passive: false });
 
   // The full-size collage decodes each photo again, one at a time, so
   // nine phone photos aren't all held in memory at full size at once.
@@ -302,7 +376,7 @@
     return f.boxes.reduce(function(chain, box, i){
       return chain.then(function(){
         return decode(photos[i].src).then(function(img){
-          paint(f.ctx, box, img, img.naturalWidth, img.naturalHeight, f.radius, photos[i].pos);
+          paint(f.ctx, box, img, img.naturalWidth, img.naturalHeight, f.radius, photos[i].pos, photos[i].zoom);
         });
       });
     }, Promise.resolve()).then(function(){

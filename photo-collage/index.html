@@ -31,7 +31,7 @@
   <link rel="stylesheet" href="/assets/css/editor.css?v=23a907ae4f">
   <link rel="stylesheet" href="/assets/css/settings.css?v=e8dcb9f30c">
   <link rel="stylesheet" href="/assets/css/seg.css?v=9c1df52699">
-  <link rel="stylesheet" href="/assets/css/collage.css?v=0cef41d110">
+  <link rel="stylesheet" href="/assets/css/collage.css?v=66421a5ca3">
   <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
@@ -53,7 +53,7 @@
       <li><b>Layouts for 3, 6 and 9 photos.</b> Grids, a big feature photo with smaller ones around it, steps, columns and a mosaic.</li>
       <li><b>Shapes for where it’s going.</b> Square, portrait 4:5 for feeds, 9:16 for stories, landscape 3:2 or widescreen 16:9.</li>
       <li><b>Your style.</b> Choose the spacing between photos, round the corners and pick the background colour.</li>
-      <li><b>Rearrange.</b> Tap two photos, in the preview or the list, to swap them. Drag a photo in the preview to choose which part of it shows in its space.</li>
+      <li><b>Rearrange.</b> Tap two photos, in the preview or the list, to swap them. Drag a photo in the preview to choose which part of it shows in its space, and zoom it in up to 4× with a pinch, the mouse wheel or a slider.</li>
       <li><b>Sharp and private.</b> Download a JPEG or PNG up to 4096 px. Location and camera details aren’t carried over.</li>
     </ul>
 
@@ -77,7 +77,11 @@
           <button class="link-btn" id="clearBtn" type="button">Clear all</button>
         </div>
         <ol class="photos" id="photos" aria-label="Photos, in collage order"></ol>
-        <p class="photos-hint" id="photosHint">Tap two photos to swap their places. Drag a photo in the preview to move it within its frame.</p>
+        <p class="photos-hint" id="photosHint">Tap two photos to swap their places. Drag a photo in the preview to move it within its frame; pinch it or use the mouse wheel to zoom.</p>
+        <label class="field zoom-field" id="zoomField" hidden>
+          <span class="label"><span id="zoomName">Zoom</span> <output id="zoomOut"></output></span>
+          <input type="range" id="zoom" min="100" max="400" step="5" value="100">
+        </label>
       </div>
 
       <form class="settings panel" id="settings" autocomplete="off">
@@ -140,7 +144,7 @@
   <script src="/assets/js/profile.js?v=d7e69c9e67"></script>
   <script src="/assets/js/files.js?v=0e2bc555a1"></script>
   <script src="/assets/js/images.js?v=dad9ced77c"></script>
-  <script src="/assets/js/collage-core.js?v=c9bd712439"></script>
-  <script src="/assets/js/collage.js?v=dc40a6dd11"></script>
+  <script src="/assets/js/collage-core.js?v=55fed0d793"></script>
+  <script src="/assets/js/collage.js?v=325de3d31f"></script>
 </body>
 </html>
