@@ -17,6 +17,21 @@ test('shows the games and tools, with no under-construction wording', async ({ p
   await expectNoSideScroll(page);
 });
 
+test('screen readers get one steady line instead of the typewriter', async ({ page }) => {
+  await page.clock.install();
+  await page.goto('/');
+  const terminal = page.locator('.terminal');
+  const said = 'Games and tools that run in your browser. Nothing to install, nothing uploaded.';
+  await expect(terminal).not.toHaveAttribute('aria-live', /.*/);
+  await expect(terminal).toMatchAriaSnapshot(`- paragraph: ${said}`);
+  // The typing carries on out of their hearing.
+  const typed = page.locator('#typed');
+  const first = await typed.textContent();
+  await page.clock.runFor(4000);
+  await expect(typed).not.toHaveText(first);
+  await expect(terminal).toMatchAriaSnapshot(`- paragraph: ${said}`);
+});
+
 test('profile chip says "User" until a name is set, and links to the profile', async ({ page }) => {
   await page.goto('/');
   const chip = page.locator('.profile-chip');
