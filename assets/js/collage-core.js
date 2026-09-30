@@ -105,11 +105,28 @@
   }
 
   // The part of a width x height photo that fills a boxW x boxH box
-  // without stretching: the middle of it, cropped to the box's shape.
-  function cover(width, height, boxW, boxH){
+  // without stretching, cropped to the box's shape. pos says which part:
+  // { x, y } from 0 (the left or top edge) to 1 (the right or bottom
+  // edge); the middle, { x: 0.5, y: 0.5 }, when it's left out.
+  function cover(width, height, boxW, boxH, pos){
     var scale = Math.max(boxW / width, boxH / height);
     var sw = boxW / scale, sh = boxH / scale;
-    return { sx: (width - sw) / 2, sy: (height - sh) / 2, sw: sw, sh: sh };
+    pos = pos || CENTRE;
+    return { sx: (width - sw) * pos.x, sy: (height - sh) * pos.y, sw: sw, sh: sh };
+  }
+  var CENTRE = { x: 0.5, y: 0.5 };
+
+  // Where a photo sits in its box after being dragged dx, dy pixels of the
+  // box: the new pos for cover(). The photo moves with the drag and stops
+  // at its edges. A side with nothing cropped off can't move, so it keeps
+  // its pos for when a new layout or shape crops it.
+  function pan(pos, width, height, boxW, boxH, dx, dy){
+    var c = cover(width, height, boxW, boxH);
+    var scale = boxW / c.sw;
+    function move(p, d, spare){
+      return spare * scale < 0.5 ? p : Math.min(1, Math.max(0, p - d / scale / spare));
+    }
+    return { x: move(pos.x, dx, width - c.sw), y: move(pos.y, dy, height - c.sh) };
   }
 
   // Which box, if any, the point x, y is in: its index, or -1.
@@ -141,6 +158,6 @@
   window.bdnixCollage = {
     COUNTS: COUNTS, MAX: MAX, LAYOUTS: LAYOUTS, SHAPES: SHAPES, SIZES: SIZES, FORMATS: FORMATS,
     layoutsFor: layoutsFor, layout: layout, size: size, scaled: scaled,
-    boxes: boxes, cover: cover, hit: hit, advice: advice, outName: outName
+    boxes: boxes, cover: cover, pan: pan, hit: hit, advice: advice, outName: outName
   };
 })();
