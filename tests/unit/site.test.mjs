@@ -96,7 +96,7 @@ test('the content security policy: the site\'s own files, Google Analytics, noth
   const rules = Object.fromEntries(CSP.split('; ').map((r) => { const [k, ...v] = r.split(' '); return [k, v]; }));
   assert.deepEqual(rules['default-src'], ["'self'"]);
   assert.deepEqual(rules['object-src'], ["'none'"]);
-  assert.ok(rules['script-src'].includes('https://www.googletagmanager.com'));
+  assert.deepEqual(rules['script-src'], ["'self'", "'wasm-unsafe-eval'", 'https://www.googletagmanager.com']);
   for (const [k, v] of Object.entries(rules)) {
     assert.ok(!v.includes("'unsafe-inline'") && !v.includes("'unsafe-eval'"), k);
     assert.ok(!v.includes('*') && !v.includes('https:'), k);        // no wide-open sources
