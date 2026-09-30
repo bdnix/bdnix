@@ -41,8 +41,10 @@ test('meta: title, description, canonical URL, share tags and structured data', 
   assert.ok(tags.includes(`<link rel="canonical" href="${SITE}/x/">`));
   assert.ok(tags.includes(`<meta property="og:url" content="${SITE}/x/">`));
   assert.ok(!tags.some((t) => t.includes('noindex')));
-  const ld = tags.find((t) => t.startsWith('<script type="application/ld+json">'));
-  assert.deepEqual(JSON.parse(ld.replace(/^<script[^>]*>|<\/script>$/g, '')), schema(p));
+  const open = '<script type="application/ld+json">', close = '</script>';
+  const ld = tags.find((t) => t.startsWith(open));
+  assert.ok(ld.endsWith(close));
+  assert.deepEqual(JSON.parse(ld.slice(open.length, -close.length)), schema(p));
   assert.equal(schema(p).description, 'Plays <well>.');
   assert.deepEqual(tags.slice(-3), [
     '<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">',
