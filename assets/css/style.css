@@ -48,25 +48,26 @@
 .search-status{margin:8px 0 0;font:400 12px var(--mono);color:var(--faint);min-height:1.4em}
 .search-empty{margin:20px 0 0;font-size:15px;color:var(--muted)}
 .search-empty a{color:var(--fg)}
-.games{margin-top:40px}
-.search-empty + .games{margin-top:24px}
-.games[hidden],.game-card[hidden]{display:none}
+/* The Games and Tools sections: each a catalog of cards, one per app. */
+.catalog{margin-top:40px}
+.search-empty + .catalog{margin-top:24px}
+.catalog[hidden],.card[hidden]{display:none}
 /* As many columns as fit: four on a wide monitor, three on a laptop, two on
    a tablet, one on a phone. */
-.game-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px}
-.game-card{
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px}
+.card{
   display:flex;align-items:center;gap:14px;
   padding:14px 16px;text-decoration:none;
   transition:transform .15s ease,border-color .2s ease,box-shadow .2s ease;
 }
-.game-card:hover{transform:translateY(-2px);border-color:rgba(168,85,247,.45);box-shadow:0 14px 40px -16px rgba(168,85,247,.55)}
-.game-card:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
-.gc-icon{width:40px;height:40px;flex:0 0 auto}
-.gc-text{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
-.gc-text b{font-size:16px;font-weight:700}
-.gc-text span{font-size:13px;color:var(--muted)}
-.gc-arrow{width:16px;height:16px;color:var(--faint);transition:transform .15s ease,color .2s ease}
-.game-card:hover .gc-arrow{transform:translateX(3px);color:var(--fg)}
+.card:hover{transform:translateY(-2px);border-color:rgba(168,85,247,.45);box-shadow:0 14px 40px -16px rgba(168,85,247,.55)}
+.card:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.card-icon{width:40px;height:40px;flex:0 0 auto}
+.card-text{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.card-text b{font-size:16px;font-weight:700}
+.card-text span{font-size:13px;color:var(--muted)}
+.card-arrow{width:16px;height:16px;color:var(--faint);transition:transform .15s ease,color .2s ease}
+.card:hover .card-arrow{transform:translateX(3px);color:var(--fg)}
 .suggest{
   /* Words on the left, buttons on the right; stacked on narrower screens. */
   display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:32px;
@@ -85,7 +86,7 @@
   .suggest-actions{margin-top:16px}
 }
 @media (max-width:560px){
-  .game-cards{grid-template-columns:1fr}
+  .cards{grid-template-columns:1fr}
   .suggest{padding:20px}
   .suggest-actions .btn{flex:1 1 auto}
 }

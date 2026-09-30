@@ -23,11 +23,11 @@
   var search = document.getElementById('search');
   var status = document.getElementById('search-status');
   var empty = document.getElementById('search-empty');
-  var sections = document.querySelectorAll('.games');
+  var sections = document.querySelectorAll('.catalog');
   function filter(){
     var query = search.value, shown = 0;
     for (var i = 0; i < sections.length; i++) {
-      var cards = sections[i].querySelectorAll('.game-card'), left = 0;
+      var cards = sections[i].querySelectorAll('.card'), left = 0;
       for (var j = 0; j < cards.length; j++) {
         var card = cards[j];
         var ok = S.matches(card.textContent + ' ' + (card.getAttribute('data-keywords') || ''), query);
