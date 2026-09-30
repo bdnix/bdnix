@@ -1,6 +1,5 @@
 // PDF merger. Runs entirely in the browser with pdf-lib; nothing is uploaded.
 (function(){
-  var PDFDocument = PDFLib.PDFDocument;
   var T = window.bdnixFiles, P = window.bdnixPdf;
   var fmtSize = T.fmtSize, plural = T.plural, parseRange = P.parseRange, isPdf = P.isPdf, readBytes = T.readBytes;
 
@@ -52,6 +51,7 @@
     say('Reading ' + plural(pdfs.length, 'file') + '…');
 
     var problems = skipped.map(function(f){ return f.name + ' is not a PDF'; });
+    var PDFDocument;
     // Read in order so the list matches the order the files were picked in.
     pdfs.reduce(function(chain, file){
       return chain.then(function(){
@@ -66,11 +66,15 @@
             problems.push(file.name + (encrypted ? ' is password-protected' : ' could not be read'));
           });
       });
-    }, Promise.resolve()).then(function(){
+    }, P.loadPdfLib().then(function(lib){ PDFDocument = lib.PDFDocument; })).then(function(){
       busy = false;
       clearResult();
       render();
       say(problems.length ? 'Skipped: ' + problems.join('; ') + '.' : '', problems.length > 0);
+    }, function(err){
+      busy = false;
+      render();
+      say(err.message, true);
     });
   }
 
@@ -253,7 +257,7 @@
     var total = files.length;
     var out;
 
-    PDFDocument.create().then(function(doc){
+    P.loadPdfLib().then(function(lib){ return lib.PDFDocument.create(); }).then(function(doc){
       out = doc;
       return files.reduce(function(chain, f, i){
         return chain.then(function(){

@@ -37,14 +37,14 @@ Scripts, each exposing one `window.bdnix*` object:
 - `assets/js/blocks.js`: the falling-block backdrop (`window.bdnix`).
 - `assets/js/analytics.js`: Google Analytics page views and the cookie consent banner (`window.bdnixAnalytics`). Every page links it in `<head>` (not `async`: the profile page reads it). It only runs on `www.bdnix.com` / `bdnix.com`, so local previews and tests show no banner and send nothing; `tests/ui/analytics.spec.mjs` serves the site as `www.bdnix.com` to test it. Google's script loads only after the visitor accepts; they can change their choice on the profile page.
 - `assets/js/profile.js`: the visitor's display name and the profile chip (`window.bdnixProfile`). The list of games and their best scores belongs to the profile page (`profile-page.js`).
-- `assets/js/files.js`: reading the files a visitor opens, dropping files on the page, and file sizes and plurals (`window.bdnixFiles`). Every tool uses it.
-- `assets/js/pdftools.js`: page-range parsing, spotting a PDF and the on-demand PDF.js loader, for the PDF tools (`window.bdnixPdf`). Needs `files.js`.
+- `assets/js/files.js`: reading the files a visitor opens, dropping files on the page, file sizes and plurals, and `loadScript()`, which fetches a big library the first time a tool needs it (`window.bdnixFiles`). Every tool uses it.
+- `assets/js/pdftools.js`: page-range parsing, spotting a PDF and the on-demand pdf-lib and PDF.js loaders, for the PDF tools (`window.bdnixPdf`). Needs `files.js`.
 - `assets/js/images.js`: image files for the image tools: which files are images, the formats a canvas saves, the canvas size limit and result file names (`window.bdnixImages`).
 - `assets/js/gamesave.js`: saves a game in progress and loads it back paused (`window.bdnixSave`). Each game snapshots its own state, checks a loaded save before using it, and throws away one that doesn't make sense.
 - `assets/js/upright.js`: games are played with the phone upright (`window.bdnixUpright`). On a phone turned sideways it covers the page with a note asking for it to be turned back, and calls what each game passed to `bdnixUpright.onTurn()`, so the game pauses. Screens with a mouse are never covered, however short the window. Its styles are in `game.css`.
 - `assets/js/sound.js`: the sound engine for the games (`window.bdnixSound`), made with the Web Audio API from short recipes, so there are no audio files. It has only the sounds every game plays (`start`, `over` and `best`); each game adds its own with `bdnixSound.add({ name: [tones] })`, made with `bdnixSound.tone()` and `bdnixSound.notes()`. `bdnixSound.play('<name>')` plays one unless sound is muted. It also runs the mute button (`#soundBtn` in a game's top bar, beside pause) and the M key.
 
-Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit, lamejs), each with its licence file.
+Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit, lamejs), each with its licence file. None is linked from a page: each is fetched the first time a tool needs it (`bdnixPdf.loadPdfLib()`, `bdnixPdf.loadPdfjs()`, `bdnixFiles.loadScript()`), so a page opens without them. Link a new big library the same way.
 
 ## Every change ends in a pull request with green CI
 

@@ -1,7 +1,8 @@
 // Helpers for the PDF tools (merge-pdf, watermark-pdf, redact-pdf): page
-// ranges, spotting a PDF, and loading pdf.js. Needs files.js first.
+// ranges, spotting a PDF, and loading pdf-lib and pdf.js. Needs files.js first.
 (function(){
   var plural = window.bdnixFiles.plural;
+  var PDF_LIB = '/assets/vendor/pdf-lib.min.js?v=1.17.1';
 
   // Parses "1-3, 5, 8-" into 0-based page indices, in the order written.
   // Empty means every page. "8-" runs to the last page, "-3" from the first,
@@ -76,7 +77,17 @@
     return pdfjsPromise;
   }
 
+  // pdf-lib is big too, so it waits until the first PDF is opened. Rejects
+  // with a message for the visitor if it can't load.
+  function loadPdfLib(){
+    return window.bdnixFiles.loadScript(PDF_LIB, 'PDFLib').catch(function(){
+      var err = new Error('Couldn’t load the PDF tools. Check your connection and try again.');
+      err.library = true;
+      throw err;
+    });
+  }
+
   window.bdnixPdf = {
-    parseRange: parseRange, isPdf: isPdf, loadPdfjs: loadPdfjs, streamIterable: streamIterable
+    parseRange: parseRange, isPdf: isPdf, loadPdfjs: loadPdfjs, loadPdfLib: loadPdfLib, streamIterable: streamIterable
   };
 })();

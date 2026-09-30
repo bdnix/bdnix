@@ -1,7 +1,7 @@
 // PDF watermark tool. pdf-lib stamps the pages; pdf.js (loaded on demand)
 // draws the preview. Everything runs in the browser; nothing is uploaded.
 (function(){
-  var L = PDFLib;
+  var L = null;   // pdf-lib, once pdfLib() has loaded it
   var T = window.bdnixFiles, P = window.bdnixPdf;
   var Layout = window.bdnixWatermarkLayout;
   function $(id){ return document.getElementById(id); }
@@ -146,19 +146,13 @@
       useFont(v.bytes, v.name).catch(function(){ files.remove('font'); });
     });
   }
-  // ---- fontkit, only fetched when someone uses their own font ----
-  var fontkitPromise = null;
+  // ---- pdf-lib, fetched with the first PDF or image; fontkit, only when
+  // someone uses their own font ----
+  function pdfLib(){ return P.loadPdfLib().then(function(lib){ return (L = lib); }); }
   function loadFontkit(){
-    if (!fontkitPromise) {
-      fontkitPromise = new Promise(function(resolve, reject){
-        var tag = document.createElement('script');
-        tag.src = '/assets/vendor/fontkit.umd.min.js?v=1.1.1';
-        tag.onload = function(){ window.fontkit ? resolve(window.fontkit) : reject(new Error('fontkit did not load')); };
-        tag.onerror = function(){ fontkitPromise = null; reject(new Error('Couldn’t load the font tools. Check your connection.')); };
-        document.head.appendChild(tag);
-      });
-    }
-    return fontkitPromise;
+    return T.loadScript('/assets/vendor/fontkit.umd.min.js?v=1.1.1', 'fontkit').catch(function(){
+      throw new Error('Couldn’t load the font tools. Check your connection.');
+    });
   }
 
   // ---- Stamping (shared by the preview and the real output) ----
@@ -536,7 +530,9 @@
     var bytes;
     T.readBytes(file).then(function(buf){
       bytes = buf;
-      return L.PDFDocument.load(buf, { updateMetadata: false });
+      return pdfLib();
+    }).then(function(){
+      return L.PDFDocument.load(bytes, { updateMetadata: false });
     }).then(function(doc){
       if (src && src.viewTask) src.viewTask.destroy();
       src = { name: file.name, size: file.size, bytes: bytes, pages: doc.getPageCount(), doc: doc, view: null, viewTask: null };
@@ -563,6 +559,7 @@
         if (src === current) { src.viewFailed = true; schedulePreview(); }
       });
     }).catch(function(err){
+      if (err && err.library) return say(err.message, true);
       var encrypted = err && /encrypt/i.test(err.message || String(err));
       say(file.name + (encrypted ? ' is password-protected, so it can’t be watermarked.' : ' could not be read as a PDF.'), true);
     }).then(function(){
@@ -603,6 +600,8 @@
       }).then(function(blob){ return blob.arrayBuffer(); }).then(function(buf){ return { bytes: buf, type: 'png' }; });
     }
     ready.then(function(img){
+      return pdfLib().then(function(){ return img; });
+    }).then(function(img){
       // Check it embeds before accepting it.
       return L.PDFDocument.create().then(function(d){
         return img.type === 'png' ? d.embedPng(img.bytes) : d.embedJpg(img.bytes);
@@ -615,8 +614,8 @@
       imageName.title = file.name;
       say('');
       onChange();
-    }).catch(function(){
-      say('Couldn’t use ' + file.name + '. Try a PNG or JPG image.', true);
+    }).catch(function(err){
+      say(err && err.library ? err.message : 'Couldn’t use ' + file.name + '. Try a PNG or JPG image.', true);
     });
   }
   imagePicker.addEventListener('change', function(e){
@@ -698,7 +697,9 @@
     var out, pages = uniquePages(sel);
 
     // Start from the original bytes each time so watermarks never stack up.
-    L.PDFDocument.load(src.bytes, { updateMetadata: false }).then(function(doc){
+    pdfLib().then(function(){
+      return L.PDFDocument.load(src.bytes, { updateMetadata: false });
+    }).then(function(doc){
       out = doc;
       return prepareMark(doc, s);
     }).then(function(mark){
