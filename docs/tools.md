@@ -98,13 +98,13 @@ The browser decodes each image (turning phone photos upright) and a canvas saves
 
 Drop in 3, 6 or 9 photos (any image the browser can open, as for [Compress Images](#compress-images)), pick a layout and style, and download the collage. With any other number of photos the preview says how many to add or remove, for example "Add 2 more for a collage of 6, or remove 1 for a collage of 3". A collage holds 9 photos at most; any more dropped at once are left out, with a message.
 
-Layouts:
+Layouts, with the biggest photos filled first:
 
 | Photos | Layouts |
 |---|---|
-| 3 | Side by side, Stacked, Big left, Big top |
-| 6 | Grid 3 across, Grid 2 across, Feature (one big photo with five around it), Steps (rows of 1, 2 and 3), Columns (2 beside 4) |
-| 9 | Grid, Feature (one big photo with eight around it), Steps (rows of 2, 3 and 4), Mosaic |
+| 3 | Side by side, Stacked, Big left, Big top, Big right, Big bottom, Wide middle (a wide photo between two narrow ones) |
+| 6 | Grid 3 across, Grid 2 across, Feature (one big photo with five around it), Steps (rows of 1, 2 and 3), Columns (2 beside 4), Big top (5 below), Big left (5 beside it), Two big (4 below), Steps up (rows of 3, 2 and 1), Mosaic (two big squares with two pairs of strips) |
+| 9 | Grid, Feature (one big photo with eight around it), Steps (rows of 2, 3 and 4), Mosaic, Big top (two rows of 4 below), Big left (8 beside it), Big middle (a column of 4 each side), Two big (rows of 3 and 4 below), Steps up (rows of 4, 3 and 2), Columns (columns of 2, 3 and 4) |
 
 Settings:
 
