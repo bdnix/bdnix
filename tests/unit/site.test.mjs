@@ -97,6 +97,9 @@ test('the content security policy: the site\'s own files, Google Analytics, noth
   assert.deepEqual(rules['default-src'], ["'self'"]);
   assert.deepEqual(rules['object-src'], ["'none'"]);
   assert.deepEqual(rules['script-src'], ["'self'", "'wasm-unsafe-eval'", 'https://www.googletagmanager.com']);
+  // The fonts are the site's own (assets/fonts), so no font service.
+  assert.deepEqual(rules['style-src'], ["'self'"]);
+  assert.deepEqual(rules['font-src'], ["'self'", 'data:']);
   for (const [k, v] of Object.entries(rules)) {
     assert.ok(!v.includes("'unsafe-inline'") && !v.includes("'unsafe-eval'"), k);
     assert.ok(!v.includes('*') && !v.includes('https:'), k);        // no wide-open sources
