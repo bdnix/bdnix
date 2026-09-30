@@ -67,8 +67,6 @@
   };
   var compactMQ = window.matchMedia('(max-width:700px),(pointer:coarse)');
   var landscapeMQ = window.matchMedia('(orientation:landscape) and (max-height:520px)');
-  var ICON_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2h3v12H4zM9 2h3v12H9z"/></svg>';
-  var ICON_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2.5v11a.5.5 0 0 0 .77.42l8.5-5.5a.5.5 0 0 0 0-.84l-8.5-5.5A.5.5 0 0 0 4 2.5z"/></svg>';
 
   var CELL = 16, wallLayer = null;
   var state = 'idle', pausedFrom = null, stateTime = 0;
@@ -152,7 +150,7 @@
     overlay.hidden = true;
     newBtn.hidden = true;
     startBtn.blur();
-    pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.setAttribute('aria-label', 'Pause');
+    window.bdnixGamebar.setPaused(false);
     updateHud();
     sound.play('start');
     persist();
@@ -394,7 +392,7 @@
     if (state === 'paused') {
       state = pausedFrom; pausedFrom = null;
       overlay.hidden = true;
-      pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.setAttribute('aria-label', 'Pause');
+      window.bdnixGamebar.setPaused(false);
       last = performance.now();
     } else if (state === 'ready' || state === 'playing' || state === 'dying' || state === 'cleared') {
       pausedFrom = state; state = 'paused';
@@ -403,7 +401,7 @@
       startBtn.textContent = 'Resume';
       newBtn.hidden = false;
       overlay.hidden = false;
-      pauseBtn.innerHTML = ICON_PLAY; pauseBtn.setAttribute('aria-label', 'Resume');
+      window.bdnixGamebar.setPaused(true);
       persist();
     }
   }
