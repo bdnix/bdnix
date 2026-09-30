@@ -19,7 +19,7 @@
   <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Brick Bounce", "url": "https://www.bdnix.com/brick-bounce/", "description": "Play Brick Bounce free in your browser: bounce the ball off your paddle to smash a wall of bricks, row by row, before your three balls run out. Nothing to install.", "applicationCategory": "GameApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
   <link rel="preload" href="/assets/fonts/inter-latin-400-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/inter-latin-800-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/base.css?v=6001ee2add">
+  <link rel="stylesheet" href="/assets/css/base.css?v=7e5309da52">
   <link rel="stylesheet" href="/assets/css/icon-btn.css?v=20fd350a8d">
   <link rel="stylesheet" href="/assets/css/game.css?v=5d7bc45b69">
   <link rel="stylesheet" href="/assets/css/gamepad.css?v=69efc55b7b">
@@ -35,8 +35,8 @@
   <header class="bar">
     <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ brick bounce</span></a>
     <div class="bar-actions">
-      <button id="soundBtn" class="icon-btn" aria-label="Mute sound"></button>
-      <button id="pauseBtn" class="icon-btn" aria-label="Pause">
+      <button type="button" id="soundBtn" class="icon-btn" aria-label="Mute sound"></button>
+      <button type="button" id="pauseBtn" class="icon-btn" aria-label="Pause">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2h3v12H4zM9 2h3v12H9z"/></svg>
       </button>
     </div>
@@ -51,14 +51,14 @@
     </section>
 
     <div class="board-wrap">
-      <canvas id="board" aria-label="Brick Bounce board"></canvas>
+      <canvas id="board" role="img" aria-label="Brick Bounce board"></canvas>
       <div id="overlay" class="overlay">
         <p class="label" id="ovKicker">bdnix arcade</p>
         <h1 id="ovTitle">Brick Bounce</h1>
         <p id="ovText">Bounce the ball off your paddle to break every brick. Don’t let it past you. Glowing bricks drop powers: catch them for more balls, a fireball, a laser, a wider paddle or an extra ball.</p>
         <div class="ov-actions">
-          <button id="startBtn" class="btn btn-primary">Start game</button>
-          <button id="newBtn" class="btn btn-ghost" hidden>New game</button>
+          <button type="button" id="startBtn" class="btn btn-primary">Start game</button>
+          <button type="button" id="newBtn" class="btn btn-ghost" hidden>New game</button>
         </div>
         <p class="keys only-keys"><kbd>←</kbd> <kbd>→</kbd> or the mouse to move · <kbd>Space</kbd> or click to launch · <kbd>P</kbd> pause</p>
         <p class="keys only-touch">Drag anywhere to move, tap to launch, or use the gamepad below.</p>
@@ -69,11 +69,11 @@
 
   <nav class="touch" aria-label="Game controls">
     <div class="dpad row">
-      <button class="left" data-dir="left" aria-label="Left"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <button class="right" data-dir="right" aria-label="Right"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+      <button type="button" class="left" data-dir="left" aria-label="Left"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <button type="button" class="right" data-dir="right" aria-label="Right"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
     </div>
     <div class="face">
-      <button class="a" data-dir="launch" aria-label="Launch"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M6 11l6-6 6 6"/></svg><span>Launch</span></button>
+      <button type="button" class="a" data-dir="launch" aria-label="Launch"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M6 11l6-6 6 6"/></svg><span>Launch</span></button>
     </div>
   </nav>
 

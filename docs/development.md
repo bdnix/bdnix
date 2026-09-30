@@ -81,6 +81,7 @@ A new page needs:
 - The analytics script linked in `<head>` (listed in `tests/ui/analytics.spec.mjs`).
 - A title, description, canonical URL on `https://www.bdnix.com`, Open Graph and Twitter tags, and [schema.org](https://schema.org) structured data (checked by `tests/ui/seo.spec.mjs`).
 - An entry in [sitemap.xml](../sitemap.xml).
+- A `role="img"` and an `aria-label` on every canvas but the backdrop, and a `type` on every button (listed in `tests/ui/a11y.spec.mjs`).
 - A mention in the [README](../README.md) and the relevant guide in this directory.
 
 The share image (`assets/img/og.png`, 1200×630) and `assets/img/apple-touch-icon.png` are drawn by [scripts/og-image.mjs](../scripts/og-image.mjs). To change them, edit the script, run `npm run og-image` and commit the PNGs.

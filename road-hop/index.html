@@ -19,7 +19,7 @@
   <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Road Hop", "url": "https://www.bdnix.com/road-hop/", "description": "Play Road Hop free in your browser: help a chicken hop across busy roads and ride logs over rivers. Keep moving, go as far as you can and beat your best. Nothing to install.", "applicationCategory": "GameApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
   <link rel="preload" href="/assets/fonts/inter-latin-400-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/inter-latin-800-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/base.css?v=6001ee2add">
+  <link rel="stylesheet" href="/assets/css/base.css?v=7e5309da52">
   <link rel="stylesheet" href="/assets/css/icon-btn.css?v=20fd350a8d">
   <link rel="stylesheet" href="/assets/css/game.css?v=5d7bc45b69">
   <link rel="stylesheet" href="/assets/css/gamepad.css?v=69efc55b7b">
@@ -35,8 +35,8 @@
   <header class="bar">
     <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ road hop</span></a>
     <div class="bar-actions">
-      <button id="soundBtn" class="icon-btn" aria-label="Mute sound"></button>
-      <button id="pauseBtn" class="icon-btn" aria-label="Pause">
+      <button type="button" id="soundBtn" class="icon-btn" aria-label="Mute sound"></button>
+      <button type="button" id="pauseBtn" class="icon-btn" aria-label="Pause">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2h3v12H4zM9 2h3v12H9z"/></svg>
       </button>
     </div>
@@ -49,14 +49,14 @@
     </section>
 
     <div class="board-wrap">
-      <canvas id="board" aria-label="Road Hop board"></canvas>
+      <canvas id="board" role="img" aria-label="Road Hop board"></canvas>
       <div id="overlay" class="overlay">
         <p class="label" id="ovKicker">bdnix arcade</p>
         <h1 id="ovTitle">Road Hop</h1>
         <p id="ovText">Help the chicken across. Mind the traffic, ride the logs, and keep moving.</p>
         <div class="ov-actions">
-          <button id="startBtn" class="btn btn-primary">Start game</button>
-          <button id="newBtn" class="btn btn-ghost" hidden>New game</button>
+          <button type="button" id="startBtn" class="btn btn-primary">Start game</button>
+          <button type="button" id="newBtn" class="btn btn-ghost" hidden>New game</button>
         </div>
         <p class="keys only-keys"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> hop · click to hop forward · <kbd>P</kbd> pause</p>
         <p class="keys only-touch">Tap to hop forward, swipe to hop any way, or use the D-pad below.</p>
@@ -67,10 +67,10 @@
 
   <nav class="touch" aria-label="Game controls">
     <div class="dpad">
-      <button class="up" data-dir="up" aria-label="Up"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button>
-      <button class="left" data-dir="left" aria-label="Left"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <button class="right" data-dir="right" aria-label="Right"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
-      <button class="down" data-dir="down" aria-label="Down"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg></button>
+      <button type="button" class="up" data-dir="up" aria-label="Up"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button>
+      <button type="button" class="left" data-dir="left" aria-label="Left"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <button type="button" class="right" data-dir="right" aria-label="Right"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+      <button type="button" class="down" data-dir="down" aria-label="Down"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg></button>
     </div>
   </nav>
 
