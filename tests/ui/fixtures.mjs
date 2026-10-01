@@ -1,6 +1,6 @@
-// Every UI test gets a page that fails the test on any uncaught JS error,
-// and that doesn't fetch Google Analytics (not needed, and keeps tests
-// offline).
+// Every UI test gets a page that fails the test on any uncaught JS error or
+// anything the content security policy blocks, and that doesn't fetch Google
+// Analytics (not needed, and keeps tests offline).
 // With COVERAGE set, it also records which parts of the site's scripts ran
 // (see tests/coverage/ui.mjs).
 // Every request to the test server says which spec made it, so the UI result
@@ -20,13 +20,26 @@ export const test = base.extend({
   page: async ({ page }, use, testInfo) => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
+    // Anything the page's content security policy blocks fails the test too,
+    // unless the test takes it with takeCspViolations().
+    const blocked = [];
+    violations.set(page, blocked);
+    page.on('console', (m) => { if (m.type() === 'error' && /Content Security Policy/.test(m.text())) blocked.push(m.text()); });
     await page.route(/^https:\/\/([\w-]+\.)*(googletagmanager|google-analytics)\.com\//, (route) => route.abort());
     if (coverage.enabled) await page.coverage.startJSCoverage({ resetOnNavigation: false });
     await use(page);
     if (coverage.enabled) await coverage.save(testInfo.file, await page.coverage.stopJSCoverage());
     expect(errors, 'uncaught errors on the page').toEqual([]);
+    expect(blocked, 'blocked by the content security policy').toEqual([]);
   }
 });
+
+const violations = new WeakMap();
+// What the content security policy has blocked on the page so far, for a
+// test that expects it to block something. Clears the list.
+export function takeCspViolations(page){
+  return violations.get(page).splice(0);
+}
 
 export { expect };
 

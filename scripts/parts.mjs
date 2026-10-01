@@ -23,11 +23,29 @@ export function schema(p){
   return null;
 }
 
-// Title, description, canonical URL, Open Graph and Twitter tags, structured
-// data and icons.
+// What a page may load, and from where. Everything is the site's own except
+// Google Analytics (only after the visitor accepts). PDF.js decodes some images with WebAssembly; downloads, previews and
+// decoded media are blob: and data: URLs. No inline scripts or styles.
+export const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'wasm-unsafe-eval' https://www.googletagmanager.com",
+  "style-src 'self'",
+  "font-src 'self' data:",
+  "img-src 'self' data: blob: https://*.google-analytics.com https://*.googletagmanager.com",
+  "connect-src 'self' data: blob: https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
+  "media-src 'self' data: blob:",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'"
+].join('; ');
+
+// The content security policy, title, description, canonical URL, Open
+// Graph and Twitter tags, structured data and icons.
 export function meta(p){
   const url = SITE + p.path, ld = schema(p);
   return [
+    `<meta http-equiv="Content-Security-Policy" content="${CSP}">`,
     `<title>${esc(p.title)}</title>`,
     `<meta name="description" content="${esc(p.description)}">`,
     `<link rel="canonical" href="${url}">`,
