@@ -288,6 +288,49 @@ test('side-by-side roads, trees and trucks from a saved round are drawn', async 
   expect(lanes[2 - s.base].items[0].pos).toBeGreaterThan(5);  // the truck drove on
 });
 
+// The chicken's white pixels below the score, in world units: how many,
+// and the middle of them across the board.
+function whites(page){
+  return page.locator('#board').evaluate((c) => {
+    const u = c.width / (9 * 32), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let n = 0, sx = 0;
+    for (let y = Math.ceil(70 * u); y < c.height; y++) {
+      for (let x = 0; x < c.width; x++) {
+        const i = (y * c.width + x) * 4;
+        if (d[i] > 180 && d[i + 1] > 180 && d[i + 2] > 180 && Math.abs(d[i] - d[i + 2]) < 30) { n++; sx += x; }
+      }
+    }
+    return { n, x: n ? sx / n / u : 0 };
+  });
+}
+
+for (const speed of [0.5, -0.5]) {
+  test(`a car hit squashes the chicken, shoves it ${speed > 0 ? 'right' : 'left'} and sends feathers flying`, async ({ page }) => {
+    await start(page);
+    const s = await hopTo(page, 1);
+    // A car right in front of the chicken on row 2, with grass beyond it.
+    s.lanes[2 - s.base] = { type: 'road', trees: [], speed, items: [{ pos: s.chicken.x + MARGIN, len: 1, color: 0 }] };
+    s.lanes[3 - s.base] = { type: 'grass', trees: [], speed: 0, items: [] };
+    await page.addInitScript((data) => localStorage.setItem('bdnix_hop_save', JSON.stringify({ v: 1, data })), s);
+    await page.reload();
+    await page.locator('#startBtn').click();
+    await page.clock.runFor(50);
+    const before = await whites(page);
+    expect(before.n).toBeGreaterThan(100);
+
+    await press(page, 'ArrowUp');
+    await page.clock.runFor(150);
+    const mid = await whites(page);
+    await waitForGameOver(page);
+    await expect(page.locator('#ovKicker')).toHaveText('Fowl play on the road!');
+    const after = await whites(page);
+    expect(after.n).toBeGreaterThan(20);                 // still there, squashed flat
+    expect(after.n).toBeLessThan(before.n * 0.7);
+    expect(mid.n).toBeGreaterThan(after.n * 1.5);        // the feathers, gone by the end
+    expect((after.x - before.x) * Math.sign(speed)).toBeGreaterThan(5); // shoved along with the car
+  });
+}
+
 test('hops and each way of losing have a sound', async ({ page }) => {
   await listen(page);
   await page.reload();

@@ -183,10 +183,39 @@
     return { carry: end ? 0 : t, end: end };
   }
 
+  // How a car hit looks `t` seconds after it, for a car driving `dir` (1 to
+  // the right, -1 to the left): the chicken squashes flat and is shoved along
+  // with the car, the board shakes, a ring flashes and feathers burst out,
+  // drifting down as they fade. Offsets are in cells from the chicken's centre.
+  var FEATHERS = 7;
+  function hitPose(t, dir){
+    var squash = Math.min(1, t / 0.08);
+    var shove = 1 - Math.pow(1 - Math.min(1, t / 0.15), 2);
+    var shake = Math.max(0, 1 - t / 0.35);
+    var p = Math.min(1, t / 0.6), spread = 1 - Math.pow(1 - p, 3);
+    var feathers = [];
+    for (var i = 0; i < FEATHERS; i++) {
+      var a = i / FEATHERS * Math.PI * 2 + 0.4, reach = 0.6 + (i % 3) * 0.2;
+      feathers.push({
+        x: Math.sin(a) * reach * spread,
+        y: -Math.cos(a) * reach * spread + 0.3 * p * p,
+        spin: a + t * (i % 2 ? 6 : -6),
+        alpha: Math.max(0, 1 - t / 0.8)
+      });
+    }
+    return {
+      sx: 1 + 0.35 * squash, sy: 1 - 0.65 * squash,
+      dx: (dir < 0 ? -1 : 1) * 0.3 * shove,
+      shakeX: Math.sin(t * 90) * 4 * shake, shakeY: Math.cos(t * 70) * 3 * shake,
+      flash: Math.max(0, 1 - t / 0.15),
+      feathers: feathers
+    };
+  }
+
   window.bdnixHop = {
     COLS: COLS, ROWS: ROWS, START_COL: START_COL, MARGIN: MARGIN, PERIOD: PERIOD,
     AHEAD: AHEAD, CREEP: CREEP, STEP: STEP,
     create: create, hop: hop, tick: tick, advance: advance,
-    laneAt: laneAt, left: left, danger: danger, fill: fill, pace: pace
+    laneAt: laneAt, left: left, danger: danger, fill: fill, pace: pace, hitPose: hitPose
   };
 })();

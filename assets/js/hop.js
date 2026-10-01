@@ -232,11 +232,17 @@
     ctx.clearRect(0, 0, W * SCALE, H * SCALE);
     ctx.setTransform(dpr * SCALE, 0, 0, dpr * SCALE, 0, 0);
 
+    // A car hit shakes the board for a moment.
+    var pose = hitPose();
+    ctx.save();
+    if (pose) ctx.translate(pose.shakeX, pose.shakeY);
     var lo = Math.floor(view) - 1, hi = Math.ceil(view) + ROWS;
     for (var r = lo; r <= hi; r++) drawGround(r);
     for (r = lo; r <= hi; r++) drawThings(r);
-    drawChicken();
+    drawChicken(pose);
     for (r = lo; r <= hi; r++) drawTrees(r);
+    if (pose) drawHit(pose);
+    ctx.restore();
 
     if (state !== 'idle' && state !== 'over') drawScore();
     if (state === 'ready' || (state === 'paused' && pausedFrom === 'ready')) {
@@ -253,14 +259,15 @@
     }
   }
 
+  // A little past the edges, so the board's shake after a car hit shows no gap.
   function drawGround(row){
     var lane = F.laneAt(world, row), y = rowY(row);
     if (lane.type === 'grass') {
       ctx.fillStyle = row % 2 ? '#0f2a24' : '#12302a';
-      ctx.fillRect(0, y, W, CELL);
+      ctx.fillRect(-8, y, W + 16, CELL);
     } else if (lane.type === 'road') {
       ctx.fillStyle = '#161a2e';
-      ctx.fillRect(0, y, W, CELL);
+      ctx.fillRect(-8, y, W + 16, CELL);
       // Dashes between two roads side by side
       if (F.laneAt(world, row + 1).type === 'road') {
         ctx.fillStyle = 'rgba(238,241,248,.35)';
@@ -268,7 +275,7 @@
       }
     } else {
       ctx.fillStyle = '#0b2d4a';
-      ctx.fillRect(0, y, W, CELL);
+      ctx.fillRect(-8, y, W + 16, CELL);
       // Ripples drift with the current
       ctx.fillStyle = 'rgba(34,211,238,.18)';
       var shift = ((clock * lane.speed * CELL * 0.5) % 48 + 48) % 48;
@@ -340,13 +347,43 @@
     }
   }
 
+  // How the car hit looks now, or null if the chicken wasn't hit by a car.
+  function hitPose(){
+    if ((state !== 'dying' && state !== 'over') || world.dead !== 'car') return null;
+    var lane = F.laneAt(world, world.chicken.row);
+    return F.hitPose(state === 'over' ? DEATH_TIME : stateTime, lane.speed);
+  }
+  // The ring flashing where the car struck, and the feathers flying off.
+  function drawHit(pose){
+    var c = world.chicken, cx = (c.x + pose.dx + 0.5) * CELL, cy = rowY(c.row) + CELL / 2;
+    if (pose.flash > 0) {
+      ctx.strokeStyle = 'rgba(254,249,195,' + (0.9 * pose.flash).toFixed(3) + ')';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(cx, cy, 8 + (1 - pose.flash) * 16, 0, Math.PI * 2); ctx.stroke();
+    }
+    for (var i = 0; i < pose.feathers.length; i++) {
+      var f = pose.feathers[i];
+      if (f.alpha <= 0) continue;
+      ctx.save();
+      ctx.globalAlpha = f.alpha;
+      ctx.translate(cx + f.x * CELL, cy + f.y * CELL);
+      ctx.rotate(f.spin);
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath(); ctx.ellipse(0, 0, 2.2, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(148,163,184,.8)'; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(0, 4); ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   // The chicken, seen from above: a round white body, wings at the sides,
   // a red comb and an orange beak pointing the way it faces.
   var ANGLES = { up: 0, right: Math.PI / 2, down: Math.PI, left: -Math.PI / 2 };
-  function drawChicken(){
+  function drawChicken(pose){
     var c = world.chicken, t = hopT > 0 && from ? 1 - hopT / HOP_TIME : 1;
     var x = from && t < 1 ? from.x + (c.x - from.x) * t : c.x;
     var row = from && t < 1 ? from.row + (c.row - from.row) * t : c.row;
+    if (pose) x += pose.dx;
     var cx = (x + 0.5) * CELL, cy = rowY(row) + CELL / 2;
     var dying = state === 'dying' || state === 'over' ? world.dead : null;
     var lift = 1 + Math.sin(t * Math.PI) * 0.18;
@@ -364,7 +401,7 @@
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(ANGLES[c.face]);
-    if (dying === 'car') ctx.scale(1.35, 0.35);
+    if (pose) ctx.scale(pose.sx, pose.sy);
     else ctx.scale(lift, lift);
     ctx.fillStyle = 'rgba(8,10,18,.35)';
     ctx.beginPath(); ctx.ellipse(0, 3, 11, 11, 0, 0, Math.PI * 2); ctx.fill();
