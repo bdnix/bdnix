@@ -79,3 +79,55 @@ test('onFileDrop: lights up the drop zone while files are dragged, and hands ove
   assert.equal(got.length, 1);
 });
 
+
+// Just enough `document` for loadScript: a head that collects script tags,
+// which the test then "runs" by calling their onload or onerror.
+function scriptDocument(){
+  const head = { tags: [], appendChild(t){ t.parentNode = head; head.tags.push(t); }, removeChild(t){ head.tags.splice(head.tags.indexOf(t), 1); t.parentNode = null; } };
+  return { head, createElement: (name) => ({ name, parentNode: null }) };
+}
+
+test('loadScript: fetches a script once, and resolves to what it defines', async () => {
+  const document = scriptDocument();
+  const w = load(FILE, { document });
+  const first = w.bdnixFiles.loadScript('/lib.js?v=1', 'Lib');
+  const again = w.bdnixFiles.loadScript('/lib.js?v=1', 'Lib');
+  assert.equal(first, again);
+  assert.equal(document.head.tags.length, 1);
+  const [tag] = document.head.tags;
+  assert.deepEqual([tag.name, tag.src], ['script', '/lib.js?v=1']);
+  w.Lib = { ok: true };
+  tag.onload();
+  assert.equal(await first, w.Lib);
+  // Once it's there, no more tags.
+  assert.equal(await w.bdnixFiles.loadScript('/lib.js?v=1', 'Lib'), w.Lib);
+  assert.equal(document.head.tags.length, 1);
+});
+
+test('loadScript: a script already on the page is used as it is', async () => {
+  const document = scriptDocument();
+  const w = load(FILE, { document });
+  w.Lib = { ok: true };
+  assert.equal(await w.bdnixFiles.loadScript('/lib.js', 'Lib'), w.Lib);
+  assert.equal(document.head.tags.length, 0);
+});
+
+test('loadScript: a failed fetch rejects, removes its tag and is tried again next time', async () => {
+  const document = scriptDocument();
+  const w = load(FILE, { document });
+  const failed = w.bdnixFiles.loadScript('/lib.js', 'Lib');
+  document.head.tags[0].onerror();
+  await assert.rejects(failed, /\/lib\.js did not load/);
+  assert.equal(document.head.tags.length, 0);
+
+  // A script that runs but doesn't define what was asked for fails too.
+  const empty = w.bdnixFiles.loadScript('/lib.js', 'Lib');
+  document.head.tags[0].onload();
+  await assert.rejects(empty, /did not load/);
+
+  const retry = w.bdnixFiles.loadScript('/lib.js', 'Lib');
+  assert.notEqual(retry, failed);
+  w.Lib = 42;
+  document.head.tags[0].onload();
+  assert.equal(await retry, 42);
+});

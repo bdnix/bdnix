@@ -49,5 +49,28 @@
     });
   }
 
-  window.bdnixFiles = { fmtSize: fmtSize, plural: plural, readBytes: readBytes, onFileDrop: onFileDrop };
+  // Big libraries are fetched the first time they're needed, not with the
+  // page. Resolves to window[name] once src has run; a load that fails is
+  // forgotten, so the next call tries again.
+  var scripts = {};
+  function loadScript(src, name){
+    if (window[name]) return Promise.resolve(window[name]);
+    if (!scripts[src]) {
+      scripts[src] = new Promise(function(resolve, reject){
+        var tag = document.createElement('script');
+        function fail(){
+          delete scripts[src];
+          if (tag.parentNode) tag.parentNode.removeChild(tag);
+          reject(new Error(src + ' did not load'));
+        }
+        tag.src = src;
+        tag.onload = function(){ window[name] ? resolve(window[name]) : fail(); };
+        tag.onerror = fail;
+        document.head.appendChild(tag);
+      });
+    }
+    return scripts[src];
+  }
+
+  window.bdnixFiles = { fmtSize: fmtSize, plural: plural, readBytes: readBytes, onFileDrop: onFileDrop, loadScript: loadScript };
 })();
