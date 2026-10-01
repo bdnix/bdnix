@@ -110,3 +110,21 @@ test('streamIterable: leaves streams that already support it, and missing ones, 
   assert.equal(Stream.prototype[Symbol.asyncIterator], own);
   assert.equal(T.streamIterable(undefined), false);
 });
+
+test('loadPdfLib: fetches the vendored pdf-lib, with a message for the visitor if it fails', async () => {
+  const tags = [];
+  const document = {
+    head: { appendChild: (t) => { t.parentNode = document.head; tags.push(t); }, removeChild: () => {} },
+    createElement: () => ({})
+  };
+  const w = load(FILES, { document });
+  const failed = w.bdnixPdf.loadPdfLib();
+  assert.equal(tags[0].src, '/assets/vendor/pdf-lib.min.js?v=1.17.1');
+  tags[0].onerror();
+  await assert.rejects(failed, (err) => err.library === true &&
+    err.message === 'Couldn’t load the PDF tools. Check your connection and try again.');
+  const ok = w.bdnixPdf.loadPdfLib();
+  w.PDFLib = { PDFDocument: {} };
+  tags[1].onload();
+  assert.equal(await ok, w.PDFLib);
+});
