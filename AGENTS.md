@@ -67,12 +67,12 @@ Each game and tool is its own app. **Adding or changing a feature of one app mus
 - A shared file holds only what every page that links it uses, and nothing about any one app: no app's names, data, sounds, colours or special cases. A shared component (a stylesheet, a helper script) is one concern; a page links it only if it uses it.
 - Something only some apps use gets its own shared file (a component), linked by just those apps, not a corner of a bigger shared file.
 - Anything specific to one app lives in that app's own files: its sounds (added with `bdnixSound.add`), its rules, its styles and its words. Two apps that happen to want the same small thing (the same sound recipe, say) each keep their own copy rather than sharing a file that then couples them.
-- A page that lists every app (the landing page, the profile page, `sitemap.xml`, the SEO and analytics tests) is the one place that changes when an app is added.
+- `scripts/site.mjs` lists every page and app: titles, descriptions, card names, search keywords, icons and best-score keys. `npm run build` writes the landing page's cards, the profile page's scores, `sitemap.xml` and every page's head tags from it, so adding an app means adding it there. The tests that list every page (SEO, analytics, a11y, ...) keep their own lists on purpose, as an independent check.
 - Before editing a shared file for a feature, ask whether every page that links it needs the change. If not, the change belongs in the app, or in a new component.
 
 ## Ground rules
 
-- **Everything runs in the browser.** Files the visitor opens are never uploaded; there is no server. Don't send the visitor's files, or anything they type into a tool, anywhere. Load libraries from `assets/vendor/`, not a CDN. The site uses Google Analytics (`assets/js/analytics.js`); a new page must link it in `<head>` (the UI test in `tests/ui/analytics.spec.mjs` lists every page). A new page also needs the SEO tags the other pages have (canonical URL, Open Graph, Twitter, structured data) and an entry in `sitemap.xml`; `tests/ui/seo.spec.mjs` lists every page. Every canvas but the backdrop is `role="img"` with an `aria-label`, and every button has a `type`; `tests/ui/a11y.spec.mjs` lists every page.
+- **Everything runs in the browser.** Files the visitor opens are never uploaded; there is no server. Don't send the visitor's files, or anything they type into a tool, anywhere. Load libraries from `assets/vendor/`, not a CDN. The site uses Google Analytics (`assets/js/analytics.js`); a new page must link it in `<head>` (the UI test in `tests/ui/analytics.spec.mjs` lists every page). A new page also needs an entry in `scripts/site.mjs` and `<!-- build:meta -->` markers in its `<head>` (and `<!-- build:footer -->` around a footer), from which `npm run build` writes its title, description, canonical URL, Open Graph, Twitter and structured data and its `sitemap.xml` entry; `tests/ui/seo.spec.mjs` lists every page. Never edit between `build:` markers by hand. Every canvas but the backdrop is `role="img"` with an `aria-label`, and every button has a `type`; `tests/ui/a11y.spec.mjs` lists every page.
 - **Keep it dependency-free at runtime.** No frameworks and no bundler. `package.json` holds dev tooling only (tests, coverage, the cache-busting script).
 - **Match the existing code.** Each script is one IIFE, `(function(){ ... })();`, in ES5-style `var`/`function` code. A script that other scripts use exposes one `window.bdnix*` object. Comment density, naming and CSS style should match the file you're in.
 - **Reuse what's truly shared.** Use the tokens in `base.css`, the layouts in `page.css`, `tool.css` and `game.css`, the components, and the helpers in `files.js`, `pdftools.js`, `images.js` and `profile.js`. When several apps need the same general-purpose logic (not a feature of one of them), give it its own shared file, as `files.js` and `images.js` are, and link it only from those apps.
@@ -111,7 +111,7 @@ CI uploads the unit and UI tests' coverage of `assets/js/*.js` to [Codecov](http
 
 ## Cache-busting
 
-Pages link the site's own scripts and stylesheets with `?v=<hash of the file>`, so browsers fetch new versions as soon as they change. **After editing anything in `assets/js` or `assets/css`, run `npm run build` and commit the updated HTML.** CI fails a pull request whose hashes are stale. When adding a new script or stylesheet, link it as `/assets/js/name.js` (or `/assets/css/name.css`) and run `npm run build` to add the hash. Vendored files keep their library version as `?v=`; bump it by hand when upgrading one.
+Pages link the site's own scripts and stylesheets with `?v=<hash of the file>`, so browsers fetch new versions as soon as they change. **After editing anything in `assets/js` or `assets/css`, run `npm run build` and commit the updated HTML.** CI fails a pull request whose hashes are stale. When adding a new script or stylesheet, link it as `/assets/js/name.js` (or `/assets/css/name.css`) and run `npm run build` to add the hash. Vendored files keep their library version as `?v=`; bump it by hand when upgrading one. The same command writes the parts of the pages generated from `scripts/site.mjs` (see [Keep apps modular](#keep-apps-modular)), and CI fails a pull request where those are stale too.
 
 ## Commands
 
@@ -120,8 +120,8 @@ Node 22 or later.
 ```bash
 npm install
 npx playwright install chromium   # first time only
-npm run build          # update ?v= cache-busting hashes in every page
-npm run build:check    # fail if any hash is stale (what CI runs)
+npm run build          # write the parts generated from scripts/site.mjs and the ?v= hashes
+npm run build:check    # fail if any of those is stale (what CI runs)
 npm test               # unit tests, then UI tests
 npm run test:unit
 npm run test:ui
@@ -131,7 +131,7 @@ npm run serve          # the site at http://localhost:4173
 
 ## Before you open a pull request
 
-1. `npm run build` if you touched `assets/js` or `assets/css`.
+1. `npm run build` if you touched `assets/js`, `assets/css` or `scripts/site.mjs`.
 2. `npm run coverage` passes, and `coverage/report/index.html` shows your new and changed lines as covered.
 3. New or changed behaviour has tests, and a bug fix has a test that failed before the fix.
 4. The page works at phone width without sideways scrolling.

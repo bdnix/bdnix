@@ -70,6 +70,8 @@ Anything merged to `master` goes live once GitHub Pages rebuilds. Pages builds t
 
 ### Cache-busting
 
+`npm run build` also writes the parts of the pages that come from [scripts/site.mjs](../scripts/site.mjs) (head tags, footer, landing page cards, profile page scores and `sitemap.xml`), between `<!-- build:... -->` markers that shouldn't be edited by hand.
+
 Browsers may cache scripts and stylesheets, so every page links the site's own files with a `?v=` hash of their contents, for example `/assets/js/merge.js?v=d07a831b04`. **After editing anything in `assets/js` or `assets/css`, run `npm run build`** and commit the updated HTML. CI fails a pull request with stale hashes; `npm run build:check` runs the same check locally.
 
 Vendored libraries keep their version number as `?v=`; bump it by hand when upgrading one.
@@ -79,8 +81,8 @@ Vendored libraries keep their version number as `?v=`; bump it by hand when upgr
 A new page needs:
 
 - The analytics script linked in `<head>` (listed in `tests/ui/analytics.spec.mjs`).
-- A title, description, canonical URL on `https://www.bdnix.com`, Open Graph and Twitter tags, and [schema.org](https://schema.org) structured data (checked by `tests/ui/seo.spec.mjs`).
-- An entry in [sitemap.xml](../sitemap.xml).
+- A title and description (in `scripts/site.mjs`), from which the build writes its canonical URL on `https://www.bdnix.com`, Open Graph and Twitter tags and [schema.org](https://schema.org) structured data (checked by `tests/ui/seo.spec.mjs`).
+- An entry in [scripts/site.mjs](../scripts/site.mjs), and `<!-- build:meta -->` / `<!-- /build:meta -->` markers in its `<head>` (plus `<!-- build:footer -->` markers around a footer). `npm run build` writes its head tags and its [sitemap.xml](../sitemap.xml) entry; a game or tool gets its landing page card, and a game its profile page score row, the same way.
 - A `role="img"` and an `aria-label` on every canvas but the backdrop, and a `type` on every button (listed in `tests/ui/a11y.spec.mjs`).
 - A mention in the [README](../README.md) and the relevant guide in this directory.
 
