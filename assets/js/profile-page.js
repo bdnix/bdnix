@@ -40,7 +40,7 @@
       var card = document.createElement('div');
       card.className = 'score panel';
       card.innerHTML =
-        '<svg class="gc-icon" viewBox="0 0 40 40" aria-hidden="true">' + ICONS[g.id] + '</svg>' +
+        '<svg class="score-icon" viewBox="0 0 40 40" aria-hidden="true">' + ICONS[g.id] + '</svg>' +
         '<div class="score-text"><span></span><b></b></div>' +
         '<a class="btn btn-ghost"></a>';
       card.querySelector('span').textContent = g.name;
