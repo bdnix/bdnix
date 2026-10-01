@@ -9,8 +9,8 @@ The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub 
 | Page | Files |
 |---|---|
 | Landing `/` | `index.html`, `assets/css/style.css`, `assets/js/main.js`, `assets/js/search-core.js` |
-| Falling Blocks `/falling-blocks/` | `falling-blocks/index.html`, `assets/css/tetris.css`, `assets/js/tetris.js` |
-| Maze Chase `/maze-chase/` | `maze-chase/index.html`, `assets/css/pacman.css`, `assets/js/pacman.js` |
+| Falling Blocks `/falling-blocks/` | `falling-blocks/index.html`, `assets/css/tetris.css`, `assets/js/tetris.js`, `assets/js/tetris-core.js` |
+| Maze Chase `/maze-chase/` | `maze-chase/index.html`, `assets/css/pacman.css`, `assets/js/pacman.js`, `assets/js/pacman-core.js` |
 | Flap `/flap/` | `flap/index.html`, `assets/css/flappy.css`, `assets/js/flappy.js`, `assets/js/flappy-core.js` |
 | Road Hop `/road-hop/` | `road-hop/index.html`, `assets/css/hop.css`, `assets/js/hop.js`, `assets/js/hop-core.js` |
 | Snake `/snake/` | `snake/index.html`, `assets/css/snake.css`, `assets/js/snake.js`, `assets/js/snake-core.js` |
@@ -37,14 +37,15 @@ Scripts, each exposing one `window.bdnix*` object:
 - `assets/js/blocks.js`: the falling-block backdrop (`window.bdnix`).
 - `assets/js/analytics.js`: Google Analytics page views and the cookie consent banner (`window.bdnixAnalytics`). Every page links it in `<head>` (not `async`: the profile page reads it). It only runs on `www.bdnix.com` / `bdnix.com`, so local previews and tests show no banner and send nothing; `tests/ui/analytics.spec.mjs` serves the site as `www.bdnix.com` to test it. Google's script loads only after the visitor accepts; they can change their choice on the profile page.
 - `assets/js/profile.js`: the visitor's display name and the profile chip (`window.bdnixProfile`). The list of games and their best scores belongs to the profile page (`profile-page.js`).
-- `assets/js/files.js`: reading the files a visitor opens, dropping files on the page, and file sizes and plurals (`window.bdnixFiles`). Every tool uses it.
-- `assets/js/pdftools.js`: page-range parsing, spotting a PDF and the on-demand PDF.js loader, for the PDF tools (`window.bdnixPdf`). Needs `files.js`.
+- `assets/js/files.js`: reading the files a visitor opens, dropping files on the page, file sizes and plurals, and `loadScript()`, which fetches a big library the first time a tool needs it (`window.bdnixFiles`). Every tool uses it.
+- `assets/js/pdftools.js`: page-range parsing, spotting a PDF and the on-demand pdf-lib and PDF.js loaders, for the PDF tools (`window.bdnixPdf`). Needs `files.js`.
 - `assets/js/images.js`: image files for the image tools: which files are images, the formats a canvas saves, the canvas size limit and result file names (`window.bdnixImages`).
 - `assets/js/gamesave.js`: saves a game in progress and loads it back paused (`window.bdnixSave`). Each game snapshots its own state, checks a loaded save before using it, and throws away one that doesn't make sense.
+- `assets/js/gamebar.js`: the pause button in a game's top bar (`#pauseBtn`), whose icon and label follow whether the game is paused (`window.bdnixGamebar.setPaused()`). Each game decides when it pauses.
 - `assets/js/upright.js`: games are played with the phone upright (`window.bdnixUpright`). On a phone turned sideways it covers the page with a note asking for it to be turned back, and calls what each game passed to `bdnixUpright.onTurn()`, so the game pauses. Screens with a mouse are never covered, however short the window. Its styles are in `game.css`.
 - `assets/js/sound.js`: the sound engine for the games (`window.bdnixSound`), made with the Web Audio API from short recipes, so there are no audio files. It has only the sounds every game plays (`start`, `over` and `best`); each game adds its own with `bdnixSound.add({ name: [tones] })`, made with `bdnixSound.tone()` and `bdnixSound.notes()`. `bdnixSound.play('<name>')` plays one unless sound is muted. It also runs the mute button (`#soundBtn` in a game's top bar, beside pause) and the M key.
 
-Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit, lamejs), each with its licence file. The fonts (Inter and JetBrains Mono) are self-hosted in `assets/fonts/` and declared in `base.css`; never link a font service, since a page must contact nothing but bdnix.com until the visitor accepts analytics.
+Third-party libraries are vendored in `assets/vendor/` (pdf-lib, PDF.js, fontkit, lamejs), each with its licence file. None is linked from a page: each is fetched the first time a tool needs it (`bdnixPdf.loadPdfLib()`, `bdnixPdf.loadPdfjs()`, `bdnixFiles.loadScript()`), so a page opens without them. Link a new big library the same way. The fonts (Inter and JetBrains Mono) are self-hosted in `assets/fonts/` and declared in `base.css`; never link a font service, since a page must contact nothing but bdnix.com until the visitor accepts analytics.
 
 ## Every change ends in a pull request with green CI
 
@@ -71,12 +72,12 @@ Each game and tool is its own app. **Adding or changing a feature of one app mus
 
 ## Ground rules
 
-- **Everything runs in the browser.** Files the visitor opens are never uploaded; there is no server. Don't send the visitor's files, or anything they type into a tool, anywhere. Load libraries from `assets/vendor/`, not a CDN. The site uses Google Analytics (`assets/js/analytics.js`); a new page must link it in `<head>` (the UI test in `tests/ui/analytics.spec.mjs` lists every page). A new page also needs an entry in `scripts/site.mjs` and `<!-- build:meta -->` markers in its `<head>` (and `<!-- build:footer -->` around a footer), from which `npm run build` writes its title, description, canonical URL, Open Graph, Twitter and structured data and its `sitemap.xml` entry; `tests/ui/seo.spec.mjs` lists every page. Never edit between `build:` markers by hand. Every canvas but the backdrop is `role="img"` with an `aria-label`, and every button has a `type`; `tests/ui/a11y.spec.mjs` lists every page.
+- **Everything runs in the browser.** Files the visitor opens are never uploaded; there is no server. Don't send the visitor's files, or anything they type into a tool, anywhere. Load libraries from `assets/vendor/`, not a CDN. The site uses Google Analytics (`assets/js/analytics.js`); a new page must link it in `<head>` (the UI test in `tests/ui/analytics.spec.mjs` lists every page). A new page also needs an entry in `scripts/site.mjs` and `<!-- build:meta -->` markers in its `<head>` (and `<!-- build:footer -->` around a footer), from which `npm run build` writes its title, description, canonical URL, Open Graph, Twitter and structured data and its `sitemap.xml` entry; `tests/ui/seo.spec.mjs` lists every page. Never edit between `build:` markers by hand. Every canvas but the backdrop is `role="img"` with an `aria-label`, every button has a `type`, and [axe](https://github.com/dequelabs/axe-core) finds no WCAG 2.1 A or AA problems; `tests/ui/a11y.spec.mjs` lists every page.
 - **Every page has a content security policy.** `npm run build` writes it into each page's `build:meta` block from `CSP` in `scripts/parts.mjs`: the site's own files, Google Analytics, and nothing inline. So no inline `<script>`, `on...=` handlers or `style="..."` attributes (set styles from a script or a stylesheet), and a new outside origin has to be added there deliberately. The UI test fixture fails any test in which the policy blocks something; `tests/ui/csp.spec.mjs` checks the policy itself.
 - **Keep it dependency-free at runtime.** No frameworks and no bundler. `package.json` holds dev tooling only (tests, coverage, the cache-busting script).
 - **Match the existing code.** Each script is one IIFE, `(function(){ ... })();`, in ES5-style `var`/`function` code. A script that other scripts use exposes one `window.bdnix*` object. Comment density, naming and CSS style should match the file you're in.
 - **Reuse what's truly shared.** Use the tokens in `base.css`, the layouts in `page.css`, `tool.css` and `game.css`, the components, and the helpers in `files.js`, `pdftools.js`, `images.js` and `profile.js`. When several apps need the same general-purpose logic (not a feature of one of them), give it its own shared file, as `files.js` and `images.js` are, and link it only from those apps.
-- **Pure logic goes in its own file** (as in `watermark-layout.js`, `redact-core.js`, `flappy-core.js`, `hop-core.js`, `snake-core.js`, `bricks-core.js`, `audio-core.js`, `image-core.js`, `collage-core.js`, `frame-core.js`, `search-core.js`, `images.js`, `files.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
+- **Pure logic goes in its own file** (as in `watermark-layout.js`, `redact-core.js`, `tetris-core.js`, `pacman-core.js`, `flappy-core.js`, `hop-core.js`, `snake-core.js`, `bricks-core.js`, `audio-core.js`, `image-core.js`, `collage-core.js`, `frame-core.js`, `search-core.js`, `images.js`, `files.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
 - **Every game keeps a game in progress.** A game must survive a reload or a later visit and come back paused exactly where it was, as Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce do. Use `window.bdnixSave` from `assets/js/gamesave.js`:
   - Save through `bdnixSave.keep('<game>', snapshot)`. `snapshot()` returns the whole state as plain JSON, or `null` when no game is in progress. Call the function `keep()` returns when the game pauses, starts a new game or ends.
   - Restore at startup. Check every field of the loaded save before using it. Clear a save that doesn't make sense and show the normal start screen.
@@ -86,6 +87,7 @@ Each game and tool is its own app. **Adding or changing a feature of one app mus
   - UI tests must cover reloading mid-game and carrying on from the same spot, New game from the pause screen, discarding an invalid save, and the save being gone after game over (see the reload tests in `tests/ui/tetris.spec.mjs`).
 - **Every game has sound.** Link `assets/js/sound.js`, put the `#soundBtn` mute button beside pause in the top bar (add the page to `tests/ui/sound.spec.mjs`), and call `window.bdnixSound.play()` for starting a game, the main moves, scoring, crashing and game over (`best` for a new best score, otherwise `over`). `start`, `over` and `best` come from `sound.js`; add the game's other sounds in its own script with `bdnixSound.add()`, never in `sound.js`. UI tests record what plays with `listen()` and `heard()` from `tests/ui/games.mjs`, and each game's spec checks its sounds with `soundProblems()`.
 - **Don't use other games' trademarks as our own.** Titles, headings, URLs, SEO tags, structured data and docs use the site's own names: Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce, never Tetris, Pac-Man, Flappy Bird, Crossy Road, Blockade or Breakout. ("Snake" is the name of the genre, not a trademark.) New games get original names and artwork too. The exceptions are the credit line on each game's start screen (`<p class="credit">` in the overlay) and the Credits section of `docs/games.md`, which say which classic inspired the game and who created it, and state that the name is a trademark of its owner and bdnix isn't affiliated with or endorsed by them. A new game inspired by another needs both. `tests/ui/seo.spec.mjs` checks the credit lines. The old names also survive as internal identifiers (file names such as `tetris.js`, `bdnixSave` ids and storage keys), which stay as they are so visitors' saved data isn't lost.
+- **Every game has a pause button.** Put `#pauseBtn` beside the mute button, link `assets/js/gamebar.js`, and call `window.bdnixGamebar.setPaused(true)` when the game pauses and `setPaused(false)` when it starts or resumes. Add the page to `tests/ui/gamebar.spec.mjs`.
 - **Every game is played upright on a phone.** Link `assets/js/upright.js` and pause the game in `window.bdnixUpright.onTurn()`, as you would on `blur`. Add the page to `tests/ui/upright.spec.mjs`.
 - **Phone-sized screens matter.** Every page must work at 390 px wide with no sideways scrolling, and with touch as well as mouse and keyboard.
 - **Browser storage is optional.** Wrap every `localStorage` / IndexedDB access in `try/catch`; pages must work without it (private browsing). The keys in use are `bdnix_visits`, `bdnix_name`, `bdnix_tetris_best`, `bdnix_pacman_best`, `bdnix_flappy_best`, `bdnix_hop_best`, `bdnix_snake_best`, `bdnix_bricks_best`, `bdnix_tetris_save`, `bdnix_pacman_save`, `bdnix_flappy_save`, `bdnix_hop_save`, `bdnix_snake_save`, `bdnix_bricks_save`, `bdnix_sound`, `bdnix_watermark_v1` and `bdnix_analytics` (localStorage), and the `bdnix-tools` database (IndexedDB). Don't rename them, since visitors' saved data would be lost.
@@ -121,6 +123,7 @@ npm install
 npx playwright install chromium   # first time only
 npm run build          # write the parts generated from scripts/site.mjs and the ?v= hashes
 npm run build:check    # fail if any of those is stale (what CI runs)
+npm run lint           # ESLint (scripts, tests) and Stylelint (stylesheets)
 npm test               # unit tests, then UI tests
 npm run test:unit
 npm run test:ui
@@ -130,7 +133,7 @@ npm run serve          # the site at http://localhost:4173
 
 ## Before you open a pull request
 
-1. `npm run build` if you touched `assets/js`, `assets/css` or `scripts/site.mjs`.
+1. `npm run build` if you touched `assets/js`, `assets/css` or `scripts/site.mjs`, and `npm run lint` passes.
 2. `npm run coverage` passes, and `coverage/report/index.html` shows your new and changed lines as covered.
 3. New or changed behaviour has tests, and a bug fix has a test that failed before the fix.
 4. The page works at phone width without sideways scrolling.
@@ -140,7 +143,7 @@ npm run serve          # the site at http://localhost:4173
 
 `.github/workflows/tests.yml` runs on every pull request and push to `master`:
 
-- **Unit tests:** hash check, then the unit tests with coverage.
+- **Unit tests:** hash check and lint, then the unit tests with coverage.
 - **UI tests:** Playwright in Chromium with coverage. On failure it uploads the HTML report and a trace of each failed test (**playwright-report** artifact).
 - **Coverage:** once both pass, uploads their coverage to Codecov together.
 

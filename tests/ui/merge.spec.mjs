@@ -10,6 +10,8 @@ test.beforeEach(async ({ page }) => {
     upload('notes.txt', 'hello', 'text/plain'),
     upload('broken.pdf', '%PDF-garbage')
   ]);
+  // Files added while others are still being read are ignored, so wait.
+  await expect(page.locator('.file')).toHaveCount(2);
   await page.locator('#picker').setInputFiles([upload('C.pdf', await numberedPdf(300, 1))]);
   await expect(page.locator('.file')).toHaveCount(3);
 });

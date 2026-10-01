@@ -1,4 +1,4 @@
-import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { test, expect } from './fixtures.mjs';
 import { openGame, press, tap, inkOn, listen, heard, soundProblems } from './games.mjs';
 
 // The board is 360 × 480 units. A new ball waits on the middle of the paddle

@@ -42,6 +42,11 @@ jobs:
       # `npm run build`, which would let browsers keep a stale copy.
       - name: Cache-busting hashes are up to date
         run: npm run build:check
+      # ESLint for the scripts and tests, Stylelint for the stylesheets.
+      # Quick, so never cached; runs even if the hash check failed.
+      - name: Lint
+        if: ${{ !cancelled() }}
+        run: npm run lint
       # The unit tests only read these files, so if none has changed since
       # a run that passed, that run's coverage stands for this one. Saved
       # only when the job passes.

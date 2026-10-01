@@ -1,4 +1,4 @@
-import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { test, expect } from './fixtures.mjs';
 import { openGame, press, tap, listen, heard, soundProblems } from './games.mjs';
 
 // With Math.random fixed at 0 every gap is at the same height: 64 to 188 on

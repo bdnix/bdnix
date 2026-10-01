@@ -51,17 +51,15 @@
   width:64px;height:64px;border-radius:50%;
   box-shadow:0 8px 16px -4px rgba(0,0,0,.5),inset 0 -3px 0 rgba(0,0,0,.3);
 }
-.face .a{top:4px;right:0}
-.face .b{bottom:20px;left:0}
+.face .a{top:4px;right:0;border-color:rgba(34,211,238,.45)}
+.face .b{bottom:20px;left:0;border-color:rgba(244,114,182,.4)}
 .face .a:only-child{top:auto;bottom:20px;right:auto;left:42px}
 .face span{
   position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);
   font:600 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;
   color:var(--muted);white-space:nowrap;
 }
-.face .a{border-color:rgba(34,211,238,.45)}
 .face .a svg{color:var(--cyan)}
-.face .b{border-color:rgba(244,114,182,.4)}
 .face .b svg{color:var(--pink)}
 .face button:active svg,.face button.on svg{color:#fff}
 

@@ -1,8 +1,9 @@
+// Falling Blocks: drawing, input and timing. The rules are in tetris-core.js.
 (function(){
-  var COLS = 10, ROWS = 20;
+  var T = window.bdnixTetris;
+  var COLS = T.COLS, ROWS = T.ROWS;
   var COLORS = window.bdnix.PALETTE;
   var SHAPES = window.bdnix.SHAPES;
-  var LINE_SCORES = [0, 100, 300, 500, 800];
   var LOCK_DELAY = 500, MAX_LOCK_RESETS = 15;
   var DAS = 160, ARR = 45;
   var sound = window.bdnixSound;
@@ -28,8 +29,6 @@
   var gameEl = document.getElementById('game');
   var compactMQ = window.matchMedia('(max-width:700px),(pointer:coarse)');
   var landscapeMQ = window.matchMedia('(orientation:landscape) and (max-height:520px)');
-  var ICON_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2h3v12H4zM9 2h3v12H9z"/></svg>';
-  var ICON_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2.5v11a.5.5 0 0 0 .77.42l8.5-5.5a.5.5 0 0 0 0-.84l-8.5-5.5A.5.5 0 0 0 4 2.5z"/></svg>';
   var PREVIEW = { cell: 16, slot: 64, count: 3 };
   var overlay = document.getElementById('overlay');
   var ovTitle = document.getElementById('ovTitle');
@@ -98,44 +97,13 @@
   }
 
   // ---------- Pieces ----------
-  function refillBag(){
-    var b = Object.keys(SHAPES);
-    for (var i = b.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var t = b[i]; b[i] = b[j]; b[j] = t;
-    }
-    bag = bag.concat(b);
-  }
   function nextType(){
-    if (bag.length < 7) refillBag();
+    if (bag.length < 7) bag = bag.concat(T.bag(SHAPES, Math.random));
     return bag.shift();
   }
-  function makePiece(type){
-    var m = SHAPES[type].map(function(r){ return r.slice(); });
-    return { type:type, m:m, x:Math.floor((COLS - m[0].length) / 2), y: type === 'I' ? -1 : 0 };
-  }
-  function rotateMatrix(m, dir){
-    var n = m.length, out = [];
-    for (var r = 0; r < n; r++) {
-      out.push([]);
-      for (var c = 0; c < n; c++) {
-        out[r][c] = dir > 0 ? m[n - 1 - c][r] : m[c][n - 1 - r];
-      }
-    }
-    return out;
-  }
-  function collides(m, x, y){
-    for (var r = 0; r < m.length; r++) {
-      for (var c = 0; c < m[r].length; c++) {
-        if (!m[r][c]) continue;
-        var gx = x + c, gy = y + r;
-        if (gx < 0 || gx >= COLS || gy >= ROWS) return true;
-        if (gy >= 0 && grid[gy][gx]) return true;
-      }
-    }
-    return false;
-  }
-  function onGround(){ return collides(piece.m, piece.x, piece.y + 1); }
+  function makePiece(type){ return T.makePiece(SHAPES, type); }
+  function collides(m, x, y){ return T.collides(grid, m, x, y); }
+  function onGround(){ return T.onGround(grid, piece); }
 
   function touchedMove(){
     if (onGround() && lockResets < MAX_LOCK_RESETS) { lockAcc = 0; lockResets++; }
@@ -148,15 +116,9 @@
     return false;
   }
   function rotate(dir){
-    if (piece.type === 'O') return;
-    var m = rotateMatrix(piece.m, dir);
-    var kicks = [[0,0],[-1,0],[1,0],[0,-1],[-2,0],[2,0],[-1,-1],[1,-1]];
-    for (var i = 0; i < kicks.length; i++) {
-      var nx = piece.x + kicks[i][0], ny = piece.y + kicks[i][1];
-      if (!collides(m, nx, ny)) {
-        piece.m = m; piece.x = nx; piece.y = ny; touchedMove(); sound.play('rotate'); return;
-      }
-    }
+    var r = T.rotated(grid, piece, dir);
+    if (!r) return;
+    piece.m = r.m; piece.x = r.x; piece.y = r.y; touchedMove(); sound.play('rotate');
   }
   function softDrop(){
     if (!collides(piece.m, piece.x, piece.y + 1)) {
@@ -165,8 +127,8 @@
     return false;
   }
   function hardDrop(){
-    var d = 0;
-    while (!collides(piece.m, piece.x, piece.y + 1)) { piece.y++; d++; }
+    var d = T.dropDistance(grid, piece);
+    piece.y += d;
     score += d * 2;
     sound.play('drop');
     lock();
@@ -180,11 +142,7 @@
     resetTimers();
     sound.play('hold');
   }
-  function ghostY(){
-    var y = piece.y;
-    while (!collides(piece.m, piece.x, y + 1)) y++;
-    return y;
-  }
+  function ghostY(){ return piece.y + T.dropDistance(grid, piece); }
 
   function resetTimers(){ dropAcc = 0; lockAcc = 0; lockResets = 0; }
 
@@ -197,21 +155,9 @@
   }
 
   function lock(){
-    var m = piece.m, above = false;
-    for (var r = 0; r < m.length; r++) {
-      for (var c = 0; c < m[r].length; c++) {
-        if (!m[r][c]) continue;
-        var gy = piece.y + r;
-        if (gy < 0) { above = true; continue; }
-        grid[gy][piece.x + c] = piece.type;
-      }
-    }
-    if (above) { gameOver(); return; }
+    if (T.place(grid, piece)) { gameOver(); return; }
 
-    var full = [];
-    for (var y = 0; y < ROWS; y++) {
-      if (grid[y].every(Boolean)) full.push(y);
-    }
+    var full = T.fullRows(grid);
     sound.play(full.length === 4 ? 'bigclear' : full.length ? 'clear' : 'lock');
     if (full.length) {
       clearing = { rows: full, t: 0 };
@@ -224,29 +170,20 @@
 
   function finishClear(){
     var n = clearing.rows.length;
-    clearing.rows.forEach(function(y){
-      grid.splice(y, 1);
-      grid.unshift(new Array(COLS).fill(null));
-    });
+    T.clearRows(grid, clearing.rows);
     clearing = null;
     lines += n;
-    score += LINE_SCORES[n] * level;
+    score += T.lineScore(n, level);
     var was = level;
-    level = Math.floor(lines / 10) + 1;
+    level = T.levelFor(lines);
     if (level > was) sound.play('level');
     updateHud();
     spawn();
   }
 
-  function dropInterval(){
-    // Roughly follows the guideline gravity curve, in ms per row.
-    return Math.max(30, Math.pow(0.8 - (level - 1) * 0.007, level - 1) * 1000);
-  }
-
   // ---------- Game state ----------
   function newGame(){
-    grid = [];
-    for (var i = 0; i < ROWS; i++) grid.push(new Array(COLS).fill(null));
+    grid = T.emptyGrid();
     bag = []; queue = [];
     for (var q = 0; q < 5; q++) queue.push(nextType());
     held = null; score = 0; lines = 0; level = 1; clearing = null;
@@ -256,7 +193,7 @@
     overlay.hidden = true;
     newBtn.hidden = true;
     startBtn.blur();
-    pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.setAttribute('aria-label', 'Pause');
+    window.bdnixGamebar.setPaused(false);
     lastTime = performance.now();
     sound.play('start');
     persist();
@@ -287,12 +224,12 @@
       startBtn.textContent = 'Resume';
       newBtn.hidden = false;
       overlay.hidden = false;
-      pauseBtn.innerHTML = ICON_PLAY; pauseBtn.setAttribute('aria-label', 'Resume');
+      window.bdnixGamebar.setPaused(true);
       persist();
     } else if (state === 'paused') {
       state = 'playing';
       overlay.hidden = true;
-      pauseBtn.innerHTML = ICON_PAUSE; pauseBtn.setAttribute('aria-label', 'Pause');
+      window.bdnixGamebar.setPaused(false);
       lastTime = performance.now();
     }
   }
@@ -315,20 +252,9 @@
   }
   var persist = window.bdnixSave.keep('tetris', snapshot);
 
-  function isType(t){ return typeof t === 'string' && Object.prototype.hasOwnProperty.call(SHAPES, t); }
-  function isRow(r){ return Array.isArray(r) && r.length === COLS && r.every(function(c){ return c === null || isType(c); }); }
-  function isMatrix(m){ return Array.isArray(m) && m.length > 0 && m.every(function(r){ return Array.isArray(r) && r.length === m.length; }); }
   function restore(s){
-    var num = window.bdnixSave.num;
+    if (!T.validSave(s, SHAPES)) return false;
     var p = s.piece, c = s.clearing;
-    var ok = Array.isArray(s.grid) && s.grid.length === ROWS && s.grid.every(isRow) &&
-      Array.isArray(s.queue) && s.queue.length >= 3 && s.queue.every(isType) &&
-      Array.isArray(s.bag) && s.bag.every(isType) &&
-      (s.held === null || isType(s.held)) &&
-      (p ? isType(p.type) && isMatrix(p.m) && num(p.x) && num(p.y) :
-        c && num(c.t) && Array.isArray(c.rows) && c.rows.every(function(y){ return num(y) && y >= 0 && y < ROWS; })) &&
-      [s.score, s.lines, s.level, s.dropAcc, s.lockAcc, s.lockResets].every(num);
-    if (!ok) return false;
     grid = s.grid; bag = s.bag; queue = s.queue; piece = p || null; held = s.held; canHold = !!s.canHold;
     score = s.score; lines = s.lines; level = s.level; clearing = c || null;
     dropAcc = s.dropAcc; lockAcc = s.lockAcc; lockResets = s.lockResets;
@@ -354,7 +280,7 @@
           if (lockAcc >= LOCK_DELAY) lock();
         } else {
           dropAcc += dt;
-          var iv = dropInterval();
+          var iv = T.dropInterval(level);
           while (dropAcc >= iv && !onGround()) { piece.y++; dropAcc -= iv; }
           if (onGround()) dropAcc = 0;
         }
