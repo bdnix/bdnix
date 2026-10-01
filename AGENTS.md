@@ -72,7 +72,7 @@ Each game and tool is its own app. **Adding or changing a feature of one app mus
 
 ## Ground rules
 
-- **Everything runs in the browser.** Files the visitor opens are never uploaded; there is no server. Don't send the visitor's files, or anything they type into a tool, anywhere. Load libraries from `assets/vendor/`, not a CDN. The site uses Google Analytics (`assets/js/analytics.js`); a new page must link it in `<head>` (the UI test in `tests/ui/analytics.spec.mjs` lists every page). A new page also needs an entry in `scripts/site.mjs` and `<!-- build:meta -->` markers in its `<head>` (and `<!-- build:footer -->` around a footer), from which `npm run build` writes its title, description, canonical URL, Open Graph, Twitter and structured data and its `sitemap.xml` entry; `tests/ui/seo.spec.mjs` lists every page. Never edit between `build:` markers by hand. Every canvas but the backdrop is `role="img"` with an `aria-label`, and every button has a `type`; `tests/ui/a11y.spec.mjs` lists every page.
+- **Everything runs in the browser.** Files the visitor opens are never uploaded; there is no server. Don't send the visitor's files, or anything they type into a tool, anywhere. Load libraries from `assets/vendor/`, not a CDN. The site uses Google Analytics (`assets/js/analytics.js`); a new page must link it in `<head>` (the UI test in `tests/ui/analytics.spec.mjs` lists every page). A new page also needs an entry in `scripts/site.mjs` and `<!-- build:meta -->` markers in its `<head>` (and `<!-- build:footer -->` around a footer), from which `npm run build` writes its title, description, canonical URL, Open Graph, Twitter and structured data and its `sitemap.xml` entry; `tests/ui/seo.spec.mjs` lists every page. Never edit between `build:` markers by hand. Every canvas but the backdrop is `role="img"` with an `aria-label`, every button has a `type`, and [axe](https://github.com/dequelabs/axe-core) finds no WCAG 2.1 A or AA problems; `tests/ui/a11y.spec.mjs` lists every page.
 - **Keep it dependency-free at runtime.** No frameworks and no bundler. `package.json` holds dev tooling only (tests, coverage, the cache-busting script).
 - **Match the existing code.** Each script is one IIFE, `(function(){ ... })();`, in ES5-style `var`/`function` code. A script that other scripts use exposes one `window.bdnix*` object. Comment density, naming and CSS style should match the file you're in.
 - **Reuse what's truly shared.** Use the tokens in `base.css`, the layouts in `page.css`, `tool.css` and `game.css`, the components, and the helpers in `files.js`, `pdftools.js`, `images.js` and `profile.js`. When several apps need the same general-purpose logic (not a feature of one of them), give it its own shared file, as `files.js` and `images.js` are, and link it only from those apps.
@@ -122,6 +122,7 @@ npm install
 npx playwright install chromium   # first time only
 npm run build          # write the parts generated from scripts/site.mjs and the ?v= hashes
 npm run build:check    # fail if any of those is stale (what CI runs)
+npm run lint           # ESLint (scripts, tests) and Stylelint (stylesheets)
 npm test               # unit tests, then UI tests
 npm run test:unit
 npm run test:ui
@@ -131,7 +132,7 @@ npm run serve          # the site at http://localhost:4173
 
 ## Before you open a pull request
 
-1. `npm run build` if you touched `assets/js`, `assets/css` or `scripts/site.mjs`.
+1. `npm run build` if you touched `assets/js`, `assets/css` or `scripts/site.mjs`, and `npm run lint` passes.
 2. `npm run coverage` passes, and `coverage/report/index.html` shows your new and changed lines as covered.
 3. New or changed behaviour has tests, and a bug fix has a test that failed before the fix.
 4. The page works at phone width without sideways scrolling.
@@ -141,7 +142,7 @@ npm run serve          # the site at http://localhost:4173
 
 `.github/workflows/tests.yml` runs on every pull request and push to `master`:
 
-- **Unit tests:** hash check, then the unit tests with coverage.
+- **Unit tests:** hash check and lint, then the unit tests with coverage.
 - **UI tests:** Playwright in Chromium with coverage. On failure it uploads the HTML report and a trace of each failed test (**playwright-report** artifact).
 - **Coverage:** once both pass, uploads their coverage to Codecov together.
 

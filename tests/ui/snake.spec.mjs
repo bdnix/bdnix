@@ -1,4 +1,4 @@
-import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { test, expect } from './fixtures.mjs';
 import { openGame, press, tap, listen, heard, soundProblems } from './games.mjs';
 
 // The snake starts three long with its head at (6, 8), heading right, and the
