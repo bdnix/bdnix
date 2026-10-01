@@ -198,8 +198,8 @@
   // Decodes an MP4's audio track piece by piece and encodes each piece as
   // it comes, so the decoded sound is never all in memory at once.
   // Resolves to what A.stream's end() returns.
-  function streamed(f, track, read, opts, unreadable){
-    var out = A.stream(opts, window.lamejs, track.cut);
+  function streamed(f, track, read, opts, unreadable, lame){
+    var out = A.stream(opts, lame, track.cut);
     return new Promise(function(resolve, reject){
       var failed = false, wake = null, next = 0, fed = 0;
       function fail(err){
@@ -270,26 +270,37 @@
 
   // Decodes the whole sound at once: for files that aren't MP4, and for
   // browsers without WebCodecs. From an MP4 only the audio track is read.
-  function whole(f, track, opts, unreadable){
+  function whole(f, track, opts, unreadable, lame){
     return (track ? track.audioOnly() : readBytes(f.file)).then(function(b){ return b.buffer || b; })
       .then(decode).catch(function(){ throw unreadable; }).then(function(audio){
         var channels = [];
         for (var c = 0; c < audio.numberOfChannels; c++) channels.push(audio.getChannelData(c));
-        var job = A.encoder(A.mix(channels, opts.mono), audio.sampleRate, opts, window.lamejs);
+        var job = A.encoder(A.mix(channels, opts.mono), audio.sampleRate, opts, lame);
         return encode(job, function(p){ f.progress = p; showMeta(f); }).then(function(parts){
           return { parts: parts, frames: audio.length, rate: audio.sampleRate };
         });
       });
   }
 
+  // lamejs is only fetched the first time someone makes an MP3.
+  function loadEncoder(opts){
+    if (opts.format !== 'mp3') return Promise.resolve(null);
+    return T.loadScript('/assets/vendor/lame.min.js?v=1.2.1', 'lamejs').catch(function(){
+      throw new Error('the MP3 encoder didn’t load. Check your connection and try again');
+    });
+  }
+
   function convert(f, opts){
     f.state = 'working';
     f.progress = 0;
     render();
-    var unreadable = {}, read = reader(f.file);
-    return A.mp4(read, f.file.size).catch(function(){ throw unreadable; }).then(function(track){
+    var unreadable = {}, read = reader(f.file), lame;
+    return loadEncoder(opts).then(function(l){
+      lame = l;
+      return A.mp4(read, f.file.size).catch(function(){ throw unreadable; });
+    }).then(function(track){
       return canStream(track, opts).then(function(ok){
-        return ok ? streamed(f, track, read, opts, unreadable) : whole(f, track, opts, unreadable);
+        return ok ? streamed(f, track, read, opts, unreadable, lame) : whole(f, track, opts, unreadable, lame);
       });
     }).then(function(result){
       var blob = new Blob(result.parts, { type: TYPES[opts.format] });

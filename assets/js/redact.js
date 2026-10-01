@@ -3,7 +3,6 @@
 // text under them is gone from the file, not just covered up. pdf-lib puts
 // the result together. Everything runs in the browser; nothing is uploaded.
 (function(){
-  var L = PDFLib;
   var T = window.bdnixFiles, P = window.bdnixPdf;
   var R = window.bdnixRedact;
   function $(id){ return document.getElementById(id); }
@@ -331,7 +330,9 @@
     var bytes;
     T.readBytes(file).then(function(buf){
       bytes = buf;
-      return L.PDFDocument.load(buf, { updateMetadata: false });
+      return P.loadPdfLib();
+    }).then(function(L){
+      return L.PDFDocument.load(bytes, { updateMetadata: false });
     }).then(function(doc){
       if (src && src.viewTask) src.viewTask.destroy();
       src = { name: file.name, bytes: bytes, pages: doc.getPageCount(), doc: doc, view: null, viewTask: null };
@@ -362,6 +363,7 @@
         if (src === current) { showPage(); syncUi(); }
       });
     }).catch(function(err){
+      if (err && err.library) return say(err.message, true);
       var encrypted = err && /encrypt/i.test(err.message || String(err));
       say(file.name + (encrypted ? ' is password-protected, so it can’t be redacted.' : ' could not be read as a PDF.'), true);
     }).then(function(){
@@ -423,7 +425,7 @@
 
     // A new file, so nothing from the original (its title, author, bookmarks
     // or attachments) comes along except the pages themselves.
-    Promise.all([P.loadPdfjs(), L.PDFDocument.create()]).then(function(r){
+    Promise.all([P.loadPdfjs(), P.loadPdfLib().then(function(L){ return L.PDFDocument.create(); })]).then(function(r){
       lib = r[0];
       out = r[1];
       return out.copyPages(src.doc, kept);
