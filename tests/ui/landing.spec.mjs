@@ -6,7 +6,7 @@ test('shows the games and tools, with no under-construction wording', async ({ p
   await expect(page.locator('h1')).toHaveText('Play a little.Get things done.');
   await expect(page.locator('body')).not.toContainText(/under construction|check back soon|being built/i);
 
-  const cards = page.locator('.game-card');
+  const cards = page.locator('.card');
   await expect(cards).toHaveCount(13);
   const links = await cards.evaluateAll((els) => els.map((a) => [a.querySelector('b').textContent, a.getAttribute('href')]));
   expect(links).toEqual([
@@ -122,9 +122,9 @@ test('the search box filters the games and tools as you type', async ({ page }) 
   const empty = page.locator('#search-empty');
   const games = page.getByRole('region', { name: 'Games' });
   const tools = page.getByRole('region', { name: 'Tools' });
-  const shown = () => page.locator('.game-card:visible b').allTextContents();
+  const shown = () => page.locator('.card:visible b').allTextContents();
 
-  await expect(page.locator('.game-card:visible')).toHaveCount(13);
+  await expect(page.locator('.card:visible')).toHaveCount(13);
   await expect(status).toHaveText('');
   await expect(empty).toBeHidden();
 
@@ -172,7 +172,7 @@ test('the search box filters the games and tools as you type', async ({ page }) 
   expect(await shown()).toEqual(['Snake']);
   await search.press('Escape');
   await expect(search).toHaveValue('');
-  await expect(page.locator('.game-card:visible')).toHaveCount(13);
+  await expect(page.locator('.card:visible')).toHaveCount(13);
   await expect(status).toHaveText('');
   await expect(empty).toBeHidden();
   await expectNoSideScroll(page);
@@ -187,7 +187,7 @@ test('"/" jumps to the search box, but types normally inside it', async ({ page 
   await expect(search).toHaveValue('');
   await page.keyboard.type('mp4/');
   await expect(search).toHaveValue('mp4/');
-  expect(await page.locator('.game-card:visible b').allTextContents()).toEqual(['MP4 to MP3']);
+  expect(await page.locator('.card:visible b').allTextContents()).toEqual(['MP4 to MP3']);
 
   // Held with a modifier, it's left to the browser.
   await search.blur();
@@ -205,15 +205,15 @@ test('a search already in the box when the page loads is applied', async ({ page
   });
   await page.goto('/');
   await expect(page.locator('#search')).toHaveValue('bounce');
-  expect(await page.locator('.game-card:visible b').allTextContents()).toEqual(['Brick Bounce']);
+  expect(await page.locator('.card:visible b').allTextContents()).toEqual(['Brick Bounce']);
   await expect(page.locator('#search-status')).toHaveText('1 match');
 });
 
 test('the cards fill a laptop in three columns, a wide monitor in four, and stack on a phone', async ({ page }) => {
-  const columns = () => page.locator('#games .game-card').evaluateAll((els) => new Set(els.map((e) => e.getBoundingClientRect().left)).size);
+  const columns = () => page.locator('#games .card').evaluateAll((els) => new Set(els.map((e) => e.getBoundingClientRect().left)).size);
   const spare = () => page.evaluate(() => {
     const main = document.querySelector('.hero').getBoundingClientRect();
-    const cards = document.querySelector('#games .game-cards').getBoundingClientRect();
+    const cards = document.querySelector('#games .cards').getBoundingClientRect();
     return Math.round(main.right - cards.right);
   });
 

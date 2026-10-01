@@ -166,7 +166,12 @@ test('a decoder that fails at the end says the audio can’t be read', async ({ 
   await expect(page.locator('.file-meta')).toHaveText('No audio your browser can read in this file');
 });
 
+// lamejs is fetched with the first MP3 (see libraries.spec.mjs); load it
+// now so a test can swap parts of it out.
+const loadLame = (page) => page.evaluate(() => window.bdnixFiles.loadScript('/assets/vendor/lame.min.js?v=1.2.1', 'lamejs'));
+
 test('an encoder failure while finishing is reported on the file', async ({ page }) => {
+  await loadLame(page);
   await page.evaluate(() => {
     const Real = window.lamejs.Mp3Encoder;
     window.lamejs.Mp3Encoder = function(...args){
@@ -294,6 +299,7 @@ test('when nothing converts, the message says so', async ({ page }) => {
 });
 
 test('an encoder failure is reported on the file', async ({ page }) => {
+  await loadLame(page);
   await page.evaluate(() => { window.lamejs.Mp3Encoder = function(){ throw new Error('out of memory'); }; });
   await page.locator('#picker').setInputFiles([clip()]);
   await page.getByRole('button', { name: 'Convert 1 file' }).click();
