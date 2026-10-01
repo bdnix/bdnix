@@ -38,6 +38,7 @@
   var world = F.create(), carry = 0, clock = 0;
   var view = world.camera;      // the camera as drawn, easing after the real one
   var hopT = 0, from = null;    // the hop being drawn, and where it started
+  var knocked = null;           // where a car knocked the chicken (F.knock)
   var best = 0;
   var sound = window.bdnixSound;
   // This game's sounds, beside the ones every game shares (sound.js).
@@ -101,6 +102,7 @@
   // save are settled straight away, and the score shows once the crash has played.
   function crash(){
     setState('dying');
+    knocked = world.dead === 'car' ? F.knock(world) : null;
     sound.play(CRASH_SOUNDS[world.dead]);
     if (world.score > best) {
       best = world.score;
@@ -232,11 +234,17 @@
     ctx.clearRect(0, 0, W * SCALE, H * SCALE);
     ctx.setTransform(dpr * SCALE, 0, 0, dpr * SCALE, 0, 0);
 
+    // A car hit shakes the board for a moment.
+    var pose = hitPose();
+    ctx.save();
+    if (pose) ctx.translate(pose.shakeX, pose.shakeY);
     var lo = Math.floor(view) - 1, hi = Math.ceil(view) + ROWS;
     for (var r = lo; r <= hi; r++) drawGround(r);
     for (r = lo; r <= hi; r++) drawThings(r);
-    drawChicken();
+    drawChicken(pose);
     for (r = lo; r <= hi; r++) drawTrees(r);
+    if (pose) drawHit(pose);
+    ctx.restore();
 
     if (state !== 'idle' && state !== 'over') drawScore();
     if (state === 'ready' || (state === 'paused' && pausedFrom === 'ready')) {
@@ -253,14 +261,15 @@
     }
   }
 
+  // A little past the edges, so the board's shake after a car hit shows no gap.
   function drawGround(row){
     var lane = F.laneAt(world, row), y = rowY(row);
     if (lane.type === 'grass') {
       ctx.fillStyle = row % 2 ? '#0f2a24' : '#12302a';
-      ctx.fillRect(0, y, W, CELL);
+      ctx.fillRect(-8, y, W + 16, CELL);
     } else if (lane.type === 'road') {
       ctx.fillStyle = '#161a2e';
-      ctx.fillRect(0, y, W, CELL);
+      ctx.fillRect(-8, y, W + 16, CELL);
       // Dashes between two roads side by side
       if (F.laneAt(world, row + 1).type === 'road') {
         ctx.fillStyle = 'rgba(238,241,248,.35)';
@@ -268,7 +277,7 @@
       }
     } else {
       ctx.fillStyle = '#0b2d4a';
-      ctx.fillRect(0, y, W, CELL);
+      ctx.fillRect(-8, y, W + 16, CELL);
       // Ripples drift with the current
       ctx.fillStyle = 'rgba(34,211,238,.18)';
       var shift = ((clock * lane.speed * CELL * 0.5) % 48 + 48) % 48;
@@ -340,34 +349,96 @@
     }
   }
 
+  // How long ago the round ended, as the crash plays.
+  function sinceCrash(){ return state === 'over' ? DEATH_TIME : stateTime; }
+  // How the car hit looks now, or null if the chicken wasn't hit by a car.
+  function hitPose(){
+    if ((state !== 'dying' && state !== 'over') || world.dead !== 'car' || !knocked) return null;
+    return F.hitPose(sinceCrash(), knocked.to - world.chicken.x);
+  }
+  // The ring flashing where the car struck, and the feathers flying off.
+  function drawHit(pose){
+    var c = world.chicken, cx = (c.x + 0.5) * CELL, cy = rowY(c.row) + CELL / 2;
+    if (pose.flash > 0) {
+      ctx.strokeStyle = 'rgba(254,249,195,' + (0.9 * pose.flash).toFixed(3) + ')';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(cx, cy, 8 + (1 - pose.flash) * 16, 0, Math.PI * 2); ctx.stroke();
+    }
+    for (var i = 0; i < pose.feathers.length; i++) {
+      var f = pose.feathers[i];
+      if (f.alpha <= 0) continue;
+      ctx.save();
+      ctx.globalAlpha = f.alpha;
+      ctx.translate(cx + f.x * CELL, cy + f.y * CELL);
+      ctx.rotate(f.spin);
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath(); ctx.ellipse(0, 0, 2.2, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(148,163,184,.8)'; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(0, 4); ctx.stroke();
+      ctx.restore();
+    }
+  }
+  // Foam, spray and rings where the chicken went under.
+  function drawSplash(s, cx, cy){
+    if (s.crown.alpha > 0) {
+      ctx.fillStyle = 'rgba(224,242,254,' + (0.45 * s.crown.alpha).toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(cx, cy, s.crown.r * CELL * 0.7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(224,242,254,' + (0.85 * s.crown.alpha).toFixed(3) + ')';
+      for (var k = 0; k < 12; k++) {
+        var a = k / 12 * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(cx + Math.sin(a) * s.crown.r * CELL, cy - Math.cos(a) * s.crown.r * CELL, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    for (var i = 0; i < s.drops.length; i++) {
+      var d = s.drops[i];
+      if (d.alpha <= 0) continue;
+      ctx.fillStyle = 'rgba(186,230,253,' + d.alpha.toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(cx + d.x * CELL, cy + d.y * CELL, d.size * CELL, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(238,241,248,' + s.rings.alpha.toFixed(3) + ')';
+    ctx.lineWidth = 2;
+    for (var r = 0; r < 2; r++) {
+      ctx.beginPath(); ctx.arc(cx, cy, s.rings.r * CELL + r * 6, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
   // The chicken, seen from above: a round white body, wings at the sides,
-  // a red comb and an orange beak pointing the way it faces.
+  // a red comb and an orange beak pointing the way it faces. Knocked down by
+  // a car, it lies with its feet in the air and crosses for eyes.
   var ANGLES = { up: 0, right: Math.PI / 2, down: Math.PI, left: -Math.PI / 2 };
-  function drawChicken(){
+  function drawChicken(pose){
     var c = world.chicken, t = hopT > 0 && from ? 1 - hopT / HOP_TIME : 1;
     var x = from && t < 1 ? from.x + (c.x - from.x) * t : c.x;
     var row = from && t < 1 ? from.row + (c.row - from.row) * t : c.row;
+    if (pose) x = c.x + pose.dx;
     var cx = (x + 0.5) * CELL, cy = rowY(row) + CELL / 2;
     var dying = state === 'dying' || state === 'over' ? world.dead : null;
     var lift = 1 + Math.sin(t * Math.PI) * 0.18;
+    var splash = dying === 'water' || dying === 'swept' ? F.splashPose(sinceCrash()) : null;
 
-    if (dying === 'water' || dying === 'swept') {
-      // Rings spreading where it went under
-      var p = Math.min(1, (state === 'over' ? DEATH_TIME : stateTime) / DEATH_TIME);
-      ctx.strokeStyle = 'rgba(238,241,248,' + (0.8 * (1 - p)).toFixed(3) + ')';
-      ctx.lineWidth = 2;
-      for (var k = 0; k < 2; k++) {
-        ctx.beginPath(); ctx.arc(cx, cy, 6 + p * 14 + k * 6, 0, Math.PI * 2); ctx.stroke();
-      }
-      return;
-    }
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.rotate(ANGLES[c.face]);
-    if (dying === 'car') ctx.scale(1.35, 0.35);
+    ctx.rotate(ANGLES[c.face] + (pose ? pose.spin : 0));
+    if (pose) ctx.scale(pose.sx, pose.sy);
+    else if (splash) { ctx.scale(splash.scale, splash.scale); ctx.globalAlpha = splash.alpha; }
     else ctx.scale(lift, lift);
+    if (!splash || splash.alpha > 0) drawBird(pose && pose.landed);
+    ctx.restore();
+    if (splash) drawSplash(splash, cx, cy);
+  }
+  function drawBird(dazed){
     ctx.fillStyle = 'rgba(8,10,18,.35)';
     ctx.beginPath(); ctx.ellipse(0, 3, 11, 11, 0, 0, Math.PI * 2); ctx.fill();
+    if (dazed) {
+      // Feet sticking up
+      ctx.strokeStyle = '#fb923c'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-4, 9); ctx.lineTo(-6, 16); ctx.moveTo(4, 9); ctx.lineTo(6, 16);
+      ctx.moveTo(-8, 16); ctx.lineTo(-4, 16); ctx.moveTo(4, 16); ctx.lineTo(8, 16);
+      ctx.stroke();
+    }
     ctx.fillStyle = '#e2e8f0';
     ctx.beginPath(); ctx.ellipse(-10, 2, 4, 7, 0.2, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.ellipse(10, 2, 4, 7, -0.2, 0, Math.PI * 2); ctx.fill();
@@ -377,10 +448,19 @@
     ctx.beginPath(); ctx.ellipse(0, -8, 3, 4, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#fb923c';
     ctx.beginPath(); ctx.moveTo(-3, -10); ctx.lineTo(0, -15); ctx.lineTo(3, -10); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#080a12';
-    ctx.beginPath(); ctx.arc(-4, -5, 1.4, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(4, -5, 1.4, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+    if (dazed) {
+      ctx.strokeStyle = '#080a12'; ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (var e = -1; e <= 1; e += 2) {
+        ctx.moveTo(e * 4 - 1.6, -6.6); ctx.lineTo(e * 4 + 1.6, -3.4);
+        ctx.moveTo(e * 4 + 1.6, -6.6); ctx.lineTo(e * 4 - 1.6, -3.4);
+      }
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = '#080a12';
+      ctx.beginPath(); ctx.arc(-4, -5, 1.4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(4, -5, 1.4, 0, Math.PI * 2); ctx.fill();
+    }
   }
   function drawScore(){
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

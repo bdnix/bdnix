@@ -288,6 +288,84 @@ test('side-by-side roads, trees and trucks from a saved round are drawn', async 
   expect(lanes[2 - s.base].items[0].pos).toBeGreaterThan(5);  // the truck drove on
 });
 
+// Pixels below the score that `kind` matches: the chicken's white ones, the
+// pink car's, or the light blue spray of a splash. How many (in world units), how
+// far across the board they reach, and how far down (all of it, or `rows`).
+function pixels(page, kind, rows){
+  return page.locator('#board').evaluate((c, [kind, rows]) => {
+    const is = {
+      white: (r, g, b) => r > 180 && g > 180 && b > 180 && Math.abs(r - b) < 30,
+      pink: (r, g, b) => r > 230 && g < 130 && b > 160,
+      splash: (r, g, b) => b > 170 && g > 150 && b >= r + 40
+    }[kind];
+    const u = c.width / (9 * 32), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let n = 0, lo = Infinity, hi = -Infinity, top = Infinity, bottom = -Infinity;
+    const y0 = rows ? Math.floor(rows.top * u) : Math.ceil(70 * u), y1 = rows ? Math.ceil(rows.bottom * u) : c.height - 1;
+    for (let y = y0; y <= y1; y++) {
+      for (let x = 0; x < c.width; x++) {
+        const i = (y * c.width + x) * 4;
+        if (is(d[i], d[i + 1], d[i + 2])) {
+          n++; lo = Math.min(lo, x); hi = Math.max(hi, x); top = Math.min(top, y); bottom = Math.max(bottom, y);
+        }
+      }
+    }
+    return { n: n / u / u, lo: lo / u, hi: hi / u, top: top / u, bottom: bottom / u };
+  }, [kind, rows]);
+}
+
+// Restores a round on row 1 with `lane` as row 2 and grass beyond it, ready to hop.
+async function onTheVerge(page, lane){
+  await start(page);
+  const s = await hopTo(page, 1);
+  s.lanes[2 - s.base] = { trees: [], ...lane };
+  s.lanes[3 - s.base] = { type: 'grass', trees: [], speed: 0, items: [] };
+  if (lane.type === 'road') lane.items[0].pos = s.chicken.x + MARGIN;   // right in front of the chicken
+  await page.addInitScript((data) => localStorage.setItem('bdnix_hop_save', JSON.stringify({ v: 1, data })), s);
+  await page.reload();
+  await page.locator('#startBtn').click();
+  await page.clock.runFor(50);
+}
+
+for (const speed of [0.5, -0.5]) {
+  test(`a car driving ${speed > 0 ? 'right' : 'left'} knocks the chicken clear, in a burst of feathers`, async ({ page }) => {
+    const lane = { type: 'road', speed, items: [{ pos: 0, len: 1, color: 0 }] };
+    await onTheVerge(page, lane);
+    const before = await pixels(page, 'white');
+    expect(before.n).toBeGreaterThan(200);
+
+    await press(page, 'ArrowUp');
+    await page.clock.runFor(150);
+    const mid = await pixels(page, 'white');               // up in the air, feathers flying
+    await waitForGameOver(page);
+    await expect(page.locator('#ovKicker')).toHaveText('Fowl play on the road!');
+    const after = await pixels(page, 'white'), car = await pixels(page, 'pink', after);  // in the chicken's lane
+    expect(after.n).toBeGreaterThan(200);                  // lying on the road
+    expect(mid.n).toBeGreaterThan(after.n * 1.5);          // the feathers, gone by the end
+    expect(car.n).toBeGreaterThan(200);
+    // Off past the car's front bumper, not on top of the car.
+    if (speed > 0) expect(after.lo).toBeGreaterThan(car.hi);
+    else expect(after.hi).toBeLessThan(car.lo);
+  });
+}
+
+test('falling in the water makes a splash', async ({ page }) => {
+  await onTheVerge(page, { type: 'river', speed: 0.5, items: [{ pos: 0, len: 2, color: 0 }] });
+  expect((await pixels(page, 'splash')).n).toBe(0);
+  const chicken = await pixels(page, 'white');
+  await press(page, 'ArrowUp');
+  await page.clock.runFor(100);
+  const foam = await pixels(page, 'splash');
+  expect(foam.n).toBeGreaterThan(200);
+  await page.clock.runFor(150);
+  const spray = await pixels(page, 'splash');
+  expect(spray.hi - spray.lo).toBeGreaterThan(foam.hi - foam.lo); // spreading out
+  expect((await pixels(page, 'white')).n).toBeLessThan(chicken.n / 3); // going under
+  await waitForGameOver(page);
+  await expect(page.locator('#ovKicker')).toHaveText('Splash! Chickens can’t swim.');
+  expect((await pixels(page, 'splash')).n).toBe(0);      // settled again
+  expect((await pixels(page, 'white')).n).toBe(0);
+});
+
 test('hops and each way of losing have a sound', async ({ page }) => {
   await listen(page);
   await page.reload();

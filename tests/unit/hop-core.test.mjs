@@ -233,3 +233,98 @@ test('danger reads the chicken where it stands', () => {
   assert.equal(F.danger(w), 'swept');
   assert.equal(F.left({ pos: F.MARGIN }), 0);
 });
+
+// Equal to within rounding (and -0 is 0).
+const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, a + ' is not ' + b);
+
+test('a car knocks the chicken clear of its front bumper, the way it drives', () => {
+  const w = F.create(() => 0);
+  w.chicken = { x: 4, row: 2, face: 'up' };
+  const lane = F.laneAt(w, 2);
+  lane.speed = 1.5;
+  lane.items = [{ pos: 3.5 + F.MARGIN, len: 2, color: 0 }];        // a truck over columns 3.5 to 5.5
+  assert.equal(F.knock(w).dir, 1);
+  near(F.knock(w).to, 5.8);
+  lane.speed = -1.5;
+  assert.equal(F.knock(w).dir, -1);
+  near(F.knock(w).to, 2.2);
+  lane.items = [{ pos: 9, len: 1, color: 0 }];                     // nothing touching: a cell along
+  assert.deepEqual({ ...F.knock(w) }, { dir: -1, to: 3 });
+});
+
+test('a car hit: the chicken tumbles across the road and lands sprawled, the board shakes', () => {
+  const start = F.hitPose(0, 2);
+  near(start.dx, 0);
+  near(start.spin, 0);
+  near(start.sx, 1);
+  near(start.flash, 1);
+  near(start.shakeX, 0);
+  near(start.shakeY, 3);
+  assert.equal(start.landed, false);
+
+  const air = F.hitPose(0.2, 2);
+  assert.ok(air.dx > 0 && air.dx < 2);
+  assert.ok(air.sx > 1.3 && air.sy === air.sx);                   // up in the air
+  assert.ok(air.spin > 0);
+  near(air.flash, 0);
+  assert.ok(Math.abs(air.shakeX) > 0);
+  assert.ok(F.hitPose(0.2, -2).spin < 0);                         // knocked left, it spins the other way
+
+  const end = F.hitPose(5, -1.5);
+  near(end.dx, -1.5);
+  near(end.spin, -Math.PI * 3);                                   // on its back
+  near(end.sx, 1.15);
+  near(end.sy, 0.8);
+  assert.equal(end.landed, true);
+  near(end.shakeX, 0);
+  near(end.shakeY, 0);
+});
+
+test('a car hit: feathers burst out where it was struck, drift down and fade', () => {
+  const at = (t) => F.hitPose(t, 1).feathers;
+  assert.equal(at(0).length, 7);
+  for (const f of at(0)) {
+    near(f.x, 0);
+    near(f.y, 0);
+    near(f.alpha, 1);
+  }
+  const dist = (f) => Math.hypot(f.x, f.y);
+  const mid = at(0.3), late = at(0.6);
+  mid.forEach((f, i) => {
+    assert.ok(dist(f) > 0.3 && Math.abs(late[i].x) >= Math.abs(f.x));  // flying outwards
+    assert.ok(late[i].alpha < f.alpha && f.alpha < 1);
+    assert.notEqual(late[i].spin, f.spin);                    // they spin as they go
+  });
+  // Spread all round, a little lower once they've drifted.
+  assert.ok(mid.some((f) => f.x < 0) && mid.some((f) => f.x > 0));
+  assert.ok(late.reduce((s, f) => s + f.y, 0) > 0);
+  assert.ok(at(0.8).every((f) => f.alpha === 0));
+  assert.deepEqual(at(0.6), at(0.6));                         // the same every time
+});
+
+test('falling in the water: the chicken sinks in a splash of foam, spray and rings', () => {
+  const start = F.splashPose(0);
+  near(start.scale, 1);
+  near(start.alpha, 1);
+  near(start.crown.alpha, 1);
+  assert.equal(start.drops.length, 10);
+  for (const d of start.drops) {
+    near(Math.hypot(d.x, d.y), 0);
+    near(d.size, 0.06);
+  }
+
+  const mid = F.splashPose(0.25);
+  assert.ok(mid.scale < 0.6 && mid.alpha < 0.3);                  // going under
+  assert.ok(mid.crown.r > start.crown.r && mid.crown.alpha > 0);
+  assert.ok(mid.drops.every((d) => Math.hypot(d.x, d.y) > 0.3 && d.size > 0.15 && d.alpha > 0.5));
+  assert.ok(mid.drops.some((d) => d.x < 0) && mid.drops.some((d) => d.x > 0));
+  assert.ok(mid.rings.r > start.rings.r && mid.rings.alpha < start.rings.alpha);
+
+  const end = F.splashPose(0.9);
+  near(end.scale, 0.3);
+  near(end.alpha, 0);                                             // gone
+  near(end.crown.alpha, 0);
+  assert.ok(end.drops.every((d) => d.alpha === 0));
+  near(end.rings.alpha, 0);
+  near(end.rings.r, 1);
+});

@@ -183,10 +183,78 @@
     return { carry: end ? 0 : t, end: end };
   }
 
+  // Where a car knocks the chicken: clear of the car's front bumper, the way
+  // the car drives. `dir` is 1 for a car driving right, -1 for left; `to` is
+  // the chicken's x once it lands.
+  function knock(w){
+    var c = w.chicken, lane = laneAt(w, c.row), dir = lane.speed < 0 ? -1 : 1;
+    var to = c.x + dir;
+    for (var i = 0; i < lane.items.length; i++) {
+      var l = left(lane.items[i]), len = lane.items[i].len;
+      if (c.x + BODY < l + len && c.x + 1 - BODY > l) to = dir > 0 ? l + len + 0.3 : l - 1.3;
+    }
+    return { dir: dir, to: to };
+  }
+
+  // How a car hit looks `t` seconds after it, for a chicken knocked `dist`
+  // cells across the road: it tumbles through the air and lands sprawled,
+  // dazed, the board shakes, a ring flashes and feathers burst out where it
+  // was struck, drifting down as they fade. Feathers are in cells from there.
+  var FLIGHT = 0.4, FEATHERS = 7;
+  function hitPose(t, dist){
+    var p = Math.min(1, t / FLIGHT), e = 1 - (1 - p) * (1 - p), air = Math.sin(p * Math.PI);
+    var shake = Math.max(0, 1 - t / 0.35);
+    var f = Math.min(1, t / 0.6), spread = 1 - Math.pow(1 - f, 3);
+    var feathers = [];
+    for (var i = 0; i < FEATHERS; i++) {
+      var a = i / FEATHERS * Math.PI * 2 + 0.4, reach = 0.6 + (i % 3) * 0.2;
+      feathers.push({
+        x: Math.sin(a) * reach * spread,
+        y: -Math.cos(a) * reach * spread + 0.3 * f * f,
+        spin: a + t * (i % 2 ? 6 : -6),
+        alpha: Math.max(0, 1 - t / 0.8)
+      });
+    }
+    return {
+      dx: dist * e,
+      spin: (dist < 0 ? -1 : 1) * Math.PI * 3 * e,
+      sx: p < 1 ? 1 + 0.45 * air : 1.15, sy: p < 1 ? 1 + 0.45 * air : 0.8,
+      landed: p >= 1,
+      shakeX: Math.sin(t * 90) * 4 * shake, shakeY: Math.cos(t * 70) * 3 * shake,
+      flash: Math.max(0, 1 - t / 0.15),
+      feathers: feathers
+    };
+  }
+
+  // How falling in the water looks `t` seconds after: the chicken sinks,
+  // a crown of foam and a spray of drops burst out and fall back, and rings
+  // spread. Sizes are in cells; `size` is a drop's radius as it rises and falls.
+  var DROPS = 10;
+  function splashPose(t){
+    var sink = Math.max(0, 1 - t / 0.3);
+    var p = Math.min(1, t / 0.5), out = 1 - (1 - p) * (1 - p), drops = [];
+    for (var i = 0; i < DROPS; i++) {
+      var a = i / DROPS * Math.PI * 2 + 0.2, reach = 0.7 + (i % 3) * 0.3;
+      drops.push({
+        x: Math.sin(a) * reach * out, y: -Math.cos(a) * reach * out,
+        size: 0.06 + 0.12 * Math.sin(p * Math.PI),
+        alpha: Math.max(0, 1 - t / 0.6)
+      });
+    }
+    var r = Math.min(1, t / 0.9);
+    return {
+      scale: 0.3 + 0.7 * sink, alpha: sink,
+      crown: { r: 0.3 + 0.5 * Math.min(1, t / 0.35), alpha: Math.max(0, 1 - t / 0.35) },
+      drops: drops,
+      rings: { r: 0.2 + 0.8 * r, alpha: 0.8 * (1 - r) }
+    };
+  }
+
   window.bdnixHop = {
     COLS: COLS, ROWS: ROWS, START_COL: START_COL, MARGIN: MARGIN, PERIOD: PERIOD,
     AHEAD: AHEAD, CREEP: CREEP, STEP: STEP,
     create: create, hop: hop, tick: tick, advance: advance,
-    laneAt: laneAt, left: left, danger: danger, fill: fill, pace: pace
+    laneAt: laneAt, left: left, danger: danger, fill: fill, pace: pace,
+    knock: knock, hitPose: hitPose, splashPose: splashPose
   };
 })();

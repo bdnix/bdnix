@@ -66,6 +66,8 @@ Hitting a pipe (its wider end caps count too) ends the round with a jolt: the bo
 
 Each new row the chicken reaches scores a point. Lanes of grass, roads and rivers are laid out at random for every round, and the traffic and the rivers speed up the further the chicken goes. A car ends the round, and so does landing in the water, riding a log off the edge of the board, or standing still so long that the screen moves on without the chicken. Trees are in the way but harmless.
 
+A car hit ends the round with a thump: the car stops dead, the board shakes, a ring flashes where it struck and a burst of feathers flies off, while the chicken tumbles through the air and lands on its back in the road past the car's bumper, feet up and seeing stars. Landing in the water makes a splash: a crown of foam and a spray of drops burst out as the chicken sinks, and ripples spread where it went under.
+
 ## Snake
 
 `/snake/`
