@@ -361,6 +361,8 @@ test('signatures are remembered in this browser only when asked', async ({ page 
 
   await openSecret(page);
   await addImage(page, block());
+  // Making it is done once it's in the list (and its message is cleared).
+  await expect(page.locator('#sigList .sig')).toHaveCount(1);
   await page.locator('#remember').check();
   await expect(page.locator('#msg')).toHaveText('Your signatures will be here next time, in this browser only.');
   await addImage(page, paper(), { see: true });
@@ -422,6 +424,7 @@ test('the editor with a signature on the page passes axe', async ({ page }) => {
 test('opening another file starts over but keeps your signatures', async ({ page }) => {
   await openSecret(page);
   await addImage(page, block());
+  await expect(page.locator('#summary')).toHaveText('1 signature on 1 page');
   await page.getByRole('button', { name: 'Next page' }).click();
   const pdf = await secretPdf();
   await page.locator('#picker').setInputFiles(upload('other.pdf', pdf.bytes));

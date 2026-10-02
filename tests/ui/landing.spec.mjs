@@ -7,7 +7,7 @@ test('shows the games and tools, with no under-construction wording', async ({ p
   await expect(page.locator('body')).not.toContainText(/under construction|check back soon|being built/i);
 
   const cards = page.locator('.card');
-  await expect(cards).toHaveCount(13);
+  await expect(cards).toHaveCount(14);
   const links = await cards.evaluateAll((els) => els.map((a) => [a.querySelector('b').textContent, a.getAttribute('href')]));
   expect(links).toEqual([
     ['Falling Blocks', '/falling-blocks/'], ['Maze Chase', '/maze-chase/'], ['Flap', '/flap/'], ['Road Hop', '/road-hop/'], ['Snake', '/snake/'], ['Brick Bounce', '/brick-bounce/'],
@@ -124,16 +124,19 @@ test('the search box filters the games and tools as you type', async ({ page }) 
   const tools = page.getByRole('region', { name: 'Tools' });
   const shown = () => page.locator('.card:visible b').allTextContents();
 
-  await expect(page.locator('.card:visible')).toHaveCount(13);
+  await expect(page.locator('.card:visible')).toHaveCount(14);
   await expect(status).toHaveText('');
   await expect(empty).toBeHidden();
 
   // Names, descriptions and keywords all count; the other section hides.
   await search.fill('pdf');
-  expect(await shown()).toEqual(['Merge PDFs', 'Watermark a PDF', 'Redact a PDF']);
-  await expect(status).toHaveText('3 matches');
+  expect(await shown()).toEqual(['Merge PDFs', 'Watermark a PDF', 'Redact a PDF', 'Sign a PDF']);
+  await expect(status).toHaveText('4 matches');
   await expect(games).toBeHidden();
   await expect(tools).toBeVisible();
+
+  await search.fill('signature');
+  expect(await shown()).toEqual(['Sign a PDF']);
 
   await search.fill('ghosts');
   expect(await shown()).toEqual(['Maze Chase']);
@@ -172,7 +175,7 @@ test('the search box filters the games and tools as you type', async ({ page }) 
   expect(await shown()).toEqual(['Snake']);
   await search.press('Escape');
   await expect(search).toHaveValue('');
-  await expect(page.locator('.card:visible')).toHaveCount(13);
+  await expect(page.locator('.card:visible')).toHaveCount(14);
   await expect(status).toHaveText('');
   await expect(empty).toBeHidden();
   await expectNoSideScroll(page);
