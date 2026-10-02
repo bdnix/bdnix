@@ -5,6 +5,7 @@ Every tool runs entirely in the browser. Files are never uploaded, and all proce
 - [Merge PDFs](#merge-pdfs)
 - [Watermark PDF](#watermark-pdf)
 - [Redact PDF](#redact-pdf)
+- [Sign PDF](#sign-pdf)
 - [MP4 to MP3](#mp4-to-mp3)
 - [Compress Images](#compress-images)
 - [Photo Collage](#photo-collage)
@@ -57,6 +58,32 @@ Open one PDF, then mark what to black out:
 **Redact PDF** creates the file. Every page with a mark is redrawn as an image (144 dpi) with the marked areas filled solid black, so the text underneath is genuinely gone: it can't be selected, copied or uncovered by moving the box. The remaining text on those pages can't be selected either. Pages with no marks are copied unchanged. The result is a new file, so the original's title, author, bookmarks and attachments aren't carried over. The download is named after the original, for example `report-redacted.pdf`.
 
 Search positions boxes from the PDF's own text, estimating where each letter sits, so boxes are padded slightly. Check the marks in the preview before redacting, and draw extra boxes if anything shows through.
+
+## Sign PDF
+
+`/sign-pdf/`
+
+Open one PDF, then make a signature under **New signature**:
+
+- **Draw** it in the white box with a finger, a pen or the mouse. **Clear** wipes the box.
+- **Type** your name and pick one of four handwriting fonts (Dancing Script, Great Vibes, Sacramento and Caveat, served from this site). The name from the visitor's profile is filled in, if they've set one.
+- **Image** uses a photo or scan of a signature (PNG, JPG, WebP or GIF). **Make white paper see-through** (on by default) turns the light background clear and keeps the ink, with soft edges.
+
+Drawn and typed signatures can be in black or blue ink. **Add to the page** turns the signature into a PNG with a see-through background, cropped to the ink, adds it to **Your signatures** and puts it on the page shown.
+
+**Your signatures** lists every signature made so far. Click one to put another copy on the page shown; **Save image** downloads it as a PNG to use later (it can be brought back with **Image**), and **Delete** removes it and takes it off the pages. Tick **Remember them in this browser** to keep them for next time; they're stored only in this browser, and unticking it forgets them.
+
+On the page, click a signature to select it, then:
+
+- **drag** it to move it (the arrow keys move it too, 1% of the page a press, 5% with Shift);
+- drag its **corner handle** to resize it, or use the **Size** slider (its width as a share of the page's width);
+- drag the **handle above** it to turn it, or use the **Rotation** slider. Dragging snaps to level and to quarter turns when it's within 4°.
+
+**Copy to every page** puts the selected signature at the same spot on every other page, for initials. **Remove** (or Delete on the keyboard) takes it off, and **Clear all** takes everything off.
+
+**Sign PDF** stamps the signatures into the file and offers it as `report-signed.pdf`. The rest of the file is left as it was: its text stays selectable, and each signature image is stored once however many pages it's on. Pages turned with `/Rotate` are handled, so a signature comes out exactly as it was placed in the preview.
+
+This is a picture of a signature, like signing a printout, not a cryptographic digital signature.
 
 ## MP4 to MP3
 

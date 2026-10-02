@@ -7,7 +7,7 @@ import { upload, numberedPdf } from './pdfs.mjs';
 const pages = [
   '/', '/profile/',
   '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/',
-  '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/mp4-to-mp3/',
+  '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/mp4-to-mp3/',
   '/compress-image/', '/photo-collage/', '/fit-to-frame/'
 ];
 

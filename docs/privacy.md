@@ -4,7 +4,7 @@ bdnix has no server-side application and no accounts. Everything the site keeps 
 
 ## Files opened in the tools
 
-Files are read and processed by the browser. They are never uploaded or sent anywhere, and neither is anything typed into a tool. Third-party libraries (pdf-lib, PDF.js, fontkit, lamejs) and the fonts (Inter and JetBrains Mono) are served from this site, not from a CDN or a font service, so until a visitor accepts analytics a page contacts nothing but bdnix.com (checked by `tests/ui/analytics.spec.mjs`).
+Files are read and processed by the browser. They are never uploaded or sent anywhere, and neither is anything typed into a tool. Third-party libraries (pdf-lib, PDF.js, fontkit, lamejs) and the fonts (Inter, JetBrains Mono and the signing tool's handwriting fonts) are served from this site, not from a CDN or a font service, so until a visitor accepts analytics a page contacts nothing but bdnix.com (checked by `tests/ui/analytics.spec.mjs`).
 
 ## Content security policy
 
@@ -28,7 +28,7 @@ In `localStorage`:
 | `bdnix_watermark_v1` | Watermark tool settings |
 | `bdnix_analytics` | Analytics consent choice |
 
-In IndexedDB, the `bdnix-tools` database holds the watermark tool's chosen image and font file.
+In IndexedDB, the `bdnix-tools` database holds the watermark tool's chosen image and font file, and the `bdnix-sign` database holds the signatures made in the signing tool, only if the visitor ticks **Remember them in this browser** (unticking it deletes them).
 
 Every page works without storage (for example in private browsing); it just won't remember anything. Clearing the browser's site data removes all of it.
 
