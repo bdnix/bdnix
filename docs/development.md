@@ -41,7 +41,7 @@ npm run test:ui
 npm run lint                      # ESLint and Stylelint
 ```
 
-- **Unit tests** (`tests/unit/`) use Node's built-in test runner. They load the site's scripts into a sandbox and cover pure logic: page-range parsing, the profile, saved games, game sounds, watermark placement, redaction search and geometry, audio encoding and MP4 parsing, image compression rules, photo collage layouts, where Resize Without Cropping places an image, and the Flap, Road Hop, Snake and Brick Bounce game rules.
+- **Unit tests** (`tests/unit/`) use Node's built-in test runner. They load the site's scripts into a sandbox and cover pure logic: page-range parsing, the profile, saved games, game sounds, watermark placement, redaction search and geometry, signature placement and image clean-up, audio encoding and MP4 parsing, image compression rules, photo collage layouts, where Resize Without Cropping places an image, and the Flap, Road Hop, Snake and Brick Bounce game rules.
 - **UI tests** (`tests/ui/`) use Playwright to drive the real pages in Chromium at desktop and phone size. They check downloaded output (PDFs are opened and inspected, audio and images are decoded), play every game on a frozen clock with fixed randomness so scores are exact, and fail on any uncaught JavaScript error or sideways scrolling on a phone. Test PDFs, audio, video and images are generated in code, so no binary fixtures are committed.
 - **Accessibility:** `tests/ui/a11y.spec.mjs` runs [axe](https://github.com/dequelabs/axe-core) on every page, and on a paused game and a tool with files in it, and fails on any WCAG 2.1 A or AA problem.
 - **Lint:** ESLint checks the site's scripts (as ES5-style browser scripts that mustn't leak globals), the tests and the build scripts (`eslint.config.mjs`); Stylelint checks the stylesheets for mistakes such as unknown properties or duplicate selectors (`.stylelintrc.json`). CI runs both.
@@ -95,11 +95,12 @@ The share image (`assets/img/og.png`, 1200×630) and `assets/img/apple-touch-ico
 
 | Library | Version | Licence | Used for |
 |---|---|---|---|
-| [pdf-lib](https://pdf-lib.js.org/) | 1.17.1 | MIT | Editing PDFs in all three PDF tools (loaded with the first PDF or image) |
+| [pdf-lib](https://pdf-lib.js.org/) | 1.17.1 | MIT | Editing PDFs in all four PDF tools (loaded with the first PDF or image) |
 | [@pdf-lib/fontkit](https://github.com/Hopding/fontkit) | 1.1.1 | MIT | Embedding uploaded fonts in watermarks (loaded only when needed) |
 | [PDF.js](https://mozilla.github.io/pdf.js/) (legacy build) | 6.3.289 | Apache 2.0 | Previews, text search and page rendering (loaded once a file is opened) |
 | [lamejs](https://github.com/zhuker/lamejs) | 1.2.1 | LGPL | MP3 encoding, included unmodified as its own file (loaded with the first MP3) |
 | [Inter](https://rsms.me/inter/) (from [Fontsource](https://fontsource.org/)) | 5.3.0 | OFL 1.1 | The site's text, weights 400, 600 and 800 |
 | [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (from Fontsource) | 5.3.0 | OFL 1.1 | Labels and code-style text, weights 400 and 600 |
+| Dancing Script, Great Vibes, Sacramento and Caveat (from Fontsource) | 5.3.0 | OFL 1.1 | Typed signatures in Sign PDF, weight 400 |
 
-Each library's licence file sits beside it in [assets/vendor/](../assets/vendor/); the fonts, Latin and Latin Extended subsets as WOFF2, are in [assets/fonts/](../assets/fonts/) with theirs. `base.css` declares them, and every page preloads Inter 400 and 800.
+Each library's licence file sits beside it in [assets/vendor/](../assets/vendor/); the fonts, Latin and Latin Extended subsets as WOFF2, are in [assets/fonts/](../assets/fonts/) with theirs. `base.css` declares Inter and JetBrains Mono, and every page preloads Inter 400 and 800; the handwriting fonts are declared in `sign.css` and only load on the signing page.

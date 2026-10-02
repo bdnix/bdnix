@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <!-- build:meta -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://www.googletagmanager.com; style-src 'self'; font-src 'self' data:; img-src 'self' data: blob: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' data: blob: https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; media-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Sign a PDF — Add your signature free | bdnix</title>
+  <meta name="description" content="Sign a PDF free: draw your signature, type it in a handwriting font or upload a picture of it, then move, resize and turn it anywhere on the page. Runs in your browser; your file is never uploaded.">
+  <link rel="canonical" href="https://www.bdnix.com/sign-pdf/">
+  <meta property="og:site_name" content="bdnix">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.bdnix.com/sign-pdf/">
+  <meta property="og:title" content="Sign a PDF — Add your signature free | bdnix">
+  <meta property="og:description" content="Sign a PDF free: draw your signature, type it in a handwriting font or upload a picture of it, then move, resize and turn it anywhere on the page. Runs in your browser; your file is never uploaded.">
+  <meta property="og:image" content="https://www.bdnix.com/assets/img/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="bdnix: Play a little. Get things done.">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Sign a PDF", "url": "https://www.bdnix.com/sign-pdf/", "description": "Sign a PDF free: draw your signature, type it in a handwriting font or upload a picture of it, then move, resize and turn it anywhere on the page. Runs in your browser; your file is never uploaded.", "applicationCategory": "UtilitiesApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
+  <meta name="theme-color" content="#080a12">
+  <!-- /build:meta -->
+  <link rel="preload" href="/assets/fonts/inter-latin-400-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/inter-latin-800-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/base.css?v=7e5309da52">
+  <link rel="stylesheet" href="/assets/css/icon-btn.css?v=20fd350a8d">
+  <link rel="stylesheet" href="/assets/css/avatar.css?v=1da16dde9f">
+  <link rel="stylesheet" href="/assets/css/profile-chip.css?v=9563092884">
+  <link rel="stylesheet" href="/assets/css/footer.css?v=5f3a8660bb">
+  <link rel="stylesheet" href="/assets/css/page.css?v=6ee9010c44">
+  <link rel="stylesheet" href="/assets/css/tool.css?v=a70bc4eb15">
+  <link rel="stylesheet" href="/assets/css/file.css?v=6d62676c6d">
+  <link rel="stylesheet" href="/assets/css/editor.css?v=23a907ae4f">
+  <link rel="stylesheet" href="/assets/css/settings.css?v=e8dcb9f30c">
+  <link rel="stylesheet" href="/assets/css/seg.css?v=9c1df52699">
+  <link rel="stylesheet" href="/assets/css/sign.css?v=a1fe2cdee1">
+  <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
+</head>
+<body>
+  <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
+
+  <header class="bar">
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ sign-pdf</span></a>
+    <a class="profile-chip" href="/profile/" title="Your profile"><span class="avatar" data-profile-initial aria-hidden="true">U</span><span data-profile-name>User</span></a>
+  </header>
+
+  <main class="tool wide">
+    <p class="kicker">// tools</p>
+    <h1>Sign a PDF</h1>
+    <p class="lede">Draw your signature, type it in a handwriting font or use a picture of it, then put it anywhere on the pages: move it, resize it and turn it. Everything happens in your browser. Your file is never uploaded.</p>
+
+    <label class="drop panel" id="drop">
+      <input type="file" id="picker" accept="application/pdf,.pdf">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <b>Drop a PDF file here</b>
+      <span>or <u>choose a file</u></span>
+    </label>
+
+    <div class="file-bar panel" id="fileBar" hidden>
+      <div class="file-info">
+        <span class="file-name" id="fileName"></span>
+        <span class="file-meta" id="fileMeta"></span>
+      </div>
+      <button class="link-btn" id="changeBtn" type="button">Change file</button>
+    </div>
+
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+    <section class="editor" id="editor" hidden>
+      <div class="preview panel">
+        <div class="preview-stage" id="stage">
+          <div class="sheet" id="sheet" hidden>
+            <canvas id="pageCanvas" role="img" aria-label="The page, with your signatures on it"></canvas>
+            <div class="layer" id="layer"></div>
+          </div>
+          <p class="preview-note" id="previewNote">Loading the page…</p>
+        </div>
+        <div class="preview-nav">
+          <button class="icon-btn" id="prevPage" type="button" aria-label="Previous page"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg></button>
+          <span class="label" id="pageLabel">Page 1 of 1</span>
+          <button class="icon-btn" id="nextPage" type="button" aria-label="Next page"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg></button>
+        </div>
+      </div>
+
+      <div class="settings panel">
+        <fieldset class="seg modes" id="modes">
+          <legend class="label">New signature</legend>
+          <label><input type="radio" name="mode" value="draw" checked><span>Draw</span></label>
+          <label><input type="radio" name="mode" value="type"><span>Type</span></label>
+          <label><input type="radio" name="mode" value="image"><span>Image</span></label>
+        </fieldset>
+
+        <div class="for-draw" id="forDraw">
+          <canvas class="pad" id="pad" role="img" aria-label="Signature pad: sign here with your finger, a pen or the mouse"></canvas>
+          <div class="pad-row">
+            <p class="tip">Sign in the box with your finger, a pen or the mouse.</p>
+            <button class="link-btn" id="padClear" type="button" disabled>Clear</button>
+          </div>
+        </div>
+
+        <div class="for-type" id="forType" hidden>
+          <label class="field">
+            <span class="label">Your name</span>
+            <input type="text" id="typed" maxlength="60" spellcheck="false" autocomplete="name" placeholder="Type your name">
+          </label>
+          <fieldset class="field">
+            <legend class="label">Style</legend>
+            <div class="fonts" id="fonts">
+              <label><input type="radio" name="font" value="Dancing Script" checked><span class="font-dancing">Your name</span></label>
+              <label><input type="radio" name="font" value="Great Vibes"><span class="font-vibes">Your name</span></label>
+              <label><input type="radio" name="font" value="Sacramento"><span class="font-sacramento">Your name</span></label>
+              <label><input type="radio" name="font" value="Caveat"><span class="font-caveat">Your name</span></label>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="for-image" id="forImage" hidden>
+          <div class="image-pick">
+            <label class="btn btn-ghost btn-sm">
+              <input type="file" id="imagePicker" accept="image/png,image/jpeg,image/webp,image/gif">
+              Choose image
+            </label>
+            <span class="image-name" id="imageName">A photo or scan of your signature</span>
+          </div>
+          <label class="check"><input type="checkbox" id="clearBg" checked> Make white paper see-through</label>
+        </div>
+
+        <fieldset class="seg" id="inks">
+          <legend class="label">Ink</legend>
+          <label><input type="radio" name="ink" value="#111827" checked><span>Black</span></label>
+          <label><input type="radio" name="ink" value="#1d3fb8"><span>Blue</span></label>
+        </fieldset>
+
+        <button class="btn btn-ghost" id="addBtn" type="button" disabled>
+          <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v10M3 8h10"/></svg>
+          <span>Add to the page</span>
+        </button>
+        <p class="hint" id="addHint" hidden></p>
+
+        <div class="field">
+          <span class="label">Your signatures</span>
+          <ul class="sigs" id="sigList"></ul>
+          <p class="tip" id="sigNone">None yet. Make one above.</p>
+          <label class="check"><input type="checkbox" id="remember"> Remember them in this browser</label>
+        </div>
+
+        <div class="field" id="selected" hidden>
+          <span class="label">Selected signature</span>
+          <p class="tip">Drag it on the page to move it, its corner handle to resize it, and the handle above it to turn it. The arrow keys move it too.</p>
+          <label class="field">
+            <span class="label">Size <output id="sizeOut"></output></span>
+            <input type="range" id="sizeRange" min="3" max="100" step="1" value="30">
+          </label>
+          <label class="field">
+            <span class="label">Rotation <output id="angleOut"></output></span>
+            <input type="range" id="angleRange" min="-180" max="180" step="1" value="0">
+          </label>
+          <div class="row-btns">
+            <button class="link-btn" id="everyBtn" type="button">Copy to every page</button>
+            <button class="link-btn" id="removeBtn" type="button">Remove</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="label">On the pages</span>
+          <div class="placed-row">
+            <span class="placed-sum" id="summary">Nothing placed yet</span>
+            <button class="link-btn" id="clearBtn" type="button" disabled>Clear all</button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="applyBtn" type="button" disabled>
+            <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c2-4 3-8 5-8s0 7 2 7 2-3 3-3 1 2 2 2M2 14h12"/></svg>
+            <span id="applyLabel">Sign PDF</span>
+          </button>
+          <a class="btn btn-ghost" id="downloadBtn" hidden>
+            <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4 7l4 4 4-4M2 14h12"/></svg>
+            <span id="downloadLabel">Download</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- build:footer -->
+  <footer class="foot">
+    <span>© <span id="year">2026</span> bdnix · <a href="https://github.com/bdnix/bdnix">Open source on GitHub</a></span>
+    <span class="foot-links"><a href="/#suggest">Suggest a tool or game</a><a href="mailto:root@bdnix.com">root@bdnix.com</a></span>
+  </footer>
+  <!-- /build:footer -->
+
+  <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
+  <script src="/assets/js/profile.js?v=d7e69c9e67"></script>
+  <script src="/assets/js/files.js?v=75d1bc56e6"></script>
+  <script src="/assets/js/pdftools.js?v=876b24df99"></script>
+  <script src="/assets/js/sign-core.js?v=a79782f4ca"></script>
+  <script src="/assets/js/sign.js?v=40fba1ae46"></script>
+</body>
+</html>

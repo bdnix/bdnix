@@ -19,7 +19,7 @@ export const pages = [
   {
     path: '/',
     title: 'bdnix — Free browser games and PDF, audio and image tools',
-    description: 'Play Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce, merge, watermark and redact PDFs, turn videos into MP3s, compress, frame or collage photos, all in your browser. Nothing to install, nothing uploaded.',
+    description: 'Play Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce, merge, watermark, redact and sign PDFs, turn videos into MP3s, compress, frame or collage photos, all in your browser. Nothing to install, nothing uploaded.',
     schema: 'WebSite'
   },
   {
@@ -178,6 +178,22 @@ export const pages = [
         '<rect x="12" y="11" width="16" height="5" rx="1" fill="#080a12"/>',
         '<path d="M13 22h14M13 28h8" stroke="#eef1f8" stroke-width="2" stroke-linecap="round" opacity=".7"/>',
         '<rect x="19" y="25.5" width="9" height="5" rx="1" fill="#080a12"/>'
+      ]
+    }
+  },
+  {
+    path: '/sign-pdf/',
+    title: 'Sign a PDF — Add your signature free | bdnix',
+    description: 'Sign a PDF free: draw your signature, type it in a handwriting font or upload a picture of it, then move, resize and turn it anywhere on the page. Runs in your browser; your file is never uploaded.',
+    schema: 'WebApplication', category: 'UtilitiesApplication',
+    app: {
+      kind: 'tool', name: 'Sign a PDF', blurb: 'Draw, type or upload a signature',
+      keywords: 'tool pdf signature sign esign autograph initials documents',
+      icon: [
+        '<rect x="9" y="4" width="22" height="32" rx="3" fill="#22d3ee" opacity=".55"/>',
+        '<path d="M13 10h14M13 15h10" stroke="#eef1f8" stroke-width="2" stroke-linecap="round" opacity=".7"/>',
+        '<path d="M11 28c3-6 5-10 7-10s-1 9 2 9 3-4 5-4 1 3 4 3" fill="none" stroke="#a855f7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
+        '<path d="M12 32h18" stroke="#f472b6" stroke-width="2" stroke-linecap="round"/>'
       ]
     }
   },
