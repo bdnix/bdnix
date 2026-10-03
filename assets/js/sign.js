@@ -9,7 +9,7 @@
   function $(id){ return document.getElementById(id); }
 
   var drop = $('drop'), picker = $('picker');
-  var fileBar = $('fileBar'), fileName = $('fileName'), fileMeta = $('fileMeta'), changeBtn = $('changeBtn');
+  var fileBar = $('fileBar'), fileName = $('fileName'), fileMeta = $('fileMeta'), changeBtn = $('changeBtn'), closeBtn = $('closeBtn');
   var msg = $('msg'), editor = $('editor');
   var sigsBtn = $('sigsBtn'), sigCountEl = $('sigCount'), placeBtn = $('placeBtn'), placeTip = $('placeTip');
   var dialog = $('sigDialog'), dialogClose = $('dialogClose'), sigMsg = $('sigMsg');
@@ -383,8 +383,7 @@
       links.className = 'sig-links';
       var save = document.createElement('a');
       save.className = 'link-btn';
-      save.href = s.url;
-      save.download = 'signature-' + s.n + '.png';
+      T.offer(save, s.url, 'signature-' + s.n + '.png');
       save.textContent = 'Save image';
       save.setAttribute('aria-label', 'Save ' + sigLabel(s) + ' as an image');
       var del = document.createElement('button');
@@ -397,9 +396,62 @@
       links.appendChild(del);
       li.appendChild(put);
       li.appendChild(links);
+      if (s === confirming) li.appendChild(askToDelete(s));
       sigList.appendChild(li);
     });
     syncUi();
+  }
+
+  // The pages of the open PDF a signature is on.
+  function pagesOf(s){
+    return placed.reduce(function(list, p){
+      if (p.sig === s && list.indexOf(p.page) < 0) list.push(p.page);
+      return list;
+    }, []);
+  }
+
+  // A signature that's on the open PDF isn't deleted straight away: the
+  // visitor is told it would come off those pages too, and can keep it.
+  var confirming = null;
+  function askToDelete(s){
+    var box = document.createElement('div');
+    box.className = 'sig-confirm';
+    box.setAttribute('role', 'alert');
+    var text = document.createElement('p');
+    text.className = 'tip';
+    var n = pagesOf(s).length;
+    text.textContent = 'Signature ' + s.n + ' is on ' + T.plural(n, 'page') + ' of ' + src.name + '. Deleting it takes it off ' +
+      (n === 1 ? 'that page' : 'them') + ' too, so sign and download the PDF first if you want it there.';
+    var keep = document.createElement('button');
+    keep.type = 'button';
+    keep.className = 'btn btn-ghost btn-sm sig-keep';
+    keep.dataset.id = s.id;
+    keep.textContent = 'Keep it';
+    var yes = document.createElement('button');
+    yes.type = 'button';
+    yes.className = 'link-btn sig-del-yes';
+    yes.dataset.id = s.id;
+    yes.textContent = 'Delete anyway';
+    var row = document.createElement('div');
+    row.className = 'row-btns';
+    row.appendChild(keep);
+    row.appendChild(yes);
+    box.appendChild(text);
+    box.appendChild(row);
+    return box;
+  }
+
+  function deleteSig(s){
+    var had = placed.length;
+    confirming = null;
+    sigs = sigs.filter(function(o){ return o !== s; });
+    placed = placed.filter(function(p){ return p.sig !== s; });
+    if (selected && selected.sig === s) selected = null;
+    URL.revokeObjectURL(s.url);
+    store();
+    drawSigs();
+    sayDlg(had > placed.length ? 'Deleted ' + sigLabel(s) + ' and took it off the pages.' : 'Deleted ' + sigLabel(s) + '.');
+    changed();
   }
 
   function sigById(id){
@@ -408,6 +460,7 @@
 
   sigList.addEventListener('click', function(e){
     var put = e.target.closest('.sig-place'), del = e.target.closest('.sig-del');
+    var keep = e.target.closest('.sig-keep'), yes = e.target.closest('.sig-del-yes');
     if (busy) return;
     if (put && src) {
       closeDialog();
@@ -415,16 +468,20 @@
     }
     if (del) {
       var s = sigById(del.dataset.id);
-      var had = placed.length;
-      sigs = sigs.filter(function(o){ return o !== s; });
-      placed = placed.filter(function(p){ return p.sig !== s; });
-      if (selected && selected.sig === s) selected = null;
-      URL.revokeObjectURL(s.url);
-      store();
+      if (!pagesOf(s).length) return deleteSig(s);
+      confirming = s;
+      sayDlg('');
       drawSigs();
-      sayDlg(had > placed.length ? 'Deleted ' + sigLabel(s) + ' and took it off the pages.' : 'Deleted ' + sigLabel(s) + '.');
-      changed();
+      sigList.querySelector('.sig-keep').focus();
     }
+    if (keep) {
+      var k = sigById(keep.dataset.id);
+      confirming = null;
+      drawSigs();
+      sayDlg('Kept ' + sigLabel(k) + '. It’s still on the pages.');
+      sigList.querySelector('.sig-del[data-id="' + k.id + '"]').focus();
+    }
+    if (yes) deleteSig(sigById(yes.dataset.id));
   });
 
   // ---- Remembering signatures ----
@@ -771,9 +828,11 @@
       });
       src = { name: file.name, bytes: bytes, pages: doc.getPageCount(), views: views, view: null, viewTask: null };
       placed = [];
+      confirming = null;
       selected = null;
       pageIndex = 0;
       clearResult();
+      drawSigs();
       drop.hidden = true;
       fileBar.hidden = false;
       editor.hidden = false;
@@ -810,6 +869,28 @@
     picker.value = '';
   });
   changeBtn.addEventListener('click', function(){ picker.click(); });
+
+  // Puts the PDF away without signing it or opening another. The
+  // signatures stay, ready for the next file.
+  closeBtn.addEventListener('click', function(){
+    if (busy || !src) return;
+    var name = src.name;
+    if (src.viewTask) src.viewTask.destroy();
+    src = null;
+    placed = [];
+    selected = null;
+    confirming = null;
+    pageIndex = 0;
+    showSeq++;
+    clearResult();
+    editor.hidden = true;
+    fileBar.hidden = true;
+    drop.hidden = false;
+    drawSigs();
+    changed();
+    say('Closed ' + name + '. Your signatures are still here for the next one.');
+    drop.querySelector('input').focus();
+  });
   T.onFileDrop(drop, function(list){ openFile(list[0]); });
 
   // ---- Making the file ----
@@ -844,8 +925,7 @@
       var blob = new Blob([bytes], { type: 'application/pdf' });
       var name = S.signedName(src.name);
       resultUrl = URL.createObjectURL(blob);
-      downloadBtn.href = resultUrl;
-      downloadBtn.download = name;
+      T.offer(downloadBtn, resultUrl, name);
       downloadBtn.title = name;
       downloadLabel.textContent = 'Download (' + T.fmtSize(blob.size) + ')';
       downloadBtn.hidden = false;

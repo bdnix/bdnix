@@ -131,3 +131,10 @@ test('loadScript: a failed fetch rejects, removes its tag and is tried again nex
   document.head.tags[0].onload();
   assert.equal(await retry, 42);
 });
+
+test('offer: a download link that opens in a new window', () => {
+  const w = load(FILE);
+  const a = {};
+  assert.equal(w.bdnixFiles.offer(a, 'blob:x', 'report-signed.pdf'), a);
+  assert.deepEqual({ ...a }, { href: 'blob:x', download: 'report-signed.pdf', target: '_blank', rel: 'noopener' });
+});

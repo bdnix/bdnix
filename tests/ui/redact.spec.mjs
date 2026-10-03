@@ -1,4 +1,4 @@
-import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll, expectNewWindow } from './fixtures.mjs';
 import { upload, secretPdf, picturePdf, download, widths, contentStreams, hexText, imageCount } from './pdfs.mjs';
 
 async function openSecret(page){
@@ -14,6 +14,7 @@ async function openSecret(page){
 const redact = (page) => download(page, async () => {
   await page.getByRole('button', { name: 'Redact PDF' }).click();
   await expect(page.locator('#downloadBtn')).toBeVisible({ timeout: 20_000 });
+  await expectNewWindow(page.locator('#downloadBtn'));
   await page.locator('#downloadBtn').click();
 });
 

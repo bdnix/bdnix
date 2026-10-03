@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll, expectNewWindow } from './fixtures.mjs';
 import { flacMp4, wav, tone, readWav, mp3Header, analyse, box, full, u32 } from './media.mjs';
 
 const file = (name, buffer, mimeType) => ({ name, mimeType, buffer: Buffer.from(buffer) });
@@ -7,6 +7,7 @@ const file = (name, buffer, mimeType) => ({ name, mimeType, buffer: Buffer.from(
 const clip = () => file('holiday clip.mp4', flacMp4(tone(1, 2)), 'video/mp4');
 
 async function fetchDownload(page, row){
+  await expectNewWindow(row.locator('.dl'));
   const [dl] = await Promise.all([page.waitForEvent('download'), row.locator('.dl').click()]);
   return { name: dl.suggestedFilename(), bytes: fs.readFileSync(await dl.path()) };
 }

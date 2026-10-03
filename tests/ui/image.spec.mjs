@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll, expectNewWindow } from './fixtures.mjs';
 import { png, photo, gif, kind, inspect, near } from './images.mjs';
 
 const file = (name, buffer, mimeType) => ({ name, mimeType, buffer: Buffer.from(buffer) });
@@ -20,6 +20,7 @@ function tileColours(page, row){
 }
 
 async function fetchDownload(page, row){
+  await expectNewWindow(row.locator('.dl'));
   const [dl] = await Promise.all([page.waitForEvent('download'), row.locator('.dl').click()]);
   return { name: dl.suggestedFilename(), bytes: fs.readFileSync(await dl.path()) };
 }

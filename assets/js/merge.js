@@ -273,7 +273,7 @@
     }).then(function(bytes){
       var blob = new Blob([bytes], { type: 'application/pdf' });
       resultUrl = URL.createObjectURL(blob);
-      downloadBtn.href = resultUrl;
+      T.offer(downloadBtn, resultUrl, 'merged.pdf');
       downloadLabel.textContent = 'Download merged.pdf (' + fmtSize(blob.size) + ')';
       downloadBtn.hidden = false;
       say('Done. ' + plural(out.getPageCount(), 'page') + ' from ' + plural(total, 'file') + '.');

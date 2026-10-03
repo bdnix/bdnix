@@ -121,3 +121,11 @@
    and the links beside a signature stay clear while it can't be placed. */
 .sig-dialog .label{color:var(--muted)}
 .sig-place:disabled + .sig-links{opacity:1}
+/* Asked before deleting a signature that's on the open PDF */
+.sig-confirm{
+  flex:1 1 100%;display:flex;flex-direction:column;gap:10px;
+  padding:12px 14px;border-radius:10px;
+  border:1px solid rgba(244,114,182,.45);background:rgba(244,114,182,.08);
+}
+.sig-confirm .tip{color:var(--fg)}
+.sig-confirm .row-btns{align-items:center}

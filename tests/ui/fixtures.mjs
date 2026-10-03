@@ -43,6 +43,14 @@ export function takeCspViolations(page){
 
 export { expect };
 
+// Every download link opens in a new window (bdnixFiles.offer in files.js),
+// so a browser that shows a PDF or image rather than saving it leaves the
+// tool, and the work in it, where it was.
+export async function expectNewWindow(link){
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener');
+}
+
 // Fails if the page scrolls sideways (the layout is wider than the screen).
 export async function expectNoSideScroll(page){
   const { scroll, client } = await page.evaluate(() => ({

@@ -1,12 +1,12 @@
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll, expectNewWindow } from './fixtures.mjs';
 import { upload, secretPdf, download, imageCount, contentStreams } from './pdfs.mjs';
 import { png } from './images.mjs';
 
 // secret.pdf: three A4 pages, the second turned with /Rotate 90.
-async function openSecret(page){
+async function openSecret(page, { reload = true } = {}){
   const pdf = await secretPdf();
-  await page.goto('/sign-pdf/');
+  if (reload) await page.goto('/sign-pdf/');
   await page.locator('#picker').setInputFiles(upload('secret.pdf', pdf.bytes));
   await expect(page.locator('#fileMeta')).toHaveText(/^3 pages · \d+ KB$/);
   await expect(page.locator('#pageCanvas')).toBeVisible({ timeout: 20_000 });
@@ -47,6 +47,7 @@ const sign = (page) => download(page, async () => {
   await expect(page.locator('#sigDialog')).toBeHidden();
   await page.getByRole('button', { name: 'Sign PDF' }).click();
   await expect(page.locator('#downloadBtn')).toBeVisible({ timeout: 20_000 });
+  await expectNewWindow(page.locator('#downloadBtn'));
   await page.locator('#downloadBtn').click();
 });
 
@@ -100,6 +101,7 @@ async function savedImage(page, n){
   await openSigs(page);
   const link = page.getByRole('link', { name: `Save signature ${n} as an image` });
   await expect(link).toHaveAttribute('download', `signature-${n}.png`);
+  await expectNewWindow(link);
   const [dl] = await Promise.all([page.waitForEvent('download'), link.click()]);
   expect(dl.suggestedFilename()).toBe(`signature-${n}.png`);
   return page.evaluate(async (href) => {
@@ -362,11 +364,68 @@ test('a signature copied to every page is stored once, and deleting it takes it 
   expect(imageCount(out.doc)).toBe(1);
   for (const i of [0, 1, 2]) expect(contentStreams(out.doc, i).join(''), `page ${i + 1}`).toMatch(/\/Image-\d+ Do/);
 
+  // It's on the open PDF, so deleting it asks first.
   await remove(page, 1);
+  const ask = page.locator('.sig-confirm');
+  await expect(ask).toHaveText(/^Signature 1 is on 3 pages of secret\.pdf\. Deleting it takes it off them too, so sign and download the PDF first if you want it there\./);
+  await expect(page.getByRole('button', { name: 'Keep it' })).toBeFocused();
+  await expect(page.locator('#sigList .sig')).toHaveCount(1);
+  await expectNoSideScroll(page);
+
+  await page.getByRole('button', { name: 'Keep it' }).click();
+  await expect(ask).toHaveCount(0);
+  await expect(page.locator('#sigMsg')).toHaveText('Kept signature 1. It’s still on the pages.');
+  await expect(page.getByRole('button', { name: 'Delete signature 1' })).toBeFocused();
+  await expect(page.locator('#summary')).toHaveText('3 signatures on 3 pages');
+  await expect(page.locator('#downloadBtn')).toBeVisible();
+
+  await remove(page, 1);
+  await page.getByRole('button', { name: 'Delete anyway' }).click();
   await expect(page.locator('#sigMsg')).toHaveText('Deleted signature 1 and took it off the pages.');
   await expect(page.locator('#summary')).toHaveText('Nothing placed yet');
   await expect(page.locator('#sigList .sig')).toHaveCount(0);
   await expect(page.locator('#downloadBtn')).toBeHidden();
+});
+
+test('a signature that isn’t on the open PDF is deleted straight away', async ({ page }) => {
+  await openSecret(page);
+  await addImage(page, block());
+  await addImage(page, paper(), { see: true });
+  await expect(page.locator('#summary')).toHaveText('2 signatures on 1 page');
+  await page.locator('#layer .placed').nth(1).focus();
+  await page.keyboard.press('Delete');
+  await expect(page.locator('#summary')).toHaveText('1 signature on 1 page');
+  await remove(page, 1);
+  await expect(page.locator('.sig-confirm')).toHaveText(/^Signature 1 is on 1 page of secret\.pdf\. Deleting it takes it off that page too,/);
+  await page.getByRole('button', { name: 'Keep it' }).click();
+  await remove(page, 2);
+  await expect(page.locator('.sig-confirm')).toHaveCount(0);
+  await expect(page.locator('#sigMsg')).toHaveText('Deleted signature 2.');
+  await expect(page.locator('#sigList .sig')).toHaveCount(1);
+  await expect(page.locator('#summary')).toHaveText('1 signature on 1 page');
+});
+
+test('Close file puts the PDF away and keeps the signatures', async ({ page }) => {
+  await openSecret(page);
+  await addImage(page, block());
+  await expect(page.locator('#summary')).toHaveText('1 signature on 1 page');
+  await page.getByRole('button', { name: 'Close file' }).click();
+  await expect(page.locator('#msg')).toHaveText('Closed secret.pdf. Your signatures are still here for the next one.');
+  await expect(page.locator('#editor')).toBeHidden();
+  await expect(page.locator('#fileBar')).toBeHidden();
+  await expect(page.locator('#drop')).toBeVisible();
+  await expect(page.locator('#sigCount')).toHaveText('1');
+  await openSigs(page);
+  await expect(page.getByRole('button', { name: 'Put signature 1 on this page' })).toBeDisabled();
+  await expect(page.locator('#addLabel')).toHaveText('Create signature');
+  // Nothing is in use any more, so it could be deleted without asking.
+  await page.keyboard.press('Escape');
+
+  // The next file starts clean, with the signature ready.
+  await openSecret(page, { reload: false });
+  await expect(page.locator('#summary')).toHaveText('Nothing placed yet');
+  await put(page, 1);
+  await expect(page.locator('#summary')).toHaveText('1 signature on 1 page');
 });
 
 // What the page keeps in IndexedDB, once any write in progress is done.
