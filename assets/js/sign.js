@@ -10,15 +10,15 @@
 
   var drop = $('drop'), picker = $('picker');
   var fileBar = $('fileBar'), fileName = $('fileName'), fileMeta = $('fileMeta'), changeBtn = $('changeBtn');
-  var msg = $('msg'), editor = $('editor');
+  var msg = $('msg'), preview = $('preview'), placing = $('placing');
   var stage = $('stage'), sheet = $('sheet'), canvas = $('pageCanvas'), layer = $('layer'), note = $('previewNote');
   var prevBtn = $('prevPage'), nextBtn = $('nextPage'), pageLabel = $('pageLabel');
   var modes = $('modes'), forDraw = $('forDraw'), forType = $('forType'), forImage = $('forImage'), inks = $('inks');
   var pad = $('pad'), padClear = $('padClear');
   var typed = $('typed'), fonts = $('fonts');
   var imagePicker = $('imagePicker'), imageName = $('imageName'), clearBg = $('clearBg');
-  var addBtn = $('addBtn'), addHint = $('addHint');
-  var sigList = $('sigList'), sigNone = $('sigNone'), remember = $('remember');
+  var addBtn = $('addBtn'), addLabel = $('addLabel'), addHint = $('addHint');
+  var sigList = $('sigList'), sigNone = $('sigNone'), sigTip = $('sigTip'), remember = $('remember');
   var selectedBox = $('selected'), sizeRange = $('sizeRange'), sizeOut = $('sizeOut');
   var angleRange = $('angleRange'), angleOut = $('angleOut'), everyBtn = $('everyBtn'), removeBtn = $('removeBtn');
   var summary = $('summary'), clearBtn = $('clearBtn');
@@ -76,7 +76,13 @@
     summary.textContent = n ? T.plural(n, 'signature') + ' on ' + T.plural(pagesWith().length, 'page') : 'Nothing placed yet';
     clearBtn.disabled = busy || !n;
     applyBtn.disabled = busy || !src || !n;
-    addBtn.disabled = busy || !src || !canAdd();
+    // Signatures can be made, saved and kept without a PDF; one opened
+    // lets them be put on its pages too.
+    addBtn.disabled = busy || !canAdd();
+    addLabel.textContent = src ? 'Add to the page' : 'Create signature';
+    placing.hidden = !src;
+    sigTip.hidden = !!src || !sigs.length;
+    Array.prototype.forEach.call(sigList.querySelectorAll('.sig-place'), function(b){ b.disabled = !src; });
     padClear.disabled = !strokes.length;
     sigNone.hidden = sigs.length > 0;
     selectedBox.hidden = !selected;
@@ -298,7 +304,7 @@
   }
 
   addBtn.addEventListener('click', function(){
-    if (busy || !src || !canAdd()) return;
+    if (busy || !canAdd()) return;
     var m = mode();
     busy = true;
     syncUi();
@@ -311,7 +317,8 @@
       if (m === 'draw') clearPad();
       store();
       hint('');
-      place(s);
+      if (src) place(s);
+      else say('Made ' + sigLabel(s) + '. Save it as an image, or open a PDF to put it on a page.');
     }).catch(function(){
       hint(m === 'image' ? image.name + ' couldn’t be read as an image.' : 'Couldn’t make the signature.', true);
     }).then(function(){
@@ -732,8 +739,7 @@
       clearResult();
       drop.hidden = true;
       fileBar.hidden = false;
-      editor.hidden = false;
-      sizePad();
+      preview.hidden = false;
       fileName.textContent = file.name;
       fileName.title = file.name;
       fileMeta.textContent = T.plural(src.pages, 'page') + ' · ' + T.fmtSize(file.size);
@@ -825,5 +831,6 @@
   }
 
   restored.then(syncUi);
+  sizePad();
   syncUi();
 })();

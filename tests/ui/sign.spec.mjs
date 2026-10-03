@@ -434,11 +434,53 @@ test('opening another file starts over but keeps your signatures', async ({ page
   await expect(page.locator('#sigList .sig')).toHaveCount(1);
 });
 
+test('signatures are made, saved and kept without opening a PDF, then placed once one is open', async ({ page }) => {
+  await page.goto('/sign-pdf/');
+  await expect(page.locator('#preview')).toBeHidden();
+  await expect(page.locator('#placing')).toBeHidden();
+  await expect(page.locator('#sigNone')).toBeVisible();
+  const create = page.getByRole('button', { name: 'Create signature' });
+  await expect(create).toBeDisabled();
+
+  await scribble(page);
+  await create.click();
+  await expect(page.locator('#msg')).toHaveText('Made signature 1. Save it as an image, or open a PDF to put it on a page.');
+  await expect(page.locator('#sigList .sig')).toHaveCount(1);
+  await expect(page.locator('#sigTip')).toHaveText('Open a PDF to put them on its pages.');
+  // Nothing to put it on yet.
+  await expect(page.getByRole('button', { name: 'Put signature 1 on this page' })).toBeDisabled();
+  const img = await savedImage(page, 1);
+  expect(img.corner[3]).toBe(0);
+
+  await page.locator('#modes label', { hasText: 'Type' }).click();
+  await page.locator('#typed').fill('Jane Doe');
+  await create.click();
+  await expect(page.locator('#sigList .sig')).toHaveCount(2);
+  await page.locator('#remember').check();
+  await expect.poll(() => stored(page)).toBe(2);
+  await expectNoSideScroll(page);
+
+  // Still there next time, and ready for a PDF.
+  await page.reload();
+  await expect(page.locator('#sigList .sig')).toHaveCount(2);
+  const pdf = await secretPdf();
+  await page.locator('#picker').setInputFiles(upload('secret.pdf', pdf.bytes));
+  await expect(page.locator('#pageCanvas')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('#sigTip')).toBeHidden();
+  await expect(page.locator('#placing')).toBeVisible();
+  await expect(page.locator('#addLabel')).toHaveText('Add to the page');
+  await page.getByRole('button', { name: 'Put signature 2 on this page' }).click();
+  await expect(page.locator('#summary')).toHaveText('1 signature on 1 page');
+  const out = await sign(page);
+  expect(out.name).toBe('secret-signed.pdf');
+});
+
 test('rejects files that are not PDFs', async ({ page }) => {
   await page.goto('/sign-pdf/');
   await page.locator('#picker').setInputFiles(upload('notes.txt', 'hello', 'text/plain'));
   await expect(page.locator('#msg')).toHaveText('That isn’t a PDF file. Choose a .pdf to sign.');
-  await expect(page.locator('#editor')).toBeHidden();
+  await expect(page.locator('#preview')).toBeHidden();
+  await expect(page.locator('#drop')).toBeVisible();
   await page.locator('#picker').setInputFiles(upload('broken.pdf', 'not really a pdf'));
   await expect(page.locator('#msg')).toHaveText('broken.pdf could not be read as a PDF.');
 });

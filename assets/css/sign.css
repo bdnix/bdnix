@@ -89,3 +89,9 @@
 .placed-sum{flex:1;min-width:0;font-size:15px;font-weight:600}
 .link-btn:disabled{opacity:.4;cursor:default}
 .settings .actions{margin-top:2px}
+
+/* No PDF yet: the drop zone, then the page, beside the signature panel */
+.page-col{align-self:stretch;min-width:0}
+.placing{display:flex;flex-direction:column;gap:18px}
+.sig-place:disabled{cursor:default}
+.sig-place:disabled:hover{border-color:var(--line)}
