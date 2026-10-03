@@ -63,15 +63,15 @@ Search positions boxes from the PDF's own text, estimating where each letter sit
 
 `/sign-pdf/`
 
-Open one PDF, then make a signature under **New signature**:
+Signatures live in the **My signatures** dialog, which opens from the button at the top of the page, with or without a PDF, so a signature can be made, saved as an image or kept in the browser without signing anything. Once a PDF is open (drop it on the page or choose it), **Add a signature** beside its pages opens the same dialog. Esc, the × button or a click outside closes it. Make a signature under **New signature**:
 
 - **Draw** it in the white box with a finger, a pen or the mouse. **Clear** wipes the box.
 - **Type** your name and pick one of four handwriting fonts (Dancing Script, Great Vibes, Sacramento and Caveat, served from this site). The name from the visitor's profile is filled in, if they've set one.
 - **Image** uses a photo or scan of a signature (PNG, JPG, WebP or GIF). **Make white paper see-through** (on by default) turns the light background clear and keeps the ink, with soft edges.
 
-Drawn and typed signatures can be in black or blue ink. **Add to the page** turns the signature into a PNG with a see-through background, cropped to the ink, adds it to **Your signatures** and puts it on the page shown.
+Drawn and typed signatures can be in black or blue ink. **Create signature** turns the signature into a PNG with a see-through background, cropped to the ink, and adds it to **Saved**. Once a PDF is open the button reads **Add to the page**, and also closes the dialog and puts the new signature on the page shown.
 
-**Your signatures** lists every signature made so far. Click one to put another copy on the page shown; **Save image** downloads it as a PNG to use later (it can be brought back with **Image**), and **Delete** removes it and takes it off the pages. Tick **Remember them in this browser** to keep them for next time; they're stored only in this browser, and unticking it forgets them.
+**Saved** lists every signature made so far (the count shows on the **My signatures** button). With a PDF open, click one to close the dialog and put a copy on the page shown; **Save image** downloads it as a PNG to use later (it can be brought back with **Image**), and **Delete** removes it and takes it off the pages. Tick **Remember them in this browser** to keep them for next time; they're stored only in this browser, and unticking it forgets them.
 
 On the page, click a signature to select it, then:
 

@@ -19,14 +19,32 @@ const block = () => png(200, 100, () => [30, 80, 255, 255]);
 // Dark ink in the middle of white paper: 100 x 40 pixels at (50, 30).
 const paper = () => png(200, 100, (x, y) => (x >= 50 && x < 150 && y >= 30 && y < 70 ? [20, 20, 30, 255] : [255, 255, 255, 255]));
 
+// Opens the My signatures dialog, if it isn't open already.
+async function openSigs(page){
+  if (await page.locator('#sigDialog').evaluate((d) => d.open)) return;
+  await page.getByRole('button', { name: 'My signatures' }).click();
+  await expect(page.locator('#sigDialog')).toBeVisible();
+}
+// Signature n from the dialog: put on the page shown, or deleted.
+const put = async (page, n) => { await openSigs(page); await page.getByRole('button', { name: `Put signature ${n} on this page` }).click(); };
+const remove = async (page, n) => { await openSigs(page); await page.getByRole('button', { name: `Delete signature ${n}` }).click(); };
+const remember = async (page) => { await openSigs(page); return page.locator('#remember'); };
+
 async function addImage(page, bytes, { see = false, name = 'sig.png' } = {}){
+  await openSigs(page);
   await page.locator('#modes label', { hasText: 'Image' }).click();
   await page.locator('#imagePicker').setInputFiles(upload(name, bytes, 'image/png'));
   await page.locator('#clearBg').setChecked(see);
-  await page.getByRole('button', { name: 'Add to the page' }).click();
+  const before = await page.locator('#sigList .sig').count();
+  await page.getByRole('button', { name: /^(Add to the page|Create signature)$/ }).click();
+  // Done once it's in the list, or the reason it couldn't be is shown.
+  await expect.poll(async () => (await page.locator('#sigList .sig').count()) > before || page.locator('#addHint').isVisible()).toBe(true);
 }
 
 const sign = (page) => download(page, async () => {
+  // The page behind the signatures dialog can't be used while it's open.
+  if (await page.locator('#sigDialog').evaluate((d) => d.open)) await page.keyboard.press('Escape');
+  await expect(page.locator('#sigDialog')).toBeHidden();
   await page.getByRole('button', { name: 'Sign PDF' }).click();
   await expect(page.locator('#downloadBtn')).toBeVisible({ timeout: 20_000 });
   await page.locator('#downloadBtn').click();
@@ -34,6 +52,7 @@ const sign = (page) => download(page, async () => {
 
 // Draws a wave on the pad.
 async function scribble(page){
+  await openSigs(page);
   await page.locator('#pad').scrollIntoViewIfNeeded();
   const box = await page.locator('#pad').boundingBox();
   await page.mouse.move(box.x + 20, box.y + box.height / 2);
@@ -78,6 +97,7 @@ const colourAt = async (page, bytes, points) => (await readBack(page, bytes, poi
 // The PNG a signature's "Save image" link gives: its size, and the colour
 // of its top-left pixel and of its darkest one.
 async function savedImage(page, n){
+  await openSigs(page);
   const link = page.getByRole('link', { name: `Save signature ${n} as an image` });
   await expect(link).toHaveAttribute('download', `signature-${n}.png`);
   const [dl] = await Promise.all([page.waitForEvent('download'), link.click()]);
@@ -110,6 +130,7 @@ const centre = (b) => [b.x + b.width / 2, b.y + b.height / 2];
 test('an image signature goes where the preview shows it, over the page’s own text', async ({ page }) => {
   await openSecret(page);
   await expect(page.getByRole('button', { name: 'Sign PDF' })).toBeDisabled();
+  await openSigs(page);
   await expect(page.getByRole('button', { name: 'Add to the page' })).toBeDisabled();
   await addImage(page, block());
   await expect(page.locator('#summary')).toHaveText('1 signature on 1 page');
@@ -218,8 +239,8 @@ test('the sliders and keys size, turn, move and remove the selected signature', 
   await expect(page.locator('#summary')).toHaveText('Nothing placed yet');
   await expect(page.getByRole('button', { name: 'Sign PDF' })).toBeDisabled();
 
-  await page.getByRole('button', { name: 'Put signature 1 on this page' }).click();
-  await page.getByRole('button', { name: 'Put signature 1 on this page' }).click();
+  await put(page, 1);
+  await put(page, 1);
   await expect(page.locator('#summary')).toHaveText('2 signatures on 1 page');
   await page.getByRole('button', { name: 'Remove', exact: true }).click();
   await expect(page.locator('#summary')).toHaveText('1 signature on 1 page');
@@ -229,6 +250,7 @@ test('the sliders and keys size, turn, move and remove the selected signature', 
 
 test('a signature drawn on the pad, in blue ink, can be saved as an image', async ({ page }) => {
   await openSecret(page);
+  await openSigs(page);
   const add = page.getByRole('button', { name: 'Add to the page' });
   await expect(add).toBeDisabled();
   await scribble(page);
@@ -240,10 +262,13 @@ test('a signature drawn on the pad, in blue ink, can be saved as an image', asyn
   await page.locator('#inks label', { hasText: 'Blue' }).click();
   await scribble(page);
   await add.click();
+  // Made with a PDF open, it goes straight onto the page.
+  await expect(page.locator('#sigDialog')).toBeHidden();
   await expect(page.locator('#summary')).toHaveText('1 signature on 1 page');
   await expect(page.locator('#sigList .sig')).toHaveCount(1);
   await expect(page.locator('#sigNone')).toBeHidden();
   // The pad is cleared for the next one.
+  await openSigs(page);
   await expect(add).toBeDisabled();
 
   const img = await savedImage(page, 1);
@@ -262,6 +287,7 @@ test('a signature drawn on the pad, in blue ink, can be saved as an image', asyn
 test('a typed signature uses the name from the profile and a handwriting font', async ({ page }) => {
   await page.addInitScript(() => { try { localStorage.setItem('bdnix_name', 'Ada Lovelace'); } catch (e) {} });
   await openSecret(page);
+  await openSigs(page);
   await page.locator('#modes label', { hasText: 'Type' }).click();
   await expect(page.locator('#typed')).toHaveValue('Ada Lovelace');
   await expect(page.locator('#fonts span')).toHaveText(Array(4).fill('Ada Lovelace'));
@@ -273,6 +299,7 @@ test('a typed signature uses the name from the profile and a handwriting font', 
 
   const sizes = [];
   for (const [n, family] of [[1, 'Great Vibes'], [2, 'Caveat']]) {
+    await openSigs(page);
     await page.locator('#fonts label', { has: page.locator(`input[value="${family}"]`) }).click();
     await page.getByRole('button', { name: 'Add to the page' }).click();
     await expect(page.locator('#sigList .sig')).toHaveCount(n);
@@ -335,8 +362,8 @@ test('a signature copied to every page is stored once, and deleting it takes it 
   expect(imageCount(out.doc)).toBe(1);
   for (const i of [0, 1, 2]) expect(contentStreams(out.doc, i).join(''), `page ${i + 1}`).toMatch(/\/Image-\d+ Do/);
 
-  await page.getByRole('button', { name: 'Delete signature 1' }).click();
-  await expect(page.locator('#msg')).toHaveText('Deleted signature 1 and took it off the pages.');
+  await remove(page, 1);
+  await expect(page.locator('#sigMsg')).toHaveText('Deleted signature 1 and took it off the pages.');
   await expect(page.locator('#summary')).toHaveText('Nothing placed yet');
   await expect(page.locator('#sigList .sig')).toHaveCount(0);
   await expect(page.locator('#downloadBtn')).toBeHidden();
@@ -355,7 +382,7 @@ const stored = (page) => page.evaluate(() => new Promise((resolve) => {
 test('signatures are remembered in this browser only when asked', async ({ page }) => {
   await openSecret(page);
   await addImage(page, block());
-  await expect(page.locator('#remember')).not.toBeChecked();
+  await expect(await remember(page)).not.toBeChecked();
   await page.reload();
   await expect(page.locator('#sigList .sig')).toHaveCount(0);
 
@@ -363,28 +390,28 @@ test('signatures are remembered in this browser only when asked', async ({ page 
   await addImage(page, block());
   // Making it is done once it's in the list (and its message is cleared).
   await expect(page.locator('#sigList .sig')).toHaveCount(1);
-  await page.locator('#remember').check();
-  await expect(page.locator('#msg')).toHaveText('Your signatures will be here next time, in this browser only.');
+  await (await remember(page)).check();
+  await expect(page.locator('#sigMsg')).toHaveText('Your signatures will be here next time, in this browser only.');
   await addImage(page, paper(), { see: true });
   await expect.poll(() => stored(page)).toBe(2);
 
   await openSecret(page);
-  await expect(page.locator('#remember')).toBeChecked();
+  await expect(await remember(page)).toBeChecked();
   await expect(page.locator('#sigList .sig')).toHaveCount(2);
-  await page.getByRole('button', { name: 'Put signature 2 on this page' }).click();
+  await put(page, 2);
   await expect(page.locator('#summary')).toHaveText('1 signature on 1 page');
-  await page.getByRole('button', { name: 'Delete signature 1' }).click();
+  await remove(page, 1);
   await expect.poll(() => stored(page)).toBe(1);
 
-  await page.locator('#remember').uncheck();
-  await expect(page.locator('#msg')).toHaveText('Your signatures are no longer kept in this browser.');
+  await (await remember(page)).uncheck();
+  await expect(page.locator('#sigMsg')).toHaveText('Your signatures are no longer kept in this browser.');
   await expect.poll(() => stored(page)).toBe(null);
   await openSecret(page);
-  await expect(page.locator('#remember')).not.toBeChecked();
+  await expect(await remember(page)).not.toBeChecked();
   await expect(page.locator('#sigList .sig')).toHaveCount(0);
 
-  await page.locator('#remember').check();
-  await expect(page.locator('#msg')).toHaveText('Signatures you make will be kept in this browser for next time.');
+  await (await remember(page)).check();
+  await expect(page.locator('#sigMsg')).toHaveText('Signatures you make will be kept in this browser for next time.');
   await expect.poll(() => stored(page)).toBe(0);
 });
 
@@ -406,9 +433,9 @@ test('a saved signature that doesn’t make sense is left out', async ({ page })
     };
   }), good);
   await openSecret(page);
-  await expect(page.locator('#remember')).toBeChecked();
+  await expect(await remember(page)).toBeChecked();
   await expect(page.locator('#sigList .sig')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Put signature 1 on this page' }).click();
+  await put(page, 1);
   const out = await sign(page);
   expect(imageCount(out.doc)).toBe(1);
 });
@@ -434,11 +461,85 @@ test('opening another file starts over but keeps your signatures', async ({ page
   await expect(page.locator('#sigList .sig')).toHaveCount(1);
 });
 
+test('signatures are made, saved and kept in their dialog without a PDF, then placed once one is open', async ({ page }) => {
+  await page.goto('/sign-pdf/');
+  await expect(page.locator('#editor')).toBeHidden();
+  await expect(page.locator('#sigDialog')).toBeHidden();
+  await expect(page.locator('#sigCount')).toBeHidden();
+  await page.getByRole('button', { name: 'My signatures' }).click();
+  const dialog = page.getByRole('dialog', { name: 'My signatures' });
+  await expect(dialog).toBeVisible();
+  await expect(page.locator('#sigNone')).toBeVisible();
+  const create = dialog.getByRole('button', { name: 'Create signature' });
+  await expect(create).toBeDisabled();
+
+  await scribble(page);
+  await create.click();
+  await expect(page.locator('#sigMsg')).toHaveText('Made signature 1. Save it as an image, or open a PDF to put it on a page.');
+  await expect(dialog).toBeVisible();
+  await expect(page.locator('#sigList .sig')).toHaveCount(1);
+  // Nothing to put it on yet.
+  await expect(page.getByRole('button', { name: 'Put signature 1 on this page' })).toBeDisabled();
+  await expect(page.locator('#sigTip')).toBeHidden();
+  const img = await savedImage(page, 1);
+  expect(img.corner[3]).toBe(0);
+
+  await page.locator('#modes label', { hasText: 'Type' }).click();
+  await page.locator('#typed').fill('Jane Doe');
+  await create.click();
+  await expect(page.locator('#sigList .sig')).toHaveCount(2);
+  await (await remember(page)).check();
+  await expect.poll(() => stored(page)).toBe(2);
+  await expectNoSideScroll(page);
+
+  // Esc, the close button and a click outside all close it.
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('#sigCount')).toHaveText('2');
+  await openSigs(page);
+  await page.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
+  await openSigs(page);
+  await page.mouse.click(3, 3);
+  await expect(dialog).toBeHidden();
+
+  // Still there next time, and ready for a PDF.
+  await page.reload();
+  await expect(page.locator('#sigCount')).toHaveText('2');
+  const pdf = await secretPdf();
+  await page.locator('#picker').setInputFiles(upload('secret.pdf', pdf.bytes));
+  await expect(page.locator('#pageCanvas')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('#placeTip')).toBeVisible();
+  await page.getByRole('button', { name: 'Add a signature' }).click();
+  await expect(dialog).toBeVisible();
+  await expect(page.locator('#sigTip')).toHaveText('Tap a signature to put it on the page.');
+  await expect(page.locator('#addLabel')).toHaveText('Add to the page');
+  await page.getByRole('button', { name: 'Put signature 2 on this page' }).click();
+  // Picking one closes the dialog and puts it on the page.
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('#summary')).toHaveText('1 signature on 1 page');
+  await expect(page.locator('#placeTip')).toBeHidden();
+  await expect(page.locator('#layer .placed')).toBeFocused();
+  const out = await sign(page);
+  expect(out.name).toBe('secret-signed.pdf');
+});
+
+test('the signatures dialog passes axe', async ({ page }) => {
+  await page.goto('/sign-pdf/');
+  await page.getByRole('button', { name: 'My signatures' }).click();
+  await scribble(page);
+  await page.getByRole('button', { name: 'Create signature' }).click();
+  await expect(page.locator('#sigList .sig')).toHaveCount(1);
+  const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+  expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+});
+
 test('rejects files that are not PDFs', async ({ page }) => {
   await page.goto('/sign-pdf/');
   await page.locator('#picker').setInputFiles(upload('notes.txt', 'hello', 'text/plain'));
   await expect(page.locator('#msg')).toHaveText('That isn’t a PDF file. Choose a .pdf to sign.');
   await expect(page.locator('#editor')).toBeHidden();
+  await expect(page.locator('#drop')).toBeVisible();
   await page.locator('#picker').setInputFiles(upload('broken.pdf', 'not really a pdf'));
   await expect(page.locator('#msg')).toHaveText('broken.pdf could not be read as a PDF.');
 });
