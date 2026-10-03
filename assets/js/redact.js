@@ -449,8 +449,7 @@
       var blob = new Blob([bytes], { type: 'application/pdf' });
       var name = src.name.replace(/\.pdf$/i, '') + '-redacted.pdf';
       resultUrl = URL.createObjectURL(blob);
-      downloadBtn.href = resultUrl;
-      downloadBtn.download = name;
+      T.offer(downloadBtn, resultUrl, name);
       downloadBtn.title = name;
       downloadLabel.textContent = 'Download (' + T.fmtSize(blob.size) + ')';
       downloadBtn.hidden = false;

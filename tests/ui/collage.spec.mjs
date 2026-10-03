@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll, expectNewWindow } from './fixtures.mjs';
 import { png, kind, inspect, near } from './images.mjs';
 
 // Photos of one colour each, so the tests can tell which went where.
@@ -26,7 +26,20 @@ async function ready(page){
 }
 
 async function download(page){
+  // The page makes the link and clicks it itself, so keep a copy to check.
+  await page.evaluate(() => {
+    const click = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function(){
+      document.querySelectorAll('#clickedLink').forEach((el) => el.remove());
+      const copy = this.cloneNode(false);
+      copy.id = 'clickedLink';
+      copy.hidden = true;
+      document.body.appendChild(copy);
+      return click.call(this);
+    };
+  });
   const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('#downloadBtn').click()]);
+  await expectNewWindow(page.locator('#clickedLink'));
   const out = { name: dl.suggestedFilename(), bytes: fs.readFileSync(await dl.path()) };
   await expect(page.locator('#msg')).toHaveText(new RegExp('^Saved ' + out.name.replace('.', '\\.') + ': '));
   return out;

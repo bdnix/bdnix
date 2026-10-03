@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures.mjs';
+import { test, expect, expectNewWindow } from './fixtures.mjs';
 import { upload, numberedPdf, download, widths } from './pdfs.mjs';
 
 test.beforeEach(async ({ page }) => {
@@ -41,6 +41,8 @@ test('merges in the chosen order, with page ranges', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Merge PDFs' }).click();
   await expect(page.locator('#msg')).toHaveText('Done. 10 pages from 3 files.');
+  await expectNewWindow(page.locator('#downloadBtn'));
+  await expect(page.locator('#downloadBtn')).toHaveAttribute('download', 'merged.pdf');
   const out = await download(page, () => page.locator('#downloadBtn').click());
   expect(out.name).toBe('merged.pdf');
   expect(widths(out.doc)).toEqual([203, 202, 201, 101, 102, 103, 109, 110, 105, 301]);

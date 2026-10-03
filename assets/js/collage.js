@@ -400,9 +400,7 @@
       if (saved) URL.revokeObjectURL(saved);
       saved = URL.createObjectURL(r.blob);
       var name = C.outName(s.format);
-      var a = document.createElement('a');
-      a.href = saved;
-      a.download = name;
+      var a = T.offer(document.createElement('a'), saved, name);
       document.body.appendChild(a);
       a.click();
       a.remove();

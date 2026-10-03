@@ -1,6 +1,6 @@
 # Tools guide
 
-Every tool runs entirely in the browser. Files are never uploaded, and all processing happens on the visitor's device.
+Every tool runs entirely in the browser. Files are never uploaded, and all processing happens on the visitor's device. Download links open in a new window, so a browser that shows the file instead of saving it (Safari on a phone does this with PDFs and images) leaves the tool, and your work in it, as it was.
 
 - [Merge PDFs](#merge-pdfs)
 - [Watermark PDF](#watermark-pdf)
@@ -71,13 +71,17 @@ Signatures live in the **My signatures** dialog, which opens from the button at 
 
 Drawn and typed signatures can be in black or blue ink. **Create signature** turns the signature into a PNG with a see-through background, cropped to the ink, and adds it to **Saved**. Once a PDF is open the button reads **Add to the page**, and also closes the dialog and puts the new signature on the page shown.
 
-**Saved** lists every signature made so far (the count shows on the **My signatures** button). With a PDF open, click one to close the dialog and put a copy on the page shown; **Save image** downloads it as a PNG to use later (it can be brought back with **Image**), and **Delete** removes it and takes it off the pages. Tick **Remember them in this browser** to keep them for next time; they're stored only in this browser, and unticking it forgets them.
+**Saved** lists every signature made so far (the count shows on the **My signatures** button). With a PDF open, click one to close the dialog and put a copy on the page shown; **Save image** downloads it as a PNG to use later (it can be brought back with **Image**), and **Delete** removes it (asking first if it's on the open PDF, see below). Tick **Remember them in this browser** to keep them for next time; they're stored only in this browser, and unticking it forgets them.
 
 On the page, click a signature to select it, then:
 
 - **drag** it to move it (the arrow keys move it too, 1% of the page a press, 5% with Shift);
 - drag its **corner handle** to resize it, or use the **Size** slider (its width as a share of the page's width);
 - drag the **handle above** it to turn it, or use the **Rotation** slider. Dragging snaps to level and to quarter turns when it's within 4°.
+
+**Close file** (beside **Change file**) puts the PDF away without signing it or opening another one; the signatures stay for the next file.
+
+A signature that's on the open PDF isn't deleted straight away: **Delete** says which pages it's on and that deleting it takes it off them too, with **Keep it** (focused, so Enter keeps it) and **Delete anyway**. Sign and download the PDF first to keep it there. A signature that isn't on the PDF is deleted at once.
 
 **Copy to every page** puts the selected signature at the same spot on every other page, for initials. **Remove** (or Delete on the keyboard) takes it off, and **Clear all** takes everything off.
 

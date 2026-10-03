@@ -72,5 +72,17 @@
     return scripts[src];
   }
 
-  window.bdnixFiles = { fmtSize: fmtSize, plural: plural, readBytes: readBytes, onFileDrop: onFileDrop, loadScript: loadScript };
+  // Points a link at a file the visitor can download. It opens in a new
+  // window: a browser that shows the file rather than saving it (Safari on
+  // a phone shows PDFs and images) then leaves the tool, and the visitor's
+  // work in it, where it was.
+  function offer(a, url, name){
+    a.href = url;
+    a.download = name;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    return a;
+  }
+
+  window.bdnixFiles = { fmtSize: fmtSize, plural: plural, readBytes: readBytes, onFileDrop: onFileDrop, loadScript: loadScript, offer: offer };
 })();
