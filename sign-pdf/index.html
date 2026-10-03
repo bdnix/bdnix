@@ -36,7 +36,7 @@
   <link rel="stylesheet" href="/assets/css/editor.css?v=23a907ae4f">
   <link rel="stylesheet" href="/assets/css/settings.css?v=e8dcb9f30c">
   <link rel="stylesheet" href="/assets/css/seg.css?v=9c1df52699">
-  <link rel="stylesheet" href="/assets/css/sign.css?v=d069b5af19">
+  <link rel="stylesheet" href="/assets/css/sign.css?v=042ffdce2a">
   <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
 </head>
 <body>
@@ -50,7 +50,23 @@
   <main class="tool wide">
     <p class="kicker">// tools</p>
     <h1>Sign a PDF</h1>
-    <p class="lede">Draw your signature, type it in a handwriting font or use a picture of it. Save it as an image or keep it in your browser, and put it anywhere on a PDF’s pages: move it, resize it and turn it. Everything happens in your browser. Your file is never uploaded.</p>
+    <p class="lede">Draw your signature, type it in a handwriting font or use a picture of it, then put it anywhere on a PDF’s pages: move it, resize it and turn it. Everything happens in your browser. Your file is never uploaded.</p>
+
+    <div class="sig-bar">
+      <button class="btn btn-ghost" id="sigsBtn" type="button" aria-haspopup="dialog">
+        <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c2-4 3-8 5-8s0 7 2 7 2-3 3-3 1 2 2 2M2 14h12"/></svg>
+        <span>My signatures</span>
+        <span class="count" id="sigCount" hidden></span>
+      </button>
+      <p class="tip">Make, save or export a signature, with or without a PDF.</p>
+    </div>
+
+    <label class="drop panel" id="drop">
+      <input type="file" id="picker" accept="application/pdf,.pdf">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <b>Drop a PDF file here</b>
+      <span>or <u>choose a file</u></span>
+    </label>
 
     <div class="file-bar panel" id="fileBar" hidden>
       <div class="file-info">
@@ -62,32 +78,75 @@
 
     <p class="msg" id="msg" role="status" aria-live="polite"></p>
 
-    <section class="editor" id="editor">
-      <div class="page-col">
-        <label class="drop panel" id="drop">
-          <input type="file" id="picker" accept="application/pdf,.pdf">
-          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
-          <b>Drop a PDF file here</b>
-          <span>or <u>choose a file</u></span>
-        </label>
-
-        <div class="preview panel" id="preview" hidden>
-          <div class="preview-stage" id="stage">
-            <div class="sheet" id="sheet" hidden>
-              <canvas id="pageCanvas" role="img" aria-label="The page, with your signatures on it"></canvas>
-              <div class="layer" id="layer"></div>
-            </div>
-            <p class="preview-note" id="previewNote">Loading the page…</p>
+    <section class="editor" id="editor" hidden>
+      <div class="preview panel">
+        <div class="preview-stage" id="stage">
+          <div class="sheet" id="sheet" hidden>
+            <canvas id="pageCanvas" role="img" aria-label="The page, with your signatures on it"></canvas>
+            <div class="layer" id="layer"></div>
           </div>
-          <div class="preview-nav">
-            <button class="icon-btn" id="prevPage" type="button" aria-label="Previous page"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg></button>
-            <span class="label" id="pageLabel">Page 1 of 1</span>
-            <button class="icon-btn" id="nextPage" type="button" aria-label="Next page"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg></button>
-          </div>
+          <p class="preview-note" id="previewNote">Loading the page…</p>
+        </div>
+        <div class="preview-nav">
+          <button class="icon-btn" id="prevPage" type="button" aria-label="Previous page"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg></button>
+          <span class="label" id="pageLabel">Page 1 of 1</span>
+          <button class="icon-btn" id="nextPage" type="button" aria-label="Next page"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg></button>
         </div>
       </div>
 
       <div class="settings panel">
+        <div class="field">
+          <button class="btn btn-ghost" id="placeBtn" type="button" aria-haspopup="dialog">
+            <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v10M3 8h10"/></svg>
+            <span>Add a signature</span>
+          </button>
+          <p class="tip" id="placeTip">Pick one of your signatures, or make one, to put it on this page.</p>
+        </div>
+
+        <div class="field" id="selected" hidden>
+          <span class="label">Selected signature</span>
+          <p class="tip">Drag it on the page to move it, its corner handle to resize it, and the handle above it to turn it. The arrow keys move it too.</p>
+          <label class="field">
+            <span class="label">Size <output id="sizeOut"></output></span>
+            <input type="range" id="sizeRange" min="3" max="100" step="1" value="30">
+          </label>
+          <label class="field">
+            <span class="label">Rotation <output id="angleOut"></output></span>
+            <input type="range" id="angleRange" min="-180" max="180" step="1" value="0">
+          </label>
+          <div class="row-btns">
+            <button class="link-btn" id="everyBtn" type="button">Copy to every page</button>
+            <button class="link-btn" id="removeBtn" type="button">Remove</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="label">On the pages</span>
+          <div class="placed-row">
+            <span class="placed-sum" id="summary">Nothing placed yet</span>
+            <button class="link-btn" id="clearBtn" type="button" disabled>Clear all</button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="applyBtn" type="button" disabled>
+            <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c2-4 3-8 5-8s0 7 2 7 2-3 3-3 1 2 2 2M2 14h12"/></svg>
+            <span id="applyLabel">Sign PDF</span>
+          </button>
+          <a class="btn btn-ghost" id="downloadBtn" hidden>
+            <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4 7l4 4 4-4M2 14h12"/></svg>
+            <span id="downloadLabel">Download</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <dialog class="sig-dialog" id="sigDialog" aria-labelledby="sigTitle">
+      <div class="dialog-head">
+        <h2 id="sigTitle">My signatures</h2>
+        <button class="icon-btn" id="dialogClose" type="button" aria-label="Close"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+      </div>
+      <div class="settings dialog-body">
         <fieldset class="seg modes" id="modes">
           <legend class="label">New signature</legend>
           <label><input type="radio" name="mode" value="draw" checked><span>Draw</span></label>
@@ -136,59 +195,22 @@
           <label><input type="radio" name="ink" value="#1d3fb8"><span>Blue</span></label>
         </fieldset>
 
-        <button class="btn btn-ghost" id="addBtn" type="button" disabled>
+        <button class="btn btn-primary" id="addBtn" type="button" disabled>
           <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v10M3 8h10"/></svg>
           <span id="addLabel">Create signature</span>
         </button>
         <p class="hint" id="addHint" hidden></p>
 
         <div class="field">
-          <span class="label">Your signatures</span>
+          <span class="label">Saved</span>
           <ul class="sigs" id="sigList"></ul>
           <p class="tip" id="sigNone">None yet. Make one above.</p>
-          <p class="tip" id="sigTip">Open a PDF to put them on its pages.</p>
+          <p class="tip" id="sigTip" hidden>Tap a signature to put it on the page.</p>
           <label class="check"><input type="checkbox" id="remember"> Remember them in this browser</label>
         </div>
-
-        <div class="placing" id="placing" hidden>
-          <div class="field" id="selected" hidden>
-            <span class="label">Selected signature</span>
-            <p class="tip">Drag it on the page to move it, its corner handle to resize it, and the handle above it to turn it. The arrow keys move it too.</p>
-            <label class="field">
-              <span class="label">Size <output id="sizeOut"></output></span>
-              <input type="range" id="sizeRange" min="3" max="100" step="1" value="30">
-            </label>
-            <label class="field">
-              <span class="label">Rotation <output id="angleOut"></output></span>
-              <input type="range" id="angleRange" min="-180" max="180" step="1" value="0">
-            </label>
-            <div class="row-btns">
-              <button class="link-btn" id="everyBtn" type="button">Copy to every page</button>
-              <button class="link-btn" id="removeBtn" type="button">Remove</button>
-            </div>
-          </div>
-
-          <div class="field">
-            <span class="label">On the pages</span>
-            <div class="placed-row">
-              <span class="placed-sum" id="summary">Nothing placed yet</span>
-              <button class="link-btn" id="clearBtn" type="button" disabled>Clear all</button>
-            </div>
-          </div>
-
-          <div class="actions">
-            <button class="btn btn-primary" id="applyBtn" type="button" disabled>
-              <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c2-4 3-8 5-8s0 7 2 7 2-3 3-3 1 2 2 2M2 14h12"/></svg>
-              <span id="applyLabel">Sign PDF</span>
-            </button>
-            <a class="btn btn-ghost" id="downloadBtn" hidden>
-              <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4 7l4 4 4-4M2 14h12"/></svg>
-              <span id="downloadLabel">Download</span>
-            </a>
-        </div>
-        </div>
+        <p class="msg" id="sigMsg" role="status" aria-live="polite"></p>
       </div>
-    </section>
+    </dialog>
   </main>
 
   <!-- build:footer -->
@@ -203,6 +225,6 @@
   <script src="/assets/js/files.js?v=75d1bc56e6"></script>
   <script src="/assets/js/pdftools.js?v=876b24df99"></script>
   <script src="/assets/js/sign-core.js?v=a79782f4ca"></script>
-  <script src="/assets/js/sign.js?v=de95c3013b"></script>
+  <script src="/assets/js/sign.js?v=2990ec4ea5"></script>
 </body>
 </html>

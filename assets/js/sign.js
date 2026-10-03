@@ -10,7 +10,9 @@
 
   var drop = $('drop'), picker = $('picker');
   var fileBar = $('fileBar'), fileName = $('fileName'), fileMeta = $('fileMeta'), changeBtn = $('changeBtn');
-  var msg = $('msg'), preview = $('preview'), placing = $('placing');
+  var msg = $('msg'), editor = $('editor');
+  var sigsBtn = $('sigsBtn'), sigCountEl = $('sigCount'), placeBtn = $('placeBtn'), placeTip = $('placeTip');
+  var dialog = $('sigDialog'), dialogClose = $('dialogClose'), sigMsg = $('sigMsg');
   var stage = $('stage'), sheet = $('sheet'), canvas = $('pageCanvas'), layer = $('layer'), note = $('previewNote');
   var prevBtn = $('prevPage'), nextBtn = $('nextPage'), pageLabel = $('pageLabel');
   var modes = $('modes'), forDraw = $('forDraw'), forType = $('forType'), forImage = $('forImage'), inks = $('inks');
@@ -43,6 +45,12 @@
   function say(text, isError){
     msg.textContent = text || '';
     msg.classList.toggle('error', !!isError);
+  }
+
+  // Messages about the signatures themselves show in their dialog.
+  function sayDlg(text, isError){
+    sigMsg.textContent = text || '';
+    sigMsg.classList.toggle('error', !!isError);
   }
 
   function hint(text, isError){
@@ -80,8 +88,10 @@
     // lets them be put on its pages too.
     addBtn.disabled = busy || !canAdd();
     addLabel.textContent = src ? 'Add to the page' : 'Create signature';
-    placing.hidden = !src;
-    sigTip.hidden = !!src || !sigs.length;
+    sigTip.hidden = !src || !sigs.length;
+    sigCountEl.textContent = sigs.length;
+    sigCountEl.hidden = !sigs.length;
+    placeTip.hidden = n > 0;
     Array.prototype.forEach.call(sigList.querySelectorAll('.sig-place'), function(b){ b.disabled = !src; });
     padClear.disabled = !strokes.length;
     sigNone.hidden = sigs.length > 0;
@@ -107,6 +117,26 @@
     drawPlaced();
     syncUi();
   }
+
+  // ---- The signatures dialog ----
+  function openDialog(){
+    sayDlg('');
+    dialog.showModal();
+    sizePad();
+    syncUi();
+  }
+  function closeDialog(){
+    dialog.close();
+  }
+  sigsBtn.addEventListener('click', openDialog);
+  placeBtn.addEventListener('click', openDialog);
+  dialogClose.addEventListener('click', closeDialog);
+  // A click on the dimmed page around the dialog closes it too.
+  dialog.addEventListener('click', function(e){
+    if (e.target !== dialog) return;
+    var r = dialog.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) closeDialog();
+  });
 
   // ---- Making a signature ----
   function showMode(){
@@ -317,8 +347,12 @@
       if (m === 'draw') clearPad();
       store();
       hint('');
-      if (src) place(s);
-      else say('Made ' + sigLabel(s) + '. Save it as an image, or open a PDF to put it on a page.');
+      if (src) {
+        closeDialog();
+        place(s);
+      } else {
+        sayDlg('Made ' + sigLabel(s) + '. Save it as an image, or open a PDF to put it on a page.');
+      }
     }).catch(function(){
       hint(m === 'image' ? image.name + ' couldn’t be read as an image.' : 'Couldn’t make the signature.', true);
     }).then(function(){
@@ -375,7 +409,10 @@
   sigList.addEventListener('click', function(e){
     var put = e.target.closest('.sig-place'), del = e.target.closest('.sig-del');
     if (busy) return;
-    if (put && src) place(sigById(put.dataset.id));
+    if (put && src) {
+      closeDialog();
+      place(sigById(put.dataset.id));
+    }
     if (del) {
       var s = sigById(del.dataset.id);
       var had = placed.length;
@@ -385,7 +422,7 @@
       URL.revokeObjectURL(s.url);
       store();
       drawSigs();
-      say(had > placed.length ? 'Deleted ' + sigLabel(s) + ' and took it off the pages.' : '');
+      sayDlg(had > placed.length ? 'Deleted ' + sigLabel(s) + ' and took it off the pages.' : 'Deleted ' + sigLabel(s) + '.');
       changed();
     }
   });
@@ -436,10 +473,10 @@
   remember.addEventListener('change', function(){
     if (remember.checked) {
       store();
-      say(sigs.length ? 'Your signatures will be here next time, in this browser only.' : 'Signatures you make will be kept in this browser for next time.');
+      sayDlg(sigs.length ? 'Your signatures will be here next time, in this browser only.' : 'Signatures you make will be kept in this browser for next time.');
     } else {
       storing = storing.then(function(){ return db.remove(KEY); });
-      say('Your signatures are no longer kept in this browser.');
+      sayDlg('Your signatures are no longer kept in this browser.');
     }
   });
 
@@ -739,7 +776,7 @@
       clearResult();
       drop.hidden = true;
       fileBar.hidden = false;
-      preview.hidden = false;
+      editor.hidden = false;
       fileName.textContent = file.name;
       fileName.title = file.name;
       fileMeta.textContent = T.plural(src.pages, 'page') + ' · ' + T.fmtSize(file.size);
@@ -831,6 +868,5 @@
   }
 
   restored.then(syncUi);
-  sizePad();
   syncUi();
 })();

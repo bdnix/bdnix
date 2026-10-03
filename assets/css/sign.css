@@ -90,8 +90,34 @@
 .link-btn:disabled{opacity:.4;cursor:default}
 .settings .actions{margin-top:2px}
 
-/* No PDF yet: the drop zone, then the page, beside the signature panel */
-.page-col{align-self:stretch;min-width:0}
-.placing{display:flex;flex-direction:column;gap:18px}
+/* Your signatures, in a dialog that works with or without a PDF */
+.sig-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.sig-bar .tip{flex:1 1 200px}
+.count{
+  min-width:22px;padding:2px 7px;border-radius:999px;
+  background:rgba(168,85,247,.28);font:600 12px var(--mono);color:var(--fg);
+}
+.settings > .field > .btn{align-self:flex-start}
+.sig-dialog{
+  width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 24px);
+  margin:auto;padding:0;overflow:auto;
+  border:1px solid var(--line);border-radius:16px;
+  background:var(--bg-2);color:var(--fg);
+  box-shadow:0 30px 80px -20px rgba(0,0,0,.9);
+}
+.sig-dialog::backdrop{background:rgba(4,6,12,.72)}
+.dialog-head{
+  position:sticky;top:0;z-index:1;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 18px;border-bottom:1px solid var(--line);background:var(--bg-2);
+}
+.dialog-head h2{margin:0;font-size:18px}
+.dialog-head .icon-btn{width:34px;height:34px}
+.dialog-body .msg{margin:0}
+.dialog-body .msg:empty{display:none}
 .sig-place:disabled{cursor:default}
 .sig-place:disabled:hover{border-color:var(--line)}
+/* The dialog is solid, so its small labels need the stronger grey to read,
+   and the links beside a signature stay clear while it can't be placed. */
+.sig-dialog .label{color:var(--muted)}
+.sig-place:disabled + .sig-links{opacity:1}
