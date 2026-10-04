@@ -9,7 +9,7 @@
   function $(id){ return document.getElementById(id); }
 
   var drop = $('drop'), picker = $('picker');
-  var fileBar = $('fileBar'), fileName = $('fileName'), fileMeta = $('fileMeta'), changeBtn = $('changeBtn'), closeBtn = $('closeBtn');
+  var fileBar = $('fileBar'), fileName = $('fileName'), fileMeta = $('fileMeta'), closeBtn = $('closeBtn');
   var msg = $('msg'), editor = $('editor');
   var sigsBtn = $('sigsBtn'), sigCountEl = $('sigCount'), placeBtn = $('placeBtn'), placeTip = $('placeTip');
   var dialog = $('sigDialog'), dialogClose = $('dialogClose'), sigMsg = $('sigMsg');
@@ -837,7 +837,6 @@
       fileBar.hidden = false;
       editor.hidden = false;
       fileName.textContent = file.name;
-      fileName.title = file.name;
       fileMeta.textContent = T.plural(src.pages, 'page') + ' · ' + T.fmtSize(file.size);
       say('');
       var current = src;
@@ -868,7 +867,8 @@
     openFile(picker.files[0]);
     picker.value = '';
   });
-  changeBtn.addEventListener('click', function(){ picker.click(); });
+  // The file's name opens a different one; the cross on the page closes it.
+  fileName.addEventListener('click', function(){ picker.click(); });
 
   // Puts the PDF away without signing it or opening another. The
   // signatures stay, ready for the next file.
