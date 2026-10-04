@@ -79,7 +79,7 @@ On the page, click a signature to select it, then:
 - drag its **corner handle** to resize it, or use the **Size** slider (its width as a share of the page's width);
 - drag the **handle above** it to turn it, or use the **Rotation** slider. Dragging snaps to level and to quarter turns when it's within 4°.
 
-**Close file** (beside **Change file**) puts the PDF away without signing it or opening another one; the signatures stay for the next file.
+Click the file's name above the page to open a different PDF. The **×** on the top-right corner of the page closes the PDF without signing it or opening another one; the signatures stay for the next file.
 
 A signature that's on the open PDF isn't deleted straight away: **Delete** says which pages it's on and that deleting it takes it off them too, with **Keep it** (focused, so Enter keeps it) and **Delete anyway**. Sign and download the PDF first to keep it there. A signature that isn't on the PDF is deleted at once.
 
