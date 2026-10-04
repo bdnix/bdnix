@@ -129,3 +129,22 @@
 }
 .sig-confirm .tip{color:var(--fg)}
 .sig-confirm .row-btns{align-items:center}
+
+/* The file's name opens a different PDF; a cross on the page closes it */
+.file-link{
+  display:block;max-width:100%;padding:0;border:0;background:none;
+  color:var(--fg);text-align:left;cursor:pointer;
+  text-decoration:underline dotted rgba(255,255,255,.35);text-underline-offset:4px;
+}
+.file-link:hover{text-decoration-color:var(--violet);text-decoration-style:solid}
+.file-link:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:4px}
+/* Sticky on wide screens (editor.css), so the cross has a frame to sit on;
+   phones need one too. */
+@media (max-width:860px){.preview{position:relative}}
+.close-pdf{
+  position:absolute;top:-12px;right:-12px;z-index:2;
+  width:32px;height:32px;border-radius:50%;
+  background:var(--bg-2);border-color:rgba(255,255,255,.2);
+  box-shadow:0 4px 14px rgba(0,0,0,.5);
+}
+.close-pdf:hover{border-color:var(--pink);color:var(--pink)}

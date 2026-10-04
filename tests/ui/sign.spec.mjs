@@ -405,11 +405,13 @@ test('a signature that isn’t on the open PDF is deleted straight away', async 
   await expect(page.locator('#summary')).toHaveText('1 signature on 1 page');
 });
 
-test('Close file puts the PDF away and keeps the signatures', async ({ page }) => {
+test('the cross on the page closes the PDF and keeps the signatures', async ({ page }) => {
   await openSecret(page);
   await addImage(page, block());
   await expect(page.locator('#summary')).toHaveText('1 signature on 1 page');
-  await page.getByRole('button', { name: 'Close file' }).click();
+  await expect(page.locator('#fileBar .link-btn')).toHaveCount(0);
+  await expectNoSideScroll(page);
+  await page.getByRole('button', { name: 'Close the PDF' }).click();
   await expect(page.locator('#msg')).toHaveText('Closed secret.pdf. Your signatures are still here for the next one.');
   await expect(page.locator('#editor')).toBeHidden();
   await expect(page.locator('#fileBar')).toBeHidden();
@@ -505,6 +507,18 @@ test('the editor with a signature on the page passes axe', async ({ page }) => {
   await expect(page.locator('#layer .placed.on')).toHaveCount(1);
   const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+});
+
+test('the file’s name opens a different PDF', async ({ page }) => {
+  await openSecret(page);
+  await addImage(page, block());
+  await expect(page.locator('#summary')).toHaveText('1 signature on 1 page');
+  const name = page.getByRole('button', { name: 'secret.pdf' });
+  await expect(name).toHaveAttribute('title', 'Open a different PDF');
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), name.click()]);
+  await chooser.setFiles(upload('next.pdf', (await secretPdf()).bytes));
+  await expect(page.getByRole('button', { name: 'next.pdf' })).toBeVisible();
+  await expect(page.locator('#summary')).toHaveText('Nothing placed yet');
 });
 
 test('opening another file starts over but keeps your signatures', async ({ page }) => {
