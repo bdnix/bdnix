@@ -7,6 +7,12 @@
   var FADE = 0.25;              // how long a broken brick takes to fade away
   var SPARKS = 0.9;             // how long the sparks of a ball falling off the bottom last
   var SHAKE = 0.45;             // how long the board shakes when a ball is lost
+  var MISS = 1.2;               // how long "Missed!" shows after a ball is lost
+  var HURT = 0.7;               // how long the paddle blinks red after a miss
+  var RING = 0.6;               // how long the shockwave of a miss spreads
+  var CLEAR = 1.8;              // how long the celebration of a cleared wall lasts
+  var BUILD = 0.35;             // how long each row of a new wall takes to drop in
+  var CONFETTI = 36;            // pieces of confetti from each bottom corner
 
   // Bricks, top row pair to bottom, in the site's colours.
   var COLORS = ['#f472b6', '#f472b6', '#a855f7', '#a855f7', '#22d3ee', '#22d3ee', '#facc15', '#facc15'];
@@ -47,6 +53,8 @@
   var fading = [];              // bricks just broken: { i, t }
   var bursts = [];              // balls that fell off the bottom: { x, t, lost }
   var shaken = -1;              // when the board last shook (clock time)
+  var missed = null;            // the last ball lost: { t, x, left } (when, where it fell, balls left)
+  var cleared = null;           // the last wall cleared: { t, level } (when, which wall)
   var held = { left: 0, right: 0 }; // move keys and buttons held down
   var best = 0;
   var sound = window.bdnixSound;
@@ -74,6 +82,7 @@
     world = F.create();
     fading = [];
     bursts = [];
+    missed = cleared = null;
     setState('ready');
     pausedFrom = null;
     overlay.hidden = true;
@@ -105,7 +114,7 @@
     var ev = F.advance(world, dt);
     ev.bricks.forEach(function(i){ fading.push({ i: i, t: clock }); });
     ev.gone.forEach(function(x){ bursts.push({ x: x, t: clock, lost: ev.lost }); });
-    if (ev.lost) ballLost();
+    if (ev.lost) ballLost(ev.gone[ev.gone.length - 1]);
     else if (ev.gone.length) sound.play('drain');
     if (ev.powers.length) sound.play('powerup');
     else if (ev.bricks.length) sound.play('brick');
@@ -114,19 +123,33 @@
     else if (ev.wall) sound.play('wall');
     if (ev.bricks.length || ev.powers.length || ev.lost || ev.cleared) updateHud();
     if (ev.end) return crash();
-    if (ev.cleared) { fading = []; setState('ready'); sound.play('level'); persist(); }
+    if (ev.cleared) { fading = []; wallCleared(); setState('ready'); sound.play('level'); persist(); }
     else if (ev.lost) { setState('ready'); persist(); }
   }
 
   // Missing the last ball in play: the board shakes, the bottom flashes red,
-  // the ball bursts into sparks where it fell, and the ball count flashes.
-  function ballLost(){
+  // a shockwave spreads from where the ball fell and it bursts into sparks,
+  // the paddle blinks red, "Missed!" pops up with the balls left, and the
+  // ball count flashes.
+  function ballLost(x){
     shaken = clock;
+    missed = { t: clock, x: x, left: world.lives };
     sound.play('lose');
-    var stat = el.lives.parentNode;
-    stat.classList.remove('hit');
-    void stat.offsetWidth;              // so the flash starts over each time
-    stat.classList.add('hit');
+    flash(el.lives, 'hit');
+  }
+  // Clearing a wall: confetti bursts from the bottom corners, the board
+  // flashes, "Wall cleared!" pops up, the next wall drops in row by row,
+  // and the wall count flashes.
+  function wallCleared(){
+    cleared = { t: clock, level: world.level - 1 };
+    flash(el.level, 'up');
+  }
+  // Starts the CSS flash `name` on a stat, over again if it's already running.
+  function flash(b, name){
+    var stat = b.parentNode;
+    stat.classList.remove(name);
+    void stat.offsetWidth;
+    stat.classList.add(name);
   }
 
   // The game ends the moment the last ball is lost: the best score and the
@@ -252,6 +275,7 @@
     world = w;
     fading = [];
     bursts = [];
+    missed = cleared = null;
     state = s.stuck ? 'ready' : 'playing'; stateTime = 0;
     togglePause();
     ovText.textContent = 'Picked up where you left off.';
@@ -316,11 +340,16 @@
     drawDrops();
     drawPaddle();
     if (state !== 'over') world.balls.forEach(drawBall);
+    drawRing();
     drawBursts();
     drawTimers();
     ctx.restore();
+    drawCelebration();
 
-    if (state === 'ready' || (state === 'paused' && pausedFrom === 'ready')) {
+    if (state === 'over') return;       // the overlay says it now
+    if (since(missed) < MISS) drawMissed();
+    else if (since(cleared) < CLEAR) drawCleared();
+    else if (state === 'ready' || (state === 'paused' && pausedFrom === 'ready')) {
       var hint = compactMQ.matches ? 'Tap to launch' : 'Press Space or click to launch';
       var title = world.level > 1 && world.lives >= F.LIVES && !F.progress(world).broken ? 'Wall ' + world.level : 'Get ready';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -336,20 +365,32 @@
     }
   }
 
-  // Each brick with a lighter top edge; broken ones fade and swell away.
+  // Seconds since `e` (a miss or a cleared wall) happened; forever if it hasn't.
+  function since(e){ return e ? clock - e.t : Infinity; }
+  // Eases 0 to 1 in, overshooting a little before it settles.
+  function popIn(k){ k = Math.min(1, k) - 1; return Math.max(0, 1 + k * k * (2.7 * k + 1.7)); }
+
+  // Each brick with a lighter top edge; broken ones fade and swell away. A
+  // new wall drops in from above, row by row from the top.
   function drawBricks(){
+    var t = cleared && cleared.level === world.level - 1 ? since(cleared) - 0.3 : Infinity;
     for (var i = 0; i < world.bricks.length; i++) {
-      if (world.bricks[i]) drawBrick(i, 1, 0);
+      if (!world.bricks[i]) continue;
+      var k = (t - Math.floor(i / F.COLS) * 0.06) / BUILD;
+      if (k <= 0) continue;
+      if (k >= 1) drawBrick(i, 1, 0, 0);
+      else drawBrick(i, Math.min(1, k * 2), 0, -(1 - popIn(k)) * (F.brickRect(i).y + 20));
     }
     fading.forEach(function(f){
       var k = Math.min(1, (clock - f.t) / FADE);
-      drawBrick(f.i, 1 - k, k * 3);
+      drawBrick(f.i, 1 - k, k * 3, 0);
     });
   }
-  function drawBrick(i, alpha, grow){
+  function drawBrick(i, alpha, grow, drop){
     var r = F.brickRect(i), row = Math.floor(i / F.COLS);
     var p = world.bricks[i] && POWERS[world.loot[i]];
     ctx.save();
+    ctx.translate(0, drop);
     ctx.globalAlpha *= alpha;
     ctx.fillStyle = COLORS[row];
     roundRect(r.x - grow, r.y - grow, r.w + grow * 2, r.h + grow * 2, 3);
@@ -500,11 +541,87 @@
     });
   }
 
+  // A shockwave spreading from where a lost ball fell.
+  function drawRing(){
+    var t = since(missed);
+    if (t >= RING) return;
+    var k = t / RING;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(244,63,94,' + (0.9 * (1 - k)) + ')';
+    [1, 0.6].forEach(function(f){
+      ctx.lineWidth = 6 * (1 - k) + 1;
+      ctx.beginPath(); ctx.arc(missed.x, H, 150 * popIn(k) * f, Math.PI, Math.PI * 2); ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  // Big words in the middle of the board, popping in and fading out over
+  // `long` seconds, `t` seconds in.
+  function banner(title, sub, color, t, long, tilt){
+    var s = popIn(t / 0.35), a = Math.min(1, (long - t) / 0.3);
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, a);
+    ctx.translate(W / 2, 290);
+    ctx.rotate(tilt);
+    ctx.scale(s, s);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '800 34px Inter, system-ui, sans-serif';
+    ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(8,10,18,.85)';
+    ctx.strokeText(title, 0, 0);
+    ctx.shadowColor = color; ctx.shadowBlur = 16;
+    ctx.fillStyle = color;
+    ctx.fillText(title, 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.font = '600 13px "JetBrains Mono", monospace';
+    ctx.lineWidth = 5;
+    ctx.strokeText(sub, 0, 34);
+    ctx.fillStyle = '#eef1f8';
+    ctx.fillText(sub, 0, 34);
+    ctx.restore();
+  }
+  // "Missed!", wobbling, with the balls left.
+  function drawMissed(){
+    var t = since(missed), left = missed.left;
+    var tilt = Math.sin(t * 30) * 0.12 * Math.max(0, 1 - t / 0.5);
+    banner(left ? 'Missed!' : 'Out of balls', left === 1 ? 'Last ball!' : left ? left + ' balls left' : 'Game over', '#f43f5e', t, MISS, tilt);
+  }
+  function drawCleared(){
+    banner('Wall ' + cleared.level + ' cleared!', 'Here comes wall ' + (cleared.level + 1), '#facc15', since(cleared), CLEAR, 0);
+  }
+
+  // A cleared wall: a bright flash, then confetti in the bricks' colours
+  // shooting up from both bottom corners, fluttering and falling away.
+  function drawCelebration(){
+    var t = since(cleared);
+    if (t >= CLEAR) return;
+    ctx.save();
+    if (t < 0.25) {
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.45 * (1 - t / 0.25)) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+    ctx.globalAlpha = Math.min(1, 3 * (1 - t / CLEAR));
+    for (var i = 0; i < CONFETTI * 2; i++) {
+      var side = i % 2 ? -1 : 1, n = i >> 1;
+      var a = (0.12 + 0.6 * ((n * 7) % CONFETTI) / CONFETTI) * side;  // off upright, towards the middle
+      var v = 380 + 240 * ((n * 13) % CONFETTI) / CONFETTI;
+      var x = (side > 0 ? 0 : W) + Math.sin(a) * v * t + Math.sin(t * 6 + n) * 10;
+      var y = H - Math.cos(Math.abs(a)) * v * t + 210 * t * t;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(t * (4 + n % 5) * side + n);
+      ctx.fillStyle = n % 9 === 0 ? '#ffffff' : COLORS[n % COLORS.length];
+      ctx.fillRect(-3, -1.5 - Math.abs(Math.sin(t * 9 + n)) * 1.5, 6, 3 + Math.abs(Math.sin(t * 9 + n)) * 3);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // The paddle blinks red just after a miss.
   function drawPaddle(){
-    var pw = F.paddleWidth(world);
+    var pw = F.paddleWidth(world), t = since(missed);
     var g = ctx.createLinearGradient(world.paddle - pw / 2, 0, world.paddle + pw / 2, 0);
     g.addColorStop(0, '#22d3ee'); g.addColorStop(1, '#a855f7');
-    ctx.fillStyle = g;
+    ctx.fillStyle = t < HURT && Math.floor(t * 10) % 2 === 0 ? '#f43f5e' : g;
     roundRect(world.paddle - pw / 2, F.PADDLE_Y, pw, F.PADDLE_H, F.PADDLE_H / 2);
     ctx.fill();
     // The laser's two guns, one at each end.
