@@ -479,15 +479,18 @@ test('its sounds are well formed and loud enough', async ({ page }) => {
   expect(await soundProblems(page)).toEqual([]);
 });
 
-// The colours on the board inside the world rectangle (x, y, w, h), as [r, g, b].
-function colours(page, x, y, w, h){
-  return page.locator('#board').evaluate((c, [x, y, w, h]) => {
+// The colours on the board inside the world rectangle (x, y, w, h), as [r, g, b]:
+// every pixel, or every `step`th one across and down (big areas are slow to copy).
+function colours(page, x, y, w, h, step = 1){
+  return page.locator('#board').evaluate((c, [x, y, w, h, step]) => {
     const sx = c.width / 360, sy = c.height / 480;
-    const d = c.getContext('2d').getImageData(Math.round(x * sx), Math.round(y * sy), Math.max(1, Math.round(w * sx)), Math.max(1, Math.round(h * sy))).data;
-    const out = [];
-    for (let i = 0; i < d.length; i += 4) out.push([d[i], d[i + 1], d[i + 2]]);
+    const img = c.getContext('2d').getImageData(Math.round(x * sx), Math.round(y * sy), Math.max(1, Math.round(w * sx)), Math.max(1, Math.round(h * sy)));
+    const d = img.data, out = [];
+    for (let r = 0; r < img.height; r += step) {
+      for (let i = r * img.width * 4; i < (r + 1) * img.width * 4; i += 4 * step) out.push([d[i], d[i + 1], d[i + 2]]);
+    }
     return out;
-  }, [x, y, w, h]);
+  }, [x, y, w, h, step]);
 }
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 // Whether any of `px` is close to the colour `h`.
@@ -564,7 +567,7 @@ test('missing the ball blinks the paddle red and pops up “Missed!” before �
   await runUntil(page, async () => (await page.locator('#lives').textContent()) === '2');
   const red = (px) => px.filter((p) => p[0] > p[1] + 80 && p[0] > p[2]).length;
   const paddle = () => colours(page, 285, 443, 30, 4);   // the middle of the paddle
-  const words = () => colours(page, 40, 270, 280, 40);   // where "Get ready" goes
+  const words = () => colours(page, 40, 270, 280, 40, 2); // where "Get ready" goes
   // The paddle blinks: red, then its own colours, then red again.
   await page.clock.runFor(20);
   expect(shows(await paddle(), '#f43f5e')).toBe(true);
@@ -602,14 +605,14 @@ test('clearing a wall flashes, throws confetti, cheers and drops the next wall i
   await runUntil(page, async () => (await page.locator('#level').textContent()) === '2');
   await expect(page.locator('#level').locator('..')).toHaveClass(/up/);  // the wall count flashes
   const top = () => colours(page, ...rect(2));           // the second wall's first brick, top left
-  const below = () => colours(page, 0, 200, 360, 60);     // under the wall, above the words
-  const words = () => colours(page, 40, 270, 280, 40);
+  const below = () => colours(page, 0, 200, 360, 60, 2);  // under the wall, above the words
+  const words = () => colours(page, 40, 270, 280, 40, 2);
 
   // The new wall isn't up yet: it drops in from above, row by row.
   expect(shows(await top(), '#f472b6')).toBe(false);
   await page.clock.runFor(450);
   // Confetti in the bricks' colours, and "Wall 1 cleared!" in gold.
-  const confetti = await colours(page, 0, 200, 360, 220);
+  const confetti = await colours(page, 0, 200, 360, 220, 2);
   for (const c of ['#f472b6', '#a855f7', '#22d3ee']) expect(shows(confetti, c), c).toBe(true);
   expect(shows(await words(), '#facc15')).toBe(true);
 
