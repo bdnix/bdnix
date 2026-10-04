@@ -558,6 +558,72 @@ test('missing the ball shakes the board, flashes red and bursts into sparks', as
   expect(await paddleRow()).toEqual(still);
 });
 
+test('missing the ball blinks the paddle red and pops up “Missed!” before “Get ready”', async ({ page }) => {
+  await openSaved(page, saved({ ...falling, lives: 3 }));
+  await page.locator('#startBtn').click();
+  await runUntil(page, async () => (await page.locator('#lives').textContent()) === '2');
+  const red = (px) => px.filter((p) => p[0] > p[1] + 80 && p[0] > p[2]).length;
+  const paddle = () => colours(page, 285, 443, 30, 4);   // the middle of the paddle
+  const words = () => colours(page, 40, 270, 280, 40);   // where "Get ready" goes
+  // The paddle blinks: red, then its own colours, then red again.
+  await page.clock.runFor(20);
+  expect(shows(await paddle(), '#f43f5e')).toBe(true);
+  await page.clock.runFor(100);
+  expect(shows(await paddle(), '#f43f5e')).toBe(false);
+  await page.clock.runFor(100);
+  expect(shows(await paddle(), '#f43f5e')).toBe(true);
+  // "Missed!" in red where "Get ready" goes.
+  await page.clock.runFor(300);
+  expect(red(await words())).toBeGreaterThan(50);
+
+  // Then it settles into "Get ready", in white, and the paddle is itself again.
+  await page.clock.runFor(1000);
+  expect(red(await words())).toBe(0);
+  expect(shows(await words(), '#eef1f8')).toBe(true);
+  expect(shows(await paddle(), '#f43f5e')).toBe(false);
+
+  // Missing the last ball says so as the board fades, but not over the score.
+  await openSaved(page, saved({ ...falling, lives: 1 }));
+  await page.locator('#startBtn').click();
+  await runUntil(page, async () => (await page.locator('#lives').textContent()) === '0');
+  await page.clock.runFor(400);
+  expect(red(await words())).toBeGreaterThan(50);
+  await runUntil(page, overlayShown(page));
+  await page.evaluate(() => { document.getElementById('overlay').hidden = true; });
+  expect(red(await words())).toBe(0);
+});
+
+test('clearing a wall flashes, throws confetti, cheers and drops the next wall in', async ({ page }) => {
+  const last = (ROWS - 1) * COLS + 4;
+  const bricks = only(last);
+  const x = 12 + 4 * 33.6 + 16.8;                      // under the middle of that brick
+  await openSaved(page, saved({ bricks, score: points(bricks), paddle: 100, balls: [{ x, y: 300, dx: 0, dy: -1 }], stuck: false }));
+  await page.locator('#startBtn').click();
+  await runUntil(page, async () => (await page.locator('#level').textContent()) === '2');
+  await expect(page.locator('#level').locator('..')).toHaveClass(/up/);  // the wall count flashes
+  const top = () => colours(page, ...rect(2));           // the second wall's first brick, top left
+  const below = () => colours(page, 0, 200, 360, 60);     // under the wall, above the words
+  const words = () => colours(page, 40, 270, 280, 40);
+
+  // The new wall isn't up yet: it drops in from above, row by row.
+  expect(shows(await top(), '#f472b6')).toBe(false);
+  await page.clock.runFor(450);
+  // Confetti in the bricks' colours, and "Wall 1 cleared!" in gold.
+  const confetti = await colours(page, 0, 200, 360, 220);
+  for (const c of ['#f472b6', '#a855f7', '#22d3ee']) expect(shows(confetti, c), c).toBe(true);
+  expect(shows(await words(), '#facc15')).toBe(true);
+
+  // A couple of seconds on, the wall is in place, the confetti is gone and
+  // the ball waits on the paddle as usual.
+  await page.clock.runFor(1500);
+  expect(shows(await top(), '#f472b6')).toBe(true);
+  const after = await below();
+  for (const c of ['#f472b6', '#a855f7', '#22d3ee', '#facc15']) expect(shows(after, c), c).toBe(false);
+  expect(shows(await words(), '#facc15')).toBe(false);
+  expect(shows(await words(), '#eef1f8')).toBe(true);
+  expect((await peek(page)).bricks).toEqual(full(2));
+});
+
 test('an extra ball draining away just pops, and costs nothing', async ({ page }) => {
   await listen(page);
   await openSaved(page, saved({ lives: 2, stuck: false, balls: [aside, { x: 20, y: 400, dx: 0, dy: 1 }], paddle: 300 }));
