@@ -17,6 +17,7 @@ The search box on the home page narrows the list as you type: try "pdf", "photo"
 | [Watermark PDF](https://www.bdnix.com/watermark-pdf/) | Stamp text or an image on your pages, with a live preview and control over font, size, opacity, rotation, position and layering. |
 | [Redact PDF](https://www.bdnix.com/redact-pdf/) | Permanently black out text and areas. Search for words or draw boxes; the covered content is removed, not just hidden. |
 | [Sign PDF](https://www.bdnix.com/sign-pdf/) | Draw your signature with a finger, pen or mouse, type it in a handwriting font, or use a picture of it, then move, resize and turn it anywhere on the pages. Signatures can be made, kept in your browser or saved as images in their own dialog, without opening a PDF. |
+| [Unlock PDF](https://www.bdnix.com/unlock-pdf/) | Remove the password from a PDF you have the password for, and download a copy that opens without one. |
 | [MP4 to MP3](https://www.bdnix.com/mp4-to-mp3/) | Extract the audio from videos and audio files as MP3 or WAV, at the quality and channel layout you choose. |
 | [Compress Images](https://www.bdnix.com/compress-image/) | Shrink photos and images as JPEG, WebP or PNG, optionally resizing them. Camera metadata such as location is stripped. |
 | [Photo Collage](https://www.bdnix.com/photo-collage/) | Put 3, 6 or 9 photos into one picture: choose a layout and shape, the spacing, corners and background, and download a JPEG or PNG. |

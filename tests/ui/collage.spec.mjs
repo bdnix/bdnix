@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { test, expect, expectNoSideScroll, expectNewWindow } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll, inNewWindow } from './fixtures.mjs';
 import { png, kind, inspect, near } from './images.mjs';
 
 // Photos of one colour each, so the tests can tell which went where.
@@ -25,21 +25,9 @@ async function ready(page){
   await expect(page.locator('#downloadBtn')).toBeEnabled();
 }
 
+// The button opens a new window, and the collage downloads there once it's made.
 async function download(page){
-  // The page makes the link and clicks it itself, so keep a copy to check.
-  await page.evaluate(() => {
-    const click = HTMLAnchorElement.prototype.click;
-    HTMLAnchorElement.prototype.click = function(){
-      document.querySelectorAll('#clickedLink').forEach((el) => el.remove());
-      const copy = this.cloneNode(false);
-      copy.id = 'clickedLink';
-      copy.hidden = true;
-      document.body.appendChild(copy);
-      return click.call(this);
-    };
-  });
-  const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('#downloadBtn').click()]);
-  await expectNewWindow(page.locator('#clickedLink'));
+  const { download: dl } = await inNewWindow(page, () => page.locator('#downloadBtn').click());
   const out = { name: dl.suggestedFilename(), bytes: fs.readFileSync(await dl.path()) };
   await expect(page.locator('#msg')).toHaveText(new RegExp('^Saved ' + out.name.replace('.', '\\.') + ': '));
   return out;
@@ -409,4 +397,14 @@ test('fits a phone screen with 9 photos', async ({ page }) => {
   await add(page, photos(9));
   await ready(page);
   await expectNoSideScroll(page);
+});
+
+test('a collage that can\'t be saved closes the window it opened, and says why', async ({ page }) => {
+  await page.goto('/photo-collage/');
+  await add(page, photos(3));
+  await ready(page);
+  await page.evaluate(() => { HTMLCanvasElement.prototype.toBlob = function(done){ done(null); }; });
+  const [popup] = await Promise.all([page.waitForEvent('popup'), page.locator('#downloadBtn').click()]);
+  await expect(page.locator('#msg')).toHaveText('Couldn’t make the collage: your browser couldn’t save it. Try a smaller size.');
+  await expect.poll(() => popup.isClosed()).toBe(true);
 });

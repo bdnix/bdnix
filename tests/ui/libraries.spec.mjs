@@ -21,7 +21,8 @@ const opened = {
   '/merge-pdf/': (page) => expect(page.locator('.file-name')).toHaveText(['A.pdf']),
   '/redact-pdf/': (page) => expect(page.locator('#fileName')).toHaveText('A.pdf'),
   '/watermark-pdf/': (page) => expect(page.locator('#fileName')).toHaveText('A.pdf'),
-  '/sign-pdf/': (page) => expect(page.locator('#fileName')).toHaveText('A.pdf')
+  '/sign-pdf/': (page) => expect(page.locator('#fileName')).toHaveText('A.pdf'),
+  '/unlock-pdf/': (page) => expect(page.locator('#fileName')).toHaveText('A.pdf')
 };
 
 for (const [url, isOpen] of Object.entries(opened)) {

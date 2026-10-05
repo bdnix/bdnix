@@ -1,6 +1,6 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 
-const pages = ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/chess/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/mp4-to-mp3/', '/compress-image/', '/photo-collage/', '/fit-to-frame/', '/profile/'];
+const pages = ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/chess/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/unlock-pdf/', '/mp4-to-mp3/', '/compress-image/', '/photo-collage/', '/fit-to-frame/', '/profile/'];
 const LIVE = 'https://www.bdnix.com';
 const TAG = 'https://www.googletagmanager.com/gtag/js?id=G-67D1H8GX6X';
 

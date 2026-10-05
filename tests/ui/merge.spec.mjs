@@ -1,4 +1,4 @@
-import { test, expect, expectNewWindow, expectNoSideScroll } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { upload, numberedPdf, download, widths } from './pdfs.mjs';
 
 test.beforeEach(async ({ page }) => {
@@ -27,23 +27,11 @@ test('there is one button, and no download link waiting to be clicked', async ({
   await expect(page.locator('.actions a')).toHaveCount(0);
 });
 
-// Merging saves the file itself, through a link it makes and clicks; keep a
-// copy of that link to check it opens in a new window.
+// Merging opens a new window straight away, and merged.pdf downloads there
+// once it's made.
 async function merge(page){
-  await page.evaluate(() => {
-    const click = HTMLAnchorElement.prototype.click;
-    HTMLAnchorElement.prototype.click = function(){
-      document.querySelectorAll('#clickedLink').forEach((el) => el.remove());
-      const copy = this.cloneNode(false);
-      copy.id = 'clickedLink';
-      copy.hidden = true;
-      document.body.appendChild(copy);
-      return click.call(this);
-    };
-  });
   const out = await download(page, () => page.getByRole('button', { name: 'Merge PDFs' }).click());
-  await expectNewWindow(page.locator('#clickedLink'));
-  await expect(page.locator('#clickedLink')).toHaveAttribute('download', 'merged.pdf');
+  expect(out.name).toBe('merged.pdf');
   return out;
 }
 
@@ -161,4 +149,11 @@ test('without pdf.js, the preview says so and merging still works', async ({ pag
   await expect(canvas(page)).toBeHidden();
   const out = await merge(page);
   expect(widths(out.doc)).toEqual([101, 102, 103]);
+});
+
+test('a merge that fails closes the window it opened, and says why', async ({ page }) => {
+  await page.evaluate(() => { window.PDFLib.PDFDocument.prototype.save = () => Promise.reject(new Error('out of memory')); });
+  const [popup] = await Promise.all([page.waitForEvent('popup'), page.getByRole('button', { name: 'Merge PDFs' }).click()]);
+  await expect(page.locator('#msg')).toHaveText('Something went wrong while merging: out of memory');
+  await expect.poll(() => popup.isClosed()).toBe(true);
 });
