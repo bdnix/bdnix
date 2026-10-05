@@ -630,7 +630,7 @@ test('Stockfish plays on for 60 moves at most, and the line is shortened', async
   await page.getByRole('button', { name: 'Stockfish plays on' }).click();
   await expect(page.locator('#altNow')).toHaveText(/^After 60 more moves by Stockfish: [^…]+\. In the game: White won\.$/);
   await expect(status(page)).toHaveText('Trying a move');
-  await expect(page.locator('#moveNow')).toHaveText(/^Your line: 3… g6 4\. \S+ … \d+(\.|…) \S+ \S+( \d+\. )?\S*$/);
+  await expect(page.locator('#moveNow')).toHaveText('Your line: 3… g6 4. a3 … 32… Bb2 33. Bb1 Ba1');
   // It carries on from there when asked again.
   await commands(page);
   await page.getByRole('button', { name: 'Stockfish plays on' }).click();
@@ -673,7 +673,6 @@ test('the slips are listed with the better move, which can be played instead', a
   await start(page);
   await move(page, 'f2', 'f3');
   await move(page, 'g2', 'g4');
-  await expect(page.locator('#momentsNote')).toHaveText('Looking for slips…');
   await reviewed(page);
   await expect(page.locator('#momentsNote')).toBeHidden();
   await expect(page.locator('#momentsTitle')).toHaveText('Where you could have done better');
@@ -689,7 +688,11 @@ test('the slips are listed with the better move, which can be played instead', a
   await expectNoSideScroll(page);
 
   // In a game opened, both sides' slips; and a game with none says so.
+  await page.evaluate(() => { window.hold = true; });
   await page.locator('#pgnFile').setInputFiles(file('fools.pgn', FOOLS));
+  await expect(page.locator('#momentsNote')).toHaveText('Looking for slips…');
+  await expect(page.locator('.moment')).toHaveCount(0);
+  await page.evaluate(() => { window.hold = false; window.release(); });
   await reviewed(page);
   await expect(page.locator('#momentsTitle')).toHaveText('Where it could have gone better');
   await expect(page.locator('.moment')).toHaveText(['2. g4?? Blunder. 2. a3 was better: White’s chances fell from 50% to 2%.']);
@@ -733,6 +736,7 @@ test('a game can be pasted in, and a game file of any kind picked', async ({ pag
   await expect(page.locator('#reviewTitle')).toHaveText('White vs Black');
   await expect(page.locator('.mv')).toHaveText(['e4', 'e5', 'Nf3', 'Nc6']);
   await reviewed(page);
+  await press(page, 'End');
 
   // From the review too; Escape, Cancel and a click outside close it, and
   // the arrow keys move the cursor in it, not the review.
