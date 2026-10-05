@@ -151,11 +151,9 @@
     });
   }
 
+  // The buttons are disabled at either end, and while there's no preview.
   function turn(by){
-    if (!view) return;
-    var to = pageIndex + by;
-    if (to < 0 || to >= view.pages) return;
-    pageIndex = to;
+    pageIndex += by;
     showPage();
   }
   prevBtn.addEventListener('click', function(){ turn(-1); });
