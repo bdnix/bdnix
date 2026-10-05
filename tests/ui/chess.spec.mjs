@@ -269,6 +269,10 @@ test('checkmating the engine: a win, a new best, and the game\'s review', async 
   await expect(page.locator('.mv.blunder')).toHaveAttribute('aria-label', '2. g4, blunder');
   await expect(page.locator('#graph')).toHaveAttribute('aria-label', /Accuracy: White \d+%, Black 100%/);
   await expect(page.locator('#nextBtn')).toBeDisabled();
+  // Only the visitor's own slips are listed, and Stockfish's g4 isn't one.
+  await expect(page.locator('#momentsTitle')).toHaveText('Where you could have done better');
+  await expect(page.locator('.moment')).toHaveCount(0);
+  await expect(page.locator('#momentsNote')).toHaveText('None: every move you made kept your chances.');
 
   // Stepping through: buttons, keys and the move list.
   await page.locator('#firstBtn').click();
@@ -592,7 +596,7 @@ test('a move tried while the review is still being worked out waits for the engi
   await move(page, 'd7', 'd5');                              // and again, straight away
   await expect(page.locator('#altMine')).toHaveText('1. d4 · analysing…');
   await page.evaluate(() => { window.hold = false; window.release(); });
-  await expect(page.locator('#altMine')).toHaveText('1. d4 · Best move · 0.00 · White’s chances 50%');
+  await expect(page.locator('#altMine')).toHaveText('1. d4 · Good move · 0.00 · White’s chances 50%');
   await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal. In the game: White won.');
   await page.getByRole('button', { name: 'Back to the game' }).click();
   await reviewed(page);
@@ -608,6 +612,21 @@ test('Stockfish plays on for 60 moves at most, and the line is shortened', async
   await reviewed(page);
   await page.locator('.mv').nth(4).click();
   await move(page, 'g7', 'g6');
+  // Its moves: 70 that never repeat a position or end the game.
+  await page.evaluate(() => {
+    const C = window.bdnixChess, g = C.parsePgn('1. e4 e5 2. Bc4 Nc6 3. Qh5 g6').game, seen = new Set([C.key(C.current(g))]);
+    window.replies = [];
+    while (window.replies.length < 70) {
+      const u = C.moves(C.current(g)).map(C.uci).sort().find((m) => {
+        const h = { positions: g.positions.slice(), moves: g.moves.slice() };
+        C.play(h, m);
+        return !seen.has(C.key(C.current(h))) && !C.status(h).over;
+      });
+      C.play(g, u);
+      seen.add(C.key(C.current(g)));
+      window.replies.push(u);
+    }
+  });
   await page.getByRole('button', { name: 'Stockfish plays on' }).click();
   await expect(page.locator('#altNow')).toHaveText(/^After 60 more moves by Stockfish: [^…]+\. In the game: White won\.$/);
   await expect(status(page)).toHaveText('Trying a move');
@@ -645,6 +664,95 @@ test('moves tried from where an unfinished game stopped, and from a game just pl
   await move(page, 'd8', 'e7');
   await expect(page.locator('#altVerdict')).toHaveText('Qe7 is worse than the game’s Qh4#: Black’s chances go down from 98% to 50%.');
   await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal. In the game: Checkmate — Black wins.');
+});
+
+test('the slips are listed with the better move, which can be played instead', async ({ page }) => {
+  await fakeEngine(page, ['e7e5', 'd8h4']);
+  await openGame(page, '/chess/');
+  // In a game the visitor lost, their own slips.
+  await start(page);
+  await move(page, 'f2', 'f3');
+  await move(page, 'g2', 'g4');
+  await expect(page.locator('#momentsNote')).toHaveText('Looking for slips…');
+  await reviewed(page);
+  await expect(page.locator('#momentsNote')).toBeHidden();
+  await expect(page.locator('#momentsTitle')).toHaveText('Where you could have done better');
+  await expect(page.locator('.moment')).toHaveText(['2. g4?? Blunder. 2. a3 was better: White’s chances fell from 50% to 2%.']);
+  await expect(page.locator('.moment')).toHaveClass(/blunder/);
+  // Choosing it plays the better move instead, against the game's.
+  await page.locator('.moment').click();
+  await expect(page.locator('#moveNow')).toHaveText('Your line: 2. a3');
+  await expect(page.locator('.mv.on .san')).toHaveText('e5');
+  expect(await pieceOn(page, 'a3')).toBe('a3, White pawn');
+  await expect(page.locator('#altVerdict')).toHaveText('a3 is better than the game’s g4: White’s chances go up from 2% to 50%.');
+  await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal. In the game: Checkmate — Black wins.');
+  await expectNoSideScroll(page);
+
+  // In a game opened, both sides' slips; and a game with none says so.
+  await page.locator('#pgnFile').setInputFiles(file('fools.pgn', FOOLS));
+  await reviewed(page);
+  await expect(page.locator('#momentsTitle')).toHaveText('Where it could have gone better');
+  await expect(page.locator('.moment')).toHaveText(['2. g4?? Blunder. 2. a3 was better: White’s chances fell from 50% to 2%.']);
+  await page.locator('#pgnFile').setInputFiles(file('moves.txt', 'e4 e5 Nf3 Nc6'));
+  await reviewed(page);
+  await expect(page.locator('.moment')).toHaveCount(0);
+  await expect(page.locator('#momentsNote')).toHaveText('None: every move kept the chances.');
+});
+
+test('a game can be pasted in, and a game file of any kind picked', async ({ page }) => {
+  await fakeEngine(page);
+  await openGame(page, '/chess/');
+  // Phones won't pick a .pgn file if the picker only asks for known types.
+  await expect(page.locator('#pgnFile')).not.toHaveAttribute('accept');
+  await page.locator('#pgnFile').setInputFiles({ name: 'game.pgn', mimeType: 'application/octet-stream', buffer: Buffer.from(FOOLS) });
+  await expect(page.locator('#reviewTitle')).toHaveText('Ann vs Bob');
+  await page.locator('#againBtn').click();
+
+  const paste = page.getByRole('dialog', { name: 'Paste a game' });
+  await page.getByRole('button', { name: 'Paste a game' }).click();
+  await expect(paste).toBeVisible();
+  await expect(page.locator('#pgnText')).toBeFocused();
+  await expectNoSideScroll(page);
+  // Nothing pasted, or not a game: it says why and stays open.
+  await paste.getByRole('button', { name: 'Analyse' }).click();
+  await expect(page.locator('#pasteMsg')).toHaveText('Paste a game first.');
+  await page.locator('#pgnText').fill('e4 e5 Nf6');
+  await paste.getByRole('button', { name: 'Analyse' }).click();
+  await expect(page.locator('#pasteMsg')).toHaveText('Couldn’t read a game from that. Move 2. Nf6 isn’t a legal move there.');
+  await page.locator('#pgnText').fill('x'.repeat(1024 * 1024 + 1));
+  await paste.getByRole('button', { name: 'Analyse' }).click();
+  await expect(page.locator('#pasteMsg')).toHaveText('That’s too long to be a game (over 1 MB).');
+  // Keys typed into it stay there: P doesn't pause, Space doesn't start.
+  await page.locator('#pgnText').fill('');
+  await page.locator('#pgnText').pressSequentially('1. e4 e5 2. Nf3 Nc6 P');
+  await expect(page.locator('#ovTitle')).toHaveText('Chess');
+  await page.locator('#pgnText').fill('1. e4 e5 2. Nf3 Nc6');
+  await paste.getByRole('button', { name: 'Analyse' }).click();
+  await expect(paste).toBeHidden();
+  await expect(page.locator('#reviewKicker')).toHaveText('Pasted game');
+  await expect(page.locator('#reviewTitle')).toHaveText('White vs Black');
+  await expect(page.locator('.mv')).toHaveText(['e4', 'e5', 'Nf3', 'Nc6']);
+  await reviewed(page);
+
+  // From the review too; Escape, Cancel and a click outside close it, and
+  // the arrow keys move the cursor in it, not the review.
+  await page.locator('#pasteAgainBtn').click();
+  await expect(page.locator('#pgnText')).toHaveValue('');
+  await page.locator('#pgnText').fill('d4 d5');
+  await press(page, 'ArrowLeft');
+  await press(page, 'Home');
+  await expect(page.locator('#moveNow')).toHaveText('2… Nc6: Good move. Best was a5.');
+  await press(page, 'Escape');
+  await expect(paste).toBeHidden();
+  await expect(page.locator('#pasteAgainBtn')).toBeFocused();
+  await page.locator('#pasteAgainBtn').click();
+  await paste.getByRole('button', { name: 'Cancel' }).click();
+  await expect(paste).toBeHidden();
+  await page.locator('#pasteAgainBtn').click();
+  await page.mouse.click(2, 2);
+  await expect(paste).toBeHidden();
+  await expect(page.locator('#reviewKicker')).toHaveText('Pasted game');
+  await expect(page.locator('.mv')).toHaveCount(4);
 });
 
 test('a game file from a set-up position, with Black to move first', async ({ page }) => {

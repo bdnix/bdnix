@@ -197,7 +197,7 @@
       kicker: st.result === 'checkmate' ? 'Checkmate' : 'Draw',
       title: st.result !== 'checkmate' ? 'Draw' : won ? 'You win!' : 'Stockfish wins',
       text: ending(st) + ' · Level ' + lv + (record ? ' — your best yet!' : ''),
-      outcome: ending(st), side: side, back: 'start', again: 'Play again'
+      outcome: ending(st), side: side, mine: side, back: 'start', again: 'Play again'
     });
   }
 
@@ -376,6 +376,8 @@
     $('reviewTitle').textContent = info.title;
     $('reviewText').textContent = info.text;
     $('againBtn').textContent = info.again;
+    $('momentsTitle').textContent = info.mine ? 'Where you could have done better' : 'Where it could have gone better';
+    moments = null;
     buildMoveList();
     resize();
     render();
@@ -670,7 +672,46 @@
     });
     showMove();
     showAlt();
+    showMoments();
     drawGraph();
+  }
+
+  // The slips worth a second look, each with the engine's better move: the
+  // visitor's in a game they played, both sides' in a game opened. Choosing
+  // one plays the better move instead (see tryOut), to see how it compares.
+  var moments = null;
+  function showMoments(){
+    var r = review, sum = r.summary, list = [];
+    sum.moves.forEach(function(mv, i){
+      if (mv.kind && KINDS[mv.kind].mark && mv.best && (!r.info.mine || mv.color === r.info.mine)) list.push(i);
+    });
+    var done = r.next >= r.game.positions.length;
+    $('momentsNote').textContent = list.length ? '' : !done ? 'Looking for slips…'
+      : r.info.mine ? 'None: every move you made kept your chances.' : 'None: every move kept the chances.';
+    var key = list.join(' ');
+    if (key === moments) return;
+    moments = key;
+    var ol = $('moments');
+    ol.innerHTML = '';
+    list.forEach(function(i){
+      var mv = sum.moves[i], pos = r.game.positions[i];
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'moment ' + mv.kind;
+      b.setAttribute('data-ply', i);
+      b.innerHTML = '<b></b> <span class="why"></span>';
+      b.querySelector('b').textContent = moveName(r.game, i);
+      var mark = document.createElement('span');
+      mark.setAttribute('aria-hidden', 'true');
+      mark.textContent = KINDS[mv.kind].mark;
+      b.querySelector('b').appendChild(mark);
+      b.querySelector('.why').textContent = KINDS[mv.kind].name + '. ' + pos.full + (pos.turn === 'w' ? '. ' : '… ') + mv.bestSan +
+        ' was better: ' + COLOR[mv.color] + '’s chances fell from ' + C.winChance(r.evals[i], mv.color) + '% to ' +
+        C.winChance(r.evals[i + 1], mv.color) + '%.';
+      var li = document.createElement('li');
+      li.appendChild(b);
+      ol.appendChild(li);
+    });
   }
 
   // What the review says about the move shown: its evaluation, what kind of
@@ -809,7 +850,9 @@
       (s.w.accuracy === null ? '' : '. Accuracy: White ' + s.w.accuracy + '%, Black ' + (s.b.accuracy === null ? '—' : s.b.accuracy + '%')));
   }
 
-  // ---------- Opening a game file ----------
+  // ---------- Opening a game file, or pasting one ----------
+  // Any file can be picked (browsers that don't know .pgn files won't let
+  // them be picked otherwise); what's in it decides whether it's a game.
   function importError(text){
     (state === 'review' ? reviewMsg : ovMsg).textContent = text;
   }
@@ -821,6 +864,31 @@
       if (r.error) { importError('Couldn’t read a game from ' + file.name + '. ' + r.error); return; }
       openGame(r, file.name);
     }, function(){ importError('Couldn’t read ' + file.name + '.'); });
+  }
+
+  // The box to paste a game into, for a game copied from somewhere else.
+  var pasteEl = $('paste'), pasteText = $('pgnText'), pasteMsg = $('pasteMsg'), pasteFrom = null;
+  function openPaste(e){
+    stopReplay();
+    pasteFrom = e.currentTarget;
+    pasteMsg.textContent = '';
+    pasteEl.hidden = false;
+    pasteText.focus();
+  }
+  function closePaste(){
+    if (pasteEl.hidden) return;
+    pasteEl.hidden = true;
+    if (pasteFrom && !pasteFrom.closest('[hidden]')) pasteFrom.focus();
+  }
+  function readPasted(){
+    var text = pasteText.value;
+    if (!text.trim()) { pasteMsg.textContent = 'Paste a game first.'; return; }
+    if (text.length > MAX_FILE) { pasteMsg.textContent = 'That’s too long to be a game (over 1 MB).'; return; }
+    var r = C.parsePgn(text);
+    if (r.error) { pasteMsg.textContent = 'Couldn’t read a game from that. ' + r.error; return; }
+    pasteEl.hidden = true;
+    pasteText.value = '';
+    openGame(r, 'Pasted game');
   }
   // Reviews a game read from a file. A game paused before is kept, and
   // "Back to your game" returns to it.
@@ -1050,6 +1118,10 @@
     Home: function(){ return 0; }, End: function(){ return review.game.moves.length; }
   };
   document.addEventListener('keydown', function(e){
+    if (!pasteEl.hidden) {
+      if (e.code === 'Escape') { closePaste(); e.preventDefault(); }
+      return;
+    }
     if (e.code === 'Escape' && !promoEl.hidden) { closePromo(); e.preventDefault(); return; }
     if (e.target === levelEl) return;
     if (state === 'review') {
@@ -1091,6 +1163,11 @@
   [$('importBtn'), $('anotherBtn')].forEach(function(btn){
     btn.addEventListener('click', function(){ fileEl.click(); });
   });
+  $('pasteBtn').addEventListener('click', openPaste);
+  $('pasteAgainBtn').addEventListener('click', openPaste);
+  $('pasteGo').addEventListener('click', readPasted);
+  $('pasteCancel').addEventListener('click', closePaste);
+  pasteEl.addEventListener('click', function(e){ if (e.target === pasteEl) closePaste(); });
   fileEl.addEventListener('change', function(){
     var file = fileEl.files[0];
     fileEl.value = '';
@@ -1114,6 +1191,13 @@
   graph.addEventListener('click', function(e){
     var box = graph.getBoundingClientRect(), n = review.game.moves.length;
     goTo(Math.round((e.clientX - box.left) / box.width * n));
+  });
+  $('moments').addEventListener('click', function(e){
+    var btn = e.target.closest('.moment');
+    if (!btn) return;
+    var i = parseInt(btn.getAttribute('data-ply'), 10), mv = review.summary.moves[i];
+    goTo(i);
+    tryOut(mv.best);
   });
   $('againBtn').addEventListener('click', leaveReview);
   $('playOnBtn').addEventListener('click', togglePlayOn);
