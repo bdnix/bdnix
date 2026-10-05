@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="/assets/css/page.css?v=6ee9010c44">
   <link rel="stylesheet" href="/assets/css/tool.css?v=a70bc4eb15">
   <link rel="stylesheet" href="/assets/css/file.css?v=6d62676c6d">
-  <link rel="stylesheet" href="/assets/css/merge.css?v=9668600432">
+  <link rel="stylesheet" href="/assets/css/merge.css?v=d55f9a6dac">
   <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
 </head>
 <body>
@@ -47,7 +47,7 @@
   <main class="tool">
     <p class="kicker">// tools</p>
     <h1>Merge PDFs</h1>
-    <p class="lede">Add your files, put them in order, pick the pages you want, and download one combined PDF. Everything happens in your browser. Your files are never uploaded.</p>
+    <p class="lede">Add your files, put them in order, pick the pages you want, check the preview, and merge them into one PDF. Everything happens in your browser. Your files are never uploaded.</p>
 
     <label class="drop panel" id="drop">
       <input type="file" id="picker" accept="application/pdf,.pdf" multiple>
@@ -65,15 +65,24 @@
       </div>
       <ol class="file-list" id="list"></ol>
 
+      <section class="merge-preview panel" id="preview" aria-labelledby="previewTitle" hidden>
+        <h2 class="label" id="previewTitle">Preview of merged.pdf</h2>
+        <div class="preview-stage" id="stage">
+          <canvas id="pageCanvas" role="img" aria-label="The merged PDF" hidden></canvas>
+          <p class="preview-note" id="previewNote" role="status" aria-live="polite">Loading the preview…</p>
+        </div>
+        <div class="preview-nav">
+          <button class="icon-btn" id="prevPage" type="button" aria-label="Previous page" disabled><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg></button>
+          <span class="label" id="pageLabel"></span>
+          <button class="icon-btn" id="nextPage" type="button" aria-label="Next page" disabled><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg></button>
+        </div>
+      </section>
+
       <div class="actions">
         <button class="btn btn-primary" id="mergeBtn" type="button">
           <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h6M3 8h10M3 13h6M11 11l2 2-2 2"/></svg>
           <span id="mergeLabel">Merge PDFs</span>
         </button>
-        <a class="btn btn-ghost" id="downloadBtn" hidden>
-          <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4 7l4 4 4-4M2 14h12"/></svg>
-          <span id="downloadLabel">Download merged.pdf</span>
-        </a>
       </div>
     </section>
   </main>
@@ -89,6 +98,6 @@
   <script src="/assets/js/profile.js?v=d7e69c9e67"></script>
   <script src="/assets/js/files.js?v=ddf7e424a5"></script>
   <script src="/assets/js/pdftools.js?v=876b24df99"></script>
-  <script src="/assets/js/merge.js?v=74d139e396"></script>
+  <script src="/assets/js/merge.js?v=00fc5a65c1"></script>
 </body>
 </html>
