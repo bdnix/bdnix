@@ -576,6 +576,80 @@
     return { moves: list, w: sides.w, b: sides.b };
   }
 
+  // ---------- Openings ----------
+  // Well-known openings by their moves (SAN, check marks left off). A game
+  // is named after the longest that it starts with.
+  var OPENINGS = [
+    ['e4', 'King’s Pawn Opening'], ['d4', 'Queen’s Pawn Opening'], ['c4', 'English Opening'],
+    ['Nf3', 'Réti Opening'], ['f4', 'Bird’s Opening'], ['b3', 'Nimzo-Larsen Attack'],
+    ['e4 e5', 'Open Game'], ['e4 e5 Nf3 Nc6 Bb5', 'Ruy Lopez'], ['e4 e5 Nf3 Nc6 Bb5 a6', 'Ruy Lopez, Morphy Defence'],
+    ['e4 e5 Nf3 Nc6 Bb5 Nf6', 'Ruy Lopez, Berlin Defence'], ['e4 e5 Nf3 Nc6 Bc4', 'Italian Game'],
+    ['e4 e5 Nf3 Nc6 Bc4 Bc5', 'Italian Game, Giuoco Piano'], ['e4 e5 Nf3 Nc6 Bc4 Bc5 b4', 'Evans Gambit'],
+    ['e4 e5 Nf3 Nc6 Bc4 Nf6', 'Two Knights Defence'], ['e4 e5 Nf3 Nc6 d4', 'Scotch Game'],
+    ['e4 e5 Nf3 Nc6 Nc3 Nf6', 'Four Knights Game'], ['e4 e5 Nf3 Nf6', 'Petrov’s Defence'],
+    ['e4 e5 Nf3 d6', 'Philidor Defence'], ['e4 e5 f4', 'King’s Gambit'], ['e4 e5 Nc3', 'Vienna Game'],
+    ['e4 e5 Bc4', 'Bishop’s Opening'], ['e4 e5 d4 exd4 c3', 'Danish Gambit'],
+    ['e4 c5', 'Sicilian Defence'], ['e4 c5 Nc3', 'Sicilian Defence, Closed'], ['e4 c5 c3', 'Sicilian Defence, Alapin Variation'],
+    ['e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6', 'Sicilian Defence, Najdorf Variation'],
+    ['e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6', 'Sicilian Defence, Dragon Variation'],
+    ['e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3 e5', 'Sicilian Defence, Sveshnikov Variation'],
+    ['e4 e6', 'French Defence'], ['e4 e6 d4 d5 e5', 'French Defence, Advance Variation'],
+    ['e4 e6 d4 d5 Nd2', 'French Defence, Tarrasch Variation'], ['e4 e6 d4 d5 Nc3 Bb4', 'French Defence, Winawer Variation'],
+    ['e4 c6', 'Caro-Kann Defence'], ['e4 c6 d4 d5 e5', 'Caro-Kann Defence, Advance Variation'],
+    ['e4 d5', 'Scandinavian Defence'], ['e4 d6', 'Pirc Defence'], ['e4 g6', 'Modern Defence'], ['e4 Nf6', 'Alekhine’s Defence'],
+    ['d4 d5', 'Closed Game'], ['d4 d5 c4', 'Queen’s Gambit'], ['d4 d5 c4 e6', 'Queen’s Gambit Declined'],
+    ['d4 d5 c4 dxc4', 'Queen’s Gambit Accepted'], ['d4 d5 c4 c6', 'Slav Defence'],
+    ['d4 d5 Bf4', 'London System'], ['d4 d5 Nf3 Nf6 Bf4', 'London System'], ['d4 Nf6 Bf4', 'London System'],
+    ['d4 Nf6', 'Indian Defence'], ['d4 Nf6 Bg5', 'Trompowsky Attack'],
+    ['d4 Nf6 c4 g6 Nc3 Bg7', 'King’s Indian Defence'], ['d4 Nf6 c4 g6 Nc3 d5', 'Grünfeld Defence'],
+    ['d4 Nf6 c4 e6 Nc3 Bb4', 'Nimzo-Indian Defence'], ['d4 Nf6 c4 e6 Nf3 b6', 'Queen’s Indian Defence'],
+    ['d4 Nf6 c4 e6 g3', 'Catalan Opening'], ['d4 Nf6 c4 c5', 'Benoni Defence'], ['d4 Nf6 c4 c5 d5 b5', 'Benko Gambit'],
+    ['d4 f5', 'Dutch Defence'], ['c4 e5', 'English Opening, Reversed Sicilian'], ['c4 c5', 'English Opening, Symmetrical Variation']
+  ].map(function(o){ return { moves: o[0].split(' '), name: o[1] }; });
+  // The opening a game from the usual start played, or null.
+  function opening(game){
+    if (game.start) return null;
+    var found = null;
+    OPENINGS.forEach(function(o){
+      if (o.moves.length > game.moves.length || (found && found.moves.length >= o.moves.length)) return;
+      for (var i = 0; i < o.moves.length; i++) {
+        if (game.moves[i].san.replace(/[+#]$/, '') !== o.moves[i]) return;
+      }
+      found = o;
+    });
+    return found && found.name;
+  }
+
+  // ---------- Writing a game ----------
+  // A game as PGN: the seven usual tags (unknown ones as "?"), any others
+  // given, the set-up position if it didn't start from the usual one, and
+  // the moves, in lines of at most 80 characters.
+  function toPgn(game, tags, result){
+    var t = {}, k, lines = [], words = [], line = '';
+    var roster = { Event: '?', Site: '?', Date: '????.??.??', Round: '?', White: '?', Black: '?' };
+    for (k in roster) t[k] = roster[k];
+    for (k in tags || {}) if (tags[k]) t[k] = tags[k];
+    t.Result = result || t.Result || '*';
+    if (game.start) { t.SetUp = '1'; t.FEN = game.start; }
+    var order = ['Event', 'Site', 'Date', 'Round', 'White', 'Black', 'Result'];
+    for (k in t) if (order.indexOf(k) < 0) order.push(k);
+    order.forEach(function(k){ lines.push('[' + k + ' "' + String(t[k]).replace(/[\\"]/g, '\\$&') + '"]'); });
+    game.moves.forEach(function(m, i){
+      var pos = game.positions[i];
+      if (pos.turn === 'w') words.push(pos.full + '.');
+      else if (!i) words.push(pos.full + '...');
+      words.push(m.san);
+    });
+    words.push(t.Result);
+    var text = [];
+    words.forEach(function(w){
+      if (line && line.length + 1 + w.length > 80) { text.push(line); line = w; }
+      else line = line ? line + ' ' + w : w;
+    });
+    text.push(line);
+    return lines.join('\n') + '\n\n' + text.join('\n') + '\n';
+  }
+
   window.bdnixChess = {
     START: START, VALUE: VALUE,
     name: name, square: square, colorOf: colorOf, other: other,
@@ -586,6 +660,7 @@
     key: key, insufficient: insufficient, status: status, material: material, perft: perft,
     positionCommand: positionCommand, parsePgn: parsePgn, splitPgn: splitPgn, readMove: readMove,
     parseInfo: parseInfo, whiteView: whiteView, centipawns: centipawns, chances: chances,
-    moveAccuracy: moveAccuracy, winChance: winChance, outlook: outlook, formatEval: formatEval, reviewGame: reviewGame
+    moveAccuracy: moveAccuracy, winChance: winChance, outlook: outlook, formatEval: formatEval, reviewGame: reviewGame,
+    opening: opening, toPgn: toPgn
   };
 })();

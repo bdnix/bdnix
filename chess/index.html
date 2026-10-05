@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="/assets/css/icon-btn.css?v=20fd350a8d">
   <link rel="stylesheet" href="/assets/css/game.css?v=5d7bc45b69">
   <link rel="stylesheet" href="/assets/css/seg.css?v=9c1df52699">
-  <link rel="stylesheet" href="/assets/css/chess.css?v=b726b30ced">
+  <link rel="stylesheet" href="/assets/css/chess.css?v=b531136c9e">
   <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
 </head>
 <body class="play">
@@ -60,10 +60,18 @@
       <div><span class="label">Turn</span><b id="turn">White</b></div>
       <div class="status-row"><span class="label">Status</span><b id="status" aria-live="polite">Pick a side</b></div>
       <div class="best-row"><span class="label">Best win</span><b id="best">None yet</b></div>
+      <div class="opening-row"><span class="label">Opening</span><b id="opening">—</b></div>
     </section>
 
+    <div class="board-col" id="boardCol">
+    <div class="strip" id="stripTop">
+      <span class="who"><b id="nameTop">Stockfish</b> <span class="elo" id="eloTop"></span></span>
+      <span class="caps" id="capThem" role="img"></span><b class="adv" id="advThem"></b>
+    </div>
     <div class="board-wrap">
+      <div id="evalBar" class="eval-bar" role="img" aria-label="Evaluation" hidden><span></span></div>
       <div id="board" class="board" role="group" aria-label="Chessboard"></div>
+      <svg id="arrows" class="arrows" viewBox="0 0 8 8" aria-hidden="true" focusable="false"></svg>
       <div id="promo" class="promo" role="dialog" aria-label="Promote the pawn to" hidden>
         <p class="label">Promote to</p>
         <div class="promo-pieces"></div>
@@ -90,29 +98,26 @@
         <p class="credit">Your opponent is Stockfish, the free and open-source chess engine by the Stockfish developers, running in your browser.</p>
       </div>
     </div>
+    <div class="strip" id="stripBottom">
+      <span class="who"><b id="nameBottom">You</b> <span class="elo" id="eloBottom"></span></span>
+      <span class="caps" id="capYou" role="img"></span><b class="adv" id="advYou"></b>
+    </div>
+    </div>
 
-    <section class="panel box side" aria-label="Captures and controls">
-      <div class="caps-row"><span class="label" id="themName">Stockfish</span><span class="caps" id="capThem" role="img"></span><b class="adv" id="advThem"></b></div>
-      <div class="caps-row"><span class="label">You</span><span class="caps" id="capYou" role="img"></span><b class="adv" id="advYou"></b></div>
+    <section class="panel box side" aria-label="Difficulty and controls">
       <div class="level">
         <label class="label" for="level">Difficulty</label>
-        <select id="level">
-          <option value="1">Level 1 · depth 1</option>
-          <option value="2">Level 2 · depth 2</option>
-          <option value="3" selected>Level 3 · depth 3</option>
-          <option value="4">Level 4 · depth 4</option>
-          <option value="5">Level 5 · depth 5</option>
-          <option value="6">Level 6 · depth 6</option>
-          <option value="7">Level 7 · depth 8</option>
-          <option value="8">Level 8 · depth 10</option>
-          <option value="9">Level 9 · depth 12</option>
-          <option value="10">Level 10 · depth 15</option>
-        </select>
+        <input type="range" id="level" min="1" max="10" step="1" value="3" aria-describedby="levelText">
+        <output id="levelText" for="level">Level 3 · about 1200</output>
       </div>
       <div class="controls">
         <button type="button" id="restartBtn" class="btn btn-ghost">New game</button>
         <button type="button" id="undoBtn" class="btn btn-ghost" disabled>Undo move</button>
+        <button type="button" id="hintBtn" class="btn btn-ghost" disabled>Hint</button>
+        <button type="button" id="drawBtn" class="btn btn-ghost" disabled>Offer a draw</button>
+        <button type="button" id="resignBtn" class="btn btn-ghost" disabled>Resign</button>
       </div>
+      <p id="playMsg" class="play-msg" aria-live="polite"></p>
     </section>
 
     <section class="panel review-bar" id="reviewBar" aria-label="The move shown" hidden>
@@ -151,6 +156,8 @@
           <button type="button" id="altBackBtn" class="btn btn-ghost">Back to the game</button>
         </div>
       </section>
+      <p class="acc-line" id="accLine"></p>
+      <canvas id="graph" role="img" aria-label="How the evaluation changed over the game"></canvas>
       <p class="review-progress"><span id="reviewProgress" aria-live="polite"></span> <button type="button" id="retryBtn" class="link-btn" hidden>Try again</button></p>
       <table class="summary" aria-label="Accuracy and slips, by side">
         <thead><tr><td></td><th scope="col">White</th><th scope="col">Black</th></tr></thead>
@@ -161,7 +168,6 @@
           <tr class="blunder"><th scope="row">Blunders <span aria-hidden="true">??</span></th><td id="blunderW">0</td><td id="blunderB">0</td></tr>
         </tbody>
       </table>
-      <canvas id="graph" role="img" aria-label="How the evaluation changed over the game"></canvas>
       <section class="moments" aria-labelledby="momentsTitle">
         <h3 class="label" id="momentsTitle">Where it could have gone better</h3>
         <ol id="moments"></ol>
@@ -196,7 +202,10 @@
       <h2 id="textTitle">The game</h2>
       <p id="textAbout" class="pick-about"></p>
       <p id="textMoves" class="text-moves"></p>
+      <p id="textMsg" class="text-msg" aria-live="polite"></p>
       <div class="modal-actions">
+        <button type="button" id="copyBtn" class="btn btn-ghost">Copy PGN</button>
+        <a id="saveLink" class="btn btn-ghost" href="#">Download PGN</a>
         <button type="button" id="textClose" class="btn btn-ghost">Close</button>
       </div>
     </div>
@@ -222,7 +231,8 @@
   <script src="/assets/js/sound.js?v=7a74a68ae2"></script>
   <script src="/assets/js/gamebar.js?v=aefe068990"></script>
   <script src="/assets/js/upright.js?v=280cffb58a"></script>
-  <script src="/assets/js/chess-core.js?v=5db9fb8f30"></script>
-  <script src="/assets/js/chess.js?v=2ea17ebc4e"></script>
+  <script src="/assets/js/files.js?v=e79c6ab54e"></script>
+  <script src="/assets/js/chess-core.js?v=d43471b716"></script>
+  <script src="/assets/js/chess.js?v=52f79694ff"></script>
 </body>
 </html>
