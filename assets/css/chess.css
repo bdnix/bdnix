@@ -256,7 +256,7 @@ body.reviewing .game{
 .review-nav{display:flex;gap:6px}
 .review-nav .icon-btn{width:36px;height:36px}
 .review-nav .icon-btn:disabled{opacity:.4;cursor:default}
-.review-nav #flipBtn{margin-left:auto}
+.review-nav #speedBtn{margin-left:auto;font:600 13px/1 var(--mono)}
 .moves{
   position:relative;
   margin:0;padding:0;list-style:none;
@@ -290,8 +290,8 @@ body.reviewing .game{
   body.reviewing .game{grid-template-columns:1fr;grid-template-rows:none;grid-template-areas:"bar" "board" "stats" "side"}
   .review-bar{justify-self:stretch;padding:8px}
   .review-nav{justify-content:space-between}
-  .review-nav .icon-btn{width:44px;height:44px}
-  .review-nav #flipBtn{margin-left:0}
+  .review-nav .icon-btn{width:42px;height:42px}
+  .review-nav #speedBtn{margin-left:0}
   .review{justify-self:stretch;max-height:none;overflow:visible;padding:12px}
   /* A shorter review: accuracy in a line, the counts are in the slips listed. */
   .acc-line{display:block}

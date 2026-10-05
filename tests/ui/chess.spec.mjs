@@ -393,7 +393,7 @@ test('opens a PGN file and reviews it', async ({ page }) => {
   await expect(page.locator('#reviewMsg')).toHaveText('');
 });
 
-test('a game from a file is replayed on the board, a move a second', async ({ page }) => {
+test('a game from a file is replayed on the board, every second and a half', async ({ page }) => {
   await fakeEngine(page);
   await listen(page);
   await openGame(page, '/chess/');
@@ -403,11 +403,13 @@ test('a game from a file is replayed on the board, a move a second', async ({ pa
   await expect(btn).toHaveAttribute('aria-label', 'Pause the replay');
   await expect(status(page)).toHaveText('Replaying');
   expect(await pieceOn(page, 'f2')).toBe('f2, White pawn');
-  await page.clock.runFor(1000);
+  await page.clock.runFor(1499);
+  await expect(page.locator('#moveNow')).toHaveText('The starting position.');
+  await page.clock.runFor(1);
   await expect(page.locator('#moveNow')).toHaveText('1. f3: Good move. Best was a3.');
   expect(await pieceOn(page, 'f3')).toBe('f3, White pawn');
   await expect(sq(page, 'f3')).toHaveClass(/last/);
-  await page.clock.runFor(3000);
+  await page.clock.runFor(4500);
   await expect(page.locator('#moveNow')).toHaveText('2… Qh4#: Best move.');
   await expect(btn).toHaveAttribute('aria-label', 'Replay the moves');
   await expect(status(page)).toHaveText('Checkmate — Black wins');
@@ -419,7 +421,7 @@ test('a game from a file is replayed on the board, a move a second', async ({ pa
   await btn.click();
   await expect(page.locator('#moveNow')).toHaveText('The starting position.');
   await expect(btn).toHaveAttribute('aria-label', 'Pause the replay');
-  await page.clock.runFor(1000);
+  await page.clock.runFor(1500);
   await expect(page.locator('#moveNow')).toHaveText('1. f3: Good move. Best was a3.');
   // A step by hand stops it there.
   await page.locator('#nextBtn').click();
@@ -432,7 +434,7 @@ test('a game from a file is replayed on the board, a move a second', async ({ pa
   await page.evaluate(() => document.activeElement.blur());
   await press(page, 'Space');
   await expect(btn).toHaveAttribute('aria-label', 'Pause the replay');
-  await page.clock.runFor(1000);
+  await page.clock.runFor(1500);
   await expect(page.locator('#moveNow')).toHaveText('2. g4: Blunder. Best was a3.');
   await press(page, 'Space');
   await expect(btn).toHaveAttribute('aria-label', 'Replay the moves');
@@ -457,7 +459,7 @@ test('a game that has just ended can be replayed from its review', async ({ page
   await expect(page.locator('#replayBtn')).toHaveAttribute('aria-label', 'Replay the moves');
   await page.locator('#replayBtn').click();
   await expect(page.locator('#moveNow')).toHaveText('The starting position.');
-  await page.clock.runFor(4000);
+  await page.clock.runFor(6000);
   await expect(page.locator('#moveNow')).toHaveText(/^2… Qh4#/);
   await expect(page.locator('#replayBtn')).toHaveAttribute('aria-label', 'Replay the moves');
 });
@@ -474,7 +476,7 @@ test('a different move can be tried in a review, against the game\'s own', async
   await expect(page.locator('#altTip')).toBeVisible();
 
   // Picking up a piece stops the replay; Black, to move after 3. Qh5, can move.
-  await page.clock.runFor(5000);
+  await page.clock.runFor(7500);
   await expect(page.locator('#moveNow')).toHaveText('3. Qh5: Good move. Best was a3.');
   await expect(page.locator('#replayBtn')).toHaveAttribute('aria-label', 'Pause the replay');
   await sq(page, 'g7').click();
@@ -874,7 +876,7 @@ test('in a review the move shown and its buttons sit at the top, and a replay ke
 
   // Replaying it all: the page stays where it is, and the move list scrolls
   // itself to keep the move shown in sight.
-  await page.clock.runFor(33000);
+  await page.clock.runFor(49500);
   await expect(page.locator('#moveNow')).toHaveText('17. Rd8#: Best move.');
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
   const inSight = () => page.locator('#moves').evaluate((list) => {
@@ -1222,7 +1224,7 @@ test('a review shows how the game stands beside the board, Stockfish\'s move as 
   await expect(page.locator('#arrows polygon')).toHaveCount(0);
   // A move tried has no mark of the game's, and its own arrow.
   await page.locator('.mv').nth(2).click();
-  await move(page, 'e7', 'e6');
+  await move(page, 'd7', 'd6');
   await expect(page.locator('.badge')).toHaveCount(0);
   await expect(page.locator('#arrows polygon')).toHaveCount(1);
   await expect(bar).toHaveAttribute('aria-label', 'Evaluation 0.00: White’s winning chances 50%');
@@ -1470,5 +1472,42 @@ test('resigning asks to be sure first', async ({ page }) => {
   await expect(page.locator('#nameTop')).toHaveText('Stockfish');
   await expect(page.locator('#nameBottom')).toHaveText('You');
   await page.locator('#textBtn').click();
-  await expect(page.locator('#textMoves')).toHaveText(/ Black resigned — White wins$/);
+  await expect(page.locator('#textMoves')).toHaveText(/ Black resigned — White wins\s*$/);
+});
+
+test('the replay can go slower or faster, from the next move', async ({ page }) => {
+  await fakeEngine(page);
+  await openGame(page, '/chess/');
+  await page.locator('#pgnFile').setInputFiles(file('opera.pgn', OPERA));
+  const speedBtn = page.locator('#speedBtn'), now = page.locator('#moveNow');
+  await expect(speedBtn).toHaveText('1×');
+  await expect(speedBtn).toHaveAttribute('aria-label', 'Replay speed: normal, a move every 1.5 seconds. Change it');
+  await page.clock.runFor(1500);
+  await expect(now).toHaveText(/^1\. e4/);
+  // Fast: the next move comes 0.75 s after the change, and so on.
+  await speedBtn.click();
+  await expect(speedBtn).toHaveText('2×');
+  await expect(speedBtn).toHaveAttribute('aria-label', 'Replay speed: fast, a move every 0.75 seconds. Change it');
+  await expect(page.locator('#replayBtn')).toHaveAttribute('aria-label', 'Pause the replay');
+  await page.clock.runFor(750);
+  await expect(now).toHaveText(/^1… e5/);
+  await page.clock.runFor(750);
+  await expect(now).toHaveText(/^2\. Nf3/);
+  // Slow, then round to normal again.
+  await speedBtn.click();
+  await expect(speedBtn).toHaveText('½×');
+  await expect(speedBtn).toHaveAttribute('aria-label', 'Replay speed: slow, a move every 3 seconds. Change it');
+  await page.clock.runFor(2999);
+  await expect(now).toHaveText(/^2\. Nf3/);
+  await page.clock.runFor(1);
+  await expect(now).toHaveText(/^2… d6/);
+  // Changed while it's stopped, it counts when it starts again.
+  await page.locator('#replayBtn').click();
+  await speedBtn.click();
+  await expect(speedBtn).toHaveText('1×');
+  await page.clock.runFor(3000);
+  await expect(now).toHaveText(/^2… d6/);
+  await page.locator('#replayBtn').click();
+  await page.clock.runFor(1500);
+  await expect(now).toHaveText(/^3\. d4/);
 });

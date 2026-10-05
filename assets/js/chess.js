@@ -18,7 +18,10 @@
   var REVIEW_DEPTH = 16;          // how deep a review looks at each position
   var PLAY_DEPTH = 12;            // how deep Stockfish looks playing on from a move tried
   var PLAY_ON = 60;               // how many moves it plays on before it stops
-  var REPLAY_STEP = 1000;         // ms between moves when a game is replayed
+  // How fast a game is replayed: ms between moves, Normal to start with.
+  var SPEEDS = [
+    { name: 'Slow', short: '½×', step: 3000 }, { name: 'Normal', short: '1×', step: 1500 }, { name: 'Fast', short: '2×', step: 750 }
+  ];
   var MAX_FILE = 50 * 1024 * 1024; // a game file bigger than this isn't one (a few hundred thousand games)
   var PICK_SHOW = 100;            // how many games of a file the list to pick from shows
   var NAMES = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
@@ -919,16 +922,31 @@
   }
 
   // ---------- Replaying a game ----------
-  // Plays the game through on the board, a move every REPLAY_STEP, from the
-  // start if it's at the end. Stops at the last move or at any step by hand.
-  var replayTimer = null;
+  // Plays the game through on the board, a move every step of the speed
+  // picked, from the start if it's at the end. Stops at the last move or at
+  // any step by hand. A new speed counts straight away.
+  var replayTimer = null, speed = 1;
+  function step(){ return SPEEDS[speed].step; }
+  function nextSpeed(){
+    speed = (speed + 1) % SPEEDS.length;
+    showSpeed();
+    if (replayTimer) {
+      clearTimeout(replayTimer);
+      replayTimer = setTimeout(replayStep, step());
+    }
+  }
+  function showSpeed(){
+    var s = SPEEDS[speed], btn = $('speedBtn');
+    btn.textContent = s.short;
+    btn.setAttribute('aria-label', 'Replay speed: ' + s.name.toLowerCase() + ', a move every ' + s.step / 1000 + ' seconds. Change it');
+  }
   function startReplay(){
     var r = review;
     if (!r) return;
     if (r.alt) goTo(r.ply);
     if (r.ply >= r.game.moves.length) goTo(0);
     r.playing = true;
-    replayTimer = setTimeout(replayStep, REPLAY_STEP);
+    replayTimer = setTimeout(replayStep, step());
     showReplay();
   }
   function replayStep(){
@@ -937,7 +955,7 @@
     if (!r || !r.playing) return;
     goTo(r.ply + 1, true);
     if (r.ply >= r.game.moves.length) stopReplay();
-    else replayTimer = setTimeout(replayStep, REPLAY_STEP);
+    else replayTimer = setTimeout(replayStep, step());
   }
   function stopReplay(){
     if (replayTimer) clearTimeout(replayTimer);
@@ -1520,7 +1538,9 @@
   $('flipBtn').addEventListener('click', function(){
     review.side = C.other(review.side);
     render();
+    updateHud();
   });
+  $('speedBtn').addEventListener('click', nextSpeed);
   movesEl.addEventListener('click', function(e){
     var btn = e.target.closest('.mv');
     if (btn) goTo(parseInt(btn.getAttribute('data-ply'), 10));
@@ -1582,6 +1602,7 @@
   var saved = window.bdnixSave.load('chess');
   if (saved && !restore(saved)) window.bdnixSave.clear('chess');
   showLevel();
+  showSpeed();
   render();
   updateHud();
   resize();
