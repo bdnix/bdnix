@@ -170,7 +170,6 @@ jobs:
           disable_search: true
           use_oidc: true
           fail_ci_if_error: true
-          version: v0.0.0-temporary-test-of-the-fallback
       # PyPI's CLI is installed with pip, which the runner's own Python won't
       # do (it's managed by the system), so this one comes with its own.
       - name: Python for the Codecov CLI from PyPI
