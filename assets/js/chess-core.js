@@ -382,6 +382,8 @@
   }
 
   // ---------- Reading a game: PGN, or just its moves ----------
+  // A tag pair, as in [White "Ann"].
+  var TAG = /^\[(\w+)\s+"((?:[^"\\]|\\.)*)"\s*\]$/;
   // The first game in a PGN file, or in a text file that only lists moves
   // (SAN as in "1. e4 e5 2. Nf3", or UCI as in "e2e4 e7e5"). Tags, comments,
   // variations, annotations and move numbers are read past. Returns
@@ -391,7 +393,7 @@
     var tags = {}, lines = text.split('\n'), moveText = [], started = false;
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i].trim();
-      var tag = /^\[(\w+)\s+"((?:[^"\\]|\\.)*)"\s*\]$/.exec(line);
+      var tag = TAG.exec(line);
       if (tag) {
         if (started) break;                 // the next game's tags
         tags[tag[1]] = tag[2].replace(/\\(.)/g, '$1');
@@ -431,6 +433,30 @@
     if (!game.moves.length) return { error: 'There are no moves in it.' };
     return { game: game, tags: tags, result: result };
   }
+  // The games in a file of several (a PGN database), without reading their
+  // moves: each game's tags and its text, for parsePgn once one is picked.
+  // A game starts at its first tag, or at moves with no tags before them;
+  // tags with no moves after them aren't a game.
+  function splitPgn(text){
+    var lines = String(text).replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split('\n');
+    var games = [], cur = null, moves = false;
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim(), tag = TAG.exec(line);
+      if ((tag && (!cur || moves)) || (!cur && line && !/^%/.test(line))) {
+        cur = { tags: {}, lines: [], moves: false };
+        games.push(cur);
+        moves = false;
+      }
+      if (!cur) continue;
+      if (tag) cur.tags[tag[1]] = tag[2].replace(/\\(.)/g, '$1');
+      else if (line && !/^%/.test(line)) moves = cur.moves = true;
+      cur.lines.push(lines[i]);
+    }
+    return games.filter(function(g){ return g.moves; }).map(function(g){
+      return { tags: g.tags, text: g.lines.join('\n') };
+    });
+  }
+
   // The legal move a token from a game file stands for: its SAN, give or take
   // check marks, annotations, 0-0 for O-O and e8Q for e8=Q; or its UCI.
   function readMove(pos, t){
@@ -558,7 +584,7 @@
     uci: uci, findMove: findMove, san: san,
     newGame: newGame, current: current, play: play, undo: undo,
     key: key, insufficient: insufficient, status: status, material: material, perft: perft,
-    positionCommand: positionCommand, parsePgn: parsePgn, readMove: readMove,
+    positionCommand: positionCommand, parsePgn: parsePgn, splitPgn: splitPgn, readMove: readMove,
     parseInfo: parseInfo, whiteView: whiteView, centipawns: centipawns, chances: chances,
     moveAccuracy: moveAccuracy, winChance: winChance, outlook: outlook, formatEval: formatEval, reviewGame: reviewGame
   };

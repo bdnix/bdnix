@@ -15,7 +15,8 @@
   var PLAY_DEPTH = 12;            // how deep Stockfish looks playing on from a move tried
   var PLAY_ON = 60;               // how many moves it plays on before it stops
   var REPLAY_STEP = 1000;         // ms between moves when a game is replayed
-  var MAX_FILE = 1024 * 1024;     // a game file bigger than this isn't a game
+  var MAX_FILE = 50 * 1024 * 1024; // a game file bigger than this isn't one (a few hundred thousand games)
+  var PICK_SHOW = 100;            // how many games of a file the list to pick from shows
   var NAMES = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
   var COLOR = { w: 'White', b: 'Black' };
   var ENDINGS = {
@@ -376,6 +377,7 @@
     $('reviewTitle').textContent = info.title;
     $('reviewText').textContent = info.text;
     $('againBtn').textContent = info.again;
+    $('pickAgainBtn').hidden = !info.picked;
     $('momentsTitle').textContent = info.mine ? 'Where you could have done better' : 'Where it could have gone better';
     moments = null;
     buildMoveList();
@@ -852,47 +854,122 @@
 
   // ---------- Opening a game file, or pasting one ----------
   // Any file can be picked (browsers that don't know .pgn files won't let
-  // them be picked otherwise); what's in it decides whether it's a game.
+  // them be picked otherwise); what's in it decides whether it's a game. A
+  // file (or text) of several games lists them to pick one from.
   function importError(text){
     (state === 'review' ? reviewMsg : ovMsg).textContent = text;
   }
+  // The games in a file or text: { games } when there are several, or else
+  // the one game read (parsePgn).
+  function readGames(text){
+    var games = C.splitPgn(text);
+    return games.length > 1 ? { games: games } : C.parsePgn(text);
+  }
+  var fileFrom = null;
   function openFile(file){
     if (!file) return;
-    if (file.size > MAX_FILE) { importError(file.name + ' is too big to be a game (over 1 MB).'); return; }
+    if (file.size > MAX_FILE) { importError(file.name + ' is too big to be a game file (over 50 MB).'); return; }
     file.text().then(function(text){
-      var r = C.parsePgn(text);
-      if (r.error) { importError('Couldn’t read a game from ' + file.name + '. ' + r.error); return; }
-      openGame(r, file.name);
+      var r = readGames(text);
+      if (r.error) importError('Couldn’t read a game from ' + file.name + '. ' + r.error);
+      else if (r.games) pickFrom(r.games, file.name, fileFrom);
+      else openGame(r, file.name);
     }, function(){ importError('Couldn’t read ' + file.name + '.'); });
   }
 
-  // The box to paste a game into, for a game copied from somewhere else.
-  var pasteEl = $('paste'), pasteText = $('pgnText'), pasteMsg = $('pasteMsg'), pasteFrom = null;
-  function openPaste(e){
+  // The boxes over the page, for pasting a game and picking one: one at a
+  // time, closed by Escape, Cancel or a click outside, which puts the focus
+  // back on the button that opened it.
+  var modal = null, modalFrom = null;
+  function openModal(el, from, focus){
     stopReplay();
-    pasteFrom = e.currentTarget;
-    pasteMsg.textContent = '';
-    pasteEl.hidden = false;
-    pasteText.focus();
+    modal = el;
+    modalFrom = from;
+    el.hidden = false;
+    focus.focus();
   }
-  function closePaste(){
-    if (pasteEl.hidden) return;
-    pasteEl.hidden = true;
-    if (pasteFrom && !pasteFrom.closest('[hidden]')) pasteFrom.focus();
+  function hideModal(){
+    if (!modal) return;
+    modal.hidden = true;
+    modal = null;
+  }
+  function closeModal(){
+    hideModal();
+    if (modalFrom && !modalFrom.closest('[hidden]')) modalFrom.focus();
+  }
+
+  // The box to paste a game into, for a game copied from somewhere else.
+  var pasteEl = $('paste'), pasteText = $('pgnText'), pasteMsg = $('pasteMsg');
+  function openPaste(e){
+    pasteMsg.textContent = '';
+    openModal(pasteEl, e.currentTarget, pasteText);
   }
   function readPasted(){
     var text = pasteText.value;
     if (!text.trim()) { pasteMsg.textContent = 'Paste a game first.'; return; }
-    if (text.length > MAX_FILE) { pasteMsg.textContent = 'That’s too long to be a game (over 1 MB).'; return; }
-    var r = C.parsePgn(text);
+    if (text.length > MAX_FILE) { pasteMsg.textContent = 'That’s too long to be a game (over 50 MB).'; return; }
+    var r = readGames(text);
     if (r.error) { pasteMsg.textContent = 'Couldn’t read a game from that. ' + r.error; return; }
-    pasteEl.hidden = true;
+    hideModal();
     pasteText.value = '';
-    openGame(r, 'Pasted game');
+    if (r.games) pickFrom(r.games, 'the games pasted', modalFrom);
+    else openGame(r, 'Pasted game');
   }
+
+  // The list of a file's games to pick one from, searched by the words in
+  // its tags (players, event, place, date, round, result, opening), showing
+  // the first PICK_SHOW that match. A game is only read once it's picked.
+  var pickEl = $('pick'), pickSearch = $('pickSearch'), picking = null;
+  function pickFrom(games, name, from){
+    picking = {
+      games: games, name: name,
+      words: games.map(function(g){
+        var t = g.tags;
+        return [t.White, t.Black, t.Event, t.Site, t.Date, t.Round, t.Result, t.ECO].join(' ').toLowerCase();
+      })
+    };
+    $('pickAbout').textContent = games.length.toLocaleString('en') + ' games in ' + name + '.';
+    pickSearch.value = '';
+    $('pickMsg').textContent = '';
+    listPicks();
+    openModal(pickEl, from, pickSearch);
+  }
+  function known(v){ return v && !/^[?.\s]*$/.test(v) ? v.replace(/\.\?\?/g, '') : ''; }
+  function listPicks(){
+    var want = pickSearch.value.toLowerCase().split(/\s+/).filter(Boolean), found = [];
+    picking.words.forEach(function(w, i){
+      if (want.every(function(x){ return w.indexOf(x) >= 0; })) found.push(i);
+    });
+    var ol = $('pickList');
+    ol.innerHTML = '';
+    found.slice(0, PICK_SHOW).forEach(function(i){
+      var t = picking.games[i].tags, b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pick-game';
+      b.setAttribute('data-game', i);
+      b.innerHTML = '<b></b><span></span>';
+      b.querySelector('b').textContent = (known(t.White) || 'White') + ' – ' + (known(t.Black) || 'Black') +
+        (t.Result && t.Result !== '*' ? ' · ' + t.Result.replace('1/2-1/2', '½–½') : '');
+      b.querySelector('span').textContent = [known(t.Event), known(t.Date), known(t.Round) ? 'round ' + t.Round : '']
+        .filter(Boolean).join(' · ') || 'Game ' + (i + 1);
+      var li = document.createElement('li');
+      li.appendChild(b);
+      ol.appendChild(li);
+    });
+    $('pickCount').textContent = !found.length ? 'No games match.'
+      : found.length > PICK_SHOW ? 'Showing the first ' + PICK_SHOW + ' of ' + found.length.toLocaleString('en') + '. Search to narrow them down.' : '';
+  }
+  function choose(i){
+    var r = C.parsePgn(picking.games[i].text), n = picking.games.length;
+    if (r.error) { $('pickMsg').textContent = 'Couldn’t read game ' + (i + 1) + '. ' + r.error; return; }
+    hideModal();
+    openGame(r, picking.name + ' · game ' + (i + 1).toLocaleString('en') + ' of ' + n.toLocaleString('en'), true);
+  }
+
   // Reviews a game read from a file. A game paused before is kept, and
-  // "Back to your game" returns to it.
-  function openGame(r, fileName){
+  // "Back to your game" returns to it. A game picked from a file of several
+  // can be swapped for another of them.
+  function openGame(r, fileName, picked){
     var g = r.game, t = r.tags, st = C.status(g), paused = state === 'paused' || (review && review.info.back === 'paused');
     var outcome = r.result !== '*' ? RESULTS[r.result]
       : st.result === 'checkmate' ? 'Checkmate — ' + COLOR[st.winner] + ' wins'
@@ -902,7 +979,7 @@
       kicker: fileName, outcome: outcome === RESULTS['*'] ? null : outcome,
       title: (t.White && t.White !== '?' ? t.White : 'White') + ' vs ' + (t.Black && t.Black !== '?' ? t.Black : 'Black'),
       text: about.filter(Boolean).join(' · '),
-      side: 'w', back: paused ? 'paused' : 'start', again: paused ? 'Back to your game' : 'Play a game', replay: true
+      side: 'w', back: paused ? 'paused' : 'start', again: paused ? 'Back to your game' : 'Play a game', replay: true, picked: !!picked
     });
   }
 
@@ -1118,8 +1195,8 @@
     Home: function(){ return 0; }, End: function(){ return review.game.moves.length; }
   };
   document.addEventListener('keydown', function(e){
-    if (!pasteEl.hidden) {
-      if (e.code === 'Escape') { closePaste(); e.preventDefault(); }
+    if (modal) {
+      if (e.code === 'Escape') { closeModal(); e.preventDefault(); }
       return;
     }
     if (e.code === 'Escape' && !promoEl.hidden) { closePromo(); e.preventDefault(); return; }
@@ -1161,13 +1238,25 @@
 
   // Game files: the buttons open the file picker.
   [$('importBtn'), $('anotherBtn')].forEach(function(btn){
-    btn.addEventListener('click', function(){ fileEl.click(); });
+    btn.addEventListener('click', function(){ fileFrom = btn; fileEl.click(); });
   });
   $('pasteBtn').addEventListener('click', openPaste);
   $('pasteAgainBtn').addEventListener('click', openPaste);
   $('pasteGo').addEventListener('click', readPasted);
-  $('pasteCancel').addEventListener('click', closePaste);
-  pasteEl.addEventListener('click', function(e){ if (e.target === pasteEl) closePaste(); });
+  $('pasteCancel').addEventListener('click', closeModal);
+  $('pickCancel').addEventListener('click', closeModal);
+  [pasteEl, pickEl].forEach(function(el){
+    el.addEventListener('click', function(e){ if (e.target === el) closeModal(); });
+  });
+  pickSearch.addEventListener('input', listPicks);
+  $('pickList').addEventListener('click', function(e){
+    var btn = e.target.closest('.pick-game');
+    if (btn) choose(parseInt(btn.getAttribute('data-game'), 10));
+  });
+  $('pickAgainBtn').addEventListener('click', function(e){
+    $('pickMsg').textContent = '';
+    openModal(pickEl, e.currentTarget, pickSearch);
+  });
   fileEl.addEventListener('change', function(){
     var file = fileEl.files[0];
     fileEl.value = '';

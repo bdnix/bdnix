@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="/assets/css/icon-btn.css?v=20fd350a8d">
   <link rel="stylesheet" href="/assets/css/game.css?v=5d7bc45b69">
   <link rel="stylesheet" href="/assets/css/seg.css?v=9c1df52699">
-  <link rel="stylesheet" href="/assets/css/chess.css?v=70fa449221">
+  <link rel="stylesheet" href="/assets/css/chess.css?v=54ad5f4c30">
   <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
 </head>
 <body class="play">
@@ -168,20 +168,36 @@
         <button type="button" id="againBtn" class="btn btn-primary">Play again</button>
         <button type="button" id="anotherBtn" class="btn btn-ghost">Analyse a game file</button>
         <button type="button" id="pasteAgainBtn" class="btn btn-ghost">Paste a game</button>
+        <button type="button" id="pickAgainBtn" class="btn btn-ghost" hidden>Another game from the file</button>
       </div>
       <p id="reviewMsg" class="review-msg" aria-live="polite"></p>
     </section>
   </main>
 
-  <div class="paste" id="paste" hidden>
-    <div class="panel paste-box" role="dialog" aria-modal="true" aria-labelledby="pasteTitle">
+  <div class="modal" id="paste" hidden>
+    <div class="panel modal-box" role="dialog" aria-modal="true" aria-labelledby="pasteTitle">
       <h2 id="pasteTitle">Paste a game</h2>
       <label for="pgnText">A PGN, or just the moves, such as 1. e4 e5 2. Nf3</label>
       <textarea id="pgnText" rows="8" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
-      <p id="pasteMsg" class="paste-msg" aria-live="polite"></p>
-      <div class="paste-actions">
+      <p id="pasteMsg" class="modal-msg" aria-live="polite"></p>
+      <div class="modal-actions">
         <button type="button" id="pasteGo" class="btn btn-primary">Analyse</button>
         <button type="button" id="pasteCancel" class="btn btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="pick" hidden>
+    <div class="panel modal-box" role="dialog" aria-modal="true" aria-labelledby="pickTitle" aria-describedby="pickAbout">
+      <h2 id="pickTitle">Pick a game</h2>
+      <p id="pickAbout" class="pick-about"></p>
+      <label for="pickSearch">Search by player, event, year or result</label>
+      <input type="search" id="pickSearch" autocomplete="off" spellcheck="false">
+      <ol id="pickList" class="pick-list" aria-label="Games"></ol>
+      <p id="pickCount" class="pick-count" aria-live="polite"></p>
+      <p id="pickMsg" class="modal-msg" aria-live="polite"></p>
+      <div class="modal-actions">
+        <button type="button" id="pickCancel" class="btn btn-ghost">Cancel</button>
       </div>
     </div>
   </div>
@@ -191,7 +207,7 @@
   <script src="/assets/js/sound.js?v=7a74a68ae2"></script>
   <script src="/assets/js/gamebar.js?v=aefe068990"></script>
   <script src="/assets/js/upright.js?v=280cffb58a"></script>
-  <script src="/assets/js/chess-core.js?v=c1d93a028f"></script>
-  <script src="/assets/js/chess.js?v=a686b0865e"></script>
+  <script src="/assets/js/chess-core.js?v=5db9fb8f30"></script>
+  <script src="/assets/js/chess.js?v=87c9e95629"></script>
 </body>
 </html>
