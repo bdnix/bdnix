@@ -6,6 +6,7 @@ Every tool runs entirely in the browser. Files are never uploaded, and all proce
 - [Watermark PDF](#watermark-pdf)
 - [Redact PDF](#redact-pdf)
 - [Sign PDF](#sign-pdf)
+- [Unlock PDF](#unlock-pdf)
 - [MP4 to MP3](#mp4-to-mp3)
 - [Compress Images](#compress-images)
 - [Photo Collage](#photo-collage)
@@ -88,6 +89,20 @@ A signature that's on the open PDF isn't deleted straight away: **Delete** says 
 **Sign PDF** stamps the signatures into the file and offers it as `report-signed.pdf`. The rest of the file is left as it was: its text stays selectable, and each signature image is stored once however many pages it's on. Pages turned with `/Rotate` are handled, so a signature comes out exactly as it was placed in the preview.
 
 This is a picture of a signature, like signing a printout, not a cryptographic digital signature.
+
+## Unlock PDF
+
+`/unlock-pdf/`
+
+Open a password-protected PDF, type its password, and download `<name>-unlocked.pdf`, a copy that opens without one. The tool needs the password; it removes a password you know and never tries to guess one.
+
+- Either password works: the **user password** that opens the file, or the **owner password**. Both take off all of the encryption, so the limits a PDF can set on printing, copying and editing go too.
+- A PDF that opens without a password but restricts printing, copying or editing says so, and takes its owner password to lift the limits.
+- Pages, text, links, form fields, attachments and metadata are kept as they are: every string and stream is decrypted in place and the file is saved without its encryption dictionary. Nothing is redrawn.
+- It reads the standard PDF security handler in every revision: RC4 (40 to 128 bit), AES-128 and AES-256 (revisions 2 to 6), including object streams and crypt filters. Files encrypted for a certificate (public-key security) can't be unlocked and say so.
+- A file that isn't password-protected says so, as there's nothing to remove.
+
+pdf-lib can't decrypt, so the decryption is the tool's own: `unlock-core.js` holds the security handler and the MD5, SHA-256/384/512, RC4 and AES it needs, checked against Node's crypto in `tests/unit/unlock-core.test.mjs`. Neither the file nor the password leaves the browser.
 
 ## MP4 to MP3
 

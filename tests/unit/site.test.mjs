@@ -29,7 +29,7 @@ test('site: every game and tool has a card, and every game a best-score key', ()
     else assert.equal(p.app.best, undefined, p.path);
   }
   assert.equal(apps.filter((p) => p.app.kind === 'game').length, 6);
-  assert.equal(apps.filter((p) => p.app.kind === 'tool').length, 8);
+  assert.equal(apps.filter((p) => p.app.kind === 'tool').length, 9);
 });
 
 test('meta: title, description, canonical URL, share tags and structured data', () => {
@@ -67,7 +67,7 @@ test('cards and scores follow the order of the list', () => {
   const html = cards(pages, 'games').join('\n');
   const hrefs = [...html.matchAll(/<a class="card panel" href="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(hrefs, apps.filter((p) => p.app.kind === 'game').map((p) => p.path));
-  assert.equal(cards(pages, 'tools').filter((l) => l.startsWith('<a ')).length, 8);
+  assert.equal(cards(pages, 'tools').filter((l) => l.startsWith('<a ')).length, 9);
   assert.deepEqual(cards(pages, 'nothing'), []);
   const rows = scores(pages).filter((l) => l.startsWith('<div class="score panel"'));
   assert.deepEqual(rows.map((l) => l.match(/data-best="([^"]+)"/)[1]),
