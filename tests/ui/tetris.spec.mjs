@@ -106,8 +106,6 @@ test('stacking to the top ends the game and saves the best score', async ({ page
   await expect(page.locator('#score')).toHaveText('0');
   await expect(page.locator('#best')).toHaveText(score);
 
-  await page.goto('/profile/');
-  await expect(page.locator('.score').first().locator('b')).toHaveText(Number(score).toLocaleString('en-US'));
 });
 
 test('a reload keeps the game, paused where it was', async ({ page }) => {

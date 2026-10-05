@@ -1,5 +1,6 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { openGame, press, listen, heard, soundProblems } from './games.mjs';
+import { axeProblems } from './checks.mjs';
 
 // Most tests play against a stand-in for Stockfish (fakeEngine), so every
 // game goes the same way. Asked for a move, it plays the next move the test
@@ -662,4 +663,14 @@ test('a review says so when Stockfish can\'t be fetched, and tries again', async
   await expect(page.locator('#blunderW')).toHaveText('1');
   await expect(page.locator('.mv.blunder .san')).toHaveText('g4');
   await expect(page.locator('#moveNow')).toHaveText('2… Qh4#: Best move.');
+});
+
+test('a game review passes axe', async ({ page }) => {
+  // Not openGame(): axe needs a running clock.
+  await fakeEngine(page);
+  await page.goto('/chess/');
+  await page.locator('#pgnFile').setInputFiles(file('fools.pgn', FOOLS));
+  await reviewed(page);
+  await page.locator('.mv').nth(2).click();
+  expect(await axeProblems(page)).toEqual([]);
 });

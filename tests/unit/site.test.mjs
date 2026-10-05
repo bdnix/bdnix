@@ -1,11 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { SITE, pages } from '../../scripts/site.mjs';
 import { schema, meta, footer, cards, scores, fill, sitemap, esc, CSP } from '../../scripts/parts.mjs';
 
 // scripts/site.mjs lists every page; scripts/parts.mjs turns it into the
 // parts of the pages that scripts/build.mjs writes.
 const apps = pages.filter((p) => p.app);
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 test('site: every page once, each with a title and description', () => {
   const paths = pages.map((p) => p.path);
@@ -107,4 +111,40 @@ test('the content security policy: the site\'s own files, Google Analytics, noth
     assert.ok(!v.includes('*') && !v.includes('https:'), k);        // no wide-open sources
   }
   assert.ok(!CSP.includes('"'));                                     // safe inside content="..."
+});
+
+test('site: titles and descriptions are unique, and short enough for search results', () => {
+  assert.equal(new Set(pages.map((p) => p.title)).size, pages.length);
+  assert.equal(new Set(pages.map((p) => p.description)).size, pages.length);
+  for (const p of pages) {
+    assert.ok(p.title.length <= 60, p.path);
+    assert.ok(p.description.length <= 230, p.path);
+    if (!p.noindex) assert.ok(p.description.length >= 70, p.path);
+  }
+});
+
+test('site: sitemap.xml lists exactly the public pages', () => {
+  assert.equal(fs.readFileSync(path.join(root, 'sitemap.xml'), 'utf8'), sitemap(pages));
+});
+
+// Every page runs the checks every page gets (checkPage in tests/ui/checks.mjs),
+// and every game the checks every game gets (checkGame), from its own
+// tests/ui/<app>.site.spec.mjs. There are no lists of pages to keep up to
+// date in the shared specs, so adding an app only runs its own tests.
+test('site: every page has its own site spec, which runs the shared checks for it', () => {
+  const dir = path.join(root, 'tests/ui');
+  const specs = fs.readdirSync(dir).filter((f) => f.endsWith('.site.spec.mjs'))
+    .map((f) => ({ file: f, text: fs.readFileSync(path.join(dir, f), 'utf8') }));
+  const calls = (fn) => specs.flatMap((s) => [...s.text.matchAll(new RegExp(`\\b${fn}\\('([^']*)'`, 'g'))].map((m) => [m[1], s.file]));
+  const pageChecks = calls('checkPage'), gameChecks = calls('checkGame');
+  for (const p of pages) {
+    const own = pageChecks.filter(([url]) => url === p.path);
+    assert.equal(own.length, 1, `${p.path}: one checkPage() in a tests/ui/*.site.spec.mjs`);
+    const games = gameChecks.filter(([url]) => url === p.path);
+    assert.equal(games.length, p.app && p.app.kind === 'game' ? 1 : 0, `${p.path}: checkGame() for a game only`);
+    if (games.length) assert.equal(games[0][1], own[0][1], `${p.path}: both in the same spec`);
+  }
+  // Nothing checked that isn't a page, and one page per site spec.
+  for (const [url, file] of pageChecks) assert.ok(pages.some((p) => p.path === url), `${file}: ${url} isn't in scripts/site.mjs`);
+  assert.equal(new Set(pageChecks.map(([, file]) => file)).size, pageChecks.length);
 });

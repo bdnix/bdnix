@@ -56,7 +56,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: coverage/unit/lcov.info
-          key: unit-results-${{ runner.os }}-node-${{ steps.setup.outputs.node-version }}-${{ hashFiles('assets/js/**', 'assets/vendor/**', 'tests/unit/**', 'tests/ui/pdfs.mjs', 'scripts/site.mjs', 'scripts/parts.mjs', 'tests/coverage/**', 'package.json', 'package-lock.json') }}
+          key: unit-results-${{ runner.os }}-node-${{ steps.setup.outputs.node-version }}-${{ hashFiles('assets/js/**', 'assets/vendor/**', 'tests/unit/**', 'tests/ui/pdfs.mjs', 'tests/ui/*.site.spec.mjs', 'scripts/site.mjs', 'scripts/parts.mjs', 'sitemap.xml', 'tests/coverage/**', 'package.json', 'package-lock.json') }}
       # Runs even if the hash check failed, so one run reports both.
       - name: Unit tests with coverage
         if: ${{ !cancelled() && steps.results.outputs.cache-hit != 'true' }}

@@ -1,4 +1,5 @@
-import { test, expect } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { LIVE, TAG, watchGoogle, serveLive } from './checks.mjs';
 
 const scores = (page) => page.locator('.score').evaluateAll((els) => els.map((e) => ({
   game: e.querySelector('span').textContent,
@@ -6,52 +7,44 @@ const scores = (page) => page.locator('.score').evaluateAll((els) => els.map((e)
   link: e.querySelector('a').textContent + ' ' + e.querySelector('a').getAttribute('href')
 })));
 
+// Each game's row: the key its best score is kept under, and the word
+// (if any) shown before it.
+const rows = (page) => page.locator('.score').evaluateAll((els) => els.map((e) => ({ key: e.dataset.best, label: e.dataset.bestLabel || '' })));
+
 test('a new visitor is "User" with no scores yet', async ({ page }) => {
   await page.goto('/profile/');
   await expect(page.locator('h1')).toHaveText('User');
   await expect(page.locator('.avatar-lg')).toHaveText('U');
-  expect(await scores(page)).toEqual([
-    { game: 'Falling Blocks', best: 'Not played yet', link: 'Play /falling-blocks/' },
-    { game: 'Maze Chase', best: 'Not played yet', link: 'Play /maze-chase/' },
-    { game: 'Flap', best: 'Not played yet', link: 'Play /flap/' },
-    { game: 'Road Hop', best: 'Not played yet', link: 'Play /road-hop/' },
-    { game: 'Snake', best: 'Not played yet', link: 'Play /snake/' },
-    { game: 'Brick Bounce', best: 'Not played yet', link: 'Play /brick-bounce/' },
-    { game: 'Chess', best: 'Not played yet', link: 'Play /chess/' }
-  ]);
+  const shown = await scores(page);
+  expect(shown.length).toBeGreaterThan(0);
+  for (const s of shown) {
+    expect(s.best, s.game).toBe('Not played yet');
+    expect(s.link, s.game).toMatch(/^Play \/[a-z0-9-]+\/$/);
+  }
 });
 
-test('shows the best scores the games saved', async ({ page }) => {
+test('shows the best scores the games saved, after the game\'s own word for them', async ({ page }) => {
   await page.goto('/profile/');
-  await page.evaluate(() => {
-    localStorage.setItem('bdnix_tetris_best', '12450');
-    localStorage.setItem('bdnix_pacman_best', '3120');
-    localStorage.setItem('bdnix_flappy_best', '27');
-    localStorage.setItem('bdnix_hop_best', '42');
-    localStorage.setItem('bdnix_snake_best', '57');
-    localStorage.setItem('bdnix_bricks_best', '320');
-    localStorage.setItem('bdnix_chess_best', '4');
-  });
+  const games = await rows(page);
+  expect(games.some((g) => g.label), 'a game with a label for its best').toBe(true);
+  await page.evaluate((keys) => keys.forEach((k, i) => localStorage.setItem(k, String(12450 + i))), games.map((g) => g.key));
   await page.reload();
-  expect(await scores(page)).toEqual([
-    { game: 'Falling Blocks', best: '12,450', link: 'Play again /falling-blocks/' },
-    { game: 'Maze Chase', best: '3,120', link: 'Play again /maze-chase/' },
-    { game: 'Flap', best: '27', link: 'Play again /flap/' },
-    { game: 'Road Hop', best: '42', link: 'Play again /road-hop/' },
-    { game: 'Snake', best: '57', link: 'Play again /snake/' },
-    { game: 'Brick Bounce', best: '320', link: 'Play again /brick-bounce/' },
-    { game: 'Chess', best: 'Level 4', link: 'Play again /chess/' }
-  ]);
+  const shown = await scores(page);
+  games.forEach((g, i) => {
+    expect(shown[i].best, g.key).toBe((g.label ? g.label + ' ' : '') + (12450 + i).toLocaleString('en-US'));
+    expect(shown[i].link, g.key).toMatch(/^Play again \//);
+  });
 });
 
 test('junk scores count as not played, and the landing page’s visits are counted', async ({ page }) => {
   await page.goto('/profile/');
   await expect(page.locator('#visits')).toHaveText('');
-  await page.evaluate(() => {
-    localStorage.setItem('bdnix_tetris_best', 'abc');
-    localStorage.setItem('bdnix_pacman_best', '-5');
+  const [a, b] = await rows(page);
+  await page.evaluate(([x, y]) => {
+    localStorage.setItem(x, 'abc');
+    localStorage.setItem(y, '-5');
     localStorage.setItem('bdnix_visits', '1');
-  });
+  }, [a.key, b.key]);
   await page.reload();
   expect((await scores(page)).slice(0, 2).map((s) => s.best)).toEqual(['Not played yet', 'Not played yet']);
   await expect(page.locator('#visits')).toHaveText('You’ve visited bdnix once.');
@@ -62,10 +55,11 @@ test('junk scores count as not played, and the landing page’s visits are count
 
 test('a score saved in another tab shows up straight away', async ({ page, context }) => {
   await page.goto('/profile/');
-  const game = await context.newPage();
-  await game.goto('/falling-blocks/');
-  await game.evaluate(() => localStorage.setItem('bdnix_tetris_best', '20000'));
-  await expect(page.locator('.score').first().locator('b')).toHaveText('20,000');
+  const [first] = await rows(page);
+  const other = await context.newPage();
+  await other.goto('/profile/');
+  await other.evaluate((k) => localStorage.setItem(k, '20000'), first.key);
+  await expect(page.locator('.score').first().locator('b')).toHaveText((first.label ? first.label + ' ' : '') + '20,000');
 });
 
 test('editing the name saves it and updates the chip elsewhere', async ({ page }) => {
@@ -115,4 +109,43 @@ test('works without storage, showing no scores', async ({ page }) => {
   await expect(page.locator('h1')).toHaveText('User');
   expect((await scores(page)).every((s) => s.best === 'Not played yet')).toBe(true);
   await expect(page.locator('#visits')).toHaveText('');
+});
+
+test('the profile page turns analytics on and off', async ({ page }) => {
+  const google = watchGoogle(page);
+  await serveLive(page);
+  await page.goto(LIVE + '/profile/');
+  const state = page.locator('#analyticsState');
+  const toggle = page.locator('#analyticsBtn');
+  await expect(state).toHaveText(/^Off\./);
+  await expect(toggle).toHaveText('Turn on');
+  await expectNoSideScroll(page);
+
+  // Choosing here answers the banner too.
+  await toggle.click();
+  await expect(page.locator('.consent')).toHaveCount(0);
+  await expect(state).toHaveText(/^On\./);
+  await expect(toggle).toHaveText('Turn off');
+  await expect(page.locator('#msg')).toHaveText('Analytics cookies turned on. Thanks!');
+  await expect.poll(() => google).toEqual([TAG]);
+
+  await toggle.click();
+  await expect(state).toHaveText(/^Off\./);
+  await expect(page.locator('#msg')).toHaveText('Analytics cookies turned off.');
+  const last = await page.evaluate(() => Array.prototype.slice.call(window.dataLayer[window.dataLayer.length - 1]));
+  expect(last).toEqual(['consent', 'update', { analytics_storage: 'denied' }]);
+
+  await page.reload();
+  await expect(state).toHaveText(/^Off\./);
+  await expect(page.locator('.consent')).toHaveCount(0);
+  expect(google).toEqual([TAG]);
+});
+
+test('answering the banner on the profile page updates the setting there', async ({ page }) => {
+  await serveLive(page);
+  await page.goto(LIVE + '/profile/');
+  await expect(page.locator('#analyticsBtn')).toHaveText('Turn on');
+  await page.getByRole('button', { name: 'Accept' }).click();
+  await expect(page.locator('#analyticsState')).toHaveText(/^On\./);
+  await expect(page.locator('#analyticsBtn')).toHaveText('Turn off');
 });

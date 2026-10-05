@@ -6,14 +6,18 @@ test('shows the games and tools, with no under-construction wording', async ({ p
   await expect(page.locator('h1')).toHaveText('Play a little.Get things done.');
   await expect(page.locator('body')).not.toContainText(/under construction|check back soon|being built/i);
 
-  const cards = page.locator('.card');
-  await expect(cards).toHaveCount(16);
-  const links = await cards.evaluateAll((els) => els.map((a) => [a.querySelector('b').textContent, a.getAttribute('href')]));
-  expect(links).toEqual([
-    ['Falling Blocks', '/falling-blocks/'], ['Maze Chase', '/maze-chase/'], ['Flap', '/flap/'], ['Road Hop', '/road-hop/'], ['Snake', '/snake/'], ['Brick Bounce', '/brick-bounce/'], ['Chess', '/chess/'],
-    ['Merge PDFs', '/merge-pdf/'], ['Watermark a PDF', '/watermark-pdf/'], ['Redact a PDF', '/redact-pdf/'], ['Sign a PDF', '/sign-pdf/'], ['Unlock a PDF', '/unlock-pdf/'], ['MP4 to MP3', '/mp4-to-mp3/'],
-    ['Compress Images', '/compress-image/'], ['Photo Collage', '/photo-collage/'], ['Resize Without Cropping', '/fit-to-frame/']
-  ]);
+  // A card for every game and tool (written from scripts/site.mjs), each a
+  // link to its page with an icon, a name and a line about it.
+  for (const section of ['Games', 'Tools']) {
+    const cards = page.getByRole('region', { name: section }).locator('.card');
+    expect(await cards.count(), section).toBeGreaterThan(0);
+    for (const card of await cards.all()) {
+      await expect(card).toHaveAttribute('href', /^\/[a-z0-9-]+\/$/);
+      await expect(card.locator('.card-icon')).toBeVisible();
+      await expect(card.locator('b')).toHaveText(/\w/);
+      await expect(card.locator('.card-text > span')).toHaveText(/\w/);
+    }
+  }
   await expectNoSideScroll(page);
 });
 
@@ -55,26 +59,6 @@ test('welcome line greets first-time and returning visitors', async ({ page }) =
   await expect(page.locator('#visit')).toHaveText('Welcome back, Musa. Visit #9, you’re a regular now.');
 });
 
-for (const path of ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/chess/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/unlock-pdf/', '/mp4-to-mp3/', '/compress-image/', '/photo-collage/', '/fit-to-frame/', '/profile/']) {
-  test(`${path} fits the screen without scrolling sideways`, async ({ page }) => {
-    await page.goto(path);
-    await expectNoSideScroll(page);
-  });
-}
-
-test('every page links its own scripts and styles with a content hash, and they load', async ({ page }) => {
-  for (const path of ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/chess/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/unlock-pdf/', '/mp4-to-mp3/', '/compress-image/', '/photo-collage/', '/fit-to-frame/', '/profile/']) {
-    const failed = [];
-    page.on('response', (r) => { if (r.url().includes('/assets/') && r.status() >= 400) failed.push(r.url()); });
-    await page.goto(path);
-    const own = await page.locator('script[src^="/assets/js/"], link[href^="/assets/css/"]')
-      .evaluateAll((els) => els.map((e) => e.getAttribute('src') || e.getAttribute('href')));
-    expect(own.length, `${path} has scripts and styles`).toBeGreaterThan(1);
-    for (const url of own) expect(url, path).toMatch(/^\/assets\/(js\/[\w-]+\.js|css\/[\w-]+\.css)\?v=[0-9a-f]{10}$/);
-    expect(failed, `${path}: assets that failed to load`).toEqual([]);
-  }
-});
-
 test('asks for tool and game requests by email or GitHub issue, and says the site is open source', async ({ page, request }) => {
   await page.goto('/');
   const suggest = page.getByRole('region', { name: 'Want a tool or game that isn’t here?' });
@@ -99,16 +83,7 @@ test('asks for tool and game requests by email or GitHub issue, and says the sit
   await expectNoSideScroll(page);
 });
 
-test('every page with a footer links to the GitHub repository and to the request section', async ({ page }) => {
-  for (const url of ['/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/unlock-pdf/', '/mp4-to-mp3/', '/compress-image/', '/photo-collage/', '/fit-to-frame/', '/profile/']) {
-    await page.goto(url);
-    const foot = page.locator('footer.foot');
-    await expect(foot.getByRole('link', { name: 'Open source on GitHub' }), url).toHaveAttribute('href', 'https://github.com/bdnix/bdnix');
-    await expect(foot.getByRole('link', { name: 'Suggest a tool or game' }), url).toHaveAttribute('href', '/#suggest');
-    await expect(foot.getByRole('link', { name: 'root@bdnix.com' }), url).toHaveAttribute('href', 'mailto:root@bdnix.com');
-    await expectNoSideScroll(page);
-  }
-
+test('a page\'s footer link to the request section goes there', async ({ page }) => {
   await page.goto('/merge-pdf/');
   await page.getByRole('link', { name: 'Suggest a tool or game' }).click();
   await expect(page).toHaveURL(/\/#suggest$/);
@@ -123,47 +98,45 @@ test('the search box filters the games and tools as you type', async ({ page }) 
   const games = page.getByRole('region', { name: 'Games' });
   const tools = page.getByRole('region', { name: 'Tools' });
   const shown = () => page.locator('.card:visible b').allTextContents();
+  const all = await page.locator('.card').count();
+  const gameNames = await games.locator('.card b').allTextContents();
 
-  await expect(page.locator('.card:visible')).toHaveCount(16);
+  await expect(page.locator('.card:visible')).toHaveCount(all);
   await expect(status).toHaveText('');
   await expect(empty).toBeHidden();
 
   // Names, descriptions and keywords all count; the other section hides.
   await search.fill('pdf');
-  expect(await shown()).toEqual(['Merge PDFs', 'Watermark a PDF', 'Redact a PDF', 'Sign a PDF', 'Unlock a PDF']);
-  await expect(status).toHaveText('5 matches');
+  const pdf = await shown();
+  expect(pdf).toEqual(expect.arrayContaining(['Merge PDFs', 'Sign a PDF']));
+  await expect(status).toHaveText(pdf.length + ' matches');
   await expect(games).toBeHidden();
   await expect(tools).toBeVisible();
 
-  await search.fill('signature');
-  expect(await shown()).toEqual(['Sign a PDF']);
-
-  await search.fill('password');
-  expect(await shown()).toEqual(['Unlock a PDF']);
-
+  // A word from a card's keywords finds it, even when its name doesn't say it.
   await search.fill('ghosts');
-  expect(await shown()).toEqual(['Maze Chase']);
-  await expect(status).toHaveText('1 match');
+  expect(await shown()).toContain('Maze Chase');
   await expect(tools).toBeHidden();
 
-  await search.fill('Photo');
-  expect(await shown()).toEqual(['Compress Images', 'Photo Collage', 'Resize Without Cropping']);
-
+  // Every game says it's a game; plurals find the singular.
   await search.fill('game');
-  expect(await shown()).toEqual(['Falling Blocks', 'Maze Chase', 'Flap', 'Road Hop', 'Snake', 'Brick Bounce', 'Chess']);
-
-  // Plurals find the singular.
+  expect(await shown()).toEqual(gameNames);
   await search.fill('games');
-  expect(await shown()).toEqual(['Falling Blocks', 'Maze Chase', 'Flap', 'Road Hop', 'Snake', 'Brick Bounce', 'Chess']);
+  expect(await shown()).toEqual(gameNames);
+  await search.fill('photo');
+  const photo = await shown();
+  expect(photo).toEqual(expect.arrayContaining(['Compress Images', 'Photo Collage']));
   await search.fill('photos');
-  expect(await shown()).toEqual(['Compress Images', 'Photo Collage', 'Resize Without Cropping']);
+  expect(await shown()).toEqual(photo);
 
   // Every word has to match.
   await search.fill('photo grid');
-  expect(await shown()).toEqual(['Photo Collage']);
+  const grid = await shown();
+  expect(grid).toContain('Photo Collage');
+  expect(grid.length).toBeLessThan(photo.length);
 
   // Nothing left: both sections hide and the page asks for a request.
-  await search.fill('spreadsheet');
+  await search.fill('zqxjv');
   expect(await shown()).toEqual([]);
   await expect(games).toBeHidden();
   await expect(tools).toBeHidden();
@@ -175,10 +148,10 @@ test('the search box filters the games and tools as you type', async ({ page }) 
 
   // Escape clears the search and brings everything back.
   await search.fill('snake');
-  expect(await shown()).toEqual(['Snake']);
+  expect(await shown()).toContain('Snake');
   await search.press('Escape');
   await expect(search).toHaveValue('');
-  await expect(page.locator('.card:visible')).toHaveCount(16);
+  await expect(page.locator('.card:visible')).toHaveCount(all);
   await expect(status).toHaveText('');
   await expect(empty).toBeHidden();
   await expectNoSideScroll(page);
@@ -193,7 +166,7 @@ test('"/" jumps to the search box, but types normally inside it', async ({ page 
   await expect(search).toHaveValue('');
   await page.keyboard.type('mp4/');
   await expect(search).toHaveValue('mp4/');
-  expect(await page.locator('.card:visible b').allTextContents()).toEqual(['MP4 to MP3']);
+  expect(await page.locator('.card:visible b').allTextContents()).toContain('MP4 to MP3');
 
   // Held with a modifier, it's left to the browser.
   await search.blur();
@@ -211,8 +184,9 @@ test('a search already in the box when the page loads is applied', async ({ page
   });
   await page.goto('/');
   await expect(page.locator('#search')).toHaveValue('bounce');
-  expect(await page.locator('.card:visible b').allTextContents()).toEqual(['Brick Bounce']);
-  await expect(page.locator('#search-status')).toHaveText('1 match');
+  const found = await page.locator('.card:visible b').allTextContents();
+  expect(found).toContain('Brick Bounce');
+  await expect(page.locator('#search-status')).toHaveText(found.length + (found.length === 1 ? ' match' : ' matches'));
 });
 
 test('the cards fill a laptop in three columns, a wide monitor in four, and stack on a phone', async ({ page }) => {

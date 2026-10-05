@@ -1,48 +1,12 @@
-import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.mjs';
 import { press } from './games.mjs';
 import { upload, numberedPdf } from './pdfs.mjs';
+import { axeProblems } from './checks.mjs';
 
-// What screen reader and keyboard users need from every page.
-const pages = [
-  '/', '/profile/',
-  '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/chess/',
-  '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/unlock-pdf/', '/mp4-to-mp3/',
-  '/compress-image/', '/photo-collage/', '/fit-to-frame/'
-];
-
-for (const url of pages) {
-  test(`${url}: canvases are labelled pictures, and buttons say what they are`, async ({ page }) => {
-    await page.goto(url);
-    // The backdrop is decoration; every other canvas is a picture with a name.
-    const canvases = await page.locator('canvas:not(#bg)').evaluateAll((els) =>
-      els.map((c) => ({ id: c.id, role: c.getAttribute('role'), label: c.getAttribute('aria-label') })));
-    for (const c of canvases) {
-      expect(c.role, `#${c.id} role`).toBe('img');
-      expect(c.label, `#${c.id} label`).toBeTruthy();
-    }
-    await expect(page.locator('canvas#bg')).toHaveAttribute('aria-hidden', 'true');
-    // Outside a form a button without a type still works, but saying so keeps
-    // one from submitting anything if it ever ends up inside one.
-    await expect(page.locator('button:not([type])')).toHaveCount(0);
-  });
-}
-
-// axe checks each page against WCAG 2.1 A and AA. Its colour contrast check
-// can't judge text over the site's gradients and translucent panels, so it
-// reports those as incomplete rather than as violations.
-async function axeProblems(page){
-  const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
-  return violations.map((v) => `${v.id} (${v.impact}): ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
-}
-
-for (const url of pages) {
-  test(`${url}: axe finds nothing to fix`, async ({ page }) => {
-    await page.goto(url);
-    expect(await axeProblems(page)).toEqual([]);
-  });
-}
-
+// Every page is checked with axe as it opens (checkPage in checks.mjs, from
+// each app's own site spec). This checks the shared parts in the states
+// they're in once a page is in use: a game's pause screen and a tool's file
+// list and preview.
 test('a paused game, and a tool with files in it, pass axe too', async ({ page }) => {
   // Not openGame(): axe needs a running clock, and the snake waits for the
   // first turn before it moves, so nothing happens while axe looks.
@@ -58,13 +22,5 @@ test('a paused game, and a tool with files in it, pass axe too', async ({ page }
   // With with the merged file's preview showing.
   await expect(page.locator('#pageLabel')).toHaveText('Page 1 of 5');
   await expect(page.locator('#pageCanvas')).toBeVisible();
-  expect(await axeProblems(page)).toEqual([]);
-});
-
-test('a chess game review passes axe', async ({ page }) => {
-  await page.goto('/chess/');
-  await page.locator('#pgnFile').setInputFiles({ name: 'game.pgn', mimeType: 'text/plain', buffer: Buffer.from('1. f3 e5 2. g4 Qh4# 0-1') });
-  await expect(page.locator('#reviewProgress')).toHaveText('Analysed by Stockfish, 16 moves deep.', { timeout: 30000 });
-  await page.locator('.mv').nth(2).click();
   expect(await axeProblems(page)).toEqual([]);
 });
