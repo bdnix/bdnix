@@ -495,6 +495,21 @@
     var drop = Math.max(0, (before - after) * 50);    // in winning-percentage points
     return Math.max(0, Math.min(100, 103.1668 * Math.exp(-0.04354 * drop) - 3.1669));
   }
+  // A side's chances of winning, as a percentage from 0 to 100.
+  function winChance(e, c){
+    return Math.round(50 + 50 * chances(e) * (c === 'w' ? 1 : -1));
+  }
+  // How a position stands, in words: who mates in how many, or who's ahead
+  // and by how much (from White's chances: under 0.1 either way is equal).
+  function outlook(e){
+    if (e.mate !== undefined) {
+      if (e.mate === 0) return (e.lost === 'w' ? 'Black' : 'White') + ' has won';
+      return (e.mate > 0 ? 'White' : 'Black') + ' mates in ' + Math.abs(e.mate);
+    }
+    var c = chances(e), a = Math.abs(c), who = c > 0 ? 'White' : 'Black';
+    if (a < 0.1) return 'Equal';
+    return who + (a < 0.3 ? ' is slightly better' : a < 0.6 ? ' is better' : ' is winning');
+  }
   // An evaluation as people write it: +0.85, -1.20, M3 or -M3, # once mated.
   function formatEval(e){
     if (e.mate !== undefined) return e.mate === 0 ? '#' : (e.mate > 0 ? 'M' : '-M') + Math.abs(e.mate);
@@ -545,6 +560,6 @@
     key: key, insufficient: insufficient, status: status, material: material, perft: perft,
     positionCommand: positionCommand, parsePgn: parsePgn, readMove: readMove,
     parseInfo: parseInfo, whiteView: whiteView, centipawns: centipawns, chances: chances,
-    moveAccuracy: moveAccuracy, formatEval: formatEval, reviewGame: reviewGame
+    moveAccuracy: moveAccuracy, winChance: winChance, outlook: outlook, formatEval: formatEval, reviewGame: reviewGame
   };
 })();

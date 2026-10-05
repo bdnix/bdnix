@@ -12,6 +12,8 @@
     { skill: 18, depth: 12 }, { skill: 20, depth: 15 }
   ];
   var REVIEW_DEPTH = 16;          // how deep a review looks at each position
+  var PLAY_DEPTH = 12;            // how deep Stockfish looks playing on from a move tried
+  var PLAY_ON = 60;               // how many moves it plays on before it stops
   var REPLAY_STEP = 1000;         // ms between moves when a game is replayed
   var MAX_FILE = 1024 * 1024;     // a game file bigger than this isn't a game
   var NAMES = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
@@ -66,8 +68,10 @@
   // ---------- The engine ----------
   // One search at a time: `job` hears its lines (info) and its answer (done).
   // A search that's stopped still ends with a bestmove, so the next `stale`
-  // answers, and the lines before them, are ignored.
-  var engine = null, job = null, stale = 0;
+  // answers, and the lines before them, are ignored. Stockfish crashes when
+  // a search starts before a stopped one has answered, so a search asked
+  // for then waits (`queued`) until it has.
+  var engine = null, job = null, stale = 0, queued = null;
   function post(cmd){ engine.postMessage(cmd); }
   function startEngine(){
     if (engine) return;
@@ -79,11 +83,13 @@
   }
   function search(j, cmds){
     job = j;
-    cmds.forEach(post);
+    if (stale) queued = cmds;
+    else cmds.forEach(post);
   }
   function cancel(){
     if (!job) return;
     job = null;
+    if (queued) { queued = null; return; }     // never sent, so nothing to stop
     stale++;
     post('stop');
   }
@@ -95,7 +101,14 @@
     }
     var m = /^bestmove (\S+)/.exec(line);
     if (!m) return;
-    if (stale) { stale--; return; }
+    if (stale) {
+      if (!--stale && queued) {
+        var q = queued;
+        queued = null;
+        q.forEach(post);
+      }
+      return;
+    }
     var j = job;
     job = null;
     if (j) j.done(m[1]);
@@ -104,10 +117,13 @@
   // review says so with a button to try again.
   function engineFailed(){
     if (engine) { try { engine.terminate(); } catch (e) {} }
-    engine = null; job = null; stale = 0;
+    engine = null; job = null; stale = 0; queued = null;
     if (state === 'playing') pause(OFFLINE);
     else if (state === 'paused') ovText.textContent = OFFLINE;
-    else if (state === 'review') refreshReview();
+    else if (state === 'review') {
+      if (review.alt) review.alt.auto = false;
+      refreshReview();
+    }
     updateHud();
   }
 
@@ -180,10 +196,14 @@
     startReview(game, {
       kicker: st.result === 'checkmate' ? 'Checkmate' : 'Draw',
       title: st.result !== 'checkmate' ? 'Draw' : won ? 'You win!' : 'Stockfish wins',
-      text: (st.result === 'checkmate' ? 'Checkmate — ' + COLOR[st.winner] + ' wins' : ENDINGS[st.result]) +
-        ' · Level ' + lv + (record ? ' — your best yet!' : ''),
-      side: side, back: 'start', again: 'Play again'
+      text: ending(st) + ' · Level ' + lv + (record ? ' — your best yet!' : ''),
+      outcome: ending(st), side: side, mine: side, back: 'start', again: 'Play again'
     });
+  }
+
+  // How a game that's over ended, in words.
+  function ending(st){
+    return st.result === 'checkmate' ? 'Checkmate — ' + COLOR[st.winner] + ' wins' : ENDINGS[st.result];
   }
 
   function showOverlay(start, showNew){
@@ -266,19 +286,27 @@
   }
 
   // ---------- The visitor's moves ----------
+  // In a game, the visitor moves their own side's pieces on their turn. In a
+  // review, either side's, to try a different move (see tryOut), unless
+  // the game shown is over or Stockfish is playing on.
+  function mover(){ return C.current(shown()).turn; }
   function mine(sq){
-    var p = C.current(game).board[sq];
-    return !!p && C.colorOf(p) === side;
+    var p = C.current(shown()).board[sq];
+    return !!p && C.colorOf(p) === mover();
   }
-  function myTurn(){ return state === 'playing' && C.current(game).turn === side && !job; }
+  function myTurn(){
+    if (state === 'review') return !(review.alt && review.alt.auto) && !C.status(shown()).over;
+    return state === 'playing' && C.current(game).turn === side && !job;
+  }
   function targets(from){
-    return C.moves(C.current(game)).filter(function(m){ return m.from === from; });
+    return C.moves(C.current(shown())).filter(function(m){ return m.from === from; });
   }
 
   // A press on a square: picks up a piece of yours, or puts the one picked
-  // up down where it can go.
+  // up down where it can go. Picking up a piece stops a replay.
   function pick(sq){
     if (!myTurn()) return;
+    stopReplay();
     if (selected >= 0 && tryMove(selected, sq)) return;
     selected = mine(sq) && selected !== sq ? sq : -1;
     render();
@@ -293,6 +321,7 @@
     return true;
   }
   function finish(uci){
+    if (state === 'review') { tryOut(uci); return; }
     var m = C.play(game, uci);
     if (m) moved(m);
   }
@@ -306,7 +335,7 @@
       var b = document.createElement('button');
       b.type = 'button';
       b.setAttribute('aria-label', NAMES[t].charAt(0).toUpperCase() + NAMES[t].slice(1));
-      b.innerHTML = pieceSvg(side === 'w' ? t.toUpperCase() : t);
+      b.innerHTML = pieceSvg(mover() === 'w' ? t.toUpperCase() : t);
       b.addEventListener('click', function(){
         var uci = C.name(promoFrom) + C.name(promoTo) + t;
         closePromo();
@@ -347,13 +376,15 @@
     $('reviewTitle').textContent = info.title;
     $('reviewText').textContent = info.text;
     $('againBtn').textContent = info.again;
+    $('momentsTitle').textContent = info.mine ? 'Where you could have done better' : 'Where it could have gone better';
+    moments = null;
     buildMoveList();
     resize();
     render();
     updateHud();
     refreshReview();
     persist();
-    analyse();
+    work();
     showReplay();
     if (info.replay) startReplay();
   }
@@ -382,38 +413,204 @@
     return { positions: g.positions.slice(0, ply + 1), moves: g.moves.slice(0, ply), start: g.start };
   }
 
-  // Looks at each position in turn, one search each, until all are done.
-  // A position with no moves left needs no engine: mate or a draw.
-  function analyse(){
+  // The engine's evaluation of the position after `i` moves of `g`: White's
+  // view, with its choice of move as `best`, passed to done(). A position
+  // with no moves left needs no engine: mate or a draw. Returns false if the
+  // engine can't be had.
+  function evaluate(g, i, depth, done){
+    var pos = g.positions[i], st = C.status(upTo(g, i));
+    if (!C.moves(pos).length || (i === g.positions.length - 1 && st.over)) {
+      done(st.result === 'checkmate' ? { mate: 0, lost: pos.turn } : { cp: 0 });
+      return true;
+    }
+    startEngine();
+    if (!engine) return false;
+    var heard = null;
+    search({
+      info: function(inf){ heard = inf; },
+      done: function(uci){
+        var e = C.whiteView(heard || { cp: 0 }, pos.turn);
+        e.best = uci !== '(none)' ? uci : heard && heard.best;
+        done(e);
+      }
+    }, ['setoption name Skill Level value 20', C.positionCommand(g, i), 'go depth ' + depth]);
+    return true;
+  }
+
+  // What the engine does next in a review, one search at a time: playing on
+  // from a move tried, then looking at the positions of a move tried, then
+  // at the game's own, each in turn until all are done.
+  function work(){
     var r = review;
     if (!r || job) return;
-    var last = r.game.positions.length - 1;
-    while (r.next <= last) {
-      var i = r.next, pos = r.game.positions[i], st = C.status(upTo(r.game, i));
-      if (!C.moves(pos).length || (i === last && st.over)) {
-        r.evals[i] = st.result === 'checkmate' ? { mate: 0, lost: pos.turn } : { cp: 0 };
+    var a = r.alt;
+    if (a && a.auto) { playOn(a); return; }
+    var k = a ? nextOf(a) : -1;
+    if (k >= 0) {
+      evaluate(a.game, k, REVIEW_DEPTH, function(e){
+        if (review !== r || r.alt !== a) return;
+        a.evals[k] = e;
+        refreshReview();
+        work();
+      });
+    } else if (r.next < r.game.positions.length) {
+      var i = r.next;
+      evaluate(r.game, i, REVIEW_DEPTH, function(e){
+        if (review !== r) return;
+        r.evals[i] = e;
         r.next++;
-        continue;
-      }
-      startEngine();
-      if (!engine) { refreshReview(); return; }
-      var heard = null;
-      search({
-        info: function(inf){ heard = inf; },
-        done: function(uci){
-          if (review !== r) return;
-          var e = C.whiteView(heard || { cp: 0 }, pos.turn);
-          e.best = uci !== '(none)' ? uci : heard && heard.best;
-          r.evals[i] = e;
-          r.next++;
-          refreshReview();
-          analyse();
-        }
-      }, ['setoption name Skill Level value 20', C.positionCommand(r.game, i), 'go depth ' + REVIEW_DEPTH]);
-      refreshReview();
-      return;
+        refreshReview();
+        work();
+      });
     }
     refreshReview();
+  }
+  // The first position of a line tried that's still to be looked at, or -1.
+  function nextOf(a){
+    for (var k = a.base; k < a.game.positions.length; k++) if (!a.evals[k]) return k;
+    return -1;
+  }
+
+  // ---------- Trying other moves ----------
+  // In a review, a piece moved on the board starts a line of the visitor's
+  // own from the position shown. `review.alt` holds it: the move it branches
+  // off after (base), the game up to there and the moves tried since (game),
+  // the engine's look at each of its positions (evals), whether Stockfish is
+  // playing it on (auto) and how many moves it has played on (played).
+  // Playing the game's own move just steps on to it.
+  function tryOut(uci){
+    var r = review;
+    stopReplay();
+    if (!r.alt) {
+      var next = r.game.moves[r.ply];
+      if (next && C.uci(next) === uci) { goTo(r.ply + 1); return; }
+      r.alt = { base: r.ply, game: upTo(r.game, r.ply), evals: r.evals.slice(0, r.ply + 1), auto: false, played: 0 };
+    }
+    var m = C.play(r.alt.game, uci);
+    if (!m) return;
+    r.alt.played = 0;
+    altMoved(m);
+  }
+  function altMoved(m){
+    var st = C.status(review.alt.game);
+    selected = -1; animate = m;
+    sound.play(st.check ? 'check' : m.captured ? 'capture' : 'move');
+    if (st.over) review.alt.auto = false;
+    afterAlt();
+  }
+  // The line has changed: the board, the panels, and what the engine does.
+  function afterAlt(){
+    cancel();
+    render();
+    updateHud();
+    refreshReview();
+    work();
+  }
+  // Takes back the last move tried; taking back the first goes back to the game.
+  function takeBack(){
+    var a = review.alt;
+    C.undo(a.game);
+    a.auto = false;
+    a.played = 0;
+    a.evals.length = a.game.positions.length;
+    selected = -1; animate = null;
+    if (a.game.moves.length === a.base) closeAlt();
+    afterAlt();
+  }
+  // Leaves the line tried for the game's own moves.
+  function closeAlt(){
+    if (!review || !review.alt) return;
+    review.alt = null;
+    selected = -1;
+    cancel();
+  }
+  function backToGame(){
+    closeAlt();
+    afterAlt();
+  }
+
+  // Stockfish plays the line on, both sides, a move at a time, until the
+  // game is over or it has played PLAY_ON moves. Its look at each position
+  // stands as that position's evaluation.
+  function playOn(a){
+    var r = review, g = a.game, k = g.positions.length - 1, pos = C.current(g);
+    if (C.status(g).over || a.played >= PLAY_ON) { a.auto = false; updateHud(); work(); return; }
+    startEngine();
+    if (!engine) { a.auto = false; refreshReview(); return; }
+    var heard = null;
+    search({
+      info: function(inf){ heard = inf; },
+      done: function(uci){
+        if (review !== r || r.alt !== a || !a.auto) return;
+        if (!a.evals[k]) {
+          a.evals[k] = C.whiteView(heard || { cp: 0 }, pos.turn);
+          a.evals[k].best = uci;
+        }
+        var m = C.play(g, uci);
+        if (!m) { a.auto = false; afterAlt(); return; }
+        a.played++;
+        altMoved(m);
+      }
+    }, ['setoption name Skill Level value 20', C.positionCommand(g), 'go depth ' + PLAY_DEPTH]);
+  }
+  function togglePlayOn(){
+    var a = review.alt;
+    if (!a) return;
+    a.auto = !a.auto;
+    if (a.auto) a.played = 0;
+    selected = -1;
+    afterAlt();
+  }
+
+  // The panel about the line tried: the move it tried against the game's,
+  // and where the line has got to, against how the game itself ended.
+  function showAlt(){
+    var r = review, a = r.alt;
+    $('alt').hidden = !a;
+    $('altTip').hidden = !!a || C.status(shown()).over;
+    if (!a) return;
+    var g = a.game, base = a.base, last = g.positions.length - 1, st = C.status(g);
+    var mine = C.reviewGame(g, a.evals).moves[base], color = mine.color;
+    var real = r.summary.moves[base], eReal = r.evals[base + 1], eMine = a.evals[base + 1];
+    $('altGame').textContent = real ? about(moveName(r.game, base), real.kind, eReal, color) : 'The game stopped here.';
+    $('altMine').textContent = about(moveName(g, base), mine.kind, eMine, color);
+    var verdict = '';
+    if (real && (!eReal || !eMine)) verdict = 'Working out how it compares…';
+    else if (real) {
+      var was = C.winChance(eReal, color), now = C.winChance(eMine, color);
+      verdict = Math.abs(now - was) < 2 ? mine.san + ' is about as good as the game’s ' + real.san + '.'
+        : mine.san + ' is ' + (now > was ? 'better' : 'worse') + ' than the game’s ' + real.san + ': ' +
+          COLOR[color] + '’s chances go ' + (now > was ? 'up' : 'down') + ' from ' + was + '% to ' + now + '%.';
+    }
+    $('altVerdict').textContent = verdict;
+    var e = a.evals[last], where;
+    if (st.over) where = ending(st);
+    else if (a.auto) where = 'Stockfish is playing on…';
+    else where = e ? C.formatEval(e) + ' · ' + C.outlook(e) : 'Analysing…';
+    $('altNow').textContent = (a.played && !a.auto ? 'After ' + a.played + ' more ' + (a.played === 1 ? 'move' : 'moves') + ' by Stockfish: ' : 'Now: ') +
+      where + (/…$/.test(where) ? '' : '.') + (r.info.outcome ? ' In the game: ' + r.info.outcome + '.' : '');
+    var play = $('playOnBtn');
+    play.textContent = a.auto ? 'Stop' : 'Stockfish plays on';
+    play.disabled = st.over;
+  }
+  // The moves tried, numbered as people write them; a long line keeps its
+  // first two moves and its last three.
+  function lineOf(a){
+    var g = a.game, from = a.base, to = g.moves.length, parts = [];
+    var say = function(i, j){
+      for (var k = i; k < j; k++) parts.push(k > i && g.positions[k].turn === 'b' ? g.moves[k].san : moveName(g, k));
+    };
+    if (to - from > 6) {
+      say(from, from + 2);
+      parts.push('…');
+      say(to - 3, to);
+    } else say(from, to);
+    return parts.join(' ');
+  }
+  // A move, what kind of move it was, and how the game stood after it.
+  function about(name, kind, e, color){
+    return name + (kind ? ' · ' + KINDS[kind].name : '') +
+      (e ? ' · ' + C.formatEval(e) + ' · ' + COLOR[color] + '’s chances ' + C.winChance(e, color) + '%' : ' · analysing…');
   }
 
   // The move list: a row per move number, a button per move.
@@ -474,16 +671,57 @@
       if (i + 1 === r.ply) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
     });
     showMove();
+    showAlt();
+    showMoments();
     drawGraph();
+  }
+
+  // The slips worth a second look, each with the engine's better move: the
+  // visitor's in a game they played, both sides' in a game opened. Choosing
+  // one plays the better move instead (see tryOut), to see how it compares.
+  var moments = null;
+  function showMoments(){
+    var r = review, sum = r.summary, list = [];
+    sum.moves.forEach(function(mv, i){
+      if (mv.kind && KINDS[mv.kind].mark && mv.best && (!r.info.mine || mv.color === r.info.mine)) list.push(i);
+    });
+    var done = r.next >= r.game.positions.length;
+    $('momentsNote').textContent = list.length ? '' : !done ? 'Looking for slips…'
+      : r.info.mine ? 'None: every move you made kept your chances.' : 'None: every move kept the chances.';
+    var key = list.join(' ');
+    if (key === moments) return;
+    moments = key;
+    var ol = $('moments');
+    ol.innerHTML = '';
+    list.forEach(function(i){
+      var mv = sum.moves[i], pos = r.game.positions[i];
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'moment ' + mv.kind;
+      b.setAttribute('data-ply', i);
+      b.innerHTML = '<b></b> <span class="why"></span>';
+      b.querySelector('b').textContent = moveName(r.game, i);
+      var mark = document.createElement('span');
+      mark.setAttribute('aria-hidden', 'true');
+      mark.textContent = KINDS[mv.kind].mark;
+      b.querySelector('b').appendChild(mark);
+      b.querySelector('.why').textContent = KINDS[mv.kind].name + '. ' + pos.full + (pos.turn === 'w' ? '. ' : '… ') + mv.bestSan +
+        ' was better: ' + COLOR[mv.color] + '’s chances fell from ' + C.winChance(r.evals[i], mv.color) + '% to ' +
+        C.winChance(r.evals[i + 1], mv.color) + '%.';
+      var li = document.createElement('li');
+      li.appendChild(b);
+      ol.appendChild(li);
+    });
   }
 
   // What the review says about the move shown: its evaluation, what kind of
   // move it was, and what the engine would have played.
   function showMove(){
-    var r = review, ply = r.ply, e = r.evals[ply];
+    var r = review, ply = r.ply, a = r.alt, e = a ? a.evals[a.game.positions.length - 1] : r.evals[ply];
     $('evalNow').textContent = e ? C.formatEval(e) : '…';
     var text;
-    if (!ply) text = 'The starting position.';
+    if (a) text = 'Your line: ' + lineOf(a);
+    else if (!ply) text = 'The starting position.';
     else {
       var mv = r.summary.moves[ply - 1];
       text = moveName(r.game, ply - 1) + ': ';
@@ -494,18 +732,22 @@
       }
     }
     $('moveNow').textContent = text;
-    $('firstBtn').disabled = $('prevBtn').disabled = ply === 0;
+    $('firstBtn').disabled = ply === 0;
+    $('prevBtn').disabled = ply === 0 && !a;
     $('nextBtn').disabled = $('lastBtn').disabled = ply === r.game.moves.length;
   }
 
-  // Shows the position after `ply` moves. Stepping by hand stops a replay;
-  // a step forward slides the piece and plays the move's sound.
+  // Shows the position after `ply` moves of the game, leaving a line tried.
+  // Stepping by hand stops a replay; a step forward slides the piece and
+  // plays the move's sound.
   function goTo(ply, replaying){
     var r = review;
     if (!r) return;
     if (!replaying) stopReplay();
+    var wasAlt = !!r.alt;
+    closeAlt();
     ply = Math.max(0, Math.min(r.game.moves.length, ply));
-    animate = ply === r.ply + 1 ? r.game.moves[ply - 1] : null;
+    animate = ply === r.ply + 1 && !wasAlt ? r.game.moves[ply - 1] : null;
     if (animate) {
       var g = upTo(r.game, ply);
       sound.play(C.inCheck(C.current(g)) ? 'check' : animate.captured ? 'capture' : 'move');
@@ -514,8 +756,15 @@
     render();
     updateHud();
     refreshReview();
+    if (wasAlt) work();
     var on = moveBtns[ply - 1];
     if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest' });
+  }
+
+  // One step back: the last move tried taken back, or the game's move before.
+  function back(){
+    if (review.alt) takeBack();
+    else goTo(review.ply - 1);
   }
 
   // ---------- Replaying a game ----------
@@ -525,6 +774,7 @@
   function startReplay(){
     var r = review;
     if (!r) return;
+    if (r.alt) goTo(r.ply);
     if (r.ply >= r.game.moves.length) goTo(0);
     r.playing = true;
     replayTimer = setTimeout(replayStep, REPLAY_STEP);
@@ -600,7 +850,9 @@
       (s.w.accuracy === null ? '' : '. Accuracy: White ' + s.w.accuracy + '%, Black ' + (s.b.accuracy === null ? '—' : s.b.accuracy + '%')));
   }
 
-  // ---------- Opening a game file ----------
+  // ---------- Opening a game file, or pasting one ----------
+  // Any file can be picked (browsers that don't know .pgn files won't let
+  // them be picked otherwise); what's in it decides whether it's a game.
   function importError(text){
     (state === 'review' ? reviewMsg : ovMsg).textContent = text;
   }
@@ -613,6 +865,31 @@
       openGame(r, file.name);
     }, function(){ importError('Couldn’t read ' + file.name + '.'); });
   }
+
+  // The box to paste a game into, for a game copied from somewhere else.
+  var pasteEl = $('paste'), pasteText = $('pgnText'), pasteMsg = $('pasteMsg'), pasteFrom = null;
+  function openPaste(e){
+    stopReplay();
+    pasteFrom = e.currentTarget;
+    pasteMsg.textContent = '';
+    pasteEl.hidden = false;
+    pasteText.focus();
+  }
+  function closePaste(){
+    if (pasteEl.hidden) return;
+    pasteEl.hidden = true;
+    if (pasteFrom && !pasteFrom.closest('[hidden]')) pasteFrom.focus();
+  }
+  function readPasted(){
+    var text = pasteText.value;
+    if (!text.trim()) { pasteMsg.textContent = 'Paste a game first.'; return; }
+    if (text.length > MAX_FILE) { pasteMsg.textContent = 'That’s too long to be a game (over 1 MB).'; return; }
+    var r = C.parsePgn(text);
+    if (r.error) { pasteMsg.textContent = 'Couldn’t read a game from that. ' + r.error; return; }
+    pasteEl.hidden = true;
+    pasteText.value = '';
+    openGame(r, 'Pasted game');
+  }
   // Reviews a game read from a file. A game paused before is kept, and
   // "Back to your game" returns to it.
   function openGame(r, fileName){
@@ -622,7 +899,7 @@
       : st.over ? ENDINGS[st.result] : RESULTS['*'];
     var about = [outcome, t.Event && t.Event !== '?' ? t.Event : '', t.Date && !/\?/.test(t.Date) ? t.Date : '', g.moves.length + (g.moves.length === 1 ? ' move' : ' moves')];
     startReview(g, {
-      kicker: fileName,
+      kicker: fileName, outcome: outcome === RESULTS['*'] ? null : outcome,
       title: (t.White && t.White !== '?' ? t.White : 'White') + ' vs ' + (t.Black && t.Black !== '?' ? t.Black : 'Black'),
       text: about.filter(Boolean).join(' · '),
       side: 'w', back: paused ? 'paused' : 'start', again: paused ? 'Back to your game' : 'Play a game', replay: true
@@ -653,7 +930,8 @@
   }
   // The game on the board, up to the move shown.
   function shown(){
-    return review ? upTo(review.game, review.ply) : game;
+    if (!review) return game;
+    return review.alt ? review.alt.game : upTo(review.game, review.ply);
   }
 
   function render(){
@@ -661,7 +939,7 @@
     var check = C.inCheck(pos) ? pos.board.indexOf(pos.turn === 'w' ? 'K' : 'k') : -1;
     var to = selected >= 0 ? targets(selected) : [];
     // In a review, the engine's choice in the position shown.
-    var e = review && review.evals[review.ply], hint = e && e.best && C.findMove(pos, e.best);
+    var e = review && (review.alt ? review.alt.evals[g.positions.length - 1] : review.evals[review.ply]), hint = e && e.best && C.findMove(pos, e.best);
     for (var v = 0; v < 64; v++) {
       var sq = at(v), p = pos.board[sq], el = squares[v];
       var dark = ((sq >> 3) + (sq & 7)) % 2 === 1;
@@ -698,7 +976,8 @@
   function updateHud(){
     var g = shown(), st = C.status(g), pos = C.current(g), text, whose = COLOR[pos.turn];
     if (state === 'review') {
-      text = st.result === 'checkmate' ? 'Checkmate — ' + COLOR[st.winner] + ' wins' : st.over ? ENDINGS[st.result] : st.check ? 'Check!' : review.playing ? 'Replaying' : 'Reviewing';
+      text = st.result === 'checkmate' ? 'Checkmate — ' + COLOR[st.winner] + ' wins' : st.over ? ENDINGS[st.result] : st.check ? 'Check!'
+        : review.alt ? (review.alt.auto ? 'Stockfish is playing on…' : 'Trying a move') : review.playing ? 'Replaying' : 'Reviewing';
     } else {
       if (state !== 'idle') whose += pos.turn === side ? ' · you' : ' · Stockfish';
       if (state === 'idle') text = 'Pick a side';
@@ -789,6 +1068,7 @@
     if (!press.drag && Math.max(Math.abs(dx), Math.abs(dy)) < 6) return;
     if (!press.drag) {
       press.drag = true;
+      stopReplay();
       selected = press.sq;
       render();
       press.pc = squares[placeOf(press.sq)].querySelector('.pc');
@@ -832,15 +1112,22 @@
   });
 
   // In a review, ← and → step through the moves, Home and End jump to the ends.
+  // ← takes back a move tried, and Escape goes back to the game from one.
   var NAV = {
-    ArrowLeft: function(){ return review.ply - 1; }, ArrowRight: function(){ return review.ply + 1; },
+    ArrowRight: function(){ return review.ply + 1; },
     Home: function(){ return 0; }, End: function(){ return review.game.moves.length; }
   };
   document.addEventListener('keydown', function(e){
+    if (!pasteEl.hidden) {
+      if (e.code === 'Escape') { closePaste(); e.preventDefault(); }
+      return;
+    }
     if (e.code === 'Escape' && !promoEl.hidden) { closePromo(); e.preventDefault(); return; }
     if (e.target === levelEl) return;
     if (state === 'review') {
       if (NAV[e.key]) { goTo(NAV[e.key]()); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft') { back(); e.preventDefault(); }
+      else if (e.code === 'Escape' && review.alt) { backToGame(); e.preventDefault(); }
       // Space plays or pauses the replay, unless it's pressing a button.
       else if (e.code === 'Space' && !/^(BUTTON|SELECT|INPUT)$/.test(document.activeElement.tagName)) { toggleReplay(); e.preventDefault(); }
       return;
@@ -876,6 +1163,11 @@
   [$('importBtn'), $('anotherBtn')].forEach(function(btn){
     btn.addEventListener('click', function(){ fileEl.click(); });
   });
+  $('pasteBtn').addEventListener('click', openPaste);
+  $('pasteAgainBtn').addEventListener('click', openPaste);
+  $('pasteGo').addEventListener('click', readPasted);
+  $('pasteCancel').addEventListener('click', closePaste);
+  pasteEl.addEventListener('click', function(e){ if (e.target === pasteEl) closePaste(); });
   fileEl.addEventListener('change', function(){
     var file = fileEl.files[0];
     fileEl.value = '';
@@ -884,7 +1176,7 @@
 
   // The review's buttons, moves and graph.
   $('firstBtn').addEventListener('click', function(){ goTo(0); });
-  $('prevBtn').addEventListener('click', function(){ goTo(review.ply - 1); });
+  $('prevBtn').addEventListener('click', back);
   $('nextBtn').addEventListener('click', function(){ goTo(review.ply + 1); });
   $('lastBtn').addEventListener('click', function(){ goTo(review.game.moves.length); });
   $('replayBtn').addEventListener('click', toggleReplay);
@@ -900,8 +1192,18 @@
     var box = graph.getBoundingClientRect(), n = review.game.moves.length;
     goTo(Math.round((e.clientX - box.left) / box.width * n));
   });
+  $('moments').addEventListener('click', function(e){
+    var btn = e.target.closest('.moment');
+    if (!btn) return;
+    var i = parseInt(btn.getAttribute('data-ply'), 10), mv = review.summary.moves[i];
+    goTo(i);
+    tryOut(mv.best);
+  });
   $('againBtn').addEventListener('click', leaveReview);
-  $('retryBtn').addEventListener('click', analyse);
+  $('playOnBtn').addEventListener('click', togglePlayOn);
+  $('altUndoBtn').addEventListener('click', takeBack);
+  $('altBackBtn').addEventListener('click', backToGame);
+  $('retryBtn').addEventListener('click', work);
 
   window.addEventListener('resize', resize);
   if (compactMQ.addEventListener) compactMQ.addEventListener('change', resize);
