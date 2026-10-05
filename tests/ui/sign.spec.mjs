@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect, expectNoSideScroll, expectNewWindow } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll, inNewWindow } from './fixtures.mjs';
 import { upload, secretPdf, download, imageCount, contentStreams } from './pdfs.mjs';
 import { png } from './images.mjs';
 
@@ -47,7 +47,6 @@ const sign = (page) => download(page, async () => {
   await expect(page.locator('#sigDialog')).toBeHidden();
   await page.getByRole('button', { name: 'Sign PDF' }).click();
   await expect(page.locator('#downloadBtn')).toBeVisible({ timeout: 20_000 });
-  await expectNewWindow(page.locator('#downloadBtn'));
   await page.locator('#downloadBtn').click();
 });
 
@@ -101,8 +100,7 @@ async function savedImage(page, n){
   await openSigs(page);
   const link = page.getByRole('link', { name: `Save signature ${n} as an image` });
   await expect(link).toHaveAttribute('download', `signature-${n}.png`);
-  await expectNewWindow(link);
-  const [dl] = await Promise.all([page.waitForEvent('download'), link.click()]);
+  const { download: dl } = await inNewWindow(page, () => link.click());
   expect(dl.suggestedFilename()).toBe(`signature-${n}.png`);
   return page.evaluate(async (href) => {
     const bmp = await createImageBitmap(await (await fetch(href)).blob());

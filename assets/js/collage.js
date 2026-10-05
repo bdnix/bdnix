@@ -396,16 +396,16 @@
     render();
     downloadLabel.textContent = 'Making collage…';
     say('');
+    // The file downloads in a new window, opened now while the click counts.
+    var win = T.fileWindow();
     make(s).then(function(r){
       if (saved) URL.revokeObjectURL(saved);
       saved = URL.createObjectURL(r.blob);
       var name = C.outName(s.format);
-      var a = T.offer(document.createElement('a'), saved, name);
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      win.save(saved, name);
       say('Saved ' + name + ': ' + r.size.width + ' × ' + r.size.height + ' px, ' + fmtSize(r.blob.size) + '.');
     }, function(err){
+      win.close();
       say('Couldn’t make the collage: ' + (err && err.message ? err.message : 'one of the photos couldn’t be opened.'), true);
     }).then(function(){
       busy = false;

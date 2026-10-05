@@ -379,6 +379,8 @@
     say('');
     var total = files.length;
     var out;
+    // The file downloads in a new window, opened now while the click counts.
+    var win = T.fileWindow();
 
     build(function(i){ mergeLabel.textContent = 'Merging ' + (i + 1) + ' of ' + total + '…'; }).then(function(doc){
       out = doc;
@@ -388,12 +390,10 @@
       var blob = new Blob([bytes], { type: 'application/pdf' });
       if (saved) URL.revokeObjectURL(saved);
       saved = URL.createObjectURL(blob);
-      var a = T.offer(document.createElement('a'), saved, 'merged.pdf');
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      win.save(saved, 'merged.pdf');
       say('Saved merged.pdf: ' + plural(out.getPageCount(), 'page') + ' from ' + plural(total, 'file') + ', ' + fmtSize(blob.size) + '.');
     }).catch(function(err){
+      win.close();
       say('Something went wrong while merging: ' + (err && err.message ? err.message : err), true);
     }).then(function(){
       busy = false;

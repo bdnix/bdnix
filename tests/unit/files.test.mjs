@@ -134,7 +134,12 @@ test('loadScript: a failed fetch rejects, removes its tag and is tried again nex
 
 test('offer: a download link that opens in a new window', () => {
   const w = load(FILE);
-  const a = {};
+  const listeners = [];
+  const a = { addEventListener: (type, fn) => listeners.push([type, fn]) };
   assert.equal(w.bdnixFiles.offer(a, 'blob:x', 'report-signed.pdf'), a);
-  assert.deepEqual({ ...a }, { href: 'blob:x', download: 'report-signed.pdf', target: '_blank', rel: 'noopener' });
+  assert.deepEqual([a.href, a.download, a.target, a.rel], ['blob:x', 'report-signed.pdf', '_blank', 'noopener']);
+  // Pointed at a newer file, it still opens one window per click.
+  w.bdnixFiles.offer(a, 'blob:y', 'report-signed.pdf');
+  assert.equal(a.href, 'blob:y');
+  assert.deepEqual(listeners.map(([type]) => type), ['click']);
 });
