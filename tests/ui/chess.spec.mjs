@@ -845,6 +845,85 @@ test('a file of many games lists them to search and pick one from', async ({ pag
   await expect(page.locator('#reviewTitle')).toHaveText('Ann vs Bob');
 });
 
+const OPERA = '[White "Paul Morphy"]\n[Black "Duke Karl"]\n[Result "1-0"]\n\n1. e4 e5 2. Nf3 d6 3. d4 Bg4 4. dxe5 Bxf3 5. Qxf3 dxe5 6. Bc4 Nf6 7. Qb3 Qe7 8. Nc3 c6 9. Bg5 b5 10. Nxb5 cxb5 11. Bxb5+ Nbd7 12. O-O-O Rd8 13. Rxd7 Rxd7 14. Rd1 Qe6 15. Bxd7+ Nxd7 16. Qb8+ Nxb8 17. Rd8# 1-0\n';
+
+test('in a review the move shown and its buttons sit at the top, and a replay keeps the board in view', async ({ page }) => {
+  await fakeEngine(page);
+  await openGame(page, '/chess/');
+  await page.locator('#pgnFile').setInputFiles(file('opera.pgn', OPERA));
+  await reviewed(page);
+  const bar = await page.locator('#reviewBar').boundingBox(), board = await page.locator('#board').boundingBox();
+  const panel = await page.locator('#review').boundingBox();
+  if (page.viewportSize().width <= 700) {
+    // On a phone: above the board, and the rest of the review below it.
+    expect(bar.y + bar.height).toBeLessThanOrEqual(board.y);
+    expect(panel.y).toBeGreaterThanOrEqual(board.y + board.height);
+  } else {
+    // Beside the board, level with its top, the review filling the rest of its height.
+    expect(bar.x).toBeGreaterThanOrEqual(board.x + board.width);
+    expect(Math.abs(bar.y - board.y)).toBeLessThan(2);
+    expect(panel.y).toBeGreaterThan(bar.y + bar.height);
+    expect(panel.y + panel.height).toBeLessThanOrEqual(board.y + board.height + 1);
+  }
+  await expectNoSideScroll(page);
+
+  // Replaying it all: the page stays where it is, and the move list scrolls
+  // itself to keep the move shown in sight.
+  await page.clock.runFor(33000);
+  await expect(page.locator('#moveNow')).toHaveText('17. Rd8#: Best move.');
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  const inSight = () => page.locator('#moves').evaluate((list) => {
+    const on = list.querySelector('.mv.on');
+    return list.scrollTop > 0 && on.offsetTop >= list.scrollTop && on.offsetTop + on.offsetHeight <= list.scrollTop + list.clientHeight;
+  });
+  expect(await inSight()).toBe(true);
+  await page.locator('#firstBtn').click();
+  await page.locator('#nextBtn').click();
+  expect(await page.locator('#moves').evaluate((list) => list.scrollTop)).toBe(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+});
+
+test('the move shown opens the whole game as text, to jump to any move', async ({ page }) => {
+  await fakeEngine(page);
+  await openGame(page, '/chess/');
+  await page.locator('#pgnFile').setInputFiles(file('fools.pgn', FOOLS));
+  await reviewed(page);
+  await page.locator('.mv').nth(2).click();                // 2. g4, which stops the replay
+  const text = page.getByRole('dialog', { name: 'Ann vs Bob' });
+  await page.locator('#textBtn').click();
+  await expect(text).toBeVisible();
+  await expect(page.locator('#textAbout')).toHaveText('Black won · Test match · 2026.01.02 · 4 moves');
+  // Numbered as it's written, a Black move after a note numbered again.
+  await expect(page.locator('#textMoves')).toHaveText('1. f3 e5 2. g4?? (a3 was better) 2… Qh4# Black won');
+  await expect(page.locator('.tmv.on')).toHaveText('g4??');
+  await expect(page.locator('.tmv.on')).toBeFocused();
+  await expect(page.locator('.tmv.on')).toHaveAttribute('aria-label', '2. g4, blunder');
+  await expect(page.locator('.tmv.blunder')).toHaveCount(1);
+  await expectNoSideScroll(page);
+  await page.locator('.tmv').filter({ hasText: 'Qh4#' }).click();
+  await expect(text).toBeHidden();
+  await expect(page.locator('#moveNow')).toHaveText('2… Qh4#: Best move.');
+  await expect(page.locator('#textBtn')).toBeFocused();
+
+  // Escape and Close close it; at the start no move is current.
+  await press(page, 'Home');
+  await page.locator('#textBtn').click();
+  await expect(page.locator('.tmv.on')).toHaveCount(0);
+  await expect(page.locator('#textClose')).toBeFocused();
+  await press(page, 'Escape');
+  await expect(text).toBeHidden();
+  await page.locator('#textBtn').click();
+  await page.locator('#textClose').click();
+  await expect(text).toBeHidden();
+  await expect(page.locator('#moveNow')).toHaveText('The starting position.');
+
+  // An unfinished game has no result to end with.
+  await page.locator('#pgnFile').setInputFiles(file('moves.txt', 'e4 e5 Nf3 Nc6'));
+  await reviewed(page);
+  await page.locator('#textBtn').click();
+  await expect(page.locator('#textMoves')).toHaveText('1. e4 e5 2. Nf3 Nc6');
+});
+
 test('a game file from a set-up position, with Black to move first', async ({ page }) => {
   await fakeEngine(page);
   await openGame(page, '/chess/');
@@ -1088,5 +1167,7 @@ test('a game review passes axe', async ({ page }) => {
   await page.locator('#pgnFile').setInputFiles(file('fools.pgn', FOOLS));
   await reviewed(page);
   await page.locator('.mv').nth(2).click();
+  expect(await axeProblems(page)).toEqual([]);
+  await page.locator('#textBtn').click();
   expect(await axeProblems(page)).toEqual([]);
 });

@@ -41,7 +41,7 @@
   var overlay = $('overlay'), ovKicker = $('ovKicker'), ovTitle = $('ovTitle'), ovText = $('ovText'), ovMsg = $('ovMsg');
   var startBtn = $('startBtn'), newBtn = $('newBtn'), fileEl = $('pgnFile');
   var restartBtn = $('restartBtn'), undoBtn = $('undoBtn'), levelEl = $('level');
-  var reviewEl = $('review'), movesEl = $('moves'), graph = $('graph'), reviewMsg = $('reviewMsg');
+  var reviewEl = $('review'), barEl = $('reviewBar'), movesEl = $('moves'), graph = $('graph'), reviewMsg = $('reviewMsg');
   var sideInputs = document.querySelectorAll('input[name=side]');
   var compactMQ = window.matchMedia('(max-width:700px),(pointer:coarse)');
 
@@ -370,7 +370,7 @@
     selected = -1;
     document.body.classList.add('reviewing');
     overlay.hidden = true;
-    reviewEl.hidden = false;
+    reviewEl.hidden = barEl.hidden = false;
     ovMsg.textContent = reviewMsg.textContent = '';
     window.bdnixGamebar.setPaused(false);
     $('reviewKicker').textContent = info.kicker;
@@ -396,7 +396,7 @@
     cancel();
     review = null;
     document.body.classList.remove('reviewing');
-    reviewEl.hidden = true;
+    reviewEl.hidden = barEl.hidden = true;
     reviewMsg.textContent = '';
     resize();
   }
@@ -760,7 +760,60 @@
     refreshReview();
     if (wasAlt) work();
     var on = moveBtns[ply - 1];
-    if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest' });
+    if (on) scrollWithin(movesEl, on);
+  }
+  // Scrolls a list (positioned, so it's its items' offsetParent) just enough
+  // to show `el`, without scrolling the page: on a phone the page scrolls,
+  // and the board shouldn't leave the screen as the moves go by.
+  function scrollWithin(box, el){
+    if (el.offsetTop < box.scrollTop) box.scrollTop = el.offsetTop;
+    else if (el.offsetTop + el.offsetHeight > box.scrollTop + box.clientHeight) box.scrollTop = el.offsetTop + el.offsetHeight - box.clientHeight;
+  }
+
+  // The whole game as text, as it's written: numbered moves with their
+  // marks, Stockfish's better move after each slip, and how it ended.
+  // Choosing a move shows it on the board.
+  var textEl = $('text');
+  function openText(e){
+    var r = review, g = r.game, sum = r.summary, box = $('textMoves'), on = null, num = true;
+    $('textTitle').textContent = $('reviewTitle').textContent;
+    $('textAbout').textContent = $('reviewText').textContent;
+    box.innerHTML = '';
+    var add = function(el){ box.appendChild(el); box.appendChild(document.createTextNode(' ')); };
+    var span = function(cls, text){
+      var el = document.createElement('span');
+      el.className = cls;
+      el.textContent = text;
+      add(el);
+    };
+    g.moves.forEach(function(m, i){
+      var pos = g.positions[i], mv = sum.moves[i], kind = KINDS[mv.kind];
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tmv' + (mv.kind ? ' ' + mv.kind : '');
+      b.setAttribute('data-ply', i + 1);
+      b.innerHTML = '<span class="san"></span><span class="mark" aria-hidden="true"></span>';
+      b.querySelector('.san').textContent = m.san;
+      b.querySelector('.mark').textContent = kind ? kind.mark : '';
+      b.setAttribute('aria-label', moveName(g, i) + (kind ? ', ' + kind.name.toLowerCase() : ''));
+      if (i + 1 === r.ply) { b.className += ' on'; b.setAttribute('aria-current', 'true'); on = b; }
+      // A move's number stays on the same line as the move.
+      if (pos.turn === 'w' || num) {
+        var pair = document.createElement('span'), n = document.createElement('span');
+        pair.className = 'pair';
+        n.className = 'num';
+        n.textContent = pos.full + (pos.turn === 'w' ? '.' : '…');
+        pair.appendChild(n);
+        pair.appendChild(document.createTextNode(' '));
+        pair.appendChild(b);
+        add(pair);
+      } else add(b);
+      num = !!(kind && kind.mark && mv.bestSan);
+      if (num) span('better', '(' + mv.bestSan + ' was better)');
+    });
+    if (r.info.outcome) span('result', r.info.outcome);
+    openModal(textEl, e.currentTarget, on || $('textClose'));
+    if (on) scrollWithin(box, on);
   }
 
   // One step back: the last move tried taken back, or the game's move before.
@@ -1097,6 +1150,9 @@
     }
     var sq = Math.max(24, Math.min(84, Math.floor((Math.min(availW, availH) - 2) / 8)));
     boardEl.parentNode.style.setProperty('--sq', sq + 'px');
+    // Beside the board, the review fills its height under the bar.
+    if (review && !compactMQ.matches) reviewEl.style.setProperty('--review-h', (sq * 8 + 2 - barEl.offsetHeight - gap) + 'px');
+    else reviewEl.style.removeProperty('--review-h');
     boardEl.parentNode.style.setProperty('--cell', Math.max(16, sq * 0.6) + 'px');
     if (review && review.summary) drawGraph();
   }
@@ -1244,7 +1300,15 @@
   $('pasteGo').addEventListener('click', readPasted);
   $('pasteCancel').addEventListener('click', closeModal);
   $('pickCancel').addEventListener('click', closeModal);
-  [pasteEl, pickEl].forEach(function(el){
+  $('textClose').addEventListener('click', closeModal);
+  $('textBtn').addEventListener('click', openText);
+  $('textMoves').addEventListener('click', function(e){
+    var btn = e.target.closest('.tmv');
+    if (!btn) return;
+    closeModal();
+    goTo(parseInt(btn.getAttribute('data-ply'), 10));
+  });
+  [pasteEl, pickEl, textEl].forEach(function(el){
     el.addEventListener('click', function(e){ if (e.target === el) closeModal(); });
   });
   pickSearch.addEventListener('input', listPicks);
