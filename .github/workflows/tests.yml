@@ -156,10 +156,33 @@ jobs:
         with:
           name: coverage-ui
           path: coverage/ui/
-      # A failed upload doesn't fail the job.
+      # The upload fetches Codecov's CLI from cli.codecov.io. When that's
+      # down the CLI never arrives, and with fail_ci_if_error off the step
+      # still passed: nothing was uploaded and codecov/project and
+      # codecov/patch never reported. So a failed upload fails the job, and
+      # first gets one more try with the CLI from PyPI instead.
       - name: Upload coverage to Codecov
+        id: codecov
+        continue-on-error: true
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           files: coverage/unit/lcov.info,coverage/ui/lcov.info
           disable_search: true
           use_oidc: true
+          fail_ci_if_error: true
+      # PyPI's CLI is installed with pip, which the runner's own Python won't
+      # do (it's managed by the system), so this one comes with its own.
+      - name: Python for the Codecov CLI from PyPI
+        if: steps.codecov.outcome == 'failure'
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Upload coverage to Codecov again, with the CLI from PyPI
+        if: steps.codecov.outcome == 'failure'
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          files: coverage/unit/lcov.info,coverage/ui/lcov.info
+          disable_search: true
+          use_oidc: true
+          fail_ci_if_error: true
+          use_pypi: true
