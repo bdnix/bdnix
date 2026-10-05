@@ -17,7 +17,8 @@ const VALUES = { p: 100, n: 300, b: 300, r: 500, q: 900, k: 0 };
 // the page sends; window.replies is the moves to play; while window.hold is
 // set, searches wait until window.release() is called, or until they're
 // stopped, which answers them at once. Like Stockfish, it crashes if a
-// search starts before the one before it has answered.
+// search starts before the one before it has answered. window.engines
+// counts the engines started.
 async function fakeEngine(page, replies = []){
   await page.addInitScript(([list, values]) => {
     window.uci = [];
@@ -26,7 +27,7 @@ async function fakeEngine(page, replies = []){
     let waiting = [];
     window.release = () => waiting.splice(0).forEach((fn) => fn());
     window.Worker = class {
-      constructor(url){ this.url = url; this.setup = null; this.searching = null; }
+      constructor(url){ this.url = url; this.setup = null; this.searching = null; window.engines = (window.engines || 0) + 1; }
       postMessage(cmd){
         window.uci.push(cmd);
         if (/^position /.test(cmd)) this.setup = cmd;
@@ -600,7 +601,9 @@ test('a move tried while the review is still being worked out waits for the engi
   await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal. In the game: White won.');
   await page.getByRole('button', { name: 'Back to the game' }).click();
   await reviewed(page);
-  // Each search started only once the one stopped before it had answered.
+  // The one engine never crashed: each search started only once the one
+  // stopped before it had answered.
+  expect(await page.evaluate(() => window.engines)).toBe(1);
   const sent = (await commands(page)).filter((c) => /^(go|stop)/.test(c));
   sent.forEach((c, i) => { if (c === 'stop') expect(sent[i - 1]).toMatch(/^go /); });
 });
