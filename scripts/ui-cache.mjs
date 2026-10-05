@@ -140,15 +140,18 @@ function passedSpecs(){
   try { report = JSON.parse(fs.readFileSync(RESULTS, 'utf8')); }
   catch (e) { return passed; }
   if (report.errors && report.errors.length) return passed;
+  // Each top-level suite is a spec file. A test's own `file` can be a helper
+  // that declared it (checkPage in tests/ui/checks.mjs), so it counts for the
+  // spec it's in.
   const tests = new Map();
-  (function walk(suites){
+  (function walk(suites, file){
     for (const suite of suites || []) {
-      for (const spec of suite.specs || []) {
-        const file = `tests/ui/${spec.file}`;
-        const ok = spec.tests.length > 0 && spec.tests.every((t) => t.status === 'expected');
-        tests.set(file, (tests.get(file) ?? true) && ok);
+      const spec = file || `tests/ui/${suite.file}`;
+      for (const s of suite.specs || []) {
+        const ok = s.tests.length > 0 && s.tests.every((t) => t.status === 'expected');
+        tests.set(spec, (tests.get(spec) ?? true) && ok);
       }
-      walk(suite.suites);
+      walk(suite.suites, spec);
     }
   })(report.suites);
   for (const [file, ok] of tests) if (ok) passed.add(file);

@@ -12,9 +12,16 @@ import * as coverage from '../coverage/ui.mjs';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 
+// The spec file a test belongs to: the one Playwright ran, even for a test
+// declared in a helper it calls (such as checkPage in checks.mjs), whose
+// testInfo.file is the helper. Its title path starts with the spec's path.
+export function specFile(testInfo){
+  return path.join(testInfo.project.testDir, testInfo.titlePath[0]);
+}
+
 export const test = base.extend({
   extraHTTPHeaders: async ({ extraHTTPHeaders }, use, testInfo) => {
-    const spec = path.relative(root, testInfo.file).split(path.sep).join('/');
+    const spec = path.relative(root, specFile(testInfo)).split(path.sep).join('/');
     await use({ ...extraHTTPHeaders, 'x-bdnix-spec': spec });
   },
   page: async ({ page }, use, testInfo) => {
@@ -28,7 +35,7 @@ export const test = base.extend({
     await page.route(/^https:\/\/([\w-]+\.)*(googletagmanager|google-analytics)\.com\//, (route) => route.abort());
     if (coverage.enabled) await page.coverage.startJSCoverage({ resetOnNavigation: false });
     await use(page);
-    if (coverage.enabled) await coverage.save(testInfo.file, await page.coverage.stopJSCoverage());
+    if (coverage.enabled) await coverage.save(specFile(testInfo), await page.coverage.stopJSCoverage());
     expect(errors, 'uncaught errors on the page').toEqual([]);
     expect(blocked, 'blocked by the content security policy').toEqual([]);
   }
