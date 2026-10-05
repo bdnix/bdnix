@@ -366,6 +366,75 @@ test('opens a PGN file and reviews it', async ({ page }) => {
   await expect(page.locator('#reviewMsg')).toHaveText('');
 });
 
+test('a game from a file is replayed on the board, a move a second', async ({ page }) => {
+  await fakeEngine(page);
+  await listen(page);
+  await openGame(page, '/chess/');
+  const btn = page.locator('#replayBtn');
+  await page.locator('#pgnFile').setInputFiles(file('fools.pgn', FOOLS));
+  await expect(page.locator('#moveNow')).toHaveText('The starting position.');
+  await expect(btn).toHaveAttribute('aria-label', 'Pause the replay');
+  await expect(status(page)).toHaveText('Replaying');
+  expect(await pieceOn(page, 'f2')).toBe('f2, White pawn');
+  await page.clock.runFor(1000);
+  await expect(page.locator('#moveNow')).toHaveText('1. f3: Good move. Best was a3.');
+  expect(await pieceOn(page, 'f3')).toBe('f3, White pawn');
+  await expect(sq(page, 'f3')).toHaveClass(/last/);
+  await page.clock.runFor(3000);
+  await expect(page.locator('#moveNow')).toHaveText('2… Qh4#: Best move.');
+  await expect(btn).toHaveAttribute('aria-label', 'Replay the moves');
+  await expect(status(page)).toHaveText('Checkmate — Black wins');
+  expect(await heard(page)).toEqual(['move', 'move', 'move', 'check']);
+  await page.clock.runFor(3000);                           // it stays at the end
+  await expect(page.locator('#moveNow')).toHaveText('2… Qh4#: Best move.');
+
+  // From the end, play starts again from the beginning.
+  await btn.click();
+  await expect(page.locator('#moveNow')).toHaveText('The starting position.');
+  await expect(btn).toHaveAttribute('aria-label', 'Pause the replay');
+  await page.clock.runFor(1000);
+  await expect(page.locator('#moveNow')).toHaveText('1. f3: Good move. Best was a3.');
+  // A step by hand stops it there.
+  await page.locator('#nextBtn').click();
+  await expect(page.locator('#moveNow')).toHaveText('1… e5: Good move. Best was a5.');
+  await expect(btn).toHaveAttribute('aria-label', 'Replay the moves');
+  await expect(status(page)).toHaveText('Reviewing');
+  await page.clock.runFor(3000);
+  await expect(page.locator('#moveNow')).toHaveText('1… e5: Good move. Best was a5.');
+  // Space carries on from where it is, and stops it again.
+  await page.evaluate(() => document.activeElement.blur());
+  await press(page, 'Space');
+  await expect(btn).toHaveAttribute('aria-label', 'Pause the replay');
+  await page.clock.runFor(1000);
+  await expect(page.locator('#moveNow')).toHaveText('2. g4: Blunder. Best was a3.');
+  await press(page, 'Space');
+  await expect(btn).toHaveAttribute('aria-label', 'Replay the moves');
+  await page.clock.runFor(2000);
+  await expect(page.locator('#moveNow')).toHaveText('2. g4: Blunder. Best was a3.');
+
+  // Leaving the review stops it too.
+  await btn.click();
+  await page.locator('#againBtn').click();
+  await page.clock.runFor(3000);
+  await expect(page.locator('#ovTitle')).toHaveText('Chess');
+  expect(await pieceOn(page, 'f2')).toBe('f2, White pawn');
+});
+
+test('a game that has just ended can be replayed from its review', async ({ page }) => {
+  await fakeEngine(page, ['e7e5', 'd8h4']);
+  await openGame(page, '/chess/');
+  await start(page);
+  await move(page, 'f2', 'f3');
+  await move(page, 'g2', 'g4');
+  await expect(page.locator('#moveNow')).toHaveText(/^2… Qh4#/);   // opens at the end, not replaying
+  await expect(page.locator('#replayBtn')).toHaveAttribute('aria-label', 'Replay the moves');
+  await page.locator('#replayBtn').click();
+  await expect(page.locator('#moveNow')).toHaveText('The starting position.');
+  await page.clock.runFor(4000);
+  await expect(page.locator('#moveNow')).toHaveText(/^2… Qh4#/);
+  await expect(page.locator('#replayBtn')).toHaveAttribute('aria-label', 'Replay the moves');
+});
+
 test('a game file from a set-up position, with Black to move first', async ({ page }) => {
   await fakeEngine(page);
   await openGame(page, '/chess/');
@@ -582,6 +651,9 @@ test('a review says so when Stockfish can\'t be fetched, and tries again', async
   await page.locator('#pgnFile').setInputFiles(file('fools.pgn', FOOLS));
   await expect(page.locator('#reviewProgress')).toHaveText(OFFLINE);
   await expect(page.locator('#accW')).toHaveText('—');
+  await expect(page.locator('#moveNow')).toHaveText('The starting position.');
+  await page.locator('#replayBtn').click();                // stop the replay
+  await press(page, 'End');
   await expect(page.locator('#moveNow')).toHaveText('2… Qh4#: not analysed yet.');
   await page.unroute(ENGINE);
   await page.getByRole('button', { name: 'Try again' }).click();

@@ -12,6 +12,7 @@
     { skill: 18, depth: 12 }, { skill: 20, depth: 15 }
   ];
   var REVIEW_DEPTH = 16;          // how deep a review looks at each position
+  var REPLAY_STEP = 1000;         // ms between moves when a game is replayed
   var MAX_FILE = 1024 * 1024;     // a game file bigger than this isn't a game
   var NAMES = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
   var COLOR = { w: 'White', b: 'Black' };
@@ -327,14 +328,15 @@
   // ---------- Reviewing a game ----------
   // `review` holds the game, the engine's evaluation of each position found
   // so far (evals), the next position to look at (next), the move shown
-  // (ply), which way up the board is (side), the words at the top (info),
-  // and where "back" goes: the start screen, or the game paused before a
-  // file was opened.
+  // (ply), which way up the board is (side), whether it's being replayed
+  // (playing), the words at the top (info), and where "back" goes: the start
+  // screen, or the game paused before a file was opened. A game that's just
+  // ended opens at its last move; a game from a file at its first, replaying.
   function startReview(g, info){
     cancel();
     closePromo();
     state = 'review';
-    review = { game: g, evals: [], next: 0, ply: g.moves.length, side: info.side, info: info, summary: null };
+    review = { game: g, evals: [], next: 0, ply: info.replay ? 0 : g.moves.length, side: info.side, info: info, summary: null, playing: false };
     selected = -1;
     document.body.classList.add('reviewing');
     overlay.hidden = true;
@@ -352,9 +354,12 @@
     refreshReview();
     persist();
     analyse();
+    showReplay();
+    if (info.replay) startReplay();
   }
   function closeReview(){
     if (!review) return;
+    stopReplay();
     cancel();
     review = null;
     document.body.classList.remove('reviewing');
@@ -493,17 +498,64 @@
     $('nextBtn').disabled = $('lastBtn').disabled = ply === r.game.moves.length;
   }
 
-  function goTo(ply){
+  // Shows the position after `ply` moves. Stepping by hand stops a replay;
+  // a step forward slides the piece and plays the move's sound.
+  function goTo(ply, replaying){
     var r = review;
     if (!r) return;
+    if (!replaying) stopReplay();
     ply = Math.max(0, Math.min(r.game.moves.length, ply));
     animate = ply === r.ply + 1 ? r.game.moves[ply - 1] : null;
+    if (animate) {
+      var g = upTo(r.game, ply);
+      sound.play(C.inCheck(C.current(g)) ? 'check' : animate.captured ? 'capture' : 'move');
+    }
     r.ply = ply;
     render();
     updateHud();
     refreshReview();
     var on = moveBtns[ply - 1];
     if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest' });
+  }
+
+  // ---------- Replaying a game ----------
+  // Plays the game through on the board, a move every REPLAY_STEP, from the
+  // start if it's at the end. Stops at the last move or at any step by hand.
+  var replayTimer = null;
+  function startReplay(){
+    var r = review;
+    if (!r) return;
+    if (r.ply >= r.game.moves.length) goTo(0);
+    r.playing = true;
+    replayTimer = setTimeout(replayStep, REPLAY_STEP);
+    showReplay();
+  }
+  function replayStep(){
+    var r = review;
+    replayTimer = null;
+    if (!r || !r.playing) return;
+    goTo(r.ply + 1, true);
+    if (r.ply >= r.game.moves.length) stopReplay();
+    else replayTimer = setTimeout(replayStep, REPLAY_STEP);
+  }
+  function stopReplay(){
+    if (replayTimer) clearTimeout(replayTimer);
+    replayTimer = null;
+    if (!review || !review.playing) return;
+    review.playing = false;
+    showReplay();
+  }
+  function toggleReplay(){
+    if (review && review.playing) stopReplay();
+    else startReplay();
+  }
+  var ICON_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2.5v11a.5.5 0 0 0 .77.42l8.5-5.5a.5.5 0 0 0 0-.84l-8.5-5.5A.5.5 0 0 0 4 2.5z"/></svg>';
+  var ICON_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2h3v12H4zM9 2h3v12H9z"/></svg>';
+  function showReplay(){
+    var btn = $('replayBtn'), on = !!(review && review.playing);
+    btn.innerHTML = on ? ICON_PAUSE : ICON_PLAY;
+    btn.setAttribute('aria-label', on ? 'Pause the replay' : 'Replay the moves');
+    updateHud();
   }
 
   // The evaluation over the game: White's share of the chances shaded light
@@ -573,7 +625,7 @@
       kicker: fileName,
       title: (t.White && t.White !== '?' ? t.White : 'White') + ' vs ' + (t.Black && t.Black !== '?' ? t.Black : 'Black'),
       text: about.filter(Boolean).join(' · '),
-      side: 'w', back: paused ? 'paused' : 'start', again: paused ? 'Back to your game' : 'Play a game'
+      side: 'w', back: paused ? 'paused' : 'start', again: paused ? 'Back to your game' : 'Play a game', replay: true
     });
   }
 
@@ -646,7 +698,7 @@
   function updateHud(){
     var g = shown(), st = C.status(g), pos = C.current(g), text, whose = COLOR[pos.turn];
     if (state === 'review') {
-      text = st.result === 'checkmate' ? 'Checkmate — ' + COLOR[st.winner] + ' wins' : st.over ? ENDINGS[st.result] : st.check ? 'Check!' : 'Reviewing';
+      text = st.result === 'checkmate' ? 'Checkmate — ' + COLOR[st.winner] + ' wins' : st.over ? ENDINGS[st.result] : st.check ? 'Check!' : review.playing ? 'Replaying' : 'Reviewing';
     } else {
       if (state !== 'idle') whose += pos.turn === side ? ' · you' : ' · Stockfish';
       if (state === 'idle') text = 'Pick a side';
@@ -789,6 +841,8 @@
     if (e.target === levelEl) return;
     if (state === 'review') {
       if (NAV[e.key]) { goTo(NAV[e.key]()); e.preventDefault(); }
+      // Space plays or pauses the replay, unless it's pressing a button.
+      else if (e.code === 'Space' && !/^(BUTTON|SELECT|INPUT)$/.test(document.activeElement.tagName)) { toggleReplay(); e.preventDefault(); }
       return;
     }
     if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); e.preventDefault(); return; }
@@ -796,7 +850,7 @@
       startOrResume(); e.preventDefault();
     }
   });
-  window.bdnixUpright.onTurn(function(){ pause(); });
+  window.bdnixUpright.onTurn(function(){ pause(); stopReplay(); });
 
   startBtn.addEventListener('click', startOrResume);
   newBtn.addEventListener('click', newGame);
@@ -833,6 +887,7 @@
   $('prevBtn').addEventListener('click', function(){ goTo(review.ply - 1); });
   $('nextBtn').addEventListener('click', function(){ goTo(review.ply + 1); });
   $('lastBtn').addEventListener('click', function(){ goTo(review.game.moves.length); });
+  $('replayBtn').addEventListener('click', toggleReplay);
   $('flipBtn').addEventListener('click', function(){
     review.side = C.other(review.side);
     render();
