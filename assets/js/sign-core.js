@@ -152,6 +152,25 @@
     return out;
   }
 
+  // How thick the ink is at each point of a drawn line, as a share of the
+  // pen's width: a slow pen leaves more ink than a fast one, as a real one
+  // does. points are [x, y, t]: where, in fractions of the pad's width, and
+  // when, in milliseconds; size is the pad's width in pixels. The speed is
+  // smoothed so the line swells and thins gradually, and a line starts at
+  // full width, where the pen first touches down.
+  var INK_MAX = 1.3, INK_MIN = 0.4;
+  function inkWidths(points, size){
+    var out = [], v = 0;
+    for (var i = 0; i < points.length; i++) {
+      if (i > 0) {
+        var a = points[i - 1], b = points[i], dt = b[2] - a[2];
+        if (dt > 0) v = 0.6 * v + 0.4 * Math.hypot(b[0] - a[0], b[1] - a[1]) * size / dt;
+      }
+      out.push(Math.max(INK_MIN, INK_MAX / (1 + v * 0.8)));
+    }
+    return out;
+  }
+
   // The name typed for a signature: spaces tidied, at most 60 characters.
   function cleanName(text){
     return String(text || '').replace(/\s+/g, ' ').trim().slice(0, 60);
@@ -177,6 +196,7 @@
     newPlacement: newPlacement, toPage: toPage, drawParams: drawParams,
     moveTo: moveTo, nudge: nudge, resize: resize, angleFrom: angleFrom,
     inkBounds: inkBounds, clearPaper: clearPaper, smooth: smooth,
+    INK_MAX: INK_MAX, INK_MIN: INK_MIN, inkWidths: inkWidths,
     cleanName: cleanName, signedName: signedName, checkSaved: checkSaved
   };
 })();
