@@ -1,8 +1,9 @@
 import { test, expect } from './fixtures.mjs';
-import { checkPage, checkPdfLib, PDF_LIB, OFFLINE_PDF } from './checks.mjs';
+import { checkPage } from './checks.mjs';
+import { checkPdfLib, PDF_LIB, OFFLINE_PDF } from './checks-pdf.mjs';
 import { upload, logoPng } from './pdfs.mjs';
 
-// The checks every page gets (see checks.mjs).
+// The checks every page and every PDF tool gets (see checks.mjs and checks-pdf.mjs).
 checkPage('/watermark-pdf/', { schema: 'WebApplication', category: 'UtilitiesApplication', footer: true });
 // pdf-lib is fetched with the first PDF: what shows once A.pdf is open.
 checkPdfLib('/watermark-pdf/', (page) => expect(page.locator('#fileName')).toHaveText('A.pdf'));

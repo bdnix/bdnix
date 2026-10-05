@@ -1,5 +1,6 @@
 import fs from 'node:fs';
-import { test, expect, expectNoSideScroll, inNewWindow } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { inNewWindow } from './downloads.mjs';
 import { png, photo, gif, kind, inspect, near } from './images.mjs';
 
 const file = (name, buffer, mimeType) => ({ name, mimeType, buffer: Buffer.from(buffer) });

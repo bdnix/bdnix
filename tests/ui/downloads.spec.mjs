@@ -1,4 +1,5 @@
-import { test, expect, inNewWindow } from './fixtures.mjs';
+import { test, expect } from './fixtures.mjs';
+import { inNewWindow } from './downloads.mjs';
 import { upload, samplePdf, lockedPdf, download } from './pdfs.mjs';
 
 // What every tool's downloads share (bdnixFiles in files.js), tried on the

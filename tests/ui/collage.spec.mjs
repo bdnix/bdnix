@@ -1,5 +1,6 @@
 import fs from 'node:fs';
-import { test, expect, expectNoSideScroll, inNewWindow } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { inNewWindow } from './downloads.mjs';
 import { png, kind, inspect, near } from './images.mjs';
 
 // Photos of one colour each, so the tests can tell which went where.

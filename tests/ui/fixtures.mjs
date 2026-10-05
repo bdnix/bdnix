@@ -50,9 +50,6 @@ export function takeCspViolations(page){
 
 export { expect };
 
-// Every file a tool makes downloads in a new window: see downloads.mjs.
-export { inNewWindow } from './downloads.mjs';
-
 // Fails if the page scrolls sideways (the layout is wider than the screen).
 export async function expectNoSideScroll(page){
   const { scroll, client } = await page.evaluate(() => ({
