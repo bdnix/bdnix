@@ -214,6 +214,7 @@ body.reviewing .game{grid-template-columns:190px auto 320px}
 .mv.blunder .mark{color:#fb7185}
 .mv.best .san{color:var(--cyan)}
 .review-actions{display:flex;flex-wrap:wrap;gap:8px}
+.review-actions [hidden]{display:none}
 .review-actions .btn{flex:1 1 auto;padding:11px 14px;font-size:14px}
 .review-msg{margin:0;font-size:13px;line-height:1.4;color:var(--pink)}
 .review-msg:empty{display:none}

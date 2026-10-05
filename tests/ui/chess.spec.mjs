@@ -782,7 +782,7 @@ test('a file of many games lists them to search and pick one from', async ({ pag
 
   // Every word searched for has to be there, in any tag.
   await page.locator('#pickSearch').fill('player 12');
-  await expect(games).toHaveCount(11);
+  await expect(games).toHaveCount(12);
   await expect(page.locator('#pickCount')).toBeHidden();
   await page.locator('#pickSearch').fill('RAPID  player 12');
   await expect(games).toHaveCount(5);
