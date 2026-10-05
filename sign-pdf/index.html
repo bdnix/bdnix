@@ -36,7 +36,7 @@
   <link rel="stylesheet" href="/assets/css/editor.css?v=23a907ae4f">
   <link rel="stylesheet" href="/assets/css/settings.css?v=e8dcb9f30c">
   <link rel="stylesheet" href="/assets/css/seg.css?v=9c1df52699">
-  <link rel="stylesheet" href="/assets/css/sign.css?v=d4a3a12a59">
+  <link rel="stylesheet" href="/assets/css/sign.css?v=5711a20f3f">
   <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
 </head>
 <body>
@@ -70,17 +70,16 @@
 
     <div class="file-bar panel" id="fileBar" hidden>
       <div class="file-info">
-        <span class="file-name" id="fileName"></span>
+        <button class="file-name file-link" id="fileName" type="button" title="Open a different PDF"></button>
         <span class="file-meta" id="fileMeta"></span>
       </div>
-      <button class="link-btn" id="changeBtn" type="button">Change file</button>
-      <button class="link-btn" id="closeBtn" type="button">Close file</button>
     </div>
 
     <p class="msg" id="msg" role="status" aria-live="polite"></p>
 
     <section class="editor" id="editor" hidden>
       <div class="preview panel">
+        <button class="icon-btn close-pdf" id="closeBtn" type="button" aria-label="Close the PDF" title="Close the PDF"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
         <div class="preview-stage" id="stage">
           <div class="sheet" id="sheet" hidden>
             <canvas id="pageCanvas" role="img" aria-label="The page, with your signatures on it"></canvas>
@@ -226,6 +225,6 @@
   <script src="/assets/js/files.js?v=ddf7e424a5"></script>
   <script src="/assets/js/pdftools.js?v=876b24df99"></script>
   <script src="/assets/js/sign-core.js?v=a79782f4ca"></script>
-  <script src="/assets/js/sign.js?v=f680dd63b5"></script>
+  <script src="/assets/js/sign.js?v=d135822fb1"></script>
 </body>
 </html>
