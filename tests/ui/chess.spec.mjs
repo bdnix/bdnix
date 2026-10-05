@@ -725,9 +725,6 @@ test('a game can be pasted in, and a game file of any kind picked', async ({ pag
   await page.locator('#pgnText').fill('e4 e5 Nf6');
   await paste.getByRole('button', { name: 'Analyse' }).click();
   await expect(page.locator('#pasteMsg')).toHaveText('Couldn’t read a game from that. Move 2. Nf6 isn’t a legal move there.');
-  await page.locator('#pgnText').fill('x'.repeat(1024 * 1024 + 1));
-  await paste.getByRole('button', { name: 'Analyse' }).click();
-  await expect(page.locator('#pasteMsg')).toHaveText('That’s too long to be a game (over 1 MB).');
   // Keys typed into it stay there: P doesn't pause, Space doesn't start.
   await page.locator('#pgnText').fill('');
   await page.locator('#pgnText').pressSequentially('1. e4 e5 2. Nf3 Nc6 P');
@@ -762,6 +759,92 @@ test('a game can be pasted in, and a game file of any kind picked', async ({ pag
   await expect(page.locator('.mv')).toHaveCount(4);
 });
 
+// A file of 151 games: 150 that can be read, and a last one that can't.
+const DATABASE = Array.from({ length: 150 }, (_, i) =>
+  `[Event "${i % 2 ? 'Rapid' : 'Blitz'} Open"]\n[Site "?"]\n[Date "2020.??.??"]\n[Round "${i % 9 + 1}"]\n[White "Player ${i}"]\n[Black "Rival"]\n[Result "${i % 3 ? '1-0' : '1/2-1/2'}"]\n\n1. e4 e5 2. Nf3 ${i % 3 ? '1-0' : '1/2-1/2'}\n`
+).join('\n') + '\n[Event "Broken"]\n[White "?"]\n[Black "?"]\n\n1. e4 e5 2. Nf6 *\n';
+
+test('a file of many games lists them to search and pick one from', async ({ page }) => {
+  await fakeEngine(page);
+  await openGame(page, '/chess/');
+  const pick = page.getByRole('dialog', { name: 'Pick a game' });
+  const games = page.locator('.pick-game');
+  await page.locator('#importBtn').click();
+  await page.locator('#pgnFile').setInputFiles(file('games.pgn', DATABASE));
+  await expect(pick).toBeVisible();
+  await expect(page.locator('#pickAbout')).toHaveText('151 games in games.pgn.');
+  await expect(page.locator('#pickSearch')).toBeFocused();
+  await expect(games).toHaveCount(100);
+  await expect(page.locator('#pickCount')).toHaveText('Showing the first 100 of 151. Search to narrow them down.');
+  await expect(games.first()).toHaveText('Player 0 – Rival · ½–½Blitz Open · 2020 · round 1');
+  await expect(games.nth(1)).toHaveText('Player 1 – Rival · 1-0Rapid Open · 2020 · round 2');
+  await expectNoSideScroll(page);
+
+  // Every word searched for has to be there, in any tag.
+  await page.locator('#pickSearch').fill('player 12');
+  await expect(games).toHaveCount(12);
+  await expect(page.locator('#pickCount')).toBeHidden();
+  await page.locator('#pickSearch').fill('RAPID  player 12');
+  await expect(games).toHaveCount(5);
+  await page.locator('#pickSearch').fill('nobody');
+  await expect(games).toHaveCount(0);
+  await expect(page.locator('#pickCount')).toHaveText('No games match.');
+  // A game with no names or event is shown by its number, and one that
+  // can't be read says why, and the list stays.
+  await page.locator('#pickSearch').fill('broken');
+  await expect(games).toHaveText(['White – BlackBroken']);
+  await games.click();
+  await expect(page.locator('#pickMsg')).toHaveText('Couldn’t read game 151. Move 2. Nf6 isn’t a legal move there.');
+  await expect(pick).toBeVisible();
+
+  // Picking one reviews it.
+  await page.locator('#pickSearch').fill('player 7 rival');
+  await games.filter({ hasText: 'Player 7 –' }).click();
+  await expect(pick).toBeHidden();
+  await expect(page.locator('#reviewKicker')).toHaveText('games.pgn · game 8 of 151');
+  await expect(page.locator('#reviewTitle')).toHaveText('Player 7 vs Rival');
+  await expect(page.locator('#reviewText')).toHaveText('White won · Rapid Open · 3 moves');
+  await expect(page.locator('.mv')).toHaveText(['e4', 'e5', 'Nf3']);
+  await reviewed(page);
+
+  // Another from the same file: the list as it was left.
+  const again = page.getByRole('button', { name: 'Another game from the file' });
+  await again.click();
+  await expect(page.locator('#pickSearch')).toHaveValue('player 7 rival');
+  await expect(page.locator('#pickMsg')).toHaveText('');
+  await press(page, 'Escape');
+  await expect(pick).toBeHidden();
+  await expect(again).toBeFocused();
+  await again.click();
+  await pick.getByRole('button', { name: 'Cancel' }).click();
+  await expect(pick).toBeHidden();
+  await again.click();
+  await page.mouse.click(2, 2);
+  await expect(pick).toBeHidden();
+  await again.click();
+  await page.locator('#pickSearch').fill('');
+  await games.first().click();
+  await expect(page.locator('#reviewKicker')).toHaveText('games.pgn · game 1 of 151');
+  await expect(page.locator('#reviewText')).toHaveText('Drawn · Blitz Open · 3 moves');
+
+  // A file of one game opens straight away, and isn't one to pick from again.
+  await page.locator('#pgnFile').setInputFiles(file('fools.pgn', FOOLS));
+  await expect(page.locator('#reviewKicker')).toHaveText('fools.pgn');
+  await expect(again).toBeHidden();
+  await expect(pick).toBeHidden();
+
+  // Several games pasted are listed the same way.
+  await page.locator('#pasteAgainBtn').click();
+  await page.locator('#pgnText').fill(FOOLS + '\n' + DATABASE);
+  await page.getByRole('dialog', { name: 'Paste a game' }).getByRole('button', { name: 'Analyse' }).click();
+  await expect(pick).toBeVisible();
+  await expect(page.locator('#pickAbout')).toHaveText('152 games in the games pasted.');
+  await page.locator('#pickSearch').fill('ann');
+  await games.click();
+  await expect(page.locator('#reviewKicker')).toHaveText('the games pasted · game 1 of 152');
+  await expect(page.locator('#reviewTitle')).toHaveText('Ann vs Bob');
+});
+
 test('a game file from a set-up position, with Black to move first', async ({ page }) => {
   await fakeEngine(page);
   await openGame(page, '/chess/');
@@ -779,8 +862,15 @@ test('game files that can\'t be opened say why on the start screen', async ({ pa
   await openGame(page, '/chess/');
   await page.locator('#pgnFile').setInputFiles(file('empty.pgn', '[Event "Nothing"]\n\n*'));
   await expect(page.locator('#ovMsg')).toHaveText('Couldn’t read a game from empty.pgn. There are no moves in it.');
-  await page.locator('#pgnFile').setInputFiles(file('big.pgn', 'e4 '.repeat(400000)));
-  await expect(page.locator('#ovMsg')).toHaveText('big.pgn is too big to be a game (over 1 MB).');
+  // A file is only refused when it's far too big to be games (built in the
+  // page, as Playwright won't send a file that size).
+  await page.evaluate(() => {
+    const input = document.querySelector('#pgnFile'), files = new DataTransfer();
+    files.items.add(new File([new Uint8Array(50 * 1024 * 1024 + 1)], 'big.pgn'));
+    input.files = files.files;
+    input.dispatchEvent(new Event('change'));
+  });
+  await expect(page.locator('#ovMsg')).toHaveText('big.pgn is too big to be a game file (over 50 MB).');
   await expect(page.locator('#ovTitle')).toHaveText('Chess');
   await page.getByRole('button', { name: 'Start game' }).click();
   await expect(page.locator('#ovMsg')).toHaveText('');

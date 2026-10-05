@@ -294,6 +294,27 @@ test('text files: just the moves, in SAN (loosely written) or UCI', () => {
   assert.equal(C.parsePgn('1. e4 e5 2. Nf3 e.p.').error, 'Move 2... e.p. isn’t a legal move there.');
 });
 
+test('PGN files of several games: each game\'s tags and text, its moves unread', () => {
+  const games = C.splitPgn(OPERA);
+  assert.equal(games.length, 2);
+  assert.equal(games[0].tags.White, 'Paul Morphy');
+  assert.equal(games[0].tags.Black, 'Duke Karl "the" Count');
+  assert.equal(games[1].tags.Event, 'The next game, not read');
+  assert.equal(C.parsePgn(games[0].text).game.moves.length, 33);
+  assert.deepEqual(plain(C.parsePgn(games[1].text).game.moves.map((m) => m.san)), ['d4']);
+
+  // Windows line ends, a byte order mark and escaped lines; tags with no
+  // moves after them aren't a game, and moves with no tags before them are.
+  const text = '\uFEFF[White "A"]\r\n[Black "B"]\r\n\r\n1. e4 e5 *\r\n\r\n% a note\r\n[Event "Second"]\r\n[White "C"]\r\n\r\n1. d4 1-0\r\n';
+  const two = C.splitPgn(text);
+  assert.deepEqual(plain(two.map((g) => g.tags)), [{ White: 'A', Black: 'B' }, { Event: 'Second', White: 'C' }]);
+  assert.equal(C.parsePgn(two[1].text).result, '1-0');
+  assert.deepEqual(plain(C.splitPgn('[Event "x"]\n[Site "y"]').map((g) => g.tags)), []);
+  assert.deepEqual(plain(C.splitPgn('e4 e5\n\n[White "Z"]\n\nd4 d5').map((g) => g.tags)), [{}, { White: 'Z' }]);
+  assert.equal(C.splitPgn('').length, 0);
+  assert.equal(C.splitPgn('1. e4 e5').length, 1);
+});
+
 test('PGN: what can\'t be read says why', () => {
   assert.equal(C.parsePgn('').error, 'There are no moves in it.');
   assert.equal(C.parsePgn('[Event "x"]\n\n*').error, 'There are no moves in it.');
