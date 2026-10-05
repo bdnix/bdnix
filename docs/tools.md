@@ -65,8 +65,8 @@ Search positions boxes from the PDF's own text, estimating where each letter sit
 
 Signatures live in the **My signatures** dialog, which opens from the button at the top of the page, with or without a PDF, so a signature can be made, saved as an image or kept in the browser without signing anything. Once a PDF is open (drop it on the page or choose it), **Add a signature** beside its pages opens the same dialog. Esc, the × button or a click outside closes it. Make a signature under **New signature**:
 
-- **Draw** it in the white box with a finger, a pen or the mouse. **Clear** wipes the box.
-- **Type** your name and pick one of four handwriting fonts (Dancing Script, Great Vibes, Sacramento and Caveat, served from this site). The name from the visitor's profile is filled in, if they've set one.
+- **Draw** it in the white box with a finger, a pen or the mouse. The line behaves like ink: it's thicker where the pen moves slowly and thinner where it moves fast, so the signature comes out the way the hand wrote it. **Clear** wipes the box.
+- **Type** your name and pick one of four signature fonts (Mrs Saint Delafield, Herr Von Muellerhoff, Mr De Haviland and Mr Dafoe, served from this site). The name from the visitor's profile is filled in, if they've set one.
 - **Image** uses a photo or scan of a signature (PNG, JPG, WebP or GIF). **Make white paper see-through** (on by default) turns the light background clear and keeps the ink, with soft edges.
 
 Drawn and typed signatures can be in black or blue ink. **Create signature** turns the signature into a PNG with a see-through background, cropped to the ink, and adds it to **Saved**. Once a PDF is open the button reads **Add to the page**, and also closes the dialog and puts the new signature on the page shown.
