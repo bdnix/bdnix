@@ -1,4 +1,4 @@
-import { test, expect, expectNewWindow } from './fixtures.mjs';
+import { test, expect, expectNewWindow, expectNoSideScroll } from './fixtures.mjs';
 import { upload, numberedPdf, download, widths } from './pdfs.mjs';
 
 test.beforeEach(async ({ page }) => {
@@ -72,4 +72,54 @@ test('changing the list after merging hides the old download', async ({ page }) 
   await expect(page.locator('#downloadBtn')).toBeVisible();
   await page.locator('.file').first().locator('.file-range input').fill('1');
   await expect(page.locator('#downloadBtn')).toBeHidden();
+});
+
+// Each preview page's canvas, as its label and its width over its height.
+const previewPages = (page) => page.locator('#previewGrid canvas').evaluateAll((cs) => cs.map((c) => ({
+  label: c.getAttribute('aria-label'),
+  ratio: c.width / c.height,
+  drawn: c.closest('.preview-page').classList.contains('drawn')
+})));
+
+test('merging shows a preview of every page, in order', async ({ page }) => {
+  await expect(page.locator('#preview')).toBeHidden();
+  await page.locator('.file').first().locator('.file-range input').fill('2, 10');
+  await page.locator('.file').nth(1).locator('.file-range input').fill('3');
+  await page.getByRole('button', { name: 'Merge PDFs' }).click();
+  await expect(page.locator('#msg')).toHaveText('Done. 4 pages from 3 files.');
+  await expect(page.getByRole('heading', { name: 'Preview of merged.pdf' })).toBeVisible();
+  await expect(page.locator('#previewGrid .drawn')).toHaveCount(4);
+  await expect(page.locator('#previewNote')).toHaveText('');
+  // Pages are (width) x 300: A2 = 102, A10 = 110, B3 = 203, C1 = 301.
+  // Canvases are whole pixels, so the shapes match to within rounding.
+  const shown = await previewPages(page);
+  expect(shown.map((p) => p.label)).toEqual([1, 2, 3, 4].map((n) => `Page ${n} of merged.pdf`));
+  expect(shown.every((p) => p.drawn)).toBe(true);
+  [102, 110, 203, 301].forEach((w, i) => expect(shown[i].ratio).toBeCloseTo(w / 300, 2));
+  // Drawn as the page, not left blank.
+  const ink = await page.locator('#previewGrid canvas').first().evaluate((c) => {
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    return d[3];
+  });
+  expect(ink).toBe(255);
+  await expectNoSideScroll(page);
+});
+
+test('changing the list after merging removes the preview', async ({ page }) => {
+  await page.getByRole('button', { name: 'Merge PDFs' }).click();
+  await expect(page.locator('#previewGrid .drawn')).toHaveCount(14);
+  await page.getByRole('button', { name: 'Remove C.pdf' }).click();
+  await expect(page.locator('#preview')).toBeHidden();
+  await expect(page.locator('#previewGrid canvas')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Merge PDFs' }).click();
+  await expect(page.locator('#previewGrid .drawn')).toHaveCount(13);
+});
+
+test('without pdf.js, the preview says so and the download still works', async ({ page }) => {
+  await page.route(/\/assets\/vendor\/pdfjs\//, (route) => route.abort());
+  await page.getByRole('button', { name: 'Merge PDFs' }).click();
+  await expect(page.locator('#previewNote')).toHaveText('The pages can’t be shown in this browser, but the merged file is ready to download.');
+  await expect(page.locator('#previewGrid canvas')).toHaveCount(0);
+  const out = await download(page, () => page.locator('#downloadBtn').click());
+  expect(widths(out.doc)).toHaveLength(14);
 });

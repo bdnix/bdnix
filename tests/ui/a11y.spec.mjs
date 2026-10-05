@@ -56,4 +56,8 @@ test('a paused game, and a tool with files in it, pass axe too', async ({ page }
   await page.locator('#picker').setInputFiles([upload('A.pdf', await numberedPdf(100, 3)), upload('B.pdf', await numberedPdf(200, 2))]);
   await expect(page.locator('.file')).toHaveCount(2);
   expect(await axeProblems(page)).toEqual([]);
+  // And with the merged file's preview showing.
+  await page.getByRole('button', { name: 'Merge PDFs' }).click();
+  await expect(page.locator('#previewGrid .drawn')).toHaveCount(5);
+  expect(await axeProblems(page)).toEqual([]);
 });

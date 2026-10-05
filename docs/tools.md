@@ -17,6 +17,8 @@ Every tool runs entirely in the browser. Files are never uploaded, and all proce
 
 Add PDFs by dropping them on the page or choosing them. Reorder them by dragging or with the arrow buttons, then merge and download `merged.pdf`.
 
+After merging, a **preview** below the download button shows every page of `merged.pdf` in order, so you can check it before saving. Changing the list, a range or the order clears the preview with the old download; merge again to see the new one. The pages are drawn with [PDF.js](https://mozilla.github.io/pdf.js/), fetched the first time a preview is shown; if it can't load, the preview says so and the download still works.
+
 Each file has a **Pages** box. Leave it empty to include every page, or list pages and ranges separated by commas, for example `1-3, 5, 8-`:
 
 | Entry | Meaning |

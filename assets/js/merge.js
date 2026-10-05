@@ -14,6 +14,9 @@
   var mergeLabel = document.getElementById('mergeLabel');
   var downloadBtn = document.getElementById('downloadBtn');
   var downloadLabel = document.getElementById('downloadLabel');
+  var preview = document.getElementById('preview');
+  var previewNote = document.getElementById('previewNote');
+  var previewGrid = document.getElementById('previewGrid');
 
   document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -23,6 +26,11 @@
   var nextId = 1;
   var busy = false;
   var resultUrl = null;
+  // The pdf.js document behind the preview, and a counter that tells a
+  // preview still drawing that the merged file it shows has gone stale.
+  var previewTask = null;
+  var previewSeq = 0;
+  var THUMB = 180;   // CSS pixels along a preview page's longer side (merge.css fits it to its frame)
 
   function say(text, isError){
     msg.textContent = text || '';
@@ -35,6 +43,77 @@
     resultUrl = null;
     downloadBtn.hidden = true;
     downloadBtn.removeAttribute('href');
+    clearPreview();
+  }
+
+  function clearPreview(){
+    previewSeq++;
+    if (previewTask) previewTask.destroy();
+    previewTask = null;
+    preview.hidden = true;
+    previewGrid.textContent = '';
+    previewNote.textContent = '';
+  }
+
+  // Draws every page of the merged file, one at a time and in order, so the
+  // visitor can check it before downloading. pdf.js is only fetched now.
+  function showPreview(bytes, count){
+    var seq = ++previewSeq;
+    var canvases = [];
+    for (var i = 0; i < count; i++) {
+      var li = document.createElement('li');
+      li.className = 'preview-page';
+      var c = document.createElement('canvas');
+      c.setAttribute('role', 'img');
+      c.setAttribute('aria-label', 'Page ' + (i + 1) + ' of merged.pdf');
+      var num = document.createElement('span');
+      num.className = 'preview-num';
+      num.textContent = i + 1;
+      num.setAttribute('aria-hidden', 'true');
+      var frame = document.createElement('div');
+      frame.className = 'preview-frame';
+      frame.appendChild(c);
+      li.appendChild(frame);
+      li.appendChild(num);
+      previewGrid.appendChild(li);
+      canvases.push(c);
+    }
+    previewNote.textContent = 'Drawing ' + plural(count, 'page') + '…';
+    preview.hidden = false;
+
+    P.loadPdfjs().then(function(lib){
+      if (seq !== previewSeq) return;
+      if (!lib) throw new Error('pdf.js is unavailable');
+      // pdf.js takes over the bytes it's given, so it gets a copy.
+      previewTask = lib.getDocument({ data: bytes.slice(0), isEvalSupported: false });
+      return previewTask.promise.then(function(doc){
+        return canvases.reduce(function(chain, c, i){
+          return chain.then(function(){
+            if (seq === previewSeq) return drawPage(doc, i, c);
+          });
+        }, Promise.resolve());
+      }).then(function(){
+        if (seq === previewSeq) previewNote.textContent = '';
+      });
+    }).catch(function(){
+      if (seq !== previewSeq) return;
+      previewGrid.textContent = '';
+      previewNote.textContent = 'The pages can’t be shown in this browser, but the merged file is ready to download.';
+    });
+  }
+
+  function drawPage(doc, i, c){
+    return doc.getPage(i + 1).then(function(page){
+      var vp1 = page.getViewport({ scale: 1 });
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var vp = page.getViewport({ scale: THUMB / Math.max(vp1.width, vp1.height) * dpr });
+      c.width = Math.round(vp.width);
+      c.height = Math.round(vp.height);
+      return page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise.then(function(){
+        page.cleanup();
+        c.parentNode.parentNode.classList.add('drawn');
+      });
+    });
   }
 
   function addFiles(fileList){
@@ -277,6 +356,7 @@
       downloadLabel.textContent = 'Download merged.pdf (' + fmtSize(blob.size) + ')';
       downloadBtn.hidden = false;
       say('Done. ' + plural(out.getPageCount(), 'page') + ' from ' + plural(total, 'file') + '.');
+      showPreview(bytes, out.getPageCount());
       downloadBtn.focus();
     }).catch(function(err){
       say('Something went wrong while merging: ' + (err && err.message ? err.message : err), true);

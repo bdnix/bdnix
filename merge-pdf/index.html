@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="/assets/css/page.css?v=6ee9010c44">
   <link rel="stylesheet" href="/assets/css/tool.css?v=a70bc4eb15">
   <link rel="stylesheet" href="/assets/css/file.css?v=6d62676c6d">
-  <link rel="stylesheet" href="/assets/css/merge.css?v=9668600432">
+  <link rel="stylesheet" href="/assets/css/merge.css?v=2936116521">
   <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
 </head>
 <body>
@@ -47,7 +47,7 @@
   <main class="tool">
     <p class="kicker">// tools</p>
     <h1>Merge PDFs</h1>
-    <p class="lede">Add your files, put them in order, pick the pages you want, and download one combined PDF. Everything happens in your browser. Your files are never uploaded.</p>
+    <p class="lede">Add your files, put them in order, pick the pages you want, check the preview, and download one combined PDF. Everything happens in your browser. Your files are never uploaded.</p>
 
     <label class="drop panel" id="drop">
       <input type="file" id="picker" accept="application/pdf,.pdf" multiple>
@@ -75,6 +75,12 @@
           <span id="downloadLabel">Download merged.pdf</span>
         </a>
       </div>
+
+      <section class="preview" id="preview" aria-labelledby="previewTitle" hidden>
+        <h2 class="label" id="previewTitle">Preview of merged.pdf</h2>
+        <p class="preview-note" id="previewNote" role="status" aria-live="polite"></p>
+        <ol class="preview-grid" id="previewGrid"></ol>
+      </section>
     </section>
   </main>
 
@@ -89,6 +95,6 @@
   <script src="/assets/js/profile.js?v=d7e69c9e67"></script>
   <script src="/assets/js/files.js?v=ddf7e424a5"></script>
   <script src="/assets/js/pdftools.js?v=876b24df99"></script>
-  <script src="/assets/js/merge.js?v=74d139e396"></script>
+  <script src="/assets/js/merge.js?v=d7643b8fe5"></script>
 </body>
 </html>
