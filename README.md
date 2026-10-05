@@ -13,7 +13,7 @@ The search box on the home page narrows the list as you type: try "pdf", "photo"
 
 | Tool | What it does |
 |---|---|
-| [Merge PDFs](https://www.bdnix.com/merge-pdf/) | Combine several PDFs into one, in any order, choosing which pages to keep from each, and preview it before downloading. |
+| [Merge PDFs](https://www.bdnix.com/merge-pdf/) | Combine several PDFs into one, in any order, choosing which pages to keep from each, and preview it page by page before saving. |
 | [Watermark PDF](https://www.bdnix.com/watermark-pdf/) | Stamp text or an image on your pages, with a live preview and control over font, size, opacity, rotation, position and layering. |
 | [Redact PDF](https://www.bdnix.com/redact-pdf/) | Permanently black out text and areas. Search for words or draw boxes; the covered content is removed, not just hidden. |
 | [Sign PDF](https://www.bdnix.com/sign-pdf/) | Draw your signature with a finger, pen or mouse, type it in a handwriting font, or use a picture of it, then move, resize and turn it anywhere on the pages. Signatures can be made, kept in your browser or saved as images in their own dialog, without opening a PDF. |

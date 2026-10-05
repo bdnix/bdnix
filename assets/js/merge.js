@@ -12,11 +12,13 @@
   var clearBtn = document.getElementById('clearBtn');
   var mergeBtn = document.getElementById('mergeBtn');
   var mergeLabel = document.getElementById('mergeLabel');
-  var downloadBtn = document.getElementById('downloadBtn');
-  var downloadLabel = document.getElementById('downloadLabel');
   var preview = document.getElementById('preview');
+  var stage = document.getElementById('stage');
+  var canvas = document.getElementById('pageCanvas');
   var previewNote = document.getElementById('previewNote');
-  var previewGrid = document.getElementById('previewGrid');
+  var prevBtn = document.getElementById('prevPage');
+  var nextBtn = document.getElementById('nextPage');
+  var pageLabel = document.getElementById('pageLabel');
 
   document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -25,96 +27,139 @@
   var files = [];
   var nextId = 1;
   var busy = false;
-  var resultUrl = null;
-  // The pdf.js document behind the preview, and a counter that tells a
-  // preview still drawing that the merged file it shows has gone stale.
-  var previewTask = null;
-  var previewSeq = 0;
-  var THUMB = 180;   // CSS pixels along a preview page's longer side (merge.css fits it to its frame)
+  var saved = null;   // the object URL of the last file saved
+  // The preview: the merged file as pdf.js sees it ({ task, doc, pages }),
+  // the page showing, and counters that tell slower work it's out of date.
+  var view = null;
+  var pageIndex = 0;
+  var viewSeq = 0, showSeq = 0, viewTimer = null;
 
   function say(text, isError){
     msg.textContent = text || '';
     msg.classList.toggle('error', !!isError);
   }
 
-  // Any change to the list makes an earlier merged file stale.
-  function clearResult(){
-    if (resultUrl) URL.revokeObjectURL(resultUrl);
-    resultUrl = null;
-    downloadBtn.hidden = true;
-    downloadBtn.removeAttribute('href');
-    clearPreview();
-  }
-
-  function clearPreview(){
-    previewSeq++;
-    if (previewTask) previewTask.destroy();
-    previewTask = null;
-    preview.hidden = true;
-    previewGrid.textContent = '';
-    previewNote.textContent = '';
-  }
-
-  // Draws every page of the merged file, one at a time and in order, so the
-  // visitor can check it before downloading. pdf.js is only fetched now.
-  function showPreview(bytes, count){
-    var seq = ++previewSeq;
-    var canvases = [];
-    for (var i = 0; i < count; i++) {
-      var li = document.createElement('li');
-      li.className = 'preview-page';
-      var c = document.createElement('canvas');
-      c.setAttribute('role', 'img');
-      c.setAttribute('aria-label', 'Page ' + (i + 1) + ' of merged.pdf');
-      var num = document.createElement('span');
-      num.className = 'preview-num';
-      num.textContent = i + 1;
-      num.setAttribute('aria-hidden', 'true');
-      var frame = document.createElement('div');
-      frame.className = 'preview-frame';
-      frame.appendChild(c);
-      li.appendChild(frame);
-      li.appendChild(num);
-      previewGrid.appendChild(li);
-      canvases.push(c);
-    }
-    previewNote.textContent = 'Drawing ' + plural(count, 'page') + '…';
-    preview.hidden = false;
-
-    P.loadPdfjs().then(function(lib){
-      if (seq !== previewSeq) return;
-      if (!lib) throw new Error('pdf.js is unavailable');
-      // pdf.js takes over the bytes it's given, so it gets a copy.
-      previewTask = lib.getDocument({ data: bytes.slice(0), isEvalSupported: false });
-      return previewTask.promise.then(function(doc){
-        return canvases.reduce(function(chain, c, i){
-          return chain.then(function(){
-            if (seq === previewSeq) return drawPage(doc, i, c);
+  // Copies the chosen pages of every file, in order, into one new PDF.
+  // progress(i) is told before each file.
+  function build(progress){
+    return P.loadPdfLib().then(function(lib){ return lib.PDFDocument.create(); }).then(function(out){
+      return files.slice().reduce(function(chain, f, i){
+        return chain.then(function(){
+          if (progress) progress(i);
+          return out.copyPages(f.doc, f.sel.pages).then(function(pages){
+            pages.forEach(function(p){ out.addPage(p); });
           });
-        }, Promise.resolve());
-      }).then(function(){
-        if (seq === previewSeq) previewNote.textContent = '';
-      });
-    }).catch(function(){
-      if (seq !== previewSeq) return;
-      previewGrid.textContent = '';
-      previewNote.textContent = 'The pages can’t be shown in this browser, but the merged file is ready to download.';
+        });
+      }, Promise.resolve()).then(function(){ return out; });
     });
   }
 
-  function drawPage(doc, i, c){
-    return doc.getPage(i + 1).then(function(page){
+  // ---- Preview ----
+  // The merged file, shown one page at a time. Any change to the list
+  // rebuilds it, after a short pause so typing a range doesn't rebuild it
+  // on every key.
+  function setNote(text){
+    previewNote.textContent = text;
+    previewNote.hidden = !text;
+  }
+
+  function dropView(){
+    if (view) view.task.destroy();
+    view = null;
+  }
+
+  function changed(){
+    clearTimeout(viewTimer);
+    var seq = ++viewSeq;
+    preview.hidden = files.length === 0;
+    if (!files.length) {
+      dropView();
+      pageIndex = 0;
+      return;
+    }
+    if (files.some(function(f){ return f.sel.error; })) {
+      dropView();
+      showPage();
+      setNote('Fix the page ranges marked in red to see the preview.');
+      return;
+    }
+    setNote(view ? 'Updating the preview…' : 'Loading the preview…');
+    viewTimer = setTimeout(function(){
+      var lib;
+      P.loadPdfjs().then(function(l){
+        lib = l;
+        if (!lib) throw new Error('pdf.js is unavailable');
+        return build();
+      }).then(function(out){
+        return out.save();
+      }).then(function(bytes){
+        if (seq !== viewSeq) return;
+        var task = lib.getDocument({ data: bytes, isEvalSupported: false });
+        return task.promise.then(function(doc){
+          if (seq !== viewSeq) { task.destroy(); return; }
+          dropView();
+          view = { task: task, doc: doc, pages: doc.numPages };
+          pageIndex = Math.min(pageIndex, view.pages - 1);
+          showPage();
+        });
+      }).catch(function(){
+        if (seq !== viewSeq) return;
+        dropView();
+        showPage();
+        setNote('The preview can’t be shown in this browser, but you can still merge your files.');
+      });
+    }, 250);
+  }
+
+  function showPage(){
+    var seq = ++showSeq;
+    if (!view) {
+      canvas.hidden = true;
+      pageLabel.textContent = '';
+      prevBtn.disabled = nextBtn.disabled = true;
+      return;
+    }
+    var i = pageIndex, n = view.pages;
+    pageLabel.textContent = 'Page ' + (i + 1) + ' of ' + n;
+    prevBtn.disabled = i === 0;
+    nextBtn.disabled = i >= n - 1;
+    var cs = getComputedStyle(stage);
+    var fit = {
+      w: Math.max(120, stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)),
+      h: Math.max(240, Math.floor(window.innerHeight * 0.7))
+    };
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    view.doc.getPage(i + 1).then(function(page){
       var vp1 = page.getViewport({ scale: 1 });
-      var dpr = Math.min(window.devicePixelRatio || 1, 2);
-      var vp = page.getViewport({ scale: THUMB / Math.max(vp1.width, vp1.height) * dpr });
+      var vp = page.getViewport({ scale: Math.min(fit.w / vp1.width, fit.h / vp1.height) * dpr });
+      // Drawn off screen first, so the page showing never goes blank.
+      var c = document.createElement('canvas');
       c.width = Math.round(vp.width);
       c.height = Math.round(vp.height);
-      return page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise.then(function(){
-        page.cleanup();
-        c.parentNode.parentNode.classList.add('drawn');
-      });
+      return page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise.then(function(){ return c; });
+    }).then(function(c){
+      if (seq !== showSeq) return;
+      canvas.width = c.width;
+      canvas.height = c.height;
+      canvas.style.width = Math.round(c.width / dpr) + 'px';
+      canvas.getContext('2d').drawImage(c, 0, 0);
+      canvas.setAttribute('aria-label', 'Page ' + (i + 1) + ' of ' + n + ' of the merged PDF');
+      canvas.hidden = false;
+      setNote('');
+    }, function(){
+      // The file was replaced while this page was drawing; the new one shows itself.
     });
   }
+
+  function turn(by){
+    if (!view) return;
+    var to = pageIndex + by;
+    if (to < 0 || to >= view.pages) return;
+    pageIndex = to;
+    showPage();
+  }
+  prevBtn.addEventListener('click', function(){ turn(-1); });
+  nextBtn.addEventListener('click', function(){ turn(1); });
 
   function addFiles(fileList){
     if (busy) return;
@@ -147,8 +192,8 @@
       });
     }, P.loadPdfLib().then(function(lib){ PDFDocument = lib.PDFDocument; })).then(function(){
       busy = false;
-      clearResult();
       render();
+      changed();
       say(problems.length ? 'Skipped: ' + problems.join('; ') + '.' : '', problems.length > 0);
     }, function(err){
       busy = false;
@@ -161,8 +206,8 @@
     if (to < 0 || to >= files.length || from === to) return;
     var item = files.splice(from, 1)[0];
     files.splice(to, 0, item);
-    clearResult();
     render();
+    changed();
   }
 
   function iconBtn(cls, label, path, onClick, disabled){
@@ -215,9 +260,9 @@
       input.addEventListener('input', function(){
         f.range = input.value;
         f.sel = parseRange(f.range, f.pages);
-        clearResult();
         showMeta(f, meta, input);
         updateTotals();
+        changed();
       });
       // A draggable row stops the mouse from selecting text in the input.
       input.addEventListener('focus', function(){ li.draggable = false; });
@@ -233,8 +278,8 @@
       btns.appendChild(iconBtn('down', 'Move ' + f.name + ' down', 'M4 6l4 4 4-4', function(){ move(i, i + 1); }, busy || i === files.length - 1));
       btns.appendChild(iconBtn('rm', 'Remove ' + f.name, 'M4 4l8 8M12 4l-8 8', function(){
         files.splice(i, 1);
-        clearResult();
         render();
+        changed();
         say('');
       }, busy));
 
@@ -323,41 +368,33 @@
 
   clearBtn.addEventListener('click', function(){
     files = [];
-    clearResult();
     render();
+    changed();
     say('');
   });
 
+  // Merging saves the file straight away; the preview above shows what it holds.
   mergeBtn.addEventListener('click', function(){
     if (busy || !files.length || files.some(function(f){ return f.sel.error; })) return;
     busy = true;
-    clearResult();
     render();
+    say('');
     var total = files.length;
     var out;
 
-    P.loadPdfLib().then(function(lib){ return lib.PDFDocument.create(); }).then(function(doc){
+    build(function(i){ mergeLabel.textContent = 'Merging ' + (i + 1) + ' of ' + total + '…'; }).then(function(doc){
       out = doc;
-      return files.reduce(function(chain, f, i){
-        return chain.then(function(){
-          mergeLabel.textContent = 'Merging ' + (i + 1) + ' of ' + total + '…';
-          return out.copyPages(f.doc, f.sel.pages).then(function(pages){
-            pages.forEach(function(p){ out.addPage(p); });
-          });
-        });
-      }, Promise.resolve());
-    }).then(function(){
       mergeLabel.textContent = 'Saving…';
       return out.save();
     }).then(function(bytes){
       var blob = new Blob([bytes], { type: 'application/pdf' });
-      resultUrl = URL.createObjectURL(blob);
-      T.offer(downloadBtn, resultUrl, 'merged.pdf');
-      downloadLabel.textContent = 'Download merged.pdf (' + fmtSize(blob.size) + ')';
-      downloadBtn.hidden = false;
-      say('Done. ' + plural(out.getPageCount(), 'page') + ' from ' + plural(total, 'file') + '.');
-      showPreview(bytes, out.getPageCount());
-      downloadBtn.focus();
+      if (saved) URL.revokeObjectURL(saved);
+      saved = URL.createObjectURL(blob);
+      var a = T.offer(document.createElement('a'), saved, 'merged.pdf');
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      say('Saved merged.pdf: ' + plural(out.getPageCount(), 'page') + ' from ' + plural(total, 'file') + ', ' + fmtSize(blob.size) + '.');
     }).catch(function(err){
       say('Something went wrong while merging: ' + (err && err.message ? err.message : err), true);
     }).then(function(){
