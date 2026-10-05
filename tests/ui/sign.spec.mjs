@@ -300,7 +300,7 @@ test('a typed signature uses the name from the profile and a handwriting font', 
   await expect(page.locator('#fonts span').first()).toHaveText('Jane Doe');
 
   const sizes = [];
-  for (const [n, family] of [[1, 'Great Vibes'], [2, 'Caveat']]) {
+  for (const [n, family] of [[1, 'Herr Von Muellerhoff'], [2, 'Mr Dafoe']]) {
     await openSigs(page);
     await page.locator('#fonts label', { has: page.locator(`input[value="${family}"]`) }).click();
     await page.getByRole('button', { name: 'Add to the page' }).click();
@@ -605,6 +605,45 @@ test('the signatures dialog passes axe', async ({ page }) => {
   await expect(page.locator('#sigList .sig')).toHaveCount(1);
   const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+});
+
+test('a drawn line leaves more ink where the pen moves slowly, as real ink does', async ({ page }) => {
+  // A frozen clock, so how fast the pen moves is exact.
+  await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-01-01T00:00:01Z'));
+  await page.goto('/sign-pdf/');
+  await openSigs(page);
+  const box = await page.locator('#pad').boundingBox();
+  // The same wave, with ms between each 12 px step.
+  async function wave(ms){
+    await page.mouse.move(box.x + 20, box.y + box.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 20; i++) {
+      await page.clock.runFor(ms);
+      await page.mouse.move(box.x + 20 + i * 12, box.y + box.height / 2 - Math.sin(i / 3) * 40);
+    }
+    await page.mouse.up();
+    await page.getByRole('button', { name: 'Create signature' }).click();
+  }
+  await wave(200);
+  await expect(page.locator('#sigList .sig')).toHaveCount(1);
+  await wave(4);
+  await expect(page.locator('#sigList .sig')).toHaveCount(2);
+
+  // How many pixels of ink each signature has.
+  const ink = async (n) => page.evaluate(async (href) => {
+    const bmp = await createImageBitmap(await (await fetch(href)).blob());
+    const c = document.createElement('canvas');
+    c.width = bmp.width; c.height = bmp.height;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(bmp, 0, 0);
+    const d = ctx.getImageData(0, 0, c.width, c.height).data;
+    let n = 0;
+    for (let i = 3; i < d.length; i += 4) if (d[i] > 128) n++;
+    return n;
+  }, await page.getByRole('link', { name: `Save signature ${n} as an image` }).getAttribute('href'));
+  const slow = await ink(1), fast = await ink(2);
+  expect(slow / fast, `slow ${slow} px of ink, fast ${fast}`).toBeGreaterThan(2);
 });
 
 test('rejects files that are not PDFs', async ({ page }) => {
