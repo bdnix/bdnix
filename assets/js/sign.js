@@ -9,7 +9,7 @@
   function $(id){ return document.getElementById(id); }
 
   var drop = $('drop'), picker = $('picker');
-  var fileBar = $('fileBar'), fileName = $('fileName'), fileMeta = $('fileMeta'), changeBtn = $('changeBtn'), closeBtn = $('closeBtn');
+  var fileBar = $('fileBar'), fileName = $('fileName'), fileMeta = $('fileMeta'), closeBtn = $('closeBtn');
   var msg = $('msg'), editor = $('editor');
   var sigsBtn = $('sigsBtn'), sigCountEl = $('sigCount'), placeBtn = $('placeBtn'), placeTip = $('placeTip');
   var dialog = $('sigDialog'), dialogClose = $('dialogClose'), sigMsg = $('sigMsg');
@@ -152,26 +152,35 @@
   modes.addEventListener('change', showMode);
 
   // The pad keeps each stroke as points, in fractions of the pad's width,
-  // so it can be redrawn crisply at any size.
+  // so it can be redrawn crisply at any size, with the time each was drawn,
+  // since how fast the pen moved sets how much ink it leaves.
   var strokes = [], stroke = null;
   var LINE = 2.6;   // pen width in CSS pixels
 
+  // Each piece of a line is drawn at the ink width where it is, and the
+  // round ends of the pieces join them smoothly.
   function drawStrokes(ctx, scale, color){
+    var line = LINE * scale / pad.clientWidth;
     ctx.strokeStyle = ctx.fillStyle = color;
-    ctx.lineWidth = LINE * scale / pad.clientWidth;
     ctx.lineCap = ctx.lineJoin = 'round';
     strokes.forEach(function(pts){
+      var widths = S.inkWidths(pts, pad.clientWidth);
       var p = pts.map(function(q){ return [q[0] * scale, q[1] * scale]; });
       if (p.length === 1) {
         ctx.beginPath();
-        ctx.arc(p[0][0], p[0][1], ctx.lineWidth / 2, 0, Math.PI * 2);
+        ctx.arc(p[0][0], p[0][1], line * widths[0] / 2, 0, Math.PI * 2);
         ctx.fill();
         return;
       }
-      ctx.beginPath();
-      ctx.moveTo(p[0][0], p[0][1]);
-      S.smooth(p).forEach(function(c){ ctx.quadraticCurveTo(c.cx, c.cy, c.x, c.y); });
-      ctx.stroke();
+      var from = p[0];
+      S.smooth(p).forEach(function(c, k){
+        ctx.beginPath();
+        ctx.moveTo(from[0], from[1]);
+        ctx.quadraticCurveTo(c.cx, c.cy, c.x, c.y);
+        ctx.lineWidth = line * (widths[k] + widths[k + 1]) / 2;
+        ctx.stroke();
+        from = [c.x, c.y];
+      });
     });
   }
 
@@ -194,7 +203,7 @@
 
   function padPoint(e){
     var r = pad.getBoundingClientRect();
-    return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.width];
+    return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.width, performance.now()];
   }
 
   pad.addEventListener('pointerdown', function(e){
@@ -837,7 +846,6 @@
       fileBar.hidden = false;
       editor.hidden = false;
       fileName.textContent = file.name;
-      fileName.title = file.name;
       fileMeta.textContent = T.plural(src.pages, 'page') + ' · ' + T.fmtSize(file.size);
       say('');
       var current = src;
@@ -868,7 +876,8 @@
     openFile(picker.files[0]);
     picker.value = '';
   });
-  changeBtn.addEventListener('click', function(){ picker.click(); });
+  // The file's name opens a different one; the cross on the page closes it.
+  fileName.addEventListener('click', function(){ picker.click(); });
 
   // Puts the PDF away without signing it or opening another. The
   // signatures stay, ready for the next file.

@@ -16,7 +16,9 @@ Every tool runs entirely in the browser. Files are never uploaded, and all proce
 
 `/merge-pdf/`
 
-Add PDFs by dropping them on the page or choosing them. Reorder them by dragging or with the arrow buttons, then merge and download `merged.pdf`.
+Add PDFs by dropping them on the page or choosing them. Reorder them by dragging or with the arrow buttons, then press **Merge PDFs** to save `merged.pdf`.
+
+Below the list, a **preview** shows the merged file one page at a time, with buttons for the previous and next page. It updates by itself as you add, remove or reorder files or change a range, so you can check the result before saving. While a range is invalid, the preview waits until it's fixed. Pages are drawn with [PDF.js](https://mozilla.github.io/pdf.js/), fetched when the first file is added. If PDF.js can't load, the preview says so and merging still works.
 
 Each file has a **Pages** box. Leave it empty to include every page, or list pages and ranges separated by commas, for example `1-3, 5, 8-`:
 
@@ -66,8 +68,8 @@ Search positions boxes from the PDF's own text, estimating where each letter sit
 
 Signatures live in the **My signatures** dialog, which opens from the button at the top of the page, with or without a PDF, so a signature can be made, saved as an image or kept in the browser without signing anything. Once a PDF is open (drop it on the page or choose it), **Add a signature** beside its pages opens the same dialog. Esc, the × button or a click outside closes it. Make a signature under **New signature**:
 
-- **Draw** it in the white box with a finger, a pen or the mouse. **Clear** wipes the box.
-- **Type** your name and pick one of four handwriting fonts (Dancing Script, Great Vibes, Sacramento and Caveat, served from this site). The name from the visitor's profile is filled in, if they've set one.
+- **Draw** it in the white box with a finger, a pen or the mouse. The line behaves like ink: it's thicker where the pen moves slowly and thinner where it moves fast, so the signature comes out the way the hand wrote it. **Clear** wipes the box.
+- **Type** your name and pick one of four signature fonts (Mrs Saint Delafield, Herr Von Muellerhoff, Mr De Haviland and Mr Dafoe, served from this site). The name from the visitor's profile is filled in, if they've set one.
 - **Image** uses a photo or scan of a signature (PNG, JPG, WebP or GIF). **Make white paper see-through** (on by default) turns the light background clear and keeps the ink, with soft edges.
 
 Drawn and typed signatures can be in black or blue ink. **Create signature** turns the signature into a PNG with a see-through background, cropped to the ink, and adds it to **Saved**. Once a PDF is open the button reads **Add to the page**, and also closes the dialog and puts the new signature on the page shown.
@@ -80,7 +82,7 @@ On the page, click a signature to select it, then:
 - drag its **corner handle** to resize it, or use the **Size** slider (its width as a share of the page's width);
 - drag the **handle above** it to turn it, or use the **Rotation** slider. Dragging snaps to level and to quarter turns when it's within 4°.
 
-**Close file** (beside **Change file**) puts the PDF away without signing it or opening another one; the signatures stay for the next file.
+Click the file's name above the page to open a different PDF. The **×** on the top-right corner of the page closes the PDF without signing it or opening another one; the signatures stay for the next file.
 
 A signature that's on the open PDF isn't deleted straight away: **Delete** says which pages it's on and that deleting it takes it off them too, with **Keep it** (focused, so Enter keeps it) and **Delete anyway**. Sign and download the PDF first to keep it there. A signature that isn't on the PDF is deleted at once.
 

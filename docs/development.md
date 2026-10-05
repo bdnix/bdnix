@@ -101,6 +101,6 @@ The share image (`assets/img/og.png`, 1200×630) and `assets/img/apple-touch-ico
 | [lamejs](https://github.com/zhuker/lamejs) | 1.2.1 | LGPL | MP3 encoding, included unmodified as its own file (loaded with the first MP3) |
 | [Inter](https://rsms.me/inter/) (from [Fontsource](https://fontsource.org/)) | 5.3.0 | OFL 1.1 | The site's text, weights 400, 600 and 800 |
 | [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (from Fontsource) | 5.3.0 | OFL 1.1 | Labels and code-style text, weights 400 and 600 |
-| Dancing Script, Great Vibes, Sacramento and Caveat (from Fontsource) | 5.3.0 | OFL 1.1 | Typed signatures in Sign PDF, weight 400 |
+| Mrs Saint Delafield, Herr Von Muellerhoff, Mr De Haviland and Mr Dafoe (from Fontsource) | 5.3.0 | OFL 1.1 | Typed signatures in Sign PDF, weight 400 |
 
 Each library's licence file sits beside it in [assets/vendor/](../assets/vendor/); the fonts, Latin and Latin Extended subsets as WOFF2, are in [assets/fonts/](../assets/fonts/) with theirs. `base.css` declares Inter and JetBrains Mono, and every page preloads Inter 400 and 800; the handwriting fonts are declared in `sign.css` and only load on the signing page.

@@ -179,3 +179,29 @@ test('checkSaved: only signatures that make sense come back', () => {
     assert.equal(S.checkSaved(bad, isBytes), null, JSON.stringify(bad));
   }
 });
+
+test('inkWidths: a slow pen leaves more ink than a fast one, changing gradually', () => {
+  // 10 px apart on a 500 px pad: every 100 ms is slow, every 2 ms is fast.
+  const line = (dt) => Array.from({ length: 12 }, (_, i) => [i * 0.02, 0.1, i * dt]);
+  const slow = S.inkWidths(line(100), 500), fast = S.inkWidths(line(2), 500);
+  assert.equal(slow.length, 12);
+  // Every line starts at full width, where the pen touches down.
+  assert.equal(slow[0], S.INK_MAX);
+  assert.equal(fast[0], S.INK_MAX);
+  // 0.1 px/ms keeps most of the ink; 5 px/ms thins it to the least there is.
+  assert.ok(slow.at(-1) > 1.1, `slow ends at ${slow.at(-1)}`);
+  near(fast.at(-1), S.INK_MIN, 'fast');
+  // It thins step by step rather than all at once.
+  for (let i = 1; i < fast.length; i++) assert.ok(fast[i] <= fast[i - 1], `fast step ${i}`);
+  assert.ok(fast[1] > fast[3] && fast[1] < S.INK_MAX);
+});
+
+test('inkWidths: points with no time between them keep the speed so far', () => {
+  // Events the browser hands over together share a time.
+  const w = S.inkWidths([[0, 0, 0], [0.02, 0, 10], [0.04, 0, 10], [0.06, 0, 20]], 500);
+  near(w[2], w[1], 'same time');
+  // Points from before times were kept have none: full width.
+  assert.deepEqual(plain(S.inkWidths([[0, 0], [0.5, 0]], 500)), [S.INK_MAX, S.INK_MAX]);
+  assert.deepEqual(plain(S.inkWidths([[0.2, 0.2, 0]], 500)), [S.INK_MAX]);
+  assert.deepEqual(plain(S.inkWidths([], 500)), []);
+});
