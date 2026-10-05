@@ -4,7 +4,7 @@ import { openGame, press, listen, heard } from './games.mjs';
 // What each game's own sound tests don't cover: the mute button every game
 // has in its top bar, and the choice carrying over between games.
 const btn = (page) => page.locator('#soundBtn');
-const games = ['/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/'];
+const games = ['/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/chess/', '/brick-bounce/'];
 
 test('every game has a mute button, and muting one mutes them all', async ({ page }) => {
   await listen(page);

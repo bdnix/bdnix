@@ -3,7 +3,7 @@ import { test, expect } from './fixtures.mjs';
 const LIVE = 'https://www.bdnix.com';
 // Pages search engines should list. The profile only shows what's saved in
 // the visitor's own browser, so it's kept out of the index.
-const listed = ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/mp4-to-mp3/', '/compress-image/', '/photo-collage/', '/fit-to-frame/'];
+const listed = ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/chess/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/mp4-to-mp3/', '/compress-image/', '/photo-collage/', '/fit-to-frame/'];
 const pages = [...listed, '/profile/'];
 
 const meta = (page, attr, name) => page.locator(`head meta[${attr}="${name}"]`);
@@ -66,7 +66,7 @@ test('the landing page, games and tools describe themselves as structured data',
     } else {
       expect(data['@type'], url).toBe('WebApplication');
       expect(await page.title(), url).toContain(data.name);
-      expect(data.applicationCategory, url).toBe(/falling-blocks|maze-chase|flap|road-hop|snake|brick-bounce/.test(url) ? 'GameApplication' : /pdf/.test(url) ? 'UtilitiesApplication' : 'MultimediaApplication');
+      expect(data.applicationCategory, url).toBe(/falling-blocks|maze-chase|flap|road-hop|snake|brick-bounce|chess/.test(url) ? 'GameApplication' : /pdf/.test(url) ? 'UtilitiesApplication' : 'MultimediaApplication');
       expect(data.offers, url).toEqual({ '@type': 'Offer', price: '0', priceCurrency: 'USD' });
     }
   }

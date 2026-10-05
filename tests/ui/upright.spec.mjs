@@ -5,7 +5,7 @@ import { openGame } from './games.mjs';
 // a phone gets a note asking for it to be turned back, and the game pauses.
 // A mouse and keyboard screen is never covered, however short the window:
 // the game carries on, laid out beside its board.
-const games = ['/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/'];
+const games = ['/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/chess/'];
 const note = (page) => page.locator('.upright');
 const touch = (page) => page.evaluate(() => matchMedia('(pointer:coarse)').matches);
 

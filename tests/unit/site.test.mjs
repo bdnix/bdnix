@@ -28,7 +28,7 @@ test('site: every game and tool has a card, and every game a best-score key', ()
     if (p.app.kind === 'game') assert.match(p.app.best, /^bdnix_[a-z]+_best$/, p.path);
     else assert.equal(p.app.best, undefined, p.path);
   }
-  assert.equal(apps.filter((p) => p.app.kind === 'game').length, 6);
+  assert.equal(apps.filter((p) => p.app.kind === 'game').length, 7);
   assert.equal(apps.filter((p) => p.app.kind === 'tool').length, 8);
 });
 
@@ -71,7 +71,9 @@ test('cards and scores follow the order of the list', () => {
   assert.deepEqual(cards(pages, 'nothing'), []);
   const rows = scores(pages).filter((l) => l.startsWith('<div class="score panel"'));
   assert.deepEqual(rows.map((l) => l.match(/data-best="([^"]+)"/)[1]),
-    ['bdnix_tetris_best', 'bdnix_pacman_best', 'bdnix_flappy_best', 'bdnix_hop_best', 'bdnix_snake_best', 'bdnix_bricks_best']);
+    ['bdnix_tetris_best', 'bdnix_pacman_best', 'bdnix_flappy_best', 'bdnix_hop_best', 'bdnix_snake_best', 'bdnix_bricks_best', 'bdnix_chess_best']);
+  // Only a game with a label for its best score says it.
+  assert.deepEqual(rows.filter((l) => l.includes('data-best-label')), ['<div class="score panel" data-best="bdnix_chess_best" data-best-label="Level">']);
 });
 
 test('fill: replaces what is between the markers, indented like them, and nothing else', () => {

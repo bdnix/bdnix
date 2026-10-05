@@ -4,7 +4,7 @@ bdnix has no server-side application and no accounts. Everything the site keeps 
 
 ## Files opened in the tools
 
-Files are read and processed by the browser. They are never uploaded or sent anywhere, and neither is anything typed into a tool. Third-party libraries (pdf-lib, PDF.js, fontkit, lamejs) and the fonts (Inter, JetBrains Mono and the signing tool's handwriting fonts) are served from this site, not from a CDN or a font service, so until a visitor accepts analytics a page contacts nothing but bdnix.com (checked by `tests/ui/analytics.spec.mjs`).
+Files are read and processed by the browser (this includes chess game files). They are never uploaded or sent anywhere, and neither is anything typed into a tool. Third-party libraries (pdf-lib, PDF.js, fontkit, lamejs and the Stockfish chess engine) and the fonts (Inter, JetBrains Mono and the signing tool's handwriting fonts) are served from this site, not from a CDN or a font service, so until a visitor accepts analytics a page contacts nothing but bdnix.com (checked by `tests/ui/analytics.spec.mjs`).
 
 ## Content security policy
 
@@ -12,7 +12,7 @@ Every page tells the browser what it may load: its own files, and Google Analyti
 
 ## Profile
 
-The chip in the top right of the landing and tool pages links to `/profile/`. It shows the visitor's name ("User" until they set one, up to 24 characters), their best Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce scores, and the number of visits counted by the landing page. The profile page is marked `noindex`, since it only shows what's saved in the browser.
+The chip in the top right of the landing and tool pages links to `/profile/`. It shows the visitor's name ("User" until they set one, up to 24 characters), their best Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce scores, the highest chess level they've beaten, and the number of visits counted by the landing page. The profile page is marked `noindex`, since it only shows what's saved in the browser.
 
 ## What is stored
 
@@ -23,7 +23,8 @@ In `localStorage`:
 | `bdnix_name` | Display name |
 | `bdnix_visits` | Landing page visit count |
 | `bdnix_tetris_best`, `bdnix_pacman_best`, `bdnix_flappy_best`, `bdnix_hop_best`, `bdnix_snake_best`, `bdnix_bricks_best` | Best scores |
-| `bdnix_tetris_save`, `bdnix_pacman_save`, `bdnix_flappy_save`, `bdnix_hop_save`, `bdnix_snake_save`, `bdnix_bricks_save` | Games in progress |
+| `bdnix_chess_best` | The highest chess level beaten |
+| `bdnix_tetris_save`, `bdnix_pacman_save`, `bdnix_flappy_save`, `bdnix_hop_save`, `bdnix_snake_save`, `bdnix_bricks_save`, `bdnix_chess_save` | Games in progress |
 | `bdnix_sound` | Whether game sounds are on (`on`) or muted (`off`) |
 | `bdnix_watermark_v1` | Watermark tool settings |
 | `bdnix_analytics` | Analytics consent choice |

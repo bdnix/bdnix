@@ -7,10 +7,10 @@ test('shows the games and tools, with no under-construction wording', async ({ p
   await expect(page.locator('body')).not.toContainText(/under construction|check back soon|being built/i);
 
   const cards = page.locator('.card');
-  await expect(cards).toHaveCount(14);
+  await expect(cards).toHaveCount(15);
   const links = await cards.evaluateAll((els) => els.map((a) => [a.querySelector('b').textContent, a.getAttribute('href')]));
   expect(links).toEqual([
-    ['Falling Blocks', '/falling-blocks/'], ['Maze Chase', '/maze-chase/'], ['Flap', '/flap/'], ['Road Hop', '/road-hop/'], ['Snake', '/snake/'], ['Brick Bounce', '/brick-bounce/'],
+    ['Falling Blocks', '/falling-blocks/'], ['Maze Chase', '/maze-chase/'], ['Flap', '/flap/'], ['Road Hop', '/road-hop/'], ['Snake', '/snake/'], ['Brick Bounce', '/brick-bounce/'], ['Chess', '/chess/'],
     ['Merge PDFs', '/merge-pdf/'], ['Watermark a PDF', '/watermark-pdf/'], ['Redact a PDF', '/redact-pdf/'], ['Sign a PDF', '/sign-pdf/'], ['MP4 to MP3', '/mp4-to-mp3/'],
     ['Compress Images', '/compress-image/'], ['Photo Collage', '/photo-collage/'], ['Resize Without Cropping', '/fit-to-frame/']
   ]);
@@ -55,7 +55,7 @@ test('welcome line greets first-time and returning visitors', async ({ page }) =
   await expect(page.locator('#visit')).toHaveText('Welcome back, Musa. Visit #9, you’re a regular now.');
 });
 
-for (const path of ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/mp4-to-mp3/', '/compress-image/', '/photo-collage/', '/fit-to-frame/', '/profile/']) {
+for (const path of ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/chess/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/mp4-to-mp3/', '/compress-image/', '/photo-collage/', '/fit-to-frame/', '/profile/']) {
   test(`${path} fits the screen without scrolling sideways`, async ({ page }) => {
     await page.goto(path);
     await expectNoSideScroll(page);
@@ -63,7 +63,7 @@ for (const path of ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-ho
 }
 
 test('every page links its own scripts and styles with a content hash, and they load', async ({ page }) => {
-  for (const path of ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/mp4-to-mp3/', '/compress-image/', '/photo-collage/', '/fit-to-frame/', '/profile/']) {
+  for (const path of ['/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/chess/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/mp4-to-mp3/', '/compress-image/', '/photo-collage/', '/fit-to-frame/', '/profile/']) {
     const failed = [];
     page.on('response', (r) => { if (r.url().includes('/assets/') && r.status() >= 400) failed.push(r.url()); });
     await page.goto(path);
@@ -124,7 +124,7 @@ test('the search box filters the games and tools as you type', async ({ page }) 
   const tools = page.getByRole('region', { name: 'Tools' });
   const shown = () => page.locator('.card:visible b').allTextContents();
 
-  await expect(page.locator('.card:visible')).toHaveCount(14);
+  await expect(page.locator('.card:visible')).toHaveCount(15);
   await expect(status).toHaveText('');
   await expect(empty).toBeHidden();
 
@@ -147,11 +147,11 @@ test('the search box filters the games and tools as you type', async ({ page }) 
   expect(await shown()).toEqual(['Compress Images', 'Photo Collage', 'Resize Without Cropping']);
 
   await search.fill('game');
-  expect(await shown()).toEqual(['Falling Blocks', 'Maze Chase', 'Flap', 'Road Hop', 'Snake', 'Brick Bounce']);
+  expect(await shown()).toEqual(['Falling Blocks', 'Maze Chase', 'Flap', 'Road Hop', 'Snake', 'Brick Bounce', 'Chess']);
 
   // Plurals find the singular.
   await search.fill('games');
-  expect(await shown()).toEqual(['Falling Blocks', 'Maze Chase', 'Flap', 'Road Hop', 'Snake', 'Brick Bounce']);
+  expect(await shown()).toEqual(['Falling Blocks', 'Maze Chase', 'Flap', 'Road Hop', 'Snake', 'Brick Bounce', 'Chess']);
   await search.fill('photos');
   expect(await shown()).toEqual(['Compress Images', 'Photo Collage', 'Resize Without Cropping']);
 
@@ -175,7 +175,7 @@ test('the search box filters the games and tools as you type', async ({ page }) 
   expect(await shown()).toEqual(['Snake']);
   await search.press('Escape');
   await expect(search).toHaveValue('');
-  await expect(page.locator('.card:visible')).toHaveCount(14);
+  await expect(page.locator('.card:visible')).toHaveCount(15);
   await expect(status).toHaveText('');
   await expect(empty).toBeHidden();
   await expectNoSideScroll(page);

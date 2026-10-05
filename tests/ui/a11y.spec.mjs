@@ -6,7 +6,7 @@ import { upload, numberedPdf } from './pdfs.mjs';
 // What screen reader and keyboard users need from every page.
 const pages = [
   '/', '/profile/',
-  '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/',
+  '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/chess/',
   '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/mp4-to-mp3/',
   '/compress-image/', '/photo-collage/', '/fit-to-frame/'
 ];
@@ -58,5 +58,13 @@ test('a paused game, and a tool with files in it, pass axe too', async ({ page }
   // With with the merged file's preview showing.
   await expect(page.locator('#pageLabel')).toHaveText('Page 1 of 5');
   await expect(page.locator('#pageCanvas')).toBeVisible();
+  expect(await axeProblems(page)).toEqual([]);
+});
+
+test('a chess game review passes axe', async ({ page }) => {
+  await page.goto('/chess/');
+  await page.locator('#pgnFile').setInputFiles({ name: 'game.pgn', mimeType: 'text/plain', buffer: Buffer.from('1. f3 e5 2. g4 Qh4# 0-1') });
+  await expect(page.locator('#reviewProgress')).toHaveText('Analysed by Stockfish, 16 moves deep.', { timeout: 30000 });
+  await page.locator('.mv').nth(2).click();
   expect(await axeProblems(page)).toEqual([]);
 });

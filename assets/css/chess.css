@@ -1,0 +1,208 @@
+/* Chess layout, board and pieces. Shared pieces live in base.css and game.css. */
+.defs{position:absolute;width:0;height:0;overflow:hidden}
+
+.game{
+  position:relative;z-index:1;
+  flex:1;min-height:0;
+  display:grid;
+  grid-template-columns:190px auto 190px;
+  grid-template-areas:"stats board side";
+  justify-content:center;align-content:start;
+  gap:14px;
+  padding:4px clamp(16px,4vw,32px) 24px;
+}
+.stats{grid-area:stats;align-self:start}
+.stats b{font:600 15px/1.3 var(--sans)}
+.board-wrap{grid-area:board;--sq:44px}
+.side{grid-area:side;align-self:start;align-items:stretch;gap:12px}
+
+/* ---- The board: 8 × 8 buttons ---- */
+#board.board{
+  display:grid;
+  grid-template-columns:repeat(8,var(--sq));
+  grid-template-rows:repeat(8,var(--sq));
+  overflow:hidden;
+  touch-action:none;
+  background:none;
+}
+.sq{
+  position:relative;
+  display:block;width:var(--sq);height:var(--sq);
+  margin:0;padding:0;border:0;border-radius:0;
+  background:#d6d9ee;
+  line-height:0;
+}
+.sq.dark{background:#8576c4}
+.sq:focus{outline:none}
+.sq:focus-visible{box-shadow:inset 0 0 0 3px var(--cyan)}
+.sq.last{background:#e8d98a}
+.sq.dark.last{background:#b8a45a}
+.sq.sel{background:#7fe0f0}
+.sq.dark.sel{background:#3fb3c8}
+.sq.check{background:radial-gradient(circle,#ff5470 0%,#e2304f 45%,transparent 80%),#d6d9ee}
+.sq.dark.check{background:radial-gradient(circle,#ff5470 0%,#e2304f 45%,transparent 80%),#8576c4}
+/* Where the selected piece can go: a dot, or a ring around a piece it can take. */
+.sq.to::after{
+  content:"";position:absolute;left:50%;top:50%;
+  width:30%;height:30%;margin:-15% 0 0 -15%;border-radius:50%;
+  background:rgba(8,10,18,.32);
+}
+.sq.to.take::after{width:88%;height:88%;margin:-44% 0 0 -44%;background:none;border:4px solid rgba(8,10,18,.32)}
+.coord{
+  position:absolute;
+  font:600 10px/1 var(--mono);color:rgba(8,10,18,.55);
+  pointer-events:none;
+}
+.coord.file{right:3px;bottom:3px}
+.coord.rank{left:3px;top:3px}
+.dark .coord{color:rgba(255,255,255,.7)}
+
+/* The pieces: white with a dark outline, black with a light one. */
+.pc{
+  position:absolute;inset:4%;width:92%;height:92%;
+  pointer-events:none;
+  stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round;
+}
+.pc.w{fill:#f8f9fd;stroke:#121626}
+.pc.b{fill:#1b2036;stroke:#e4e7f4}
+.pc.w .cut{stroke:#121626;fill:none}
+.pc.b .cut{stroke:#e4e7f4;fill:none}
+.pc.slide{transition:transform .18s ease}
+.pc.drag{z-index:2;transition:none;filter:drop-shadow(0 6px 8px rgba(0,0,0,.45))}
+
+/* Choosing what a pawn becomes */
+.promo{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  padding:14px;line-height:1;
+  border:1px solid var(--line);border-radius:var(--radius);
+  background:var(--bg-2);box-shadow:0 18px 48px -12px rgba(0,0,0,.7);
+}
+.promo[hidden]{display:none}
+.promo p{margin:0}
+.promo-pieces{display:flex;gap:8px}
+.promo-pieces button{
+  position:relative;width:var(--sq);height:var(--sq);min-width:44px;min-height:44px;
+  padding:0;border:1px solid var(--line);border-radius:10px;background:#d6d9ee;
+}
+.promo-pieces button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+.overlay .seg{margin:0;padding:0;border:0;min-width:220px}
+.overlay .seg legend{margin:0 auto 8px}
+.overlay .seg span{padding:9px}
+
+/* ---- Captures and controls ---- */
+.caps-row{display:grid;grid-template-columns:1fr auto;grid-template-areas:"name adv" "caps caps";gap:6px;align-items:center}
+.caps-row .label{grid-area:name}
+.caps{grid-area:caps;display:flex;flex-wrap:wrap;min-height:20px}
+.caps svg{position:static;width:20px;height:20px;margin-right:-5px}
+.adv{grid-area:adv;font:600 13px/1 var(--mono);color:var(--muted)}
+.level{display:flex;flex-direction:column;gap:8px}
+.level select{
+  width:100%;padding:10px 12px;
+  font:inherit;font-size:14px;color:var(--fg);
+  border:1px solid var(--line);border-radius:10px;background:rgba(8,10,18,.5);
+}
+.level select:focus{outline:none;border-color:var(--cyan)}
+.level option{background:#10142a;color:var(--fg)}
+.controls{display:grid;gap:8px}
+.controls .btn{padding:11px 14px;font-size:14px}
+.controls .btn:disabled{opacity:.45;cursor:default;transform:none}
+
+/* ---- Phones & tablets ---- */
+@media (max-width:700px),(pointer:coarse){
+  .game{
+    grid-template-columns:1fr;
+    grid-template-rows:auto auto auto;
+    grid-template-areas:"stats" "board" "side";
+    justify-content:stretch;justify-items:center;
+    gap:8px;
+    padding:0 16px 8px;
+  }
+  .stats{justify-self:stretch;grid-template-columns:auto 1fr;gap:4px 12px;padding:8px 12px;text-align:left}
+  .stats div{flex-direction:row;align-items:baseline;gap:8px}
+  .stats b{font-size:14px}
+  .best-row{display:none!important}
+  .side{
+    justify-self:stretch;
+    display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;
+    padding:8px 12px;
+  }
+  .caps{min-height:16px}
+  .caps svg{width:16px;height:16px}
+  .level{grid-column:1/-1;flex-direction:row;align-items:center;gap:12px}
+  .level select{padding:8px 10px}
+  .controls{grid-column:1/-1;grid-template-columns:1fr 1fr}
+  .controls .btn{padding:10px}
+}
+
+/* The overlay hides the light squares well enough to read over. */
+.board-wrap .overlay{background:rgba(8,10,18,.93)}
+
+.ov-msg{min-height:0;color:var(--pink)!important}
+.ov-msg:empty{display:none}
+
+/* ---- Reviewing a game ---- */
+.sq.hint{box-shadow:inset 0 0 0 3px rgba(34,211,238,.85)}
+.review{
+  grid-area:side;align-self:start;
+  display:flex;flex-direction:column;gap:12px;
+  padding:14px;
+  max-height:calc(var(--sq) * 8 + 2px);overflow:auto;
+}
+.review[hidden]{display:none}
+body.reviewing .side{display:none}
+body.reviewing .game{grid-template-columns:190px auto 320px}
+.review-head{display:flex;flex-direction:column;gap:6px}
+.review-head p{margin:0}
+.review-head h2{margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+#reviewText{color:var(--muted);font-size:13px;line-height:1.4}
+.review-progress{margin:0;font:400 12px/1.4 var(--mono);color:var(--faint)}
+.link-btn{padding:0;border:0;background:none;color:var(--cyan);font:inherit;text-decoration:underline}
+.summary{width:100%;border-collapse:collapse;font-size:13px}
+.summary th,.summary td{padding:4px 6px;text-align:right;font-weight:400}
+.summary th[scope=row]{text-align:left;color:var(--muted)}
+.summary thead th{font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.summary td{font:600 13px/1 var(--mono);font-variant-numeric:tabular-nums}
+.summary .inaccuracy span{color:#facc15}
+.summary .mistake span{color:#fb923c}
+.summary .blunder span{color:#fb7185}
+#graph{display:block;width:100%;height:72px;border-radius:8px;cursor:pointer}
+.review-now{display:flex;align-items:baseline;gap:10px;min-height:2.6em}
+.review-now b{flex:0 0 auto;min-width:54px;font:600 15px/1.2 var(--mono)}
+.review-now p{margin:0;font-size:13px;line-height:1.4;color:var(--muted)}
+.review-nav{display:flex;gap:6px}
+.review-nav .icon-btn{width:36px;height:36px}
+.review-nav .icon-btn:disabled{opacity:.4;cursor:default}
+.review-nav #flipBtn{margin-left:auto}
+.moves{
+  margin:0;padding:0;list-style:none;
+  display:grid;grid-template-columns:1fr;
+  max-height:220px;overflow:auto;
+  font:400 13px/1 var(--mono);
+}
+.moves li{display:grid;grid-template-columns:38px 1fr 1fr;align-items:center}
+.moves .num{color:var(--faint)}
+.mv{
+  display:flex;gap:2px;align-items:baseline;
+  padding:5px 6px;border:0;border-radius:6px;background:none;
+  font:inherit;color:var(--fg);text-align:left;
+}
+.mv:hover{background:rgba(255,255,255,.06)}
+.mv.on{background:rgba(34,211,238,.18)}
+.mv:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px}
+.mv .mark{font-weight:600}
+.mv.inaccuracy .mark{color:#facc15}
+.mv.mistake .mark{color:#fb923c}
+.mv.blunder .mark{color:#fb7185}
+.mv.best .san{color:var(--cyan)}
+.review-actions{display:flex;flex-wrap:wrap;gap:8px}
+.review-actions .btn{flex:1 1 auto;padding:11px 14px;font-size:14px}
+.review-msg{margin:0;font-size:13px;line-height:1.4;color:var(--pink)}
+.review-msg:empty{display:none}
+
+@media (max-width:700px),(pointer:coarse){
+  body.play.reviewing{height:auto;min-height:var(--vh);overflow:visible}
+  body.reviewing .game{grid-template-columns:1fr;grid-template-areas:"stats" "board" "side"}
+  .review{justify-self:stretch;max-height:none;overflow:visible;padding:12px}
+}

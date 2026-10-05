@@ -3,7 +3,7 @@ import { openGame, press } from './games.mjs';
 
 // Every game's pause button (gamebar.js) shows pause while it runs, and play
 // with the label "Resume" while it's paused.
-const games = ['/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/'];
+const games = ['/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/chess/'];
 const PAUSE = 'M4 2h3v12H4zM9 2h3v12H9z';
 const icon = (page) => page.locator('#pauseBtn svg path').getAttribute('d');
 

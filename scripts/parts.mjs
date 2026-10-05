@@ -86,9 +86,10 @@ export const cards = (site, list) => apps(site, list.replace(/s$/, '')).flatMap(
   '  ' + ARROW,
   '</a>'
 ]);
-// The profile page's row for each game; profile-page.js fills in the best score.
+// The profile page's row for each game; profile-page.js fills in the best
+// score, after the game's label for it if it has one ("Level 3").
 export const scores = (site) => apps(site, 'game').flatMap((p) => [
-  `<div class="score panel" data-best="${p.app.best}">`,
+  `<div class="score panel" data-best="${p.app.best}"${p.app.bestLabel ? ` data-best-label="${esc(p.app.bestLabel)}"` : ''}>`,
   '  <svg class="score-icon" viewBox="0 0 40 40" aria-hidden="true">' + p.app.icon.join('') + '</svg>',
   `  <div class="score-text"><span>${esc(p.app.name)}</span><b></b></div>`,
   `  <a class="btn btn-ghost" href="${p.path}">Play</a>`,
