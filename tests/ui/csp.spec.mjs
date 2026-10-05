@@ -3,7 +3,7 @@ import { test, expect, takeCspViolations } from './fixtures.mjs';
 // Every page carries a content security policy (written by scripts/build.mjs
 // from scripts/parts.mjs). The fixture fails any test in which the policy
 // blocks something, so every other spec checks the policy lets the site work.
-const pages = ['/', '/profile/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/mp4-to-mp3/', '/compress-image/', '/photo-collage/', '/fit-to-frame/'];
+const pages = ['/', '/profile/', '/falling-blocks/', '/maze-chase/', '/flap/', '/road-hop/', '/snake/', '/brick-bounce/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/unlock-pdf/', '/mp4-to-mp3/', '/compress-image/', '/photo-collage/', '/fit-to-frame/'];
 
 test('every page sets its policy before it loads anything', async ({ page }) => {
   for (const url of pages) {

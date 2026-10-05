@@ -19,7 +19,7 @@ export const pages = [
   {
     path: '/',
     title: 'bdnix — Free browser games and PDF, audio and image tools',
-    description: 'Play Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce, merge, watermark, redact and sign PDFs, turn videos into MP3s, compress, frame or collage photos, all in your browser. Nothing to install, nothing uploaded.',
+    description: 'Play Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce, merge, watermark, redact, sign and unlock PDFs, turn videos into MP3s, compress, frame or collage photos, all in your browser. Nothing to install or upload.',
     schema: 'WebSite'
   },
   {
@@ -194,6 +194,23 @@ export const pages = [
         '<path d="M13 10h14M13 15h10" stroke="#eef1f8" stroke-width="2" stroke-linecap="round" opacity=".7"/>',
         '<path d="M11 28c3-6 5-10 7-10s-1 9 2 9 3-4 5-4 1 3 4 3" fill="none" stroke="#a855f7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
         '<path d="M12 32h18" stroke="#f472b6" stroke-width="2" stroke-linecap="round"/>'
+      ]
+    }
+  },
+  {
+    path: '/unlock-pdf/',
+    title: 'Unlock a PDF — Remove a PDF password free | bdnix',
+    description: 'Remove the password from a PDF you can open, free: type its password once and download a copy that opens without one. Runs in your browser; your file and password are never uploaded.',
+    schema: 'WebApplication', category: 'UtilitiesApplication',
+    app: {
+      kind: 'tool', name: 'Unlock a PDF', blurb: 'Remove a PDF’s password',
+      keywords: 'tool pdf password unlock decrypt remove protection encryption security documents',
+      icon: [
+        '<rect x="9" y="4" width="22" height="32" rx="3" fill="#22d3ee" opacity=".55"/>',
+        '<path d="M13 9h14M13 14h9" stroke="#eef1f8" stroke-width="2" stroke-linecap="round" opacity=".7"/>',
+        '<path d="M16 23v-4a4 4 0 0 1 7.6-1.7" fill="none" stroke="#f472b6" stroke-width="2.4" stroke-linecap="round"/>',
+        '<rect x="13" y="23" width="14" height="10" rx="2" fill="#a855f7"/>',
+        '<circle cx="20" cy="28" r="1.6" fill="#eef1f8"/>'
       ]
     }
   },

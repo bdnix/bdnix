@@ -19,6 +19,7 @@ The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub 
 | Watermark `/watermark-pdf/` | `watermark-pdf/index.html`, `assets/css/watermark.css`, `assets/js/watermark.js`, `assets/js/watermark-layout.js` |
 | Redact `/redact-pdf/` | `redact-pdf/index.html`, `assets/css/redact.css`, `assets/js/redact.js`, `assets/js/redact-core.js` |
 | Sign `/sign-pdf/` | `sign-pdf/index.html`, `assets/css/sign.css`, `assets/js/sign.js`, `assets/js/sign-core.js` |
+| Unlock `/unlock-pdf/` | `unlock-pdf/index.html`, `assets/css/unlock.css`, `assets/js/unlock.js`, `assets/js/unlock-core.js` |
 | MP4 to MP3 `/mp4-to-mp3/` | `mp4-to-mp3/index.html`, `assets/css/audio.css`, `assets/js/audio.js`, `assets/js/audio-core.js` |
 | Compress Images `/compress-image/` | `compress-image/index.html`, `assets/css/image.css`, `assets/js/image.js`, `assets/js/image-core.js` |
 | Photo Collage `/photo-collage/` | `photo-collage/index.html`, `assets/css/collage.css`, `assets/js/collage.js`, `assets/js/collage-core.js` |
@@ -78,7 +79,7 @@ Each game and tool is its own app. **Adding or changing a feature of one app mus
 - **Keep it dependency-free at runtime.** No frameworks and no bundler. `package.json` holds dev tooling only (tests, coverage, the cache-busting script).
 - **Match the existing code.** Each script is one IIFE, `(function(){ ... })();`, in ES5-style `var`/`function` code. A script that other scripts use exposes one `window.bdnix*` object. Comment density, naming and CSS style should match the file you're in.
 - **Reuse what's truly shared.** Use the tokens in `base.css`, the layouts in `page.css`, `tool.css` and `game.css`, the components, and the helpers in `files.js`, `pdftools.js`, `images.js` and `profile.js`. When several apps need the same general-purpose logic (not a feature of one of them), give it its own shared file, as `files.js` and `images.js` are, and link it only from those apps.
-- **Pure logic goes in its own file** (as in `watermark-layout.js`, `redact-core.js`, `sign-core.js`, `tetris-core.js`, `pacman-core.js`, `flappy-core.js`, `hop-core.js`, `snake-core.js`, `bricks-core.js`, `audio-core.js`, `image-core.js`, `collage-core.js`, `frame-core.js`, `search-core.js`, `images.js`, `files.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
+- **Pure logic goes in its own file** (as in `watermark-layout.js`, `redact-core.js`, `sign-core.js`, `unlock-core.js`, `tetris-core.js`, `pacman-core.js`, `flappy-core.js`, `hop-core.js`, `snake-core.js`, `bricks-core.js`, `audio-core.js`, `image-core.js`, `collage-core.js`, `frame-core.js`, `search-core.js`, `images.js`, `files.js` and `pdftools.js`), so it can be unit tested without a browser. Keep DOM code in the page scripts.
 - **Every game keeps a game in progress.** A game must survive a reload or a later visit and come back paused exactly where it was, as Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce do. Use `window.bdnixSave` from `assets/js/gamesave.js`:
   - Save through `bdnixSave.keep('<game>', snapshot)`. `snapshot()` returns the whole state as plain JSON, or `null` when no game is in progress. Call the function `keep()` returns when the game pauses, starts a new game or ends.
   - Restore at startup. Check every field of the loaded save before using it. Clear a save that doesn't make sense and show the normal start screen.
@@ -153,7 +154,7 @@ Codecov then posts **codecov/project** and **codecov/patch** (see [Coverage must
 
 Tests whose inputs haven't changed since they last passed don't run again; CI reuses their cached result and coverage:
 
-- **Unit tests** are cached as a whole, keyed on `assets/js`, `assets/vendor`, `tests/unit`, `tests/coverage`, `package.json` and `package-lock.json`.
+- **Unit tests** are cached as a whole, keyed on `assets/js`, `assets/vendor`, `tests/unit`, `tests/ui/pdfs.mjs` (the unlock tests build their encrypted PDFs with it), `tests/coverage`, `package.json` and `package-lock.json`.
 - **UI tests** are cached spec by spec by `scripts/ui-cache.mjs` (`npm run coverage:ui:cached`). The test server logs every file it serves and which spec asked for it (`tests/ui/fixtures.mjs` adds an `x-bdnix-spec` header to each request), so a spec runs again only when it, a file it loaded, or the shared test code (`tests/ui/*.mjs` helpers, `tests/coverage`, `tests/server.mjs`, `playwright.config.mjs`, the lock file) changes. A spec that fails is never cached.
 - So a UI test must get every repository file it depends on **through the test server** (`page.goto`, `request.get`, ...), never by reading it with `fs`, or the cache won't see a change to it.
 - Run the workflow by hand with **full** ticked to ignore the cache. Locally, `npm test` and `npm run coverage` always run everything.
