@@ -7,30 +7,45 @@ import { axeProblems } from './checks.mjs';
 // gave it, or else the first legal move in UCI order. Asked to look at a
 // position for a review (depth 16), it finds a mate in one if there is one,
 // and otherwise scores the material, from the side to move's view, with the
-// first legal move as its choice. The last tests use the real engine.
+// first legal move as its choice. Any other search scores the position
+// level. The last tests use the real engine.
 const OFFLINE = 'Couldn’t load the chess engine. Check your connection and try again.';
 const ENGINE = /\/assets\/vendor\/stockfish\/stockfish-19-lite-single\.js/;
 const VALUES = { p: 100, n: 300, b: 300, r: 500, q: 900, k: 0 };
 
 // Replaces Worker before the page loads. window.uci records every command
 // the page sends; window.replies is the moves to play; while window.hold is
-// set, searches wait until window.release() is called.
+// set, searches wait until window.release() is called, or until they're
+// stopped, which answers them at once. Like Stockfish, it crashes if a
+// search starts before the one before it has answered.
 async function fakeEngine(page, replies = []){
   await page.addInitScript(([list, values]) => {
     window.uci = [];
     window.replies = list;
     window.hold = false;
-    const waiting = [];
+    let waiting = [];
     window.release = () => waiting.splice(0).forEach((fn) => fn());
     window.Worker = class {
-      constructor(url){ this.url = url; this.setup = null; }
+      constructor(url){ this.url = url; this.setup = null; this.searching = null; }
       postMessage(cmd){
         window.uci.push(cmd);
         if (/^position /.test(cmd)) this.setup = cmd;
+        if (cmd === 'stop' && waiting.includes(this.searching)) {
+          waiting = waiting.filter((fn) => fn !== this.searching);
+          this.searching();
+        }
         if (!/^go /.test(cmd)) return;
-        const say = (line) => Promise.resolve().then(() => this.onmessage({ data: line }));
+        if (this.searching) {
+          this.onerror({ message: 'RuntimeError: unreachable', preventDefault(){} });
+          return;
+        }
+        const setup = this.setup;
+        const say = (line) => Promise.resolve().then(() => {
+          if (/^bestmove /.test(line)) this.searching = null;
+          this.onmessage({ data: line });
+        });
         const answer = () => {
-          const C = window.bdnixChess, m = /^position (?:startpos|fen (.+?))(?: moves (.*))?$/.exec(this.setup);
+          const C = window.bdnixChess, m = /^position (?:startpos|fen (.+?))(?: moves (.*))?$/.exec(setup);
           const g = C.newGame(m[1]);
           if (m[2]) m[2].split(' ').forEach((u) => C.play(g, u));
           const pos = C.current(g), legal = C.moves(pos).map(C.uci).sort();
@@ -42,8 +57,11 @@ async function fakeEngine(page, replies = []){
             say('bestmove ' + (mate || legal[0]));
             return;
           }
-          say('bestmove ' + (window.replies.shift() || legal[0]));
+          const reply = window.replies.shift() || legal[0];
+          say('info depth 1 score cp 0 nodes 1 pv ' + reply);
+          say('bestmove ' + reply);
         };
+        this.searching = answer;
         if (window.hold) waiting.push(answer); else answer();
       }
       terminate(){}
@@ -434,6 +452,199 @@ test('a game that has just ended can be replayed from its review', async ({ page
   await page.clock.runFor(4000);
   await expect(page.locator('#moveNow')).toHaveText(/^2… Qh4#/);
   await expect(page.locator('#replayBtn')).toHaveAttribute('aria-label', 'Replay the moves');
+});
+
+const SCHOLARS = '[White "Ann"]\n[Black "Bob"]\n[Result "1-0"]\n\n1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6?? 4. Qxf7# 1-0\n';
+const alt = (page) => page.locator('#alt');
+
+test('a different move can be tried in a review, against the game\'s own', async ({ page }) => {
+  await fakeEngine(page);
+  await listen(page);
+  await openGame(page, '/chess/');
+  await page.locator('#pgnFile').setInputFiles(file('scholars.pgn', SCHOLARS));
+  await reviewed(page);
+  await expect(page.locator('#altTip')).toBeVisible();
+
+  // Picking up a piece stops the replay; Black, to move after 3. Qh5, can move.
+  await page.clock.runFor(5000);
+  await expect(page.locator('#moveNow')).toHaveText('3. Qh5: Good move. Best was a3.');
+  await expect(page.locator('#replayBtn')).toHaveAttribute('aria-label', 'Pause the replay');
+  await sq(page, 'g7').click();
+  await expect(page.locator('#replayBtn')).toHaveAttribute('aria-label', 'Replay the moves');
+  await expect(sq(page, 'g7')).toHaveClass(/sel/);
+  await sq(page, 'g6').click();
+  expect(await heard(page)).toEqual(['move', 'move', 'move', 'move', 'move', 'move']);
+  expect(await pieceOn(page, 'g6')).toBe('g6, Black pawn');
+  await expect(sq(page, 'g6')).toHaveClass(/last/);
+  await expect(status(page)).toHaveText('Trying a move');
+  await expect(page.locator('#altTip')).toBeHidden();
+  await expect(page.locator('#moveNow')).toHaveText('Your line: 3… g6');
+  // The game's move let White mate; g6 stops it.
+  await expect(page.locator('#altGame')).toHaveText('3… Nf6 · Blunder · M1 · Black’s chances 2%');
+  await expect(page.locator('#altMine')).toHaveText('3… g6 · Good move · 0.00 · Black’s chances 50%');
+  await expect(page.locator('#altVerdict')).toHaveText('g6 is better than the game’s Nf6: Black’s chances go up from 2% to 50%.');
+  await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal. In the game: White won.');
+  await expect(page.locator('#evalNow')).toHaveText('0.00');
+  // The move list stays on the game's move it branched from.
+  await expect(page.locator('.mv.on .san')).toHaveText('Qh5');
+  expect(await commands(page)).toContain('position startpos moves e2e4 e7e5 f1c4 b8c6 d1h5 g7g6');
+  await expectNoSideScroll(page);
+
+  // Either side carries on: White, then Black.
+  await move(page, 'h5', 'f3');
+  await move(page, 'g8', 'f6');
+  await expect(page.locator('#moveNow')).toHaveText('Your line: 3… g6 4. Qf3 Nf6');
+  await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal. In the game: White won.');
+  // ← takes a move back (off the board, where the arrows move round it),
+  // and so does Take back.
+  await page.evaluate(() => document.activeElement.blur());
+  await press(page, 'ArrowLeft');
+  await expect(page.locator('#moveNow')).toHaveText('Your line: 3… g6 4. Qf3');
+  expect(await pieceOn(page, 'g8')).toBe('g8, Black knight');
+  await page.getByRole('button', { name: 'Take back' }).click();
+  await expect(page.locator('#moveNow')).toHaveText('Your line: 3… g6');
+  // Taking back the first move tried goes back to the game.
+  await page.locator('#prevBtn').click();
+  await expect(alt(page)).toBeHidden();
+  await expect(page.locator('#moveNow')).toHaveText('3. Qh5: Good move. Best was a3.');
+  await expect(status(page)).toHaveText('Reviewing');
+  expect(await pieceOn(page, 'g7')).toBe('g7, Black pawn');
+
+  // Playing the game's own move just steps on to it.
+  await move(page, 'g8', 'f6');
+  await expect(alt(page)).toBeHidden();
+  await expect(page.locator('#moveNow')).toHaveText('3… Nf6: Blunder. Best was a5.');
+  await expect(page.locator('.mv.on .san')).toHaveText('Nf6');
+
+  // Back to the game, and stepping to another move, leave a line tried.
+  await move(page, 'c4', 'f7');
+  await expect(page.locator('#altVerdict')).toHaveText('Bxf7+ is worse than the game’s Qxf7#: White’s chances go down from 98% to 59%.');
+  await page.getByRole('button', { name: 'Back to the game' }).click();
+  await expect(alt(page)).toBeHidden();
+  await expect(page.locator('#moveNow')).toHaveText('3… Nf6: Blunder. Best was a5.');
+  expect(await pieceOn(page, 'f7')).toBe('f7, Black pawn');
+  await move(page, 'c4', 'f7');
+  await page.evaluate(() => document.activeElement.blur());
+  await press(page, 'Escape');
+  await expect(alt(page)).toBeHidden();
+  await move(page, 'c4', 'f7');
+  await page.locator('#nextBtn').click();
+  await expect(alt(page)).toBeHidden();
+  await expect(page.locator('#moveNow')).toHaveText('4. Qxf7#: Best move.');
+  // The game's over there, so there's nothing to try.
+  await expect(page.locator('#altTip')).toBeHidden();
+  await sq(page, 'e8').click();
+  await expect(page.locator('#board .sel')).toHaveCount(0);
+});
+
+test('Stockfish plays on from a move tried, to show how the game would have gone', async ({ page }) => {
+  // Its moves when playing on: White mates, as in the game, but later.
+  await fakeEngine(page, ['h5f3', 'a7a6', 'f3f7']);
+  await listen(page);
+  await openGame(page, '/chess/');
+  await page.locator('#pgnFile').setInputFiles(file('scholars.pgn', SCHOLARS));
+  await reviewed(page);
+  await page.locator('.mv').nth(4).click();                // 3. Qh5
+  await move(page, 'g7', 'g6');
+  await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal. In the game: White won.');
+  await commands(page);
+  await heard(page);
+
+  await page.getByRole('button', { name: 'Stockfish plays on' }).click();
+  await expect(page.locator('#altNow')).toHaveText('After 3 more moves by Stockfish: Checkmate — White wins. In the game: White won.');
+  await expect(page.locator('#moveNow')).toHaveText('Your line: 3… g6 4. Qf3 a6 5. Qxf7#');
+  await expect(status(page)).toHaveText('Checkmate — White wins');
+  await expect(page.locator('#playOnBtn')).toBeDisabled();
+  expect(await pieceOn(page, 'f7')).toBe('f7, White queen');
+  expect((await commands(page)).filter((c) => /^go /.test(c))).toEqual(['go depth 12', 'go depth 12', 'go depth 12']);
+  expect(await heard(page)).toEqual(['move', 'move', 'check']);
+  // The board can't be moved on once it's over, but the line can be taken back.
+  await sq(page, 'e8').click();
+  await expect(page.locator('#board .sel')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Take back' }).click();
+  await expect(page.locator('#playOnBtn')).toBeEnabled();
+  await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal. In the game: White won.');
+
+  // Stop halts it while Stockfish is thinking, and the moves don't come.
+  await page.evaluate(() => { window.hold = true; window.replies = ['f3f7']; });
+  await page.getByRole('button', { name: 'Stockfish plays on' }).click();
+  await expect(page.locator('#playOnBtn')).toHaveText('Stop');
+  await expect(status(page)).toHaveText('Stockfish is playing on…');
+  await expect(page.locator('#altNow')).toHaveText('Now: Stockfish is playing on… In the game: White won.');
+  await sq(page, 'f3').click();                              // no moving while it plays
+  await expect(page.locator('#board .sel')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Stop' }).click();
+  await expect(page.locator('#playOnBtn')).toHaveText('Stockfish plays on');
+  await page.evaluate(() => { window.hold = false; window.release(); });
+  await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal. In the game: White won.');
+  expect(await pieceOn(page, 'f7')).toBe('f7, Black pawn');
+  await expect(status(page)).toHaveText('Trying a move');
+});
+
+test('a move tried while the review is still being worked out waits for the engine to stop', async ({ page }) => {
+  await fakeEngine(page);
+  await page.addInitScript(() => { window.hold = true; });
+  await openGame(page, '/chess/');
+  await page.locator('#pgnFile').setInputFiles(file('scholars.pgn', SCHOLARS));
+  await expect(page.locator('#reviewProgress')).toHaveText('Analysing… 0 of 8 positions');
+  await page.locator('#replayBtn').click();
+  await move(page, 'd2', 'd4');
+  await move(page, 'd7', 'd5');                              // and again, straight away
+  await expect(page.locator('#altMine')).toHaveText('1. d4 · analysing…');
+  await page.evaluate(() => { window.hold = false; window.release(); });
+  await expect(page.locator('#altMine')).toHaveText('1. d4 · Best move · 0.00 · White’s chances 50%');
+  await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal. In the game: White won.');
+  await page.getByRole('button', { name: 'Back to the game' }).click();
+  await reviewed(page);
+  // Each search started only once the one stopped before it had answered.
+  const sent = (await commands(page)).filter((c) => /^(go|stop)/.test(c));
+  sent.forEach((c, i) => { if (c === 'stop') expect(sent[i - 1]).toMatch(/^go /); });
+});
+
+test('Stockfish plays on for 60 moves at most, and the line is shortened', async ({ page }) => {
+  await fakeEngine(page);
+  await openGame(page, '/chess/');
+  await page.locator('#pgnFile').setInputFiles(file('scholars.pgn', SCHOLARS));
+  await reviewed(page);
+  await page.locator('.mv').nth(4).click();
+  await move(page, 'g7', 'g6');
+  await page.getByRole('button', { name: 'Stockfish plays on' }).click();
+  await expect(page.locator('#altNow')).toHaveText(/^After 60 more moves by Stockfish: [^…]+\. In the game: White won\.$/);
+  await expect(status(page)).toHaveText('Trying a move');
+  await expect(page.locator('#moveNow')).toHaveText(/^Your line: 3… g6 4\. \S+ … \d+(\.|…) \S+ \S+( \d+\. )?\S*$/);
+  // It carries on from there when asked again.
+  await commands(page);
+  await page.getByRole('button', { name: 'Stockfish plays on' }).click();
+  await expect(page.locator('#altNow')).toHaveText(/^After \d+ more moves? by Stockfish: /);
+  expect((await commands(page)).filter((c) => c === 'go depth 12').length).toBeGreaterThan(0);
+});
+
+test('moves tried from where an unfinished game stopped, and from a game just played', async ({ page }) => {
+  await fakeEngine(page, ['e7e5', 'd8h4']);
+  await openGame(page, '/chess/');
+  await page.locator('#pgnFile').setInputFiles(file('moves.txt', 'e4 e5 Nf3 Nc6'));
+  await reviewed(page);
+  await press(page, 'End');
+  await move(page, 'f1', 'b5');
+  await expect(page.locator('#altGame')).toHaveText('The game stopped here.');
+  await expect(page.locator('#altMine')).toHaveText('3. Bb5 · Good move · 0.00 · White’s chances 50%');
+  await expect(page.locator('#altVerdict')).toBeHidden();
+  await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal.');
+  // Replaying leaves the line.
+  await page.locator('#replayBtn').click();
+  await expect(alt(page)).toBeHidden();
+  await expect(page.locator('#moveNow')).toHaveText('The starting position.');
+
+  // A game just lost: Black's mate, against something else.
+  await page.locator('#againBtn').click();
+  await start(page);
+  await move(page, 'f2', 'f3');
+  await move(page, 'g2', 'g4');
+  await expect(page.locator('#moveNow')).toHaveText(/^2… Qh4#/);
+  await page.locator('#prevBtn').click();
+  await move(page, 'd8', 'e7');
+  await expect(page.locator('#altVerdict')).toHaveText('Qe7 is worse than the game’s Qh4#: Black’s chances go down from 98% to 50%.');
+  await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal. In the game: Checkmate — Black wins.');
 });
 
 test('a game file from a set-up position, with Black to move first', async ({ page }) => {

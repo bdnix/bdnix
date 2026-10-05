@@ -171,6 +171,23 @@ body.reviewing .game{grid-template-columns:190px auto 320px}
 .review-now{display:flex;align-items:baseline;gap:10px;min-height:2.6em}
 .review-now b{flex:0 0 auto;min-width:54px;font:600 15px/1.2 var(--mono)}
 .review-now p{margin:0;font-size:13px;line-height:1.4;color:var(--muted)}
+.alt-tip{margin:-4px 0 0;font-size:12px;line-height:1.4;color:var(--faint)}
+.alt-tip[hidden]{display:none}
+.alt{
+  display:flex;flex-direction:column;gap:8px;
+  padding:10px 12px;border:1px solid rgba(34,211,238,.35);border-radius:10px;
+  background:rgba(34,211,238,.06);
+}
+.alt[hidden]{display:none}
+.alt dl{margin:0;display:flex;flex-direction:column;gap:6px}
+.alt dl div{display:flex;flex-direction:column;gap:2px}
+.alt dd{margin:0;font:400 12px/1.4 var(--mono)}
+.alt-verdict,.alt-now{margin:0;font-size:13px;line-height:1.4}
+.alt-verdict:empty{display:none}
+.alt-now{color:var(--muted)}
+.alt-actions{display:flex;flex-wrap:wrap;gap:6px}
+.alt-actions .btn{flex:1 1 auto;padding:8px 10px;font-size:13px}
+.alt-actions .btn:disabled{opacity:.45;cursor:default;transform:none}
 .review-nav{display:flex;gap:6px}
 .review-nav .icon-btn{width:36px;height:36px}
 .review-nav .icon-btn:disabled{opacity:.4;cursor:default}

@@ -341,6 +341,27 @@ test('evaluations: from White\'s view, as centipawns, chances and words', () => 
   assert.equal(C.moveAccuracy(1, -1), 0);
 });
 
+test('evaluations: each side\'s winning chances, and how a position stands in words', () => {
+  assert.equal(C.winChance({ cp: 0 }, 'w'), 50);
+  assert.equal(C.winChance({ cp: 0 }, 'b'), 50);
+  assert.equal(C.winChance({ cp: 300 }, 'w') + C.winChance({ cp: 300 }, 'b'), 100);
+  assert.ok(C.winChance({ cp: 300 }, 'w') > 70);
+  assert.equal(C.winChance({ mate: -1 }, 'w'), 2);              // as low as it goes
+  assert.equal(C.winChance({ mate: -1 }, 'b'), 98);
+  assert.equal(C.winChance({ mate: 0, lost: 'b' }, 'w'), 98);
+
+  assert.equal(C.outlook({ cp: 0 }), 'Equal');
+  assert.equal(C.outlook({ cp: -50 }), 'Equal');
+  assert.equal(C.outlook({ cp: 60 }), 'White is slightly better');
+  assert.equal(C.outlook({ cp: -200 }), 'Black is better');
+  assert.equal(C.outlook({ cp: 400 }), 'White is winning');
+  assert.equal(C.outlook({ cp: -900 }), 'Black is winning');
+  assert.equal(C.outlook({ mate: 3 }), 'White mates in 3');
+  assert.equal(C.outlook({ mate: -1 }), 'Black mates in 1');
+  assert.equal(C.outlook({ mate: 0, lost: 'w' }), 'Black has won');
+  assert.equal(C.outlook({ mate: 0, lost: 'b' }), 'White has won');
+});
+
 test('review: each move\'s kind, the better move, and each side\'s accuracy', () => {
   const g = playAll('f2f3 e7e5 g2g4 d8h4');
   const evals = [
