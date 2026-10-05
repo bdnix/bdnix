@@ -1,6 +1,6 @@
 # Games guide
 
-All six games work with a keyboard, mouse or touch screen, and at phone size.
+All seven games work with a keyboard, mouse or touch screen, and at phone size.
 
 On a phone, the games are played upright. Turning the phone sideways pauses the game and shows a note asking for it to be turned back; the game then waits, paused, for Resume. On a computer, a short, wide window still shows the game, with the scores and buttons beside the board.
 
@@ -12,6 +12,7 @@ On a phone, the buttons under the board are laid out like a gamepad: a D-pad on 
 - [Road Hop](#road-hop)
 - [Snake](#snake)
 - [Brick Bounce](#brick-bounce)
+- [Chess](#chess)
 - [Sound](#sound)
 - [Scores and saved games](#scores-and-saved-games)
 - [Credits](#credits)
@@ -107,9 +108,43 @@ Six bricks in every wall, picked at random, hide a power: they glow and pulse in
 
 Each wall hides two multi-balls and one of each of the others. The seconds left of the fireball, laser and wide paddle show under the paddle, beside their icons. Losing a ball or clearing a wall ends every power and clears away falling capsules and shots.
 
+## Chess
+
+`/chess/`
+
+| Action | Keyboard | Mouse | Touch |
+|---|---|---|---|
+| Move a piece | Arrow keys to a square, Enter to pick it up, again to put it down | Click the piece, then its square, or drag it | Tap the piece, then its square, or drag it |
+| Pause | P / Esc | ❚❚ | ❚❚ |
+
+The opponent is [Stockfish](https://stockfishchess.org/), the free and open-source chess engine, in its lite WebAssembly build. It runs in the browser in its own web worker, fetched (about 1.8 MB) when the first game starts; if it can't be fetched the game pauses and says so, and **Resume** tries again.
+
+Before a game, pick a side on the start screen: White moves first, and playing Black turns the board round so your pieces are at the bottom. The **Difficulty** list beside the board sets Stockfish's strength from Level 1 (skill 0, looking 1 move ahead) to Level 10 (full strength, depth 15); a change counts from the engine's next move.
+
+The panel shows whose turn it is and how the game stands: your move, Stockfish thinking, check, checkmate and who won, or the draw: stalemate, threefold repetition, the fifty-move rule or insufficient material. Under it are the pieces each side has taken and who is ahead in material (+3, counting a pawn as 1, a knight or bishop as 3, a rook as 5 and a queen as 9). The last move is highlighted, the king in check glows red, and a picked-up piece shows dots on the squares it can go to (rings on pieces it can take). A pawn reaching the last row asks which piece to become.
+
+**Undo move** takes back your last move and Stockfish's reply, so it's your turn again; while Stockfish is thinking it takes back just your move. **New game** asks first during a game (Resume or New game, with the side picker), and starts straight away otherwise.
+
+The best score is the highest level you've beaten.
+
+### Game review
+
+When a game ends (checkmate or any draw) the page goes straight into its review: the result at the top, and Stockfish at full strength looking at every position, 16 moves deep, filling the review in as it goes ("Analysing… 12 of 41 positions"). For each move it shows:
+
+- the evaluation after it: +0.85 is White ahead by most of a pawn, -1.20 Black ahead, M3 a forced mate in three for White (-M3 for Black), # mate on the board;
+- what kind of move it was, from how much it lowered the mover's winning chances (as [lichess](https://lichess.org/) reckons them from the evaluation): **Best move** (Stockfish's own choice), **Good move**, **Inaccuracy** ?! (chances down by 10 points out of 200 or more), **Mistake** ? (20) or **Blunder** ?? (30);
+- Stockfish's better move for anything but its own choice, and its choice in the position on the board, outlined in cyan.
+
+The summary gives each side's accuracy (the average over its moves of lichess's per-move accuracy, 100% for moves that lose nothing) and how many inaccuracies, mistakes and blunders it made. The graph shows the evaluation over the game, White's share shaded light, with the slips marked in their colours; clicking it jumps to that point. Step through the game with the buttons (first, previous, next, last), the move list, or ← → Home End; each step forward slides the piece and plays its sound, and the turn-round button flips the board. The play button (or Space) replays the game on the board, a move a second, from the start if it's at the end; it stops at the last move, at the pause button, or at any step taken by hand. A game that has just ended opens at its last move. **Play again** goes back to the start screen. If Stockfish can't be fetched the review says so, with **Try again**.
+
+### Analysing a game file
+
+**Analyse a game file** (on the start and pause screens, and in a review) opens a `.pgn` or `.txt` file and reviews the first game in it, the same way, starting from its first position and replaying the moves on the board one by one. It reads PGN with its tags (the players, event, date and result are shown), comments, variations, numeric annotations and a `[FEN]` set-up position, or a text file that only lists the moves, in SAN (`1. e4 e5 2. Nf3`, also written loosely as `Ngf3`, `0-0` or `e8Q`) or UCI (`e2e4 e7e5`). A file that can't be read says why, naming the first move that isn't legal; files over 1 MB are refused. The file is read in the browser and never uploaded. A game paused when the file is opened waits, and is still saved: **Back to your game** returns to it.
+
+
 ## Sound
 
-Every game has sound effects: a jingle when a game starts, sounds for the main moves (moving, turning and dropping pieces, eating dots and power pellets, flapping, hopping, eating food, the ball hitting the paddle, the walls and bricks, catching a power and firing the laser), for scoring and clearing lines, for each way a round can end (a car, the river, a crash, a lost ball), and a tune at game over, a brighter one for a new best score.
+Every game has sound effects: a jingle when a game starts, sounds for the main moves (moving, turning and dropping pieces, eating dots and power pellets, flapping, hopping, eating food, the ball hitting the paddle, the walls and bricks, catching a power and firing the laser, chess moves, captures and checks), for scoring and clearing lines, for each way a round can end (a car, the river, a crash, a lost ball), and a tune at game over, a brighter one for a new best score.
 
 The speaker button beside pause in the top bar, or **M**, turns sound off and on. The choice applies to every game and is remembered in the browser (`bdnix_sound`). Sound is on until it's turned off.
 
@@ -119,7 +154,7 @@ The sounds are made in the browser with the Web Audio API, so there are no audio
 
 Each game keeps its best score in the browser's `localStorage`, and the [profile page](privacy.md#profile) shows them all.
 
-A game in progress is saved whenever it pauses and when the page is reloaded, closed or left. Returning to the page, even days later, shows the game paused exactly where it was, with the message "Picked up where you left off.": **Resume** carries on and **New game** starts over. The save is removed when the game ends. Flap only keeps a round once the bird has flapped, Road Hop once the chicken has hopped, Snake once the snake has started moving, and Brick Bounce once the first ball has been launched.
+A game in progress is saved whenever it pauses and when the page is reloaded, closed or left. Returning to the page, even days later, shows the game paused exactly where it was, with the message "Picked up where you left off.": **Resume** carries on and **New game** starts over. The save is removed when the game ends. Flap only keeps a round once the bird has flapped, Road Hop once the chicken has hopped, Snake once the snake has started moving, Brick Bounce once the first ball has been launched, and Chess once the first move has been played.
 
 Clearing the browser's site data removes saved games and best scores. See [Privacy and data](privacy.md) for the storage keys.
 
@@ -137,3 +172,5 @@ Each game is our own take on a classic, with its own name, artwork and code. The
 | Brick Bounce | Breakout, created by Atari in 1976 |
 
 These names are trademarks of their owners. bdnix isn't affiliated with or endorsed by them.
+
+Chess is centuries old and nobody's trademark. Its start screen credits its opponent instead: Stockfish, by the Stockfish developers, in the Stockfish.js build by Nathan Rugg and Chess.com, under the GPL 3 (see [Development](development.md#third-party-libraries)).

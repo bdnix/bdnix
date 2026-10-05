@@ -11,7 +11,8 @@
 // for an app). A game or tool has an `app`: its kind ('game' or 'tool'), the
 // name and blurb on its card (fullName, if given, names it in structured
 // data), words its card is found by in the landing page search, its icon (the
-// inside of a 40×40 SVG) and, for a game, the key of its best score.
+// inside of a 40×40 SVG) and, for a game, the key of its best score (and
+// optionally a word shown before it, bestLabel).
 
 export const SITE = 'https://www.bdnix.com';
 
@@ -19,7 +20,7 @@ export const pages = [
   {
     path: '/',
     title: 'bdnix — Free browser games and PDF, audio and image tools',
-    description: 'Play Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce, merge, watermark, redact, sign and unlock PDFs, turn videos into MP3s, compress, frame or collage photos, all in your browser. Nothing to install or upload.',
+    description: 'Play Falling Blocks, Maze Chase, Flap, Road Hop, Snake, Brick Bounce and chess, merge, watermark, redact, sign and unlock PDFs, turn videos into MP3s, compress, frame or collage photos, all in your browser. Nothing uploaded.',
     schema: 'WebSite'
   },
   {
@@ -132,6 +133,25 @@ export const pages = [
         '<rect x="27" y="13" width="10" height="6" rx="1.5" fill="#a855f7"/>',
         '<circle cx="20" cy="26" r="3" fill="#eef1f8"/>',
         '<rect x="11" y="32" width="18" height="4" rx="2" fill="#22d3ee"/>'
+      ]
+    }
+  },
+  {
+    path: '/chess/',
+    title: 'Chess — Play Stockfish free in your browser | bdnix',
+    description: 'Play chess free in your browser against Stockfish, at ten levels, as White or Black, then review every move with the engine. Open a PGN file to analyse any game. Nothing to install.',
+    schema: 'WebApplication', category: 'GameApplication',
+    app: {
+      kind: 'game', name: 'Chess', blurb: 'Take on Stockfish, ten levels',
+      best: 'bdnix_chess_best',   // the key the game keeps the highest level beaten under
+      bestLabel: 'Level',         // shown before it on the profile page
+      keywords: 'game board chess stockfish engine strategy checkmate pgn analysis review',
+      icon: [
+        '<rect x="4" y="4" width="32" height="32" rx="3" fill="#22d3ee" opacity=".3"/>',
+        '<rect x="4" y="4" width="16" height="16" rx="3" fill="#a855f7" opacity=".55"/>',
+        '<rect x="20" y="20" width="16" height="16" rx="3" fill="#a855f7" opacity=".55"/>',
+        '<path d="M13 34h16c.4-6.5-.4-12-2.8-16.5C24.2 14 21.4 11.5 18 10.8L17.2 8l-2 3.2c-3.2 1.2-5.2 3.6-6 6.4l-1.2 4.4c-.3 1.3.7 2.4 2 2.2l3.2-1c1.3-.4 2.6-.8 3.8-.7C14.6 26.8 13 30 13 34z" fill="#eef1f8"/>',
+        '<circle cx="13.6" cy="15.6" r="1.2" fill="#080a12"/>'
       ]
     }
   },

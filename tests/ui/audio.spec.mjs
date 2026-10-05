@@ -1,5 +1,6 @@
 import fs from 'node:fs';
-import { test, expect, expectNoSideScroll, inNewWindow } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { inNewWindow } from './downloads.mjs';
 import { flacMp4, wav, tone, readWav, mp3Header, analyse, box, full, u32 } from './media.mjs';
 
 const file = (name, buffer, mimeType) => ({ name, mimeType, buffer: Buffer.from(buffer) });

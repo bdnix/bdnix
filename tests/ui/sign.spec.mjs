@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect, expectNoSideScroll, inNewWindow } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { inNewWindow } from './downloads.mjs';
 import { upload, secretPdf, download, imageCount, contentStreams } from './pdfs.mjs';
 import { png } from './images.mjs';
 

@@ -33,6 +33,7 @@ The search box on the home page narrows the list as you type: try "pdf", "photo"
 | [Road Hop](https://www.bdnix.com/road-hop/) | Help a chicken hop across busy roads and ride logs over rivers, as far as it can go. |
 | [Snake](https://www.bdnix.com/snake/) | Steer the snake to the food and grow as long as you can without hitting a wall or your own tail. |
 | [Brick Bounce](https://www.bdnix.com/brick-bounce/) | Bounce a ball off your paddle to smash a wall of bricks, one wall after another, before your three balls run out. Catch the powers that fall from glowing bricks: multi-ball, fireball, laser and a wider paddle. |
+| [Chess](https://www.bdnix.com/chess/) | Play White or Black against the Stockfish engine at ten levels, with undo, check, mate and every draw rule. Every game ends with a full review (accuracy, blunders, the engine's better moves, an evaluation graph), and any game can be opened from a PGN or text file to replay and review. |
 
 Every game plays with keyboard, mouse or touch, has sound effects (mute them with the speaker button or M), keeps your best score, and saves a game in progress so you can pick up where you left off, even days later.
 
@@ -71,4 +72,4 @@ Want a tool or game that isn't here, or a feature for one that is? [Open a reque
 
 The code is released under the [MIT License](LICENSE), © bdnix. The licence covers the code only, not the bdnix name or logo.
 
-The games are original takes on classic genres and aren't affiliated with or endorsed by the owners of any similar games. Third-party libraries in [assets/vendor/](assets/vendor/) keep their own licences (MIT, Apache 2.0 and LGPL), listed in [Development](docs/development.md#third-party-libraries).
+The games are original takes on classic genres and aren't affiliated with or endorsed by the owners of any similar games. Third-party libraries in [assets/vendor/](assets/vendor/) keep their own licences (MIT, Apache 2.0, LGPL and, for the Stockfish chess engine, GPL 3), listed in [Development](docs/development.md#third-party-libraries).

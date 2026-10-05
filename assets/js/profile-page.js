@@ -18,7 +18,8 @@
       var best = parseInt(read(row.getAttribute('data-best')), 10);
       best = best > 0 ? best : 0;
       var b = row.querySelector('b');
-      b.textContent = best ? best.toLocaleString() : 'Not played yet';
+      var label = row.getAttribute('data-best-label');
+      b.textContent = best ? (label ? label + ' ' : '') + best.toLocaleString() : 'Not played yet';
       b.classList.toggle('none', !best);
       row.querySelector('a').textContent = best ? 'Play again' : 'Play';
     });

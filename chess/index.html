@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <!-- build:meta -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://www.googletagmanager.com; style-src 'self'; font-src 'self' data:; img-src 'self' data: blob: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' data: blob: https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; media-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Chess — Play Stockfish free in your browser | bdnix</title>
+  <meta name="description" content="Play chess free in your browser against Stockfish, at ten levels, as White or Black, then review every move with the engine. Open a PGN file to analyse any game. Nothing to install.">
+  <link rel="canonical" href="https://www.bdnix.com/chess/">
+  <meta property="og:site_name" content="bdnix">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.bdnix.com/chess/">
+  <meta property="og:title" content="Chess — Play Stockfish free in your browser | bdnix">
+  <meta property="og:description" content="Play chess free in your browser against Stockfish, at ten levels, as White or Black, then review every move with the engine. Open a PGN file to analyse any game. Nothing to install.">
+  <meta property="og:image" content="https://www.bdnix.com/assets/img/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="bdnix: Play a little. Get things done.">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Chess", "url": "https://www.bdnix.com/chess/", "description": "Play chess free in your browser against Stockfish, at ten levels, as White or Black, then review every move with the engine. Open a PGN file to analyse any game. Nothing to install.", "applicationCategory": "GameApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
+  <meta name="theme-color" content="#080a12">
+  <!-- /build:meta -->
+  <link rel="preload" href="/assets/fonts/inter-latin-400-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/inter-latin-800-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/base.css?v=7e5309da52">
+  <link rel="stylesheet" href="/assets/css/icon-btn.css?v=20fd350a8d">
+  <link rel="stylesheet" href="/assets/css/game.css?v=5d7bc45b69">
+  <link rel="stylesheet" href="/assets/css/seg.css?v=9c1df52699">
+  <link rel="stylesheet" href="/assets/css/chess.css?v=270bf2fae3">
+  <script src="/assets/js/analytics.js?v=2f33b9c99e"></script>
+</head>
+<body class="play">
+  <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
+
+  <!-- The pieces, drawn once and used on every square. -->
+  <svg class="defs" aria-hidden="true" focusable="false">
+    <symbol id="pc-p" viewBox="0 0 45 45"><path d="M22.5 9a5 5 0 0 1 3.4 8.7c1.6 1.2 2.6 2.9 2.6 4.3h-12c0-1.4 1-3.1 2.6-4.3A5 5 0 0 1 22.5 9zM18.5 22h8c.4 4.6 2.6 8.2 5.5 11h-19c2.9-2.8 5.1-6.4 5.5-11zM11 33h23v5H11z"/></symbol>
+    <symbol id="pc-n" viewBox="0 0 45 45"><path d="M15 38h20c.5-8-.5-15-3.5-20.5C29 13 25.5 10 21.5 9l-1-3.5-2.5 4C14 11 11.5 14 10.5 17.5L9 23c-.4 1.6.9 3 2.5 2.7l4-1.2c1.6-.5 3.3-1 4.7-.9C17 28 15 32 15 38z"/><circle cx="16" cy="15.5" r="1.4"/></symbol>
+    <symbol id="pc-b" viewBox="0 0 45 45"><path d="M22.5 6a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6zM22.5 12c5.5 4 8.5 8.4 8.5 12.8 0 3-1.9 5-3.6 5.7H17.6c-1.7-.7-3.6-2.7-3.6-5.7 0-4.4 3-8.8 8.5-12.8zM14.5 31h16v3h-16zM11 34h23v4H11z"/><path class="cut" d="M22.5 17.5v7M19 21h7"/></symbol>
+    <symbol id="pc-r" viewBox="0 0 45 45"><path d="M12.5 10h4.5v3.5h3.5V10h4v3.5h3.5V10h4.5v9.5h-20zM15.5 19.5h14l1.5 14H14zM11 33.5h23v4.5H11z"/></symbol>
+    <symbol id="pc-q" viewBox="0 0 45 45"><path d="M12.5 32 9 15l7 9 .5-12.5 4.5 11 1.5-13.5L24 22.5l4.5-11L29 24l7-9-3.5 17zM11 33h23v5H11z"/><circle cx="9" cy="13.5" r="2.2"/><circle cx="16.5" cy="10" r="2.2"/><circle cx="22.5" cy="7.5" r="2.2"/><circle cx="28.5" cy="10" r="2.2"/><circle cx="36" cy="13.5" r="2.2"/></symbol>
+    <symbol id="pc-k" viewBox="0 0 45 45"><path d="M21 4.5h3V8h3.5v3H24v4h-3v-4h-3.5V8H21zM12.5 32c-3.4-5.2-3.6-11.6 1.6-13.6 4.1-1.6 7.1 1 8.4 3.9 1.3-2.9 4.3-5.5 8.4-3.9 5.2 2 5 8.4 1.6 13.6zM11 33h23v5H11z"/></symbol>
+  </svg>
+
+  <header class="bar">
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ chess</span></a>
+    <div class="bar-actions">
+      <button type="button" id="soundBtn" class="icon-btn" aria-label="Mute sound"></button>
+      <button type="button" id="pauseBtn" class="icon-btn" aria-label="Pause">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 2h3v12H4zM9 2h3v12H9z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="game" id="game">
+    <section class="panel box stats" aria-label="Game status">
+      <div><span class="label">Turn</span><b id="turn">White</b></div>
+      <div class="status-row"><span class="label">Status</span><b id="status" aria-live="polite">Pick a side</b></div>
+      <div class="best-row"><span class="label">Best win</span><b id="best">None yet</b></div>
+    </section>
+
+    <div class="board-wrap">
+      <div id="board" class="board" role="group" aria-label="Chessboard"></div>
+      <div id="promo" class="promo" role="dialog" aria-label="Promote the pawn to" hidden>
+        <p class="label">Promote to</p>
+        <div class="promo-pieces"></div>
+      </div>
+      <div id="overlay" class="overlay">
+        <p class="label" id="ovKicker">bdnix arcade</p>
+        <h1 id="ovTitle">Chess</h1>
+        <p id="ovText">Play against Stockfish, one of the strongest chess engines there is. Pick a side and a level, or open a game to analyse.</p>
+        <fieldset class="seg" id="sideSeg">
+          <legend class="label">Play as</legend>
+          <label><input type="radio" name="side" value="w" checked><span>White</span></label>
+          <label><input type="radio" name="side" value="b"><span>Black</span></label>
+        </fieldset>
+        <div class="ov-actions">
+          <button type="button" id="startBtn" class="btn btn-primary">Start game</button>
+          <button type="button" id="newBtn" class="btn btn-ghost" hidden>New game</button>
+          <button type="button" id="importBtn" class="btn btn-ghost">Analyse a game file</button>
+        </div>
+        <p id="ovMsg" class="ov-msg" aria-live="polite"></p>
+        <input type="file" id="pgnFile" accept=".pgn,.txt,text/plain,application/x-chess-pgn" hidden>
+        <p class="keys only-keys">Click or drag a piece to move it · <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> and <kbd>Enter</kbd> on the board · <kbd>P</kbd> pause</p>
+        <p class="keys only-touch">Tap a piece, then where it goes, or drag it.</p>
+        <p class="credit">Your opponent is Stockfish, the free and open-source chess engine by the Stockfish developers, running in your browser.</p>
+      </div>
+    </div>
+
+    <section class="panel box side" aria-label="Captures and controls">
+      <div class="caps-row"><span class="label" id="themName">Stockfish</span><span class="caps" id="capThem" role="img"></span><b class="adv" id="advThem"></b></div>
+      <div class="caps-row"><span class="label">You</span><span class="caps" id="capYou" role="img"></span><b class="adv" id="advYou"></b></div>
+      <div class="level">
+        <label class="label" for="level">Difficulty</label>
+        <select id="level">
+          <option value="1">Level 1 · depth 1</option>
+          <option value="2">Level 2 · depth 2</option>
+          <option value="3" selected>Level 3 · depth 3</option>
+          <option value="4">Level 4 · depth 4</option>
+          <option value="5">Level 5 · depth 5</option>
+          <option value="6">Level 6 · depth 6</option>
+          <option value="7">Level 7 · depth 8</option>
+          <option value="8">Level 8 · depth 10</option>
+          <option value="9">Level 9 · depth 12</option>
+          <option value="10">Level 10 · depth 15</option>
+        </select>
+      </div>
+      <div class="controls">
+        <button type="button" id="restartBtn" class="btn btn-ghost">New game</button>
+        <button type="button" id="undoBtn" class="btn btn-ghost" disabled>Undo move</button>
+      </div>
+    </section>
+
+    <section class="panel review" id="review" aria-label="Game review" hidden>
+      <div class="review-head">
+        <p class="label" id="reviewKicker">Game review</p>
+        <h2 id="reviewTitle">Game review</h2>
+        <p id="reviewText"></p>
+      </div>
+      <p class="review-progress"><span id="reviewProgress" aria-live="polite"></span> <button type="button" id="retryBtn" class="link-btn" hidden>Try again</button></p>
+      <table class="summary" aria-label="Accuracy and slips, by side">
+        <thead><tr><td></td><th scope="col">White</th><th scope="col">Black</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Accuracy</th><td id="accW">—</td><td id="accB">—</td></tr>
+          <tr class="inaccuracy"><th scope="row">Inaccuracies <span aria-hidden="true">?!</span></th><td id="inaccuracyW">0</td><td id="inaccuracyB">0</td></tr>
+          <tr class="mistake"><th scope="row">Mistakes <span aria-hidden="true">?</span></th><td id="mistakeW">0</td><td id="mistakeB">0</td></tr>
+          <tr class="blunder"><th scope="row">Blunders <span aria-hidden="true">??</span></th><td id="blunderW">0</td><td id="blunderB">0</td></tr>
+        </tbody>
+      </table>
+      <canvas id="graph" role="img" aria-label="How the evaluation changed over the game"></canvas>
+      <div class="review-now">
+        <b id="evalNow" title="Evaluation: + is good for White, − for Black, M is a forced mate">…</b>
+        <p id="moveNow" aria-live="polite"></p>
+      </div>
+      <div class="review-nav">
+        <button type="button" id="firstBtn" class="icon-btn" aria-label="First move"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M3 3h2v10H3zM13 3v10L6 8z"/></svg></button>
+        <button type="button" id="prevBtn" class="icon-btn" aria-label="Previous move"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M11 3v10L4 8z"/></svg></button>
+        <button type="button" id="replayBtn" class="icon-btn" aria-label="Replay the moves"></button>
+        <button type="button" id="nextBtn" class="icon-btn" aria-label="Next move"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M5 3v10l7-5z"/></svg></button>
+        <button type="button" id="lastBtn" class="icon-btn" aria-label="Last move"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M3 3v10l7-5zM11 3h2v10h-2z"/></svg></button>
+        <button type="button" id="flipBtn" class="icon-btn" aria-label="Turn the board round"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M4 6V3.5h2.5M4 3.5l2.2 2.2A5 5 0 0 1 13 8M12 10v2.5H9.5M12 12.5l-2.2-2.2A5 5 0 0 1 3 8"/></svg></button>
+      </div>
+      <ol class="moves" id="moves" aria-label="Moves"></ol>
+      <div class="review-actions">
+        <button type="button" id="againBtn" class="btn btn-primary">Play again</button>
+        <button type="button" id="anotherBtn" class="btn btn-ghost">Analyse a game file</button>
+      </div>
+      <p id="reviewMsg" class="review-msg" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
+  <script src="/assets/js/gamesave.js?v=fb243d7a1b"></script>
+  <script src="/assets/js/sound.js?v=7a74a68ae2"></script>
+  <script src="/assets/js/gamebar.js?v=aefe068990"></script>
+  <script src="/assets/js/upright.js?v=280cffb58a"></script>
+  <script src="/assets/js/chess-core.js?v=d1a461c326"></script>
+  <script src="/assets/js/chess.js?v=cbcfae919b"></script>
+</body>
+</html>

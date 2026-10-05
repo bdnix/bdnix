@@ -1,8 +1,9 @@
 import { test, expect } from './fixtures.mjs';
 
-// Inter and JetBrains Mono come from assets/fonts, not a font service.
+// Inter and JetBrains Mono come from assets/fonts, not a font service. Every
+// page links base.css and the same preloads, so one page stands for them all.
 test('the site\'s own fonts load, in every weight the pages use', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/merge-pdf/');
   const loaded = await page.evaluate(async () => {
     const faces = ['400 16px Inter', '600 16px Inter', '800 16px Inter', '400 16px "JetBrains Mono"', '600 16px "JetBrains Mono"'];
     await Promise.all(faces.map((f) => document.fonts.load(f, 'bdnix Ąž')));
@@ -14,7 +15,7 @@ test('the site\'s own fonts load, in every weight the pages use', async ({ page 
 });
 
 test('the preloaded fonts are the ones the stylesheet asks for', async ({ page, request }) => {
-  await page.goto('/');
+  await page.goto('/merge-pdf/');
   const preloads = await page.locator('link[rel="preload"][as="font"]').evaluateAll((els) => els.map((l) => l.getAttribute('href')));
   expect(preloads.length).toBeGreaterThan(0);
   const css = await (await request.get('/assets/css/base.css')).text();

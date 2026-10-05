@@ -2,8 +2,10 @@
 // spec whose result is already known. CI runs this; locally, `npm run
 // coverage:ui` still runs everything.
 //
-// A spec's result depends on the spec itself, the shared test code (see
-// SHARED), and the site files it fetched from the test server. When a spec
+// A spec's result depends on the spec itself, the test helpers it imports
+// (and those they import: scripts/ui-deps.mjs), what every spec runs on (see
+// GLOBAL), and the site files it fetched from the test server. So changing a
+// helper runs again only the specs that use it. When a spec
 // passes, the server's log (tests/server.mjs) says which files those were;
 // the cache keeps that list, a hash of all those files' contents, and the
 // spec's coverage. On the next run, a spec whose hash still matches isn't
@@ -21,6 +23,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { helpersOf } from './ui-deps.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
@@ -33,10 +36,12 @@ const RESULTS = path.join(TMP, 'results.json');
 // Entries no run has used for this long are dropped, so the cache stays small.
 const MAX_AGE = 14 * 24 * 3600 * 1000;
 
-// Test code every spec shares: a change to any of it runs every spec again.
-const SHARED = [
-  'package-lock.json', 'package.json', 'playwright.config.mjs', 'tests/server.mjs', 'scripts/ui-cache.mjs',
-  ...list('tests/coverage'), ...list('tests/ui').filter((f) => !f.endsWith('.spec.mjs'))
+// What every spec runs on, whatever it imports: the packages, Playwright's
+// settings, the test server, coverage and this runner. A change to any of it
+// runs every spec again.
+const GLOBAL = [
+  'package-lock.json', 'package.json', 'playwright.config.mjs', 'tests/server.mjs',
+  'scripts/ui-cache.mjs', 'scripts/ui-deps.mjs', ...list('tests/coverage')
 ];
 
 function list(dir){
@@ -48,14 +53,16 @@ function fileHash(file){
   catch (e) { return 'missing'; }   // a file that appears later must still count as a change
 }
 
-const shared = crypto.createHash('sha256')
+const base = crypto.createHash('sha256')
   .update(`node ${process.versions.node.split('.')[0]}\n`)
-  .update(SHARED.map((f) => `${f} ${fileHash(f)}\n`).join(''))
+  .update(GLOBAL.map((f) => `${f} ${fileHash(f)}\n`).join(''))
   .digest('hex');
 
-// The cache key of a spec, given the site files it used.
+// The cache key of a spec, given the site files it used: those, the spec,
+// the helpers it imports, and what every spec runs on.
 function key(spec, deps){
-  const h = crypto.createHash('sha256').update(`${shared}\n${spec} ${fileHash(spec)}\n`);
+  const h = crypto.createHash('sha256').update(`${base}\n${spec} ${fileHash(spec)}\n`);
+  for (const helper of helpersOf(spec)) h.update(`helper ${helper} ${fileHash(helper)}\n`);
   for (const dep of deps) h.update(`${dep} ${fileHash(dep)}\n`);
   return h.digest('hex').slice(0, 32);
 }
@@ -140,15 +147,18 @@ function passedSpecs(){
   try { report = JSON.parse(fs.readFileSync(RESULTS, 'utf8')); }
   catch (e) { return passed; }
   if (report.errors && report.errors.length) return passed;
+  // Each top-level suite is a spec file. A test's own `file` can be a helper
+  // that declared it (checkPage in tests/ui/checks.mjs), so it counts for the
+  // spec it's in.
   const tests = new Map();
-  (function walk(suites){
+  (function walk(suites, file){
     for (const suite of suites || []) {
-      for (const spec of suite.specs || []) {
-        const file = `tests/ui/${spec.file}`;
-        const ok = spec.tests.length > 0 && spec.tests.every((t) => t.status === 'expected');
-        tests.set(file, (tests.get(file) ?? true) && ok);
+      const spec = file || `tests/ui/${suite.file}`;
+      for (const s of suite.specs || []) {
+        const ok = s.tests.length > 0 && s.tests.every((t) => t.status === 'expected');
+        tests.set(spec, (tests.get(spec) ?? true) && ok);
       }
-      walk(suite.suites);
+      walk(suite.suites, spec);
     }
   })(report.suites);
   for (const [file, ok] of tests) if (ok) passed.add(file);
