@@ -5,16 +5,23 @@
   // web worker (assets/vendor/stockfish) fetched the first time it's needed.
   var C = window.bdnixChess;
   var ENGINE = '/assets/vendor/stockfish/stockfish-19-lite-single.js?v=19.0.0';
-  // Each level: Stockfish's skill (0 to 20) and how many moves ahead it looks.
+  // Each level: Stockfish's skill (0 to 20), how many moves ahead it looks,
+  // and roughly the rating of a player it plays like (a guide, not a measure).
   var LEVELS = [
-    { skill: 0, depth: 1 }, { skill: 2, depth: 2 }, { skill: 4, depth: 3 }, { skill: 6, depth: 4 },
-    { skill: 8, depth: 5 }, { skill: 10, depth: 6 }, { skill: 13, depth: 8 }, { skill: 16, depth: 10 },
-    { skill: 18, depth: 12 }, { skill: 20, depth: 15 }
+    { skill: 0, depth: 1, rating: 800 }, { skill: 2, depth: 2, rating: 1000 }, { skill: 4, depth: 3, rating: 1200 },
+    { skill: 6, depth: 4, rating: 1400 }, { skill: 8, depth: 5, rating: 1600 }, { skill: 10, depth: 6, rating: 1800 },
+    { skill: 13, depth: 8, rating: 2000 }, { skill: 16, depth: 10, rating: 2200 }, { skill: 18, depth: 12, rating: 2400 },
+    { skill: 20, depth: 15, rating: 2700 }
   ];
+  var HINT_DEPTH = 12;            // how deep Stockfish looks for a hint
+  var DRAW_MARGIN = 30;           // Stockfish takes a draw unless it's ahead by more (centipawns)
   var REVIEW_DEPTH = 16;          // how deep a review looks at each position
   var PLAY_DEPTH = 12;            // how deep Stockfish looks playing on from a move tried
   var PLAY_ON = 60;               // how many moves it plays on before it stops
-  var REPLAY_STEP = 1000;         // ms between moves when a game is replayed
+  // How fast a game is replayed: ms between moves, Normal to start with.
+  var SPEEDS = [
+    { name: 'Slow', short: '½×', step: 3000 }, { name: 'Normal', short: '1×', step: 1500 }, { name: 'Fast', short: '2×', step: 750 }
+  ];
   var MAX_FILE = 50 * 1024 * 1024; // a game file bigger than this isn't one (a few hundred thousand games)
   var PICK_SHOW = 100;            // how many games of a file the list to pick from shows
   var NAMES = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
@@ -23,7 +30,8 @@
     stalemate: 'Draw by stalemate',
     repetition: 'Draw by threefold repetition',
     fifty: 'Draw by the fifty-move rule',
-    material: 'Draw by insufficient material'
+    material: 'Draw by insufficient material',
+    agreed: 'Draw agreed'
   };
   var KINDS = {
     best: { name: 'Best move', mark: '' },
@@ -41,6 +49,7 @@
   var overlay = $('overlay'), ovKicker = $('ovKicker'), ovTitle = $('ovTitle'), ovText = $('ovText'), ovMsg = $('ovMsg');
   var startBtn = $('startBtn'), newBtn = $('newBtn'), fileEl = $('pgnFile');
   var restartBtn = $('restartBtn'), undoBtn = $('undoBtn'), levelEl = $('level');
+  var hintBtn = $('hintBtn'), drawBtn = $('drawBtn'), resignBtn = $('resignBtn'), evalBar = $('evalBar');
   var reviewEl = $('review'), barEl = $('reviewBar'), movesEl = $('moves'), graph = $('graph'), reviewMsg = $('reviewMsg');
   var sideInputs = document.querySelectorAll('input[name=side]');
   var compactMQ = window.matchMedia('(max-width:700px),(pointer:coarse)');
@@ -62,6 +71,9 @@
   var selected = -1;              // the square of the piece picked up, or -1
   var animate = null;             // the move to slide into place on the next draw
   var review = null;              // the game being reviewed (see startReview)
+  var lastEval = null;            // Stockfish's look at the game, from its last move (White's view)
+  var hint = null;                // a hint asked for: { key (the position's), move }
+  var resignArmed = false;        // Resign was pressed once, and asks to be sure
   var best = 0;                   // the highest level beaten
   try { best = parseInt(localStorage.getItem('bdnix_chess_best'), 10) || 0; } catch (e) {}
   if (!(best >= 1 && best <= LEVELS.length)) best = 0;
@@ -133,9 +145,10 @@
     if (state !== 'playing' || job || C.current(game).turn === side || C.status(game).over) return;
     startEngine();
     if (!engine) return;
-    var lv = LEVELS[level() - 1];
-    search({ done: function(uci){
+    var lv = LEVELS[level() - 1], pos = C.current(game), heard = null;
+    search({ info: function(inf){ heard = inf; }, done: function(uci){
       if (state !== 'playing') return;
+      if (heard) lastEval = C.whiteView(heard, pos.turn);
       var m = C.play(game, uci);
       if (m) moved(m);
       else updateHud();
@@ -159,6 +172,8 @@
     side = chosenSide();
     game = C.newGame();
     selected = -1; animate = null;
+    lastEval = null;
+    forget();
     closePromo();
     state = 'playing';
     overlay.hidden = true;
@@ -177,6 +192,7 @@
   // After either side moves: the sound, the board, and the end if it's over.
   function moved(m){
     selected = -1; animate = m;
+    forget();
     var st = C.status(game);
     sound.play(st.check ? 'check' : m.captured ? 'capture' : 'move');
     render();
@@ -194,17 +210,80 @@
       try { localStorage.setItem('bdnix_chess_best', best); } catch (e) {}
       sound.play('best');
     } else sound.play(won ? 'win' : 'over');
+    var who = players(), now = new Date(), two = function(n){ return (n < 10 ? '0' : '') + n; };
     startReview(game, {
-      kicker: st.result === 'checkmate' ? 'Checkmate' : 'Draw',
-      title: st.result !== 'checkmate' ? 'Draw' : won ? 'You win!' : 'Stockfish wins',
+      kicker: { checkmate: 'Checkmate', resign: 'Resigned' }[st.result] || 'Draw',
+      title: !st.winner ? 'Draw' : won ? 'You win!' : 'Stockfish wins',
       text: ending(st) + ' · Level ' + lv + (record ? ' — your best yet!' : ''),
-      outcome: ending(st), side: side, mine: side, back: 'start', again: 'Play again'
+      outcome: ending(st), side: side, mine: side, back: 'start', again: 'Play again', players: who,
+      result: !st.winner ? '1/2-1/2' : st.winner === 'w' ? '1-0' : '0-1',
+      tags: {
+        Event: 'Casual game', Site: 'bdnix.com', Date: now.getFullYear() + '.' + two(now.getMonth() + 1) + '.' + two(now.getDate()),
+        White: who.w.name, Black: who.b.name
+      }
     });
   }
 
   // How a game that's over ended, in words.
   function ending(st){
-    return st.result === 'checkmate' ? 'Checkmate — ' + COLOR[st.winner] + ' wins' : ENDINGS[st.result];
+    if (st.result === 'checkmate') return 'Checkmate — ' + COLOR[st.winner] + ' wins';
+    if (st.result === 'resign') return COLOR[C.other(st.winner)] + ' resigned — ' + COLOR[st.winner] + ' wins';
+    return ENDINGS[st.result];
+  }
+
+  // ---------- Resigning, offering a draw, asking for a hint ----------
+  // Resign asks to be sure first: the next press resigns, anything else
+  // that changes the game forgets it, along with a hint and what was said.
+  function resign(){
+    if (state !== 'playing') return;
+    if (!resignArmed) {
+      resignArmed = true;
+      resignBtn.textContent = 'Sure? Resign';
+      resignBtn.classList.add('confirm');
+      say('Press again to resign.');
+      return;
+    }
+    forget();
+    gameOver({ result: 'resign', winner: C.other(side), over: true });
+  }
+  function forget(){
+    resignArmed = false;
+    resignBtn.textContent = 'Resign';
+    resignBtn.classList.remove('confirm');
+    hint = null;
+    say('');
+  }
+  function say(text){ $('playMsg').textContent = text; }
+  // Stockfish takes a draw unless its last look at the game had it ahead.
+  function offerDraw(){
+    if (state !== 'playing') return;
+    var them = C.other(side), ahead = lastEval ? C.centipawns(lastEval) * (them === 'w' ? 1 : -1) : null;
+    if (ahead === null || ahead > DRAW_MARGIN) {
+      forget();
+      say(ahead === null ? 'Stockfish wants to play a few moves first.' : 'Stockfish wants to play on.');
+      return;
+    }
+    forget();
+    gameOver({ result: 'agreed', winner: null, over: true });
+  }
+  // Stockfish's move for the visitor, at full strength: an arrow on the
+  // board and its name, until the position changes.
+  function askHint(){
+    if (state !== 'playing' || !myTurn()) return;
+    startEngine();
+    if (!engine) return;
+    var k = C.key(C.current(game));
+    forget();
+    say('Looking for a good move…');
+    search({ done: function(uci){
+      var pos = C.current(game), m = C.findMove(pos, uci);
+      if (state !== 'playing' || C.key(pos) !== k || !m) return;
+      hint = { key: k, move: m };
+      say('Hint: ' + C.san(pos, m));
+      render();
+      updateHud();
+    } }, ['setoption name Skill Level value 20', C.positionCommand(game), 'go depth ' + HINT_DEPTH]);
+    updateHud();
   }
 
   function showOverlay(start, showNew){
@@ -233,6 +312,7 @@
   function pause(text){
     if (state !== 'playing') return;
     cancel();
+    forget();
     state = 'paused';
     selected = -1;
     showPaused(text || 'Take a breather.');
@@ -274,6 +354,8 @@
     if (C.current(game).turn === side) C.undo(game);   // the engine's reply
     C.undo(game);                                       // the visitor's move
     selected = -1; animate = null;
+    lastEval = null;
+    forget();
     render();
     updateHud();
     persist();
@@ -676,6 +758,9 @@
     showAlt();
     showMoments();
     drawGraph();
+    decorate();
+    var acc = function(c){ return sum[c].accuracy === null ? '—' : sum[c].accuracy + '%'; };
+    $('accLine').textContent = 'Accuracy · White ' + acc('w') + ' · Black ' + acc('b');
   }
 
   // The slips worth a second look, each with the engine's better move: the
@@ -812,8 +897,22 @@
       if (num) span('better', '(' + mv.bestSan + ' was better)');
     });
     if (r.info.outcome) span('result', r.info.outcome);
+    // The game as PGN, to copy or download (as a new file each time).
+    pgn = C.toPgn(g, r.info.tags, r.info.result);
+    if (pgnUrl) URL.revokeObjectURL(pgnUrl);
+    pgnUrl = URL.createObjectURL(new Blob([pgn], { type: 'application/x-chess-pgn' }));
+    var title = $('reviewTitle').textContent.replace(/[^\w]+/g, '-').replace(/^-+|-+$/g, '');
+    window.bdnixFiles.offer($('saveLink'), pgnUrl, (title || 'game') + '.pgn');
+    $('textMsg').textContent = '';
     openModal(textEl, e.currentTarget, on || $('textClose'));
     if (on) scrollWithin(box, on);
+  }
+  var pgn = '', pgnUrl = null;
+  function copyPgn(){
+    var done = function(){ $('textMsg').textContent = 'Copied the game as PGN.'; };
+    var failed = function(){ $('textMsg').textContent = 'Couldn’t copy it here. Download it instead.'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(pgn).then(done, failed);
+    else failed();
   }
 
   // One step back: the last move tried taken back, or the game's move before.
@@ -823,16 +922,31 @@
   }
 
   // ---------- Replaying a game ----------
-  // Plays the game through on the board, a move every REPLAY_STEP, from the
-  // start if it's at the end. Stops at the last move or at any step by hand.
-  var replayTimer = null;
+  // Plays the game through on the board, a move every step of the speed
+  // picked, from the start if it's at the end. Stops at the last move or at
+  // any step by hand. A new speed counts straight away.
+  var replayTimer = null, speed = 1;
+  function step(){ return SPEEDS[speed].step; }
+  function nextSpeed(){
+    speed = (speed + 1) % SPEEDS.length;
+    showSpeed();
+    if (replayTimer) {
+      clearTimeout(replayTimer);
+      replayTimer = setTimeout(replayStep, step());
+    }
+  }
+  function showSpeed(){
+    var s = SPEEDS[speed], btn = $('speedBtn');
+    btn.textContent = s.short;
+    btn.setAttribute('aria-label', 'Replay speed: ' + s.name.toLowerCase() + ', a move every ' + s.step / 1000 + ' seconds. Change it');
+  }
   function startReplay(){
     var r = review;
     if (!r) return;
     if (r.alt) goTo(r.ply);
     if (r.ply >= r.game.moves.length) goTo(0);
     r.playing = true;
-    replayTimer = setTimeout(replayStep, REPLAY_STEP);
+    replayTimer = setTimeout(replayStep, step());
     showReplay();
   }
   function replayStep(){
@@ -841,7 +955,7 @@
     if (!r || !r.playing) return;
     goTo(r.ply + 1, true);
     if (r.ply >= r.game.moves.length) stopReplay();
-    else replayTimer = setTimeout(replayStep, REPLAY_STEP);
+    else replayTimer = setTimeout(replayStep, step());
   }
   function stopReplay(){
     if (replayTimer) clearTimeout(replayTimer);
@@ -1027,8 +1141,13 @@
       : st.result === 'checkmate' ? 'Checkmate — ' + COLOR[st.winner] + ' wins'
       : st.over ? ENDINGS[st.result] : RESULTS['*'];
     var about = [outcome, t.Event && t.Event !== '?' ? t.Event : '', t.Date && !/\?/.test(t.Date) ? t.Date : '', g.moves.length + (g.moves.length === 1 ? ' move' : ' moves')];
+    var result = r.result !== '*' ? r.result : st.result === 'checkmate' ? (st.winner === 'w' ? '1-0' : '0-1') : st.over ? '1/2-1/2' : '*';
     startReview(g, {
-      kicker: fileName, outcome: outcome === RESULTS['*'] ? null : outcome,
+      kicker: fileName, outcome: outcome === RESULTS['*'] ? null : outcome, tags: t, result: result,
+      players: {
+        w: { name: known(t.White) || 'White', elo: known(t.WhiteElo) },
+        b: { name: known(t.Black) || 'Black', elo: known(t.BlackElo) }
+      },
       title: (t.White && t.White !== '?' ? t.White : 'White') + ' vs ' + (t.Black && t.Black !== '?' ? t.Black : 'Black'),
       text: about.filter(Boolean).join(' · '),
       side: 'w', back: paused ? 'paused' : 'start', again: paused ? 'Back to your game' : 'Play a game', replay: true, picked: !!picked
@@ -1067,15 +1186,12 @@
     var g = shown(), pos = C.current(g), last = g.moves[g.moves.length - 1];
     var check = C.inCheck(pos) ? pos.board.indexOf(pos.turn === 'w' ? 'K' : 'k') : -1;
     var to = selected >= 0 ? targets(selected) : [];
-    // In a review, the engine's choice in the position shown.
-    var e = review && (review.alt ? review.alt.evals[g.positions.length - 1] : review.evals[review.ply]), hint = e && e.best && C.findMove(pos, e.best);
     for (var v = 0; v < 64; v++) {
       var sq = at(v), p = pos.board[sq], el = squares[v];
       var dark = ((sq >> 3) + (sq & 7)) % 2 === 1;
       var target = to.some(function(m){ return m.to === sq; });
       el.className = 'sq' + (dark ? ' dark' : '') +
         (last && (last.from === sq || last.to === sq) ? ' last' : '') +
-        (hint && (hint.from === sq || hint.to === sq) ? ' hint' : '') +
         (sq === selected ? ' sel' : '') + (sq === check ? ' check' : '') +
         (target ? ' to' + (p ? ' take' : '') : '');
       el.setAttribute('data-sq', C.name(sq));
@@ -1087,6 +1203,62 @@
     }
     if (animate) slide(animate);
     animate = null;
+    decorate();
+  }
+
+  // What's drawn over the board: Stockfish's move as an arrow (in a review
+  // its choice in the position shown, in a game a hint asked for), the mark
+  // of the move shown on the square it went to, and in a review how the game
+  // stands beside the board.
+  var evalPct = 50;
+  function decorate(){
+    var g = shown(), pos = C.current(g), r = review, e = null, arrow = null;
+    if (r) {
+      e = r.alt ? r.alt.evals[g.positions.length - 1] : r.evals[r.ply];
+      arrow = e && e.best ? C.findMove(pos, e.best) : null;
+    } else if (hint && state === 'playing' && hint.key === C.key(pos)) arrow = hint.move;
+    squares.forEach(function(el){
+      el.classList.remove('hint');
+      var b = el.querySelector('.badge');
+      if (b) {
+        el.removeChild(b);
+        el.setAttribute('aria-label', el.getAttribute('aria-label').replace(/, (inaccuracy|mistake|blunder)$/, ''));
+      }
+    });
+    if (arrow) {
+      squares[placeOf(arrow.from)].classList.add('hint');
+      squares[placeOf(arrow.to)].classList.add('hint');
+    }
+    drawArrow(arrow, r ? '' : 'hint-arrow');
+    var mv = r && !r.alt && r.ply && r.summary && r.summary.moves[r.ply - 1], kind = mv && KINDS[mv.kind];
+    if (kind && kind.mark) {
+      var el = squares[placeOf(r.game.moves[r.ply - 1].to)], badge = document.createElement('span');
+      badge.className = 'badge ' + mv.kind;
+      badge.setAttribute('aria-hidden', 'true');
+      badge.textContent = kind.mark;
+      el.appendChild(badge);
+      el.setAttribute('aria-label', el.getAttribute('aria-label') + ', ' + kind.name.toLowerCase());
+    }
+    // The bar keeps its last reading until the position shown is worked out.
+    evalBar.hidden = !r;
+    if (r && e) {
+      evalPct = C.winChance(e, 'w');
+      evalBar.setAttribute('aria-label', 'Evaluation ' + C.formatEval(e) + ': White’s winning chances ' + evalPct + '%');
+    }
+    evalBar.style.setProperty('--w', evalPct + '%');
+    evalBar.classList.toggle('flip', up() === 'b');
+  }
+  // An arrow from one square to another, in board squares (the SVG is 8 × 8).
+  function drawArrow(m, cls){
+    var svg = $('arrows');
+    if (!m) { svg.innerHTML = ''; return; }
+    var a = placeOf(m.from), b = placeOf(m.to);
+    var x = (a & 7) + 0.5, y = (a >> 3) + 0.5, dx = (b & 7) + 0.5 - x, dy = (b >> 3) + 0.5 - y;
+    var len = Math.sqrt(dx * dx + dy * dy), ux = dx / len, uy = dy / len;
+    var end = len - 0.1, neck = end - 0.34, w = 0.09, hw = 0.24;
+    var at = function(along, across){ return (x + ux * along - uy * across).toFixed(3) + ',' + (y + uy * along + ux * across).toFixed(3); };
+    svg.innerHTML = '<polygon' + (cls ? ' class="' + cls + '"' : '') + ' points="' +
+      [at(0.15, w), at(neck, w), at(neck, hw), at(end, 0), at(neck, -hw), at(neck, -w), at(0.15, -w)].join(' ') + '"/>';
   }
 
   // Slides the piece that just moved from where it was (no rAF, so it also
@@ -1119,15 +1291,36 @@
     $('status').textContent = text;
     $('best').textContent = best ? 'Level ' + best : 'None yet';
 
-    var mat = C.material(game), them = C.other(side);
-    var lead = side === 'w' ? mat.diff : -mat.diff;
-    $('capYou').innerHTML = mat[side].map(function(t){ return pieceSvg(them === 'w' ? t.toUpperCase() : t); }).join('');
-    $('capThem').innerHTML = mat[them].map(function(t){ return pieceSvg(side === 'w' ? t.toUpperCase() : t); }).join('');
-    $('advYou').textContent = lead > 0 ? '+' + lead : '';
-    $('advThem').textContent = lead < 0 ? '+' + -lead : '';
-    $('capYou').setAttribute('aria-label', taken(mat[side]));
-    $('capThem').setAttribute('aria-label', taken(mat[them]));
+    // The players above and below the board, each with what they've taken
+    // and their lead in material.
+    var mat = C.material(g), who = players();
+    [['Top', 'Them', C.other(up())], ['Bottom', 'You', up()]].forEach(function(p){
+      var c = p[2], lead = (c === 'w' ? 1 : -1) * mat.diff, caps = $('cap' + p[1]);
+      $('name' + p[0]).textContent = who[c].name;
+      $('elo' + p[0]).textContent = who[c].elo || '';
+      caps.innerHTML = mat[c].map(function(t){ return pieceSvg(c === 'w' ? t : t.toUpperCase()); }).join('');
+      caps.setAttribute('aria-label', taken(mat[c]));
+      $('adv' + p[1]).textContent = lead > 0 ? '+' + lead : '';
+    });
+    var t = review && review.info.tags, named = t && known(t.Opening) ? t.Opening + (known(t.Variation) ? ', ' + t.Variation : '') : null;
+    $('opening').textContent = named || C.opening(review ? review.game : game) || '—';
+
     undoBtn.disabled = !canUndo();
+    hintBtn.disabled = state !== 'playing' || !myTurn();
+    drawBtn.disabled = resignBtn.disabled = state !== 'playing';
+  }
+  // Who's playing: in a game, the visitor and Stockfish at the level picked;
+  // in a review, the players it was opened with.
+  function players(){
+    if (review) return review.info.players;
+    var you = { name: 'You', elo: '' }, sf = { name: 'Stockfish', elo: levelName(level()) };
+    return side === 'w' ? { w: you, b: sf } : { w: sf, b: you };
+  }
+  function levelName(lv){ return 'Level ' + lv + ' · about ' + LEVELS[lv - 1].rating; }
+  function showLevel(){
+    var name = levelName(level());
+    $('levelText').textContent = name;
+    levelEl.setAttribute('aria-valuetext', name);
   }
   function taken(list){
     return list.length ? 'Taken: ' + list.map(function(t){ return NAMES[t]; }).join(', ') : 'Nothing taken yet';
@@ -1141,17 +1334,21 @@
     var padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
     var padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
     var gap = parseFloat(cs.rowGap) || 0, availW, availH;
+    // The players' strips above and below the board, and in a review the
+    // evaluation bar beside it.
+    var col = $('boardCol'), strips = $('stripTop').offsetHeight + $('stripBottom').offsetHeight + (parseFloat(getComputedStyle(col).rowGap) || 0) * 2;
+    var pad = review ? 14 : 0;
     if (compactMQ.matches) {
-      availW = gameEl.clientWidth - padX;
-      availH = review ? availW : gameEl.clientHeight - padY - document.querySelector('.stats').offsetHeight - document.querySelector('.side').offsetHeight - gap * 2;
+      availW = gameEl.clientWidth - padX - pad;
+      availH = review ? availW : gameEl.clientHeight - padY - strips - document.querySelector('.stats').offsetHeight - document.querySelector('.side').offsetHeight - gap * 2;
     } else {
-      availW = gameEl.clientWidth - padX - 190 - (review ? 320 : 190) - (parseFloat(cs.columnGap) || 0) * 2;
-      availH = gameEl.clientHeight - padY;
+      availW = gameEl.clientWidth - padX - 190 - (review ? 320 : 190) - (parseFloat(cs.columnGap) || 0) * 2 - pad;
+      availH = gameEl.clientHeight - padY - strips;
     }
     var sq = Math.max(24, Math.min(84, Math.floor((Math.min(availW, availH) - 2) / 8)));
     boardEl.parentNode.style.setProperty('--sq', sq + 'px');
     // Beside the board, the review fills its height under the bar.
-    if (review && !compactMQ.matches) reviewEl.style.setProperty('--review-h', (sq * 8 + 2 - barEl.offsetHeight - gap) + 'px');
+    if (review && !compactMQ.matches) reviewEl.style.setProperty('--review-h', (sq * 8 + 2 + strips - barEl.offsetHeight - gap) + 'px');
     else reviewEl.style.removeProperty('--review-h');
     boardEl.parentNode.style.setProperty('--cell', Math.max(16, sq * 0.6) + 'px');
     if (review && review.summary) drawGraph();
@@ -1179,6 +1376,7 @@
     game = g; side = s.side;
     setSide(side);
     levelEl.value = String(s.level);
+    showLevel();
     state = 'playing';
     pause('Picked up where you left off.');
     return true;
@@ -1289,7 +1487,11 @@
   });
   undoBtn.addEventListener('click', undo);
   // A new level counts from the engine's next move.
-  levelEl.addEventListener('change', function(){ persist(); levelEl.blur(); });
+  levelEl.addEventListener('input', function(){ showLevel(); updateHud(); });
+  levelEl.addEventListener('change', persist);
+  hintBtn.addEventListener('click', askHint);
+  drawBtn.addEventListener('click', offerDraw);
+  resignBtn.addEventListener('click', resign);
 
   // Game files: the buttons open the file picker.
   [$('importBtn'), $('anotherBtn')].forEach(function(btn){
@@ -1301,6 +1503,7 @@
   $('pasteCancel').addEventListener('click', closeModal);
   $('pickCancel').addEventListener('click', closeModal);
   $('textClose').addEventListener('click', closeModal);
+  $('copyBtn').addEventListener('click', copyPgn);
   $('textBtn').addEventListener('click', openText);
   $('textMoves').addEventListener('click', function(e){
     var btn = e.target.closest('.tmv');
@@ -1335,15 +1538,50 @@
   $('flipBtn').addEventListener('click', function(){
     review.side = C.other(review.side);
     render();
+    updateHud();
   });
+  $('speedBtn').addEventListener('click', nextSpeed);
   movesEl.addEventListener('click', function(e){
     var btn = e.target.closest('.mv');
     if (btn) goTo(parseInt(btn.getAttribute('data-ply'), 10));
   });
-  graph.addEventListener('click', function(e){
+  // The graph: pressing it goes to the move under the pointer, and dragging
+  // along it goes through the game.
+  var scrubbing = false;
+  function scrubTo(e){
     var box = graph.getBoundingClientRect(), n = review.game.moves.length;
-    goTo(Math.round((e.clientX - box.left) / box.width * n));
+    var ply = Math.max(0, Math.min(n, Math.round((e.clientX - box.left) / box.width * n)));
+    if (ply !== review.ply || review.alt) goTo(ply);
+  }
+  graph.addEventListener('pointerdown', function(e){
+    if (!review || e.button > 0) return;
+    scrubbing = true;
+    try { graph.setPointerCapture(e.pointerId); } catch (err) {}
+    scrubTo(e);
   });
+  graph.addEventListener('pointermove', function(e){ if (scrubbing && review) scrubTo(e); });
+  graph.addEventListener('pointerup', function(){ scrubbing = false; });
+  graph.addEventListener('pointercancel', function(){ scrubbing = false; });
+
+  // A swipe across the move shown goes to the next move (to the left) or the
+  // one before (to the right); the press it ends with isn't a click.
+  var swipe = null, swiped = false;
+  barEl.addEventListener('pointerdown', function(e){ swipe = { x: e.clientX, y: e.clientY }; swiped = false; });
+  barEl.addEventListener('pointercancel', function(){ swipe = null; });
+  barEl.addEventListener('pointerup', function(e){
+    var s = swipe, dx = s ? e.clientX - s.x : 0, dy = s ? e.clientY - s.y : 0;
+    swipe = null;
+    if (!review || Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    swiped = true;
+    if (dx < 0) goTo(review.ply + 1);
+    else back();
+  });
+  barEl.addEventListener('click', function(e){
+    if (!swiped) return;
+    swiped = false;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
   $('moments').addEventListener('click', function(e){
     var btn = e.target.closest('.moment');
     if (!btn) return;
@@ -1363,6 +1601,8 @@
 
   var saved = window.bdnixSave.load('chess');
   if (saved && !restore(saved)) window.bdnixSave.clear('chess');
+  showLevel();
+  showSpeed();
   render();
   updateHud();
   resize();

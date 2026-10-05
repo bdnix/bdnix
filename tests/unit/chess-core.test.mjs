@@ -413,3 +413,48 @@ test('review: each move\'s kind, the better move, and each side\'s accuracy', ()
   // A best move the engine gives that isn't legal there is left out.
   assert.equal(C.reviewGame(playAll('e2e4'), [{ cp: 0, best: 'e2e5' }, { cp: 0 }]).moves[0].bestSan, null);
 });
+
+test('openings: named after the longest well-known start a game has', () => {
+  const name = (text) => C.opening(C.parsePgn(text).game);
+  assert.equal(name('e4'), 'King’s Pawn Opening');
+  assert.equal(name('e4 e5 Nf3 Nc6 Bb5 a6 Ba4'), 'Ruy Lopez, Morphy Defence');
+  assert.equal(name('e4 e5 Nf3 Nc6 Bb5'), 'Ruy Lopez');
+  assert.equal(name('e4 e5 Nf3 Nc6'), 'Open Game');
+  assert.equal(name('e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3'), 'Sicilian Defence, Najdorf Variation');
+  assert.equal(name('d4 Nf6 c4 g6 Nc3 Bg7 e4'), 'King’s Indian Defence');
+  assert.equal(name('d4 Nf6 c4 g6 Nc3 d5'), 'Grünfeld Defence');
+  assert.equal(name('d4 d5 c4 dxc4'), 'Queen’s Gambit Accepted');
+  assert.equal(name('f3 e5 g4 Qh4#'), null);                              // nothing it knows
+  assert.equal(name('e4 e5 Nf3 Nc6 Bc4 Bc5 b4 Bxb4 c3'), 'Evans Gambit');   // check marks or not
+  assert.equal(name('[FEN "4k3/8/8/8/8/8/4P3/4K3 w - - 0 1"]\n\ne4'), null); // a set-up position
+  // Every opening listed is a game that can be played.
+  for (const text of ['e4 e5 d4 exd4 c3', 'e4 e6 d4 d5 Nc3 Bb4', 'd4 Nf6 c4 c5 d5 b5', 'e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3 e5']) {
+    assert.equal(C.parsePgn(text).error, undefined, text);
+    assert.ok(name(text), text);
+  }
+});
+
+test('PGN out: the usual tags, the moves in lines of 80, and it reads back the same', () => {
+  const g = C.parsePgn(OPERA).game;
+  const pgn = C.toPgn(g, { White: 'Paul Morphy', Black: 'Duke Karl "the" Count', Event: 'Paris Opera', Annotator: 'bdnix' }, '1-0');
+  const lines = pgn.split('\n');
+  assert.deepEqual(lines.slice(0, 8), [
+    '[Event "Paris Opera"]', '[Site "?"]', '[Date "????.??.??"]', '[Round "?"]',
+    '[White "Paul Morphy"]', '[Black "Duke Karl \\"the\\" Count"]', '[Result "1-0"]', '[Annotator "bdnix"]'
+  ]);
+  assert.equal(lines[8], '');
+  assert.ok(lines[9].startsWith('1. e4 e5 2. Nf3 d6 3. d4 Bg4'));
+  assert.ok(lines.slice(9).every((l) => l.length <= 80));
+  assert.ok(pgn.endsWith('17. Rd8# 1-0\n'));
+  const back = C.parsePgn(pgn);
+  assert.equal(back.tags.Black, 'Duke Karl "the" Count');
+  assert.deepEqual(plain(back.game.moves.map((m) => m.san)), plain(g.moves.map((m) => m.san)));
+  assert.equal(back.result, '1-0');
+
+  // A game from a set-up position, Black first, no result yet.
+  const fen = '4k3/8/8/8/8/8/4P3/4K3 b - - 0 40';
+  const set = C.parsePgn(`[FEN "${fen}"]\n\n40... Kd7 41. e4`).game;
+  const out = C.toPgn(set);
+  assert.ok(out.includes('[Result "*"]\n[SetUp "1"]\n[FEN "' + fen + '"]\n\n40... Kd7 41. e4 *\n'));
+  assert.equal(C.parsePgn(out).game.moves.length, 2);
+});

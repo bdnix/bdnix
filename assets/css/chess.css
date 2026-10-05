@@ -13,7 +13,16 @@
 }
 .stats{grid-area:stats;align-self:start}
 .stats b{font:600 15px/1.3 var(--sans)}
-.board-wrap{grid-area:board;--sq:44px}
+.board-col{grid-area:board;display:flex;flex-direction:column;gap:6px;--sq:44px}
+
+/* ---- The players, above and below the board ---- */
+.strip{
+  display:flex;align-items:center;gap:8px;
+  min-height:24px;font-size:13px;line-height:1.2;
+}
+.strip .who{flex:0 1 auto;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.strip .who b{font-weight:600}
+.strip .elo{font:400 11px/1 var(--mono);color:var(--muted)}
 .side{grid-area:side;align-self:start;align-items:stretch;gap:12px}
 
 /* ---- The board: 8 × 8 buttons ---- */
@@ -92,21 +101,18 @@
 .overlay .seg span{padding:9px}
 
 /* ---- Captures and controls ---- */
-.caps-row{display:grid;grid-template-columns:1fr auto;grid-template-areas:"name adv" "caps caps";gap:6px;align-items:center}
-.caps-row .label{grid-area:name}
-.caps{grid-area:caps;display:flex;flex-wrap:wrap;min-height:20px}
+.caps{display:flex;flex:0 1 auto;flex-wrap:wrap;min-height:20px}
 .caps svg{position:static;width:20px;height:20px;margin-right:-5px}
-.adv{grid-area:adv;font:600 13px/1 var(--mono);color:var(--muted)}
+.adv{font:600 13px/1 var(--mono);color:var(--muted)}
 .level{display:flex;flex-direction:column;gap:8px}
-.level select{
-  width:100%;padding:10px 12px;
-  font:inherit;font-size:14px;color:var(--fg);
-  border:1px solid var(--line);border-radius:10px;background:rgba(8,10,18,.5);
-}
-.level select:focus{outline:none;border-color:var(--cyan)}
-.level option{background:#10142a;color:var(--fg)}
+.level input{width:100%;margin:0;accent-color:#22d3ee}
+.level output{font:600 13px/1.3 var(--mono);color:var(--fg);white-space:nowrap}
 .controls{display:grid;gap:8px}
 .controls .btn{padding:11px 14px;font-size:14px}
+.controls .btn.confirm{border-color:var(--pink);color:var(--pink)}
+.play-msg{margin:0;font-size:13px;line-height:1.4;color:var(--muted);text-align:center}
+.play-msg:empty{display:none}
+.opening-row b{font-size:13px;line-height:1.3}
 .controls .btn:disabled{opacity:.45;cursor:default;transform:none}
 
 /* ---- Phones & tablets ---- */
@@ -125,15 +131,20 @@
   .best-row{display:none!important}
   .side{
     justify-self:stretch;
-    display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;
+    display:grid;grid-template-columns:1fr;gap:8px 12px;
     padding:8px 12px;
   }
+  .board-col{gap:4px}
+  .strip{font-size:12px;min-height:20px}
   .caps{min-height:16px}
   .caps svg{width:16px;height:16px}
-  .level{grid-column:1/-1;flex-direction:row;align-items:center;gap:12px}
-  .level select{padding:8px 10px}
-  .controls{grid-column:1/-1;grid-template-columns:1fr 1fr}
-  .controls .btn{padding:10px}
+  .level{flex-direction:row;align-items:center;gap:12px}
+  .level input{flex:1 1 auto;width:auto}
+  .level output{font-size:12px}
+  .controls{grid-template-columns:repeat(3,1fr)}
+  .controls .btn{padding:10px 4px;font-size:13px}
+  .opening-row{grid-column:1/-1}
+  .opening-row b{font-size:12px}
 }
 
 /* The overlay hides the light squares well enough to read over. */
@@ -143,13 +154,42 @@
 .ov-msg:empty{display:none}
 
 /* ---- Reviewing a game ---- */
-.sq.hint{box-shadow:inset 0 0 0 3px rgba(34,211,238,.85)}
+/* Beside the board in a review: how the game stands, White's share from
+   White's side of the board. */
+body.reviewing .board-wrap{--pad:14px;padding-left:var(--pad)}
+.eval-bar{
+  position:absolute;left:0;top:0;bottom:0;width:8px;overflow:hidden;
+  border-radius:4px;background:#1b2036;box-shadow:inset 0 0 0 1px var(--line);
+}
+.eval-bar[hidden]{display:none}
+.eval-bar span{position:absolute;left:0;right:0;bottom:0;height:var(--w,50%);background:#e9ecf8;transition:height .3s ease}
+.eval-bar.flip span{top:0;bottom:auto}
+/* Arrows over the board: Stockfish's move, or a hint. */
+.arrows{
+  position:absolute;top:1px;left:calc(var(--pad,0px) + 1px);z-index:1;
+  width:calc(var(--sq) * 8);height:calc(var(--sq) * 8);
+  pointer-events:none;
+}
+.arrows polygon{fill:rgba(34,211,238,.78)}
+.arrows .hint-arrow{fill:rgba(250,204,21,.85)}
+/* What kind of move the move shown was, on the square it went to. */
+.badge{
+  position:absolute;top:2px;right:2px;z-index:1;
+  min-width:18px;height:18px;padding:0 3px;box-sizing:border-box;
+  border-radius:9px;
+  font:700 11px/18px var(--mono);text-align:center;color:#0b0d16;
+  box-shadow:0 1px 3px rgba(0,0,0,.5);
+}
+.badge.inaccuracy{background:#facc15}
+.badge.mistake{background:#fb923c}
+.badge.blunder{background:#fb7185}
+.acc-line{display:none;margin:0;font:600 13px/1.4 var(--mono)}
 /* The move shown and the buttons to step through the game sit above the
    rest of the review: beside the board's top on a wide screen, above the
    board on a phone. The review below them fills the rest of the board's
    height (set by resize() in chess.js). */
 .review-bar{
-  grid-area:bar;align-self:start;
+  grid-area:bar;align-self:start;touch-action:pan-y;
   display:flex;flex-direction:column;gap:8px;
   padding:10px;
 }
@@ -195,7 +235,7 @@ body.reviewing .game{
 .summary .inaccuracy span{color:#facc15}
 .summary .mistake span{color:#fb923c}
 .summary .blunder span{color:#fb7185}
-#graph{display:block;width:100%;height:72px;border-radius:8px;cursor:pointer}
+#graph{display:block;width:100%;height:72px;border-radius:8px;cursor:pointer;touch-action:pan-y}
 .alt-tip{margin:-4px 0 0;font-size:12px;line-height:1.4;color:var(--faint)}
 .alt-tip[hidden]{display:none}
 .alt{
@@ -216,7 +256,7 @@ body.reviewing .game{
 .review-nav{display:flex;gap:6px}
 .review-nav .icon-btn{width:36px;height:36px}
 .review-nav .icon-btn:disabled{opacity:.4;cursor:default}
-.review-nav #flipBtn{margin-left:auto}
+.review-nav #speedBtn{margin-left:auto;font:600 13px/1 var(--mono)}
 .moves{
   position:relative;
   margin:0;padding:0;list-style:none;
@@ -250,9 +290,12 @@ body.reviewing .game{
   body.reviewing .game{grid-template-columns:1fr;grid-template-rows:none;grid-template-areas:"bar" "board" "stats" "side"}
   .review-bar{justify-self:stretch;padding:8px}
   .review-nav{justify-content:space-between}
-  .review-nav .icon-btn{width:44px;height:44px}
-  .review-nav #flipBtn{margin-left:0}
+  .review-nav .icon-btn{width:42px;height:42px}
+  .review-nav #speedBtn{margin-left:0}
   .review{justify-self:stretch;max-height:none;overflow:visible;padding:12px}
+  /* A shorter review: accuracy in a line, the counts are in the slips listed. */
+  .acc-line{display:block}
+  .summary{display:none}
 }
 
 /* ---- Where it could have gone better ---- */
@@ -293,7 +336,7 @@ body.reviewing .game{
 .modal-box textarea:focus,.modal-box input:focus{outline:none;border-color:var(--cyan)}
 .modal-msg{margin:0;font-size:13px;line-height:1.4;color:var(--pink)}
 .modal-msg:empty{display:none}
-.modal-actions{display:flex;gap:8px}
+.modal-actions{display:flex;flex-wrap:wrap;gap:8px}
 .modal-actions .btn{flex:1 1 auto;padding:11px 14px;font-size:14px}
 .pick-about{margin:0;font-size:13px;line-height:1.4;color:var(--muted)}
 .pick-list{
@@ -336,3 +379,5 @@ body.reviewing .game{
 .text-moves .pair{white-space:nowrap}
 .text-moves .better{font-size:12px;color:var(--muted)}
 .text-moves .result{font-weight:600}
+.text-msg{margin:0;font-size:13px;line-height:1.4;color:var(--muted)}
+.text-msg:empty{display:none}

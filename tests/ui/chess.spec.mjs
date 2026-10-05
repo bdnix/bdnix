@@ -1,6 +1,7 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { openGame, press, listen, heard, soundProblems } from './games.mjs';
 import { axeProblems } from './checks.mjs';
+import { inNewWindow } from './downloads.mjs';
 
 // Most tests play against a stand-in for Stockfish (fakeEngine), so every
 // game goes the same way. Asked for a move, it plays the next move the test
@@ -18,7 +19,8 @@ const VALUES = { p: 100, n: 300, b: 300, r: 500, q: 900, k: 0 };
 // set, searches wait until window.release() is called, or until they're
 // stopped, which answers them at once. Like Stockfish, it crashes if a
 // search starts before the one before it has answered. window.engines
-// counts the engines started.
+// counts the engines started. Searches other than a review's score the
+// position window.engineScore (centipawns, for the side to move), or level.
 async function fakeEngine(page, replies = []){
   await page.addInitScript(([list, values]) => {
     window.uci = [];
@@ -59,7 +61,7 @@ async function fakeEngine(page, replies = []){
             return;
           }
           const reply = window.replies.shift() || legal[0];
-          say('info depth 1 score cp 0 nodes 1 pv ' + reply);
+          say('info depth 1 score cp ' + (window.engineScore || 0) + ' nodes 1 pv ' + reply);
           say('bestmove ' + reply);
         };
         this.searching = answer;
@@ -139,7 +141,7 @@ test('plays White against the engine, at the level picked', async ({ page }) => 
   expect(sent.slice(-3)).toEqual(['setoption name Skill Level value 4', 'position startpos moves e2e4', 'go depth 3']);
 
   // A new level counts from the engine's next move.
-  await page.locator('#level').selectOption('10');
+  await page.locator('#level').fill('10');
   await move(page, 'd2', 'd4');
   await expect(status(page)).toHaveText('Your move');
   expect((await commands(page)).slice(-3)).toEqual(['setoption name Skill Level value 20', 'position startpos moves e2e4 a7a5 d2d4', 'go depth 15']);
@@ -391,7 +393,7 @@ test('opens a PGN file and reviews it', async ({ page }) => {
   await expect(page.locator('#reviewMsg')).toHaveText('');
 });
 
-test('a game from a file is replayed on the board, a move a second', async ({ page }) => {
+test('a game from a file is replayed on the board, every second and a half', async ({ page }) => {
   await fakeEngine(page);
   await listen(page);
   await openGame(page, '/chess/');
@@ -401,11 +403,13 @@ test('a game from a file is replayed on the board, a move a second', async ({ pa
   await expect(btn).toHaveAttribute('aria-label', 'Pause the replay');
   await expect(status(page)).toHaveText('Replaying');
   expect(await pieceOn(page, 'f2')).toBe('f2, White pawn');
-  await page.clock.runFor(1000);
+  await page.clock.runFor(1499);
+  await expect(page.locator('#moveNow')).toHaveText('The starting position.');
+  await page.clock.runFor(1);
   await expect(page.locator('#moveNow')).toHaveText('1. f3: Good move. Best was a3.');
   expect(await pieceOn(page, 'f3')).toBe('f3, White pawn');
   await expect(sq(page, 'f3')).toHaveClass(/last/);
-  await page.clock.runFor(3000);
+  await page.clock.runFor(4500);
   await expect(page.locator('#moveNow')).toHaveText('2… Qh4#: Best move.');
   await expect(btn).toHaveAttribute('aria-label', 'Replay the moves');
   await expect(status(page)).toHaveText('Checkmate — Black wins');
@@ -417,7 +421,7 @@ test('a game from a file is replayed on the board, a move a second', async ({ pa
   await btn.click();
   await expect(page.locator('#moveNow')).toHaveText('The starting position.');
   await expect(btn).toHaveAttribute('aria-label', 'Pause the replay');
-  await page.clock.runFor(1000);
+  await page.clock.runFor(1500);
   await expect(page.locator('#moveNow')).toHaveText('1. f3: Good move. Best was a3.');
   // A step by hand stops it there.
   await page.locator('#nextBtn').click();
@@ -430,7 +434,7 @@ test('a game from a file is replayed on the board, a move a second', async ({ pa
   await page.evaluate(() => document.activeElement.blur());
   await press(page, 'Space');
   await expect(btn).toHaveAttribute('aria-label', 'Pause the replay');
-  await page.clock.runFor(1000);
+  await page.clock.runFor(1500);
   await expect(page.locator('#moveNow')).toHaveText('2. g4: Blunder. Best was a3.');
   await press(page, 'Space');
   await expect(btn).toHaveAttribute('aria-label', 'Replay the moves');
@@ -455,7 +459,7 @@ test('a game that has just ended can be replayed from its review', async ({ page
   await expect(page.locator('#replayBtn')).toHaveAttribute('aria-label', 'Replay the moves');
   await page.locator('#replayBtn').click();
   await expect(page.locator('#moveNow')).toHaveText('The starting position.');
-  await page.clock.runFor(4000);
+  await page.clock.runFor(6000);
   await expect(page.locator('#moveNow')).toHaveText(/^2… Qh4#/);
   await expect(page.locator('#replayBtn')).toHaveAttribute('aria-label', 'Replay the moves');
 });
@@ -472,7 +476,7 @@ test('a different move can be tried in a review, against the game\'s own', async
   await expect(page.locator('#altTip')).toBeVisible();
 
   // Picking up a piece stops the replay; Black, to move after 3. Qh5, can move.
-  await page.clock.runFor(5000);
+  await page.clock.runFor(7500);
   await expect(page.locator('#moveNow')).toHaveText('3. Qh5: Good move. Best was a3.');
   await expect(page.locator('#replayBtn')).toHaveAttribute('aria-label', 'Pause the replay');
   await sq(page, 'g7').click();
@@ -860,17 +864,19 @@ test('in a review the move shown and its buttons sit at the top, and a replay ke
     expect(bar.y + bar.height).toBeLessThanOrEqual(board.y);
     expect(panel.y).toBeGreaterThanOrEqual(board.y + board.height);
   } else {
-    // Beside the board, level with its top, the review filling the rest of its height.
+    // Beside the board, level with the top of its column (the player above
+    // it), the review filling the rest of the column's height.
+    const column = await page.locator('#boardCol').boundingBox();
     expect(bar.x).toBeGreaterThanOrEqual(board.x + board.width);
-    expect(Math.abs(bar.y - board.y)).toBeLessThan(2);
+    expect(Math.abs(bar.y - column.y)).toBeLessThan(2);
     expect(panel.y).toBeGreaterThan(bar.y + bar.height);
-    expect(panel.y + panel.height).toBeLessThanOrEqual(board.y + board.height + 1);
+    expect(panel.y + panel.height).toBeLessThanOrEqual(column.y + column.height + 1);
   }
   await expectNoSideScroll(page);
 
   // Replaying it all: the page stays where it is, and the move list scrolls
   // itself to keep the move shown in sight.
-  await page.clock.runFor(33000);
+  await page.clock.runFor(49500);
   await expect(page.locator('#moveNow')).toHaveText('17. Rd8#: Best move.');
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
   const inSight = () => page.locator('#moves').evaluate((list) => {
@@ -1028,7 +1034,7 @@ test('a game is kept across a reload and comes back paused', async ({ page }) =>
   await fakeEngine(page);
   await openGame(page, '/chess/');
   await start(page, 'Black');
-  await page.locator('#level').selectOption('7');
+  await page.locator('#level').fill('7');
   await move(page, 'e7', 'e5');
   await expect(status(page)).toHaveText('Your move');
   await page.reload();
@@ -1171,4 +1177,337 @@ test('a game review passes axe', async ({ page }) => {
   expect(await axeProblems(page)).toEqual([]);
   await page.locator('#textBtn').click();
   expect(await axeProblems(page)).toEqual([]);
+});
+
+const phone = (page) => page.viewportSize().width <= 700;
+const sqLabel = (page, name) => sq(page, name).getAttribute('aria-label');
+
+test('a review shows how the game stands beside the board, Stockfish\'s move as an arrow, and slips on their squares', async ({ page }) => {
+  await fakeEngine(page);
+  await openGame(page, '/chess/');
+  await expect(page.locator('#evalBar')).toBeHidden();        // only in a review
+  await page.locator('#pgnFile').setInputFiles(file('fools.pgn', FOOLS));
+  await reviewed(page);
+  const bar = page.locator('#evalBar');
+  await expect(bar).toBeVisible();
+  await expect(bar).toHaveAttribute('aria-label', 'Evaluation 0.00: White’s winning chances 50%');
+  // Stockfish's choice at the start: a3, as an arrow from a2.
+  await expect(page.locator('#arrows polygon')).toHaveCount(1);
+  await expect(sq(page, 'a2')).toHaveClass(/hint/);
+  await expect(sq(page, 'a3')).toHaveClass(/hint/);
+  await expect(page.locator('.badge')).toHaveCount(0);
+  const arrow = await page.locator('#arrows polygon').boundingBox(), a2 = await sq(page, 'a2').boundingBox(), a3 = await sq(page, 'a3').boundingBox();
+  expect(arrow.x).toBeGreaterThanOrEqual(a2.x);
+  expect(arrow.x + arrow.width).toBeLessThanOrEqual(a2.x + a2.width);
+  expect(arrow.y).toBeGreaterThanOrEqual(a3.y);
+  expect(arrow.y + arrow.height).toBeLessThanOrEqual(a2.y + a2.height);
+  await expectNoSideScroll(page);
+
+  // 2. g4?? marked on g4, and White's chances down to almost nothing.
+  await page.locator('.mv').nth(2).click();
+  await expect(page.locator('.badge')).toHaveCount(1);
+  await expect(sq(page, 'g4').locator('.badge.blunder')).toHaveText('??');
+  expect(await sqLabel(page, 'g4')).toBe('g4, White pawn, blunder');
+  await expect(bar).toHaveAttribute('aria-label', 'Evaluation -M1: White’s winning chances 2%');
+  expect(await bar.evaluate((b) => b.style.getPropertyValue('--w'))).toBe('2%');
+  await expect(sq(page, 'd8')).toHaveClass(/hint/);              // Qh4# is coming
+  // Turned round, White's share runs from the top.
+  await expect(bar).not.toHaveClass(/flip/);
+  await page.locator('#flipBtn').click();
+  await expect(bar).toHaveClass(/flip/);
+  await page.locator('#flipBtn').click();
+  // A good move has no mark; at the end there's no move to suggest.
+  await page.locator('.mv').nth(1).click();
+  await expect(page.locator('.badge')).toHaveCount(0);
+  expect(await sqLabel(page, 'e5')).toBe('e5, Black pawn');
+  await press(page, 'End');
+  await expect(page.locator('#arrows polygon')).toHaveCount(0);
+  // A move tried has no mark of the game's, and its own arrow.
+  await page.locator('.mv').nth(2).click();
+  await move(page, 'd7', 'd6');
+  await expect(page.locator('.badge')).toHaveCount(0);
+  await expect(page.locator('#arrows polygon')).toHaveCount(1);
+  await expect(bar).toHaveAttribute('aria-label', 'Evaluation 0.00: White’s winning chances 50%');
+});
+
+test('the players sit above and below the board, with what each has taken', async ({ page }) => {
+  await fakeEngine(page);
+  await openGame(page, '/chess/');
+  await expect(page.locator('#nameTop')).toHaveText('Stockfish');
+  await expect(page.locator('#eloTop')).toHaveText('Level 3 · about 1200');
+  await expect(page.locator('#nameBottom')).toHaveText('You');
+  await page.locator('#level').fill('9');
+  await expect(page.locator('#eloTop')).toHaveText('Level 9 · about 2400');
+  // The board's column: the players above and below the board.
+  const top = await page.locator('#stripTop').boundingBox(), board = await page.locator('#board').boundingBox(), bottom = await page.locator('#stripBottom').boundingBox();
+  expect(top.y + top.height).toBeLessThanOrEqual(board.y);
+  expect(bottom.y).toBeGreaterThanOrEqual(board.y + board.height);
+
+  // In a review, the game's players (and ratings), by where they sit.
+  await page.locator('#pgnFile').setInputFiles(file('rated.pgn', '[White "Ann"]\n[Black "Bob"]\n[WhiteElo "2100"]\n[BlackElo "?"]\n\n1. e4 d5 2. exd5 *'));
+  await reviewed(page);
+  await expect(page.locator('#nameTop')).toHaveText('Bob');
+  await expect(page.locator('#eloTop')).toHaveText('');
+  await expect(page.locator('#nameBottom')).toHaveText('Ann');
+  await expect(page.locator('#eloBottom')).toHaveText('2100');
+  await press(page, 'End');
+  await expect(page.locator('#capYou svg')).toHaveCount(1);
+  await expect(page.locator('#capYou')).toHaveAttribute('aria-label', 'Taken: pawn');
+  await expect(page.locator('#advYou')).toHaveText('+1');
+  await expect(page.locator('#capThem svg')).toHaveCount(0);
+  await expect(page.locator('#advThem')).toHaveText('');
+  await press(page, 'Home');
+  await expect(page.locator('#capYou svg')).toHaveCount(0);
+  await press(page, 'End');
+  await page.locator('#flipBtn').click();
+  await expect(page.locator('#nameTop')).toHaveText('Ann');
+  await expect(page.locator('#advThem')).toHaveText('+1');
+});
+
+test('the difficulty is a slider with a rough rating for each level, and the opening is named', async ({ page }) => {
+  await fakeEngine(page, ['c7c5']);
+  await openGame(page, '/chess/');
+  await expect(page.locator('#levelText')).toHaveText('Level 3 · about 1200');
+  await page.locator('#level').fill('1');
+  await expect(page.locator('#levelText')).toHaveText('Level 1 · about 800');
+  await expect(page.locator('#level')).toHaveAttribute('aria-valuetext', 'Level 1 · about 800');
+  await page.locator('#level').fill('10');
+  await expect(page.locator('#levelText')).toHaveText('Level 10 · about 2700');
+  await expect(page.locator('#opening')).toHaveText('—');
+  await start(page);
+  await move(page, 'e2', 'e4');
+  await expect(page.locator('#opening')).toHaveText('Sicilian Defence');
+  expect((await commands(page)).slice(-1)).toEqual(['go depth 15']);
+  // A game file's own name for its opening comes first.
+  await press(page, 'KeyP');
+  await page.locator('#pgnFile').setInputFiles(file('named.pgn', '[Opening "Sicilian"]\n[Variation "Najdorf"]\n\n1. e4 c5 *'));
+  await expect(page.locator('#opening')).toHaveText('Sicilian, Najdorf');
+  await page.locator('#pgnFile').setInputFiles(file('fools.pgn', FOOLS));
+  await expect(page.locator('#opening')).toHaveText('—');
+  await page.locator('#againBtn').click();                       // back to the game
+  await expect(page.locator('#opening')).toHaveText('Sicilian Defence');
+  // The level saved with the game comes back on the slider.
+  await page.reload();
+  await expect(page.locator('#levelText')).toHaveText('Level 10 · about 2700');
+});
+
+test('on a phone the review is shorter; dragging along the graph and swiping the move go through the game', async ({ page }) => {
+  await fakeEngine(page);
+  await openGame(page, '/chess/');
+  await page.locator('#pgnFile').setInputFiles(file('fools.pgn', FOOLS));
+  await reviewed(page);
+  await page.locator('#replayBtn').click();                       // stop the replay
+  if (phone(page)) {
+    await expect(page.locator('#accLine')).toBeVisible();
+    await expect(page.locator('.summary')).toBeHidden();
+  } else {
+    await expect(page.locator('#accLine')).toBeHidden();
+    await expect(page.locator('.summary')).toBeVisible();
+  }
+  await expect(page.locator('#accLine')).toHaveText(/^Accuracy · White \d+% · Black 100%$/);
+
+  // Dragging along the graph.
+  await page.locator('#graph').scrollIntoViewIfNeeded();
+  const g = await page.locator('#graph').boundingBox(), y = g.y + g.height / 2;
+  await page.mouse.move(g.x + 2, y);
+  await page.mouse.down();
+  await expect(page.locator('#moveNow')).toHaveText('The starting position.');
+  await page.mouse.move(g.x + g.width / 2, y, { steps: 4 });
+  await expect(page.locator('#moveNow')).toHaveText('1… e5: Good move. Best was a5.');
+  await page.mouse.move(g.x + g.width - 2, y, { steps: 4 });
+  await expect(page.locator('#moveNow')).toHaveText('2… Qh4#: Best move.');
+  await page.mouse.up();
+  await page.mouse.move(g.x + 2, y);                              // not pressed: nothing
+  await expect(page.locator('#moveNow')).toHaveText('2… Qh4#: Best move.');
+
+  // Swiping the move shown: to the right for the move before, to the left
+  // for the next; neither opens the text, but a press still does.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const b = await page.locator('#textBtn').boundingBox(), by = b.y + b.height / 2;
+  const swipe = async (from, to) => {
+    await page.mouse.move(from, by);
+    await page.mouse.down();
+    await page.mouse.move(to, by, { steps: 5 });
+    await page.mouse.up();
+  };
+  await swipe(b.x + 40, b.x + 140);
+  await expect(page.locator('#moveNow')).toHaveText('2. g4: Blunder. Best was a3.');
+  await swipe(b.x + 40, b.x + 140);
+  await expect(page.locator('#moveNow')).toHaveText('1… e5: Good move. Best was a5.');
+  await swipe(b.x + 160, b.x + 40);
+  await expect(page.locator('#moveNow')).toHaveText('2. g4: Blunder. Best was a3.');
+  await expect(page.locator('#text')).toBeHidden();
+  await swipe(b.x + 160, b.x + 150);                              // too short: a press
+  await expect(page.locator('#text')).toBeVisible();
+  await press(page, 'Escape');
+  await page.mouse.move(b.x + 40, by + 30);                        // mostly up and down: not a swipe
+  await page.mouse.down();
+  await page.mouse.move(b.x + 90, by - 60, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.locator('#moveNow')).toHaveText('2. g4: Blunder. Best was a3.');
+});
+
+test('the game can be copied or downloaded as PGN', async ({ page }) => {
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await fakeEngine(page);
+  await openGame(page, '/chess/');
+  await page.locator('#pgnFile').setInputFiles(file('fools.pgn', FOOLS));
+  await reviewed(page);
+  await page.locator('#textBtn').click();
+  const expected = '[Event "Test match"]\n[Site "?"]\n[Date "2026.01.02"]\n[Round "?"]\n[White "Ann"]\n[Black "Bob"]\n[Result "0-1"]\n\n1. f3 e5 2. g4 Qh4# 0-1\n';
+  await page.getByRole('button', { name: 'Copy PGN' }).click();
+  await expect(page.locator('#textMsg')).toHaveText('Copied the game as PGN.');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
+  const { download } = await inNewWindow(page, () => page.getByRole('link', { name: 'Download PGN' }).click());
+  expect(download.suggestedFilename()).toBe('Ann-vs-Bob.pgn');
+  expect((await import('node:fs')).readFileSync(await download.path(), 'utf8')).toBe(expected);
+  await expect(page.locator('#text')).toBeVisible();
+  // Where the clipboard can't be written, it says so.
+  await page.evaluate(() => { navigator.clipboard.writeText = () => Promise.reject(new Error('no')); });
+  await page.getByRole('button', { name: 'Copy PGN' }).click();
+  await expect(page.locator('#textMsg')).toHaveText('Couldn’t copy it here. Download it instead.');
+  await page.evaluate(() => { Object.defineProperty(navigator, 'clipboard', { value: undefined }); });
+  await press(page, 'Escape');
+  await page.locator('#textBtn').click();
+  await expect(page.locator('#textMsg')).toHaveText('');
+  await page.getByRole('button', { name: 'Copy PGN' }).click();
+  await expect(page.locator('#textMsg')).toHaveText('Couldn’t copy it here. Download it instead.');
+});
+
+test('a hint shows Stockfish\'s move until the position changes', async ({ page }) => {
+  await fakeEngine(page);
+  await openGame(page, '/chess/');
+  await expect(page.locator('#hintBtn')).toBeDisabled();          // no game yet
+  await start(page);
+  await commands(page);
+  await page.locator('#hintBtn').click();
+  await expect(page.locator('#playMsg')).toHaveText('Hint: a3');
+  expect(await commands(page)).toEqual(['setoption name Skill Level value 20', 'position startpos', 'go depth 12']);
+  await expect(page.locator('#arrows polygon.hint-arrow')).toHaveCount(1);
+  await expect(sq(page, 'a2')).toHaveClass(/hint/);
+  await expect(page.locator('#evalBar')).toBeHidden();
+  // Moving (anything) forgets it.
+  await move(page, 'e2', 'e4');
+  await expect(page.locator('#playMsg')).toHaveText('');
+  await expect(page.locator('#arrows polygon')).toHaveCount(0);
+  // Not while Stockfish thinks, and a pause drops one being looked for.
+  await page.evaluate(() => { window.hold = true; });
+  await move(page, 'd2', 'd4');
+  await expect(page.locator('#hintBtn')).toBeDisabled();
+  await page.evaluate(() => { window.hold = false; window.release(); });
+  await expect(status(page)).toHaveText('Your move');
+  await page.evaluate(() => { window.hold = true; });
+  await page.locator('#hintBtn').click();
+  await expect(page.locator('#playMsg')).toHaveText('Looking for a good move…');
+  await press(page, 'KeyP');
+  await page.evaluate(() => { window.hold = false; window.release(); });
+  await page.locator('#startBtn').click();
+  await expect(page.locator('#playMsg')).toHaveText('');
+  await expect(page.locator('#arrows polygon')).toHaveCount(0);
+});
+
+test('offering a draw: Stockfish takes it unless it\'s ahead', async ({ page }) => {
+  await fakeEngine(page);
+  await openGame(page, '/chess/');
+  await expect(page.locator('#drawBtn')).toBeDisabled();
+  await start(page);
+  await page.locator('#drawBtn').click();
+  await expect(page.locator('#playMsg')).toHaveText('Stockfish wants to play a few moves first.');
+  // Ahead by more than 0.30 after its move: no.
+  await page.evaluate(() => { window.engineScore = 31; });
+  await move(page, 'e2', 'e4');
+  await expect(status(page)).toHaveText('Your move');
+  await expect(page.locator('#playMsg')).toHaveText('');
+  await page.locator('#drawBtn').click();
+  await expect(page.locator('#playMsg')).toHaveText('Stockfish wants to play on.');
+  await expect(page.locator('#review')).toBeHidden();
+  // Level: yes.
+  await page.evaluate(() => { window.engineScore = 30; });
+  await move(page, 'd2', 'd4');
+  await expect(status(page)).toHaveText('Your move');
+  await page.locator('#drawBtn').click();
+  await expect(page.locator('#reviewTitle')).toHaveText('Draw');
+  await expect(page.locator('#reviewKicker')).toHaveText('Draw');
+  await expect(page.locator('#reviewText')).toHaveText('Draw agreed · Level 3');
+  await expect(page.locator('#drawBtn')).toBeDisabled();
+  expect(await page.evaluate(() => localStorage.getItem('bdnix_chess_save'))).toBeNull();
+  await reviewed(page);
+  await page.locator('#textBtn').click();
+  await expect(page.locator('#textMoves')).toHaveText('1. e4 a5 2. d4 a4 Draw agreed');
+  await page.evaluate(() => { navigator.clipboard.writeText = (t) => { window.copied = t; return Promise.resolve(); }; });
+  await page.getByRole('button', { name: 'Copy PGN' }).click();
+  const pgn = await page.evaluate(() => window.copied);
+  expect(pgn).toMatch(/^\[Event "Casual game"\]\n\[Site "bdnix\.com"\]\n\[Date "\d{4}\.\d\d\.\d\d"\]\n\[Round "\?"\]\n\[White "You"\]\n\[Black "Stockfish"\]\n\[Result "1\/2-1\/2"\]\n\n1\. e4 a5 2\. d4 a4 1\/2-1\/2\n$/);
+});
+
+test('resigning asks to be sure first', async ({ page }) => {
+  await fakeEngine(page);
+  await listen(page);
+  await openGame(page, '/chess/');
+  await expect(page.locator('#resignBtn')).toBeDisabled();
+  await start(page, 'Black');
+  await expect(status(page)).toHaveText('Your move');
+  const resign = page.locator('#resignBtn');
+  await resign.click();
+  await expect(resign).toHaveText('Sure? Resign');
+  await expect(page.locator('#playMsg')).toHaveText('Press again to resign.');
+  // A move in between: it asks again.
+  await move(page, 'e7', 'e5');
+  await expect(status(page)).toHaveText('Your move');
+  await expect(resign).toHaveText('Resign');
+  await resign.click();
+  await press(page, 'KeyP');                                       // so does a pause
+  await page.locator('#startBtn').click();
+  await expect(resign).toHaveText('Resign');
+  await heard(page);
+  await resign.click();
+  await resign.click();
+  await expect(page.locator('#reviewKicker')).toHaveText('Resigned');
+  await expect(page.locator('#reviewTitle')).toHaveText('Stockfish wins');
+  await expect(page.locator('#reviewText')).toHaveText('Black resigned — White wins · Level 3');
+  expect(await heard(page)).toEqual(['over']);
+  await expect(page.locator('#best')).toHaveText('None yet');
+  expect(await page.evaluate(() => localStorage.getItem('bdnix_chess_save'))).toBeNull();
+  await reviewed(page);
+  await expect(page.locator('#nameTop')).toHaveText('Stockfish');
+  await expect(page.locator('#nameBottom')).toHaveText('You');
+  await page.locator('#textBtn').click();
+  await expect(page.locator('#textMoves')).toHaveText(/ Black resigned — White wins\s*$/);
+});
+
+test('the replay can go slower or faster, from the next move', async ({ page }) => {
+  await fakeEngine(page);
+  await openGame(page, '/chess/');
+  await page.locator('#pgnFile').setInputFiles(file('opera.pgn', OPERA));
+  const speedBtn = page.locator('#speedBtn'), now = page.locator('#moveNow');
+  await expect(speedBtn).toHaveText('1×');
+  await expect(speedBtn).toHaveAttribute('aria-label', 'Replay speed: normal, a move every 1.5 seconds. Change it');
+  await page.clock.runFor(1500);
+  await expect(now).toHaveText(/^1\. e4/);
+  // Fast: the next move comes 0.75 s after the change, and so on.
+  await speedBtn.click();
+  await expect(speedBtn).toHaveText('2×');
+  await expect(speedBtn).toHaveAttribute('aria-label', 'Replay speed: fast, a move every 0.75 seconds. Change it');
+  await expect(page.locator('#replayBtn')).toHaveAttribute('aria-label', 'Pause the replay');
+  await page.clock.runFor(750);
+  await expect(now).toHaveText(/^1… e5/);
+  await page.clock.runFor(750);
+  await expect(now).toHaveText(/^2\. Nf3/);
+  // Slow, then round to normal again.
+  await speedBtn.click();
+  await expect(speedBtn).toHaveText('½×');
+  await expect(speedBtn).toHaveAttribute('aria-label', 'Replay speed: slow, a move every 3 seconds. Change it');
+  await page.clock.runFor(2999);
+  await expect(now).toHaveText(/^2\. Nf3/);
+  await page.clock.runFor(1);
+  await expect(now).toHaveText(/^2… d6/);
+  // Changed while it's stopped, it counts when it starts again.
+  await page.locator('#replayBtn').click();
+  await speedBtn.click();
+  await expect(speedBtn).toHaveText('1×');
+  await page.clock.runFor(3000);
+  await expect(now).toHaveText(/^2… d6/);
+  await page.locator('#replayBtn').click();
+  await page.clock.runFor(1500);
+  await expect(now).toHaveText(/^3\. d4/);
 });
