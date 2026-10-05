@@ -1,4 +1,4 @@
-import { test, expect, expectNewWindow, expectNoSideScroll } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { L, upload, samplePdf, lockedPdf, download, contentStreams } from './pdfs.mjs';
 
 const sample = await samplePdf();
@@ -12,7 +12,6 @@ async function open(page, name, bytes){
 
 // The download is the same document, and opens without a password.
 async function expectUnlocked(page, name){
-  await expectNewWindow(page.locator('#downloadBtn'));
   const out = await download(page, () => page.locator('#downloadBtn').click());
   expect(out.name).toBe(name);
   expect(out.doc.context.trailerInfo.Encrypt).toBeUndefined();

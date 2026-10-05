@@ -1,4 +1,4 @@
-import { test, expect, expectNewWindow } from './fixtures.mjs';
+import { test, expect } from './fixtures.mjs';
 import { upload, samplePdf, logoPng, download, contentStreams, hexText, baseFonts, imageCount } from './pdfs.mjs';
 
 const CONFIDENTIAL = hexText('CONFIDENTIAL');
@@ -15,7 +15,6 @@ async function openSample(page){
 const apply = (page) => download(page, async () => {
   await page.getByRole('button', { name: 'Add watermark' }).click();
   await expect(page.locator('#downloadBtn')).toBeVisible();
-  await expectNewWindow(page.locator('#downloadBtn'));
   await page.locator('#downloadBtn').click();
 });
 

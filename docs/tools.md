@@ -1,6 +1,6 @@
 # Tools guide
 
-Every tool runs entirely in the browser. Files are never uploaded, and all processing happens on the visitor's device. Download links open in a new window, so a browser that shows the file instead of saving it (Safari on a phone does this with PDFs and images) leaves the tool, and your work in it, as it was.
+Every tool runs entirely in the browser. Files are never uploaded, and all processing happens on the visitor's device. Every download opens in a new window, and the file saves from there, so a browser that shows the file instead of saving it (Safari on a phone does this with PDFs and images) leaves the tool, and your work in it, as it was. A tool that makes its file after you click (Merge PDFs, Photo Collage) opens the window straight away and says the file is on its way. If the browser blocks new windows, the file saves from the tool's page instead.
 
 - [Merge PDFs](#merge-pdfs)
 - [Watermark PDF](#watermark-pdf)

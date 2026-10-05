@@ -4,6 +4,7 @@ import zlib from 'node:zlib';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { createRequire } from 'node:module';
+import { inNewWindow } from './downloads.mjs';
 
 const require = createRequire(import.meta.url);
 export const L = require('../../assets/vendor/pdf-lib.min.js');
@@ -84,9 +85,10 @@ export function logoPng(){
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
 
-// Clicks a download link and returns the file's name and parsed PDF.
+// Clicks a download link and returns the file's name and parsed PDF. The
+// file downloads in a new window (see downloads.mjs).
 export async function download(page, trigger){
-  const [dl] = await Promise.all([page.waitForEvent('download'), trigger()]);
+  const { download: dl } = await inNewWindow(page, trigger);
   const bytes = fs.readFileSync(await dl.path());
   return { name: dl.suggestedFilename(), bytes, doc: await L.PDFDocument.load(bytes) };
 }
