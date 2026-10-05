@@ -302,6 +302,7 @@ test('checkmating the engine: a win, a new best, and the game\'s review', async 
   await page.locator('#prevBtn').click();
   await expect(page.locator('#moveNow')).toHaveText('2. g4: Blunder. Best was a3.');
   // The graph: a click picks the move under it.
+  await page.locator('#graph').scrollIntoViewIfNeeded();
   const box = await page.locator('#graph').boundingBox();
   await page.mouse.click(box.x + 1, box.y + box.height / 2);
   await expect(page.locator('#moveNow')).toHaveText('The starting position.');
