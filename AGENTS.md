@@ -154,7 +154,7 @@ npm run serve          # the site at http://localhost:4173
 
 - **Unit tests:** hash check and lint, then the unit tests with coverage.
 - **UI tests:** Playwright in Chromium with coverage. On failure it uploads the HTML report and a trace of each failed test (**playwright-report** artifact).
-- **Coverage:** once both pass, uploads their coverage to Codecov together.
+- **Coverage:** once both pass, uploads their coverage to Codecov together. A failed upload fails the job, after one more try with Codecov's CLI from PyPI instead of `cli.codecov.io`, so the Codecov checks never go missing unnoticed. A red **Coverage** job with an upload error is usually Codecov being down: re-run the job.
 
 Codecov then posts **codecov/project** and **codecov/patch** (see [Coverage must not drop](#coverage-must-not-drop)). `node_modules` and Playwright's Chromium are cached; see `.github/actions/setup`.
 
