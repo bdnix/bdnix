@@ -725,9 +725,6 @@ test('a game can be pasted in, and a game file of any kind picked', async ({ pag
   await page.locator('#pgnText').fill('e4 e5 Nf6');
   await paste.getByRole('button', { name: 'Analyse' }).click();
   await expect(page.locator('#pasteMsg')).toHaveText('Couldn’t read a game from that. Move 2. Nf6 isn’t a legal move there.');
-  await page.evaluate(() => { document.querySelector('#pgnText').value = 'x'.repeat(50 * 1024 * 1024 + 1); });
-  await paste.getByRole('button', { name: 'Analyse' }).click();
-  await expect(page.locator('#pasteMsg')).toHaveText('That’s too long to be a game (over 50 MB).');
   // Keys typed into it stay there: P doesn't pause, Space doesn't start.
   await page.locator('#pgnText').fill('');
   await page.locator('#pgnText').pressSequentially('1. e4 e5 2. Nf3 Nc6 P');
@@ -764,7 +761,7 @@ test('a game can be pasted in, and a game file of any kind picked', async ({ pag
 
 // A file of 151 games: 150 that can be read, and a last one that can't.
 const DATABASE = Array.from({ length: 150 }, (_, i) =>
-  `[Event "${i % 2 ? 'Rapid' : 'Blitz'} Open"]\n[Site "?"]\n[Date "2020.??.??"]\n[Round "${i + 1}"]\n[White "Player ${i}"]\n[Black "Rival"]\n[Result "${i % 3 ? '1-0' : '1/2-1/2'}"]\n\n1. e4 e5 2. Nf3 ${i % 3 ? '1-0' : '1/2-1/2'}\n`
+  `[Event "${i % 2 ? 'Rapid' : 'Blitz'} Open"]\n[Site "?"]\n[Date "2020.??.??"]\n[Round "${i % 9 + 1}"]\n[White "Player ${i}"]\n[Black "Rival"]\n[Result "${i % 3 ? '1-0' : '1/2-1/2'}"]\n\n1. e4 e5 2. Nf3 ${i % 3 ? '1-0' : '1/2-1/2'}\n`
 ).join('\n') + '\n[Event "Broken"]\n[White "?"]\n[Black "?"]\n\n1. e4 e5 2. Nf6 *\n';
 
 test('a file of many games lists them to search and pick one from', async ({ page }) => {
@@ -788,7 +785,7 @@ test('a file of many games lists them to search and pick one from', async ({ pag
   await expect(games).toHaveCount(11);
   await expect(page.locator('#pickCount')).toBeHidden();
   await page.locator('#pickSearch').fill('RAPID  player 12');
-  await expect(games).toHaveCount(6);
+  await expect(games).toHaveCount(5);
   await page.locator('#pickSearch').fill('nobody');
   await expect(games).toHaveCount(0);
   await expect(page.locator('#pickCount')).toHaveText('No games match.');

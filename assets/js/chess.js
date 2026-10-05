@@ -907,7 +907,6 @@
   function readPasted(){
     var text = pasteText.value;
     if (!text.trim()) { pasteMsg.textContent = 'Paste a game first.'; return; }
-    if (text.length > MAX_FILE) { pasteMsg.textContent = 'That’s too long to be a game (over 50 MB).'; return; }
     var r = readGames(text);
     if (r.error) { pasteMsg.textContent = 'Couldn’t read a game from that. ' + r.error; return; }
     hideModal();
