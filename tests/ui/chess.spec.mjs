@@ -145,7 +145,7 @@ test('plays White against the engine, at the level picked', async ({ page }) => 
   await move(page, 'd2', 'd4');
   await expect(status(page)).toHaveText('Your move');
   expect((await commands(page)).slice(-3)).toEqual(['setoption name Skill Level value 20', 'position startpos moves e2e4 a7a5 d2d4', 'go depth 15']);
-  expect(await peek(page)).toEqual({ side: 'w', level: 10, moves: ['e2e4', 'a7a5', 'd2d4', 'a5a4'] });
+  expect(await peek(page)).toEqual({ side: 'w', both: false, level: 10, moves: ['e2e4', 'a7a5', 'd2d4', 'a5a4'] });
   await expectNoSideScroll(page);
 });
 
@@ -1152,10 +1152,86 @@ test('New game: from the panel asks first, from the pause screen starts over wit
   await expect(page.locator('#overlay')).toBeHidden();
 });
 
+test('both sides can be played by you: each in turn, and Stockfish never plays', async ({ page }) => {
+  await fakeEngine(page);
+  await listen(page);
+  await openGame(page, '/chess/');
+  await expect(page.locator('#ovText')).toHaveText(/or both sides yourself/);
+  await start(page, 'Both');
+  await expect(status(page)).toHaveText('White to move');
+  await expect(page.locator('#turn')).toHaveText('White · you');
+  await expect(page.locator('#nameTop')).toHaveText('You');
+  await expect(page.locator('#nameBottom')).toHaveText('You');
+  await expect(page.locator('#undoBtn')).toBeDisabled();
+  await move(page, 'e2', 'e4');
+  await expect(status(page)).toHaveText('Black to move');
+  await expect(page.locator('#turn')).toHaveText('Black · you');
+  await move(page, 'g7', 'g5');
+  expect(await pieceOn(page, 'g5')).toBe('g5, Black pawn');
+  // Stockfish isn't even started.
+  expect(await page.evaluate(() => window.engines || 0)).toBe(0);
+  await expectNoSideScroll(page);
+
+  // Undo takes back just the last move.
+  await page.locator('#undoBtn').click();
+  expect(await pieceOn(page, 'g7')).toBe('g7, Black pawn');
+  expect(await pieceOn(page, 'e4')).toBe('e4, White pawn');
+  await expect(status(page)).toHaveText('Black to move');
+  // A hint is for the side to move.
+  await page.locator('#hintBtn').click();
+  await expect(page.locator('#playMsg')).toHaveText(/^Hint: /);
+  expect(await peek(page)).toEqual({ side: 'w', both: true, level: 3, moves: ['e2e4'] });
+
+  // It comes back after a reload, still both sides.
+  await page.reload();
+  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
+  await expect(page.locator('#sideSeg input[value=both]')).toBeChecked();
+  await page.locator('#startBtn').click();
+  await expect(status(page)).toHaveText('Black to move');
+  await move(page, 'g7', 'g5');
+  await move(page, 'd2', 'd4');
+  await move(page, 'f7', 'f6');
+  await heard(page);
+  await move(page, 'd1', 'h5');
+  // Mate: the side that won, counted for no best, and both sides' slips.
+  await expect(page.locator('#reviewKicker')).toHaveText('Checkmate');
+  await expect(page.locator('#reviewTitle')).toHaveText('White wins');
+  await expect(page.locator('#reviewText')).toHaveText('Checkmate — White wins · You played both sides');
+  expect(await heard(page)).toEqual(['check', 'win']);
+  await expect(page.locator('#best')).toHaveText('None yet');
+  await expect(page.locator('#momentsTitle')).toHaveText('Where it could have gone better');
+  expect(await page.evaluate(() => localStorage.getItem('bdnix_chess_save'))).toBeNull();
+});
+
+test('playing both sides, the side to move resigns, and a draw is agreed at once', async ({ page }) => {
+  await fakeEngine(page);
+  await openGame(page, '/chess/');
+  await start(page, 'Both');
+  await move(page, 'e2', 'e4');
+  await page.locator('#resignBtn').click();
+  await expect(page.locator('#resignBtn')).toHaveText('Sure? Resign');
+  await page.locator('#resignBtn').click();
+  await expect(page.locator('#reviewTitle')).toHaveText('White wins');
+  await expect(page.locator('#reviewText')).toHaveText('Black resigned — White wins · You played both sides');
+
+  await page.locator('#againBtn').click();
+  await expect(page.locator('#sideSeg input[value=both]')).toBeChecked();
+  await start(page, 'Both');
+  await page.locator('#drawBtn').click();
+  await expect(page.locator('#reviewTitle')).toHaveText('Draw');
+  await expect(page.locator('#reviewText')).toHaveText('Draw agreed · You played both sides');
+  await reviewed(page);
+  await page.locator('#textBtn').click();
+  await page.evaluate(() => { navigator.clipboard.writeText = (t) => { window.copied = t; return Promise.resolve(); }; });
+  await page.getByRole('button', { name: 'Copy PGN' }).click();
+  expect(await page.evaluate(() => window.copied)).toMatch(/\[White "You"\]\n\[Black "You"\]/);
+});
+
 test('a save that doesn\'t make sense is thrown away', async ({ page }) => {
   await openGame(page, '/chess/');
   for (const data of [
     { side: 'x', level: 3, moves: ['e2e4'] },
+    { side: 'w', both: 'yes', level: 3, moves: ['e2e4'] },
     { side: 'w', level: 11, moves: ['e2e4'] },
     { side: 'w', level: 2.5, moves: ['e2e4'] },
     { side: 'w', level: 3, moves: [] },
@@ -1177,7 +1253,7 @@ test('no save before the first move, and none after the game ends', async ({ pag
   await start(page);
   expect(await peek(page)).toBeNull();
   await move(page, 'f2', 'f3');
-  expect(await peek(page)).toEqual({ side: 'w', level: 3, moves: ['f2f3', 'e7e5'] });
+  expect(await peek(page)).toEqual({ side: 'w', both: false, level: 3, moves: ['f2f3', 'e7e5'] });
   await move(page, 'g2', 'g4');
   await expect(page.locator('#reviewTitle')).toHaveText('Stockfish wins');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_chess_save'))).toBeNull();

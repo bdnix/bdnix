@@ -99,6 +99,9 @@
 .overlay .seg{margin:0;padding:0;border:0;min-width:220px}
 .overlay .seg legend{margin:0 auto 8px}
 .overlay .seg span{padding:9px}
+/* Three sides to pick from: White, Black or both. */
+#sideSeg{grid-template-columns:repeat(3,1fr);min-width:270px}
+#sideSeg label + label span{border-left:0}
 
 /* ---- Captures and controls ---- */
 .caps{display:flex;flex:0 1 auto;flex-wrap:wrap;min-height:20px}

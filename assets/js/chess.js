@@ -41,7 +41,7 @@
     blunder: { name: 'Blunder', mark: '??' }
   };
   var RESULTS = { '1-0': 'White won', '0-1': 'Black won', '1/2-1/2': 'Drawn', '*': 'Unfinished' };
-  var INTRO = 'Play against Stockfish, one of the strongest chess engines there is. Pick a side and a level, or open a game to analyse.';
+  var INTRO = 'Play against Stockfish, one of the strongest chess engines there is, or both sides yourself. Pick a side and a level, or open a game to analyse.';
   var OFFLINE = 'Couldn’t load the chess engine. Check your connection and try again.';
 
   function $(id){ return document.getElementById(id); }
@@ -68,6 +68,7 @@
   var state = 'idle';
   var game = C.newGame();
   var side = 'w';                 // the visitor's side
+  var both = false;               // whether the visitor plays both sides (White at the bottom)
   var selected = -1;              // the square of the piece picked up, or -1
   var animate = null;             // the move to slide into place on the next draw
   var review = null;              // the game being reviewed (see startReview)
@@ -142,7 +143,7 @@
 
   // Asks for a move when it's the engine's turn in a game being played.
   function think(){
-    if (state !== 'playing' || job || C.current(game).turn === side || C.status(game).over) return;
+    if (state !== 'playing' || both || job || C.current(game).turn === side || C.status(game).over) return;
     startEngine();
     if (!engine) return;
     var lv = LEVELS[level() - 1], pos = C.current(game), heard = null;
@@ -157,9 +158,15 @@
   }
 
   function level(){ return Math.max(1, Math.min(LEVELS.length, parseInt(levelEl.value, 10) || 1)); }
+  // The side picked: 'w', 'b' or 'both'.
   function chosenSide(){
     for (var i = 0; i < sideInputs.length; i++) if (sideInputs[i].checked) return sideInputs[i].value;
     return 'w';
+  }
+  function pickSide(){
+    var s = chosenSide();
+    both = s === 'both';
+    side = both ? 'w' : s;
   }
   function setSide(s){
     for (var i = 0; i < sideInputs.length; i++) sideInputs[i].checked = sideInputs[i].value === s;
@@ -169,7 +176,7 @@
   function newGame(){
     cancel();
     closeReview();
-    side = chosenSide();
+    pickSide();
     game = C.newGame();
     selected = -1; animate = null;
     lastEval = null;
@@ -181,8 +188,11 @@
     window.bdnixGamebar.setPaused(false);
     startBtn.blur();
     sound.play('start');
-    startEngine();
-    if (engine) post('ucinewgame');
+    // Playing both sides needs Stockfish only for a hint or the review.
+    if (!both) {
+      startEngine();
+      if (engine) post('ucinewgame');
+    }
     render();
     updateHud();
     persist();
@@ -202,9 +212,11 @@
   }
 
   // The game is over: the result, a new best, and straight into its review.
+  // A game played against yourself is nobody's win against Stockfish, so it
+  // counts for no best.
   function gameOver(st){
     cancel();
-    var won = st.winner === side, lv = level(), record = won && lv > best;
+    var won = both ? !!st.winner : st.winner === side, lv = level(), record = !both && won && lv > best;
     if (record) {
       best = lv;
       try { localStorage.setItem('bdnix_chess_best', best); } catch (e) {}
@@ -213,9 +225,9 @@
     var who = players(), now = new Date(), two = function(n){ return (n < 10 ? '0' : '') + n; };
     startReview(game, {
       kicker: { checkmate: 'Checkmate', resign: 'Resigned' }[st.result] || 'Draw',
-      title: !st.winner ? 'Draw' : won ? 'You win!' : 'Stockfish wins',
-      text: ending(st) + ' · Level ' + lv + (record ? ' — your best yet!' : ''),
-      outcome: ending(st), side: side, mine: side, back: 'start', again: 'Play again', players: who,
+      title: !st.winner ? 'Draw' : both ? COLOR[st.winner] + ' wins' : won ? 'You win!' : 'Stockfish wins',
+      text: both ? ending(st) + ' · You played both sides' : ending(st) + ' · Level ' + lv + (record ? ' — your best yet!' : ''),
+      outcome: ending(st), side: side, mine: both ? null : side, back: 'start', again: 'Play again', players: who,
       result: !st.winner ? '1/2-1/2' : st.winner === 'w' ? '1-0' : '0-1',
       tags: {
         Event: 'Casual game', Site: 'bdnix.com', Date: now.getFullYear() + '.' + two(now.getMonth() + 1) + '.' + two(now.getDate()),
@@ -234,6 +246,7 @@
   // ---------- Resigning, offering a draw, asking for a hint ----------
   // Resign asks to be sure first: the next press resigns, anything else
   // that changes the game forgets it, along with a hint and what was said.
+  // Playing both sides, the side to move resigns.
   function resign(){
     if (state !== 'playing') return;
     if (!resignArmed) {
@@ -244,7 +257,7 @@
       return;
     }
     forget();
-    gameOver({ result: 'resign', winner: C.other(side), over: true });
+    gameOver({ result: 'resign', winner: C.other(both ? C.current(game).turn : side), over: true });
   }
   function forget(){
     resignArmed = false;
@@ -254,9 +267,15 @@
     say('');
   }
   function say(text){ $('playMsg').textContent = text; }
-  // Stockfish takes a draw unless its last look at the game had it ahead.
+  // Stockfish takes a draw unless its last look at the game had it ahead;
+  // playing both sides, it's agreed straight away.
   function offerDraw(){
     if (state !== 'playing') return;
+    if (both) {
+      forget();
+      gameOver({ result: 'agreed', winner: null, over: true });
+      return;
+    }
     var them = C.other(side), ahead = lastEval ? C.centipawns(lastEval) * (them === 'w' ? 1 : -1) : null;
     if (ahead === null || ahead > DRAW_MARGIN) {
       forget();
@@ -298,7 +317,7 @@
     cancel();
     state = 'idle';
     game = C.newGame();
-    side = chosenSide();
+    pickSide();
     selected = -1;
     ovKicker.textContent = 'bdnix arcade';
     ovTitle.textContent = 'Chess';
@@ -346,12 +365,13 @@
     else if (state === 'idle') newGame();
   }
 
-  // Takes back the visitor's last move, and the engine's reply to it.
+  // Takes back the visitor's last move, and the engine's reply to it (just
+  // the last move, playing both sides).
   function undo(){
     if (!canUndo()) return;
     cancel();
     closePromo();
-    if (C.current(game).turn === side) C.undo(game);   // the engine's reply
+    if (!both && C.current(game).turn === side) C.undo(game);   // the engine's reply
     C.undo(game);                                       // the visitor's move
     selected = -1; animate = null;
     lastEval = null;
@@ -364,12 +384,13 @@
   // Whether the visitor has a move to take back.
   function canUndo(){
     if (state !== 'playing') return false;
-    var mine = side === 'w' ? 1 : 2;     // Black's first move is the second
+    var mine = both || side === 'w' ? 1 : 2;     // Black's first move is the second
     return game.moves.length >= mine;
   }
 
   // ---------- The visitor's moves ----------
-  // In a game, the visitor moves their own side's pieces on their turn. In a
+  // In a game, the visitor moves their own side's pieces on their turn (or
+  // either side's, playing both). In a
   // review, either side's, to try a different move (see tryOut), unless
   // the game shown is over or Stockfish is playing on.
   function mover(){ return C.current(shown()).turn; }
@@ -379,7 +400,7 @@
   }
   function myTurn(){
     if (state === 'review') return !(review.alt && review.alt.auto) && !C.status(shown()).over;
-    return state === 'playing' && C.current(game).turn === side && !job;
+    return state === 'playing' && (both || C.current(game).turn === side) && !job;
   }
   function targets(from){
     return C.moves(C.current(shown())).filter(function(m){ return m.from === from; });
@@ -1316,10 +1337,11 @@
       text = st.result === 'checkmate' ? 'Checkmate — ' + COLOR[st.winner] + ' wins' : st.over ? ENDINGS[st.result] : st.check ? 'Check!'
         : review.alt ? (review.alt.auto ? 'Stockfish is playing on…' : 'Trying a move') : review.playing ? 'Replaying' : 'Reviewing';
     } else {
-      if (state !== 'idle') whose += pos.turn === side ? ' · you' : ' · Stockfish';
+      if (state !== 'idle') whose += both || pos.turn === side ? ' · you' : ' · Stockfish';
       if (state === 'idle') text = 'Pick a side';
       else if (state === 'paused') text = 'Paused';
       else if (st.check) text = 'Check!';
+      else if (both) text = COLOR[pos.turn] + ' to move';
       else if (pos.turn === side) text = 'Your move';
       else text = 'Stockfish is thinking…';
     }
@@ -1345,11 +1367,12 @@
     hintBtn.disabled = state !== 'playing' || !myTurn();
     drawBtn.disabled = resignBtn.disabled = state !== 'playing';
   }
-  // Who's playing: in a game, the visitor and Stockfish at the level picked;
-  // in a review, the players it was opened with.
+  // Who's playing: in a game, the visitor and Stockfish at the level picked
+  // (or the visitor on both sides); in a review, the players it was opened with.
   function players(){
     if (review) return review.info.players;
     var you = { name: 'You', elo: '' }, sf = { name: 'Stockfish', elo: levelName(level()) };
+    if (both) return { w: you, b: you };
     return side === 'w' ? { w: you, b: sf } : { w: sf, b: you };
   }
   function levelName(lv){ return 'Level ' + lv + ' · about ' + LEVELS[lv - 1].rating; }
@@ -1391,26 +1414,27 @@
   }
 
   // ---------- Saving ----------
-  // A game in progress is kept as the side, the level and the moves played,
-  // also while a game file is being looked at.
+  // A game in progress is kept as the side, whether the visitor plays both,
+  // the level and the moves played, also while a game file is being looked at.
   function snapshot(){
     var live = state === 'playing' || state === 'paused' || (state === 'review' && review.info.back === 'paused');
     if (!live || !game.moves.length) return null;
-    return { side: side, level: level(), moves: game.moves.map(C.uci) };
+    return { side: side, both: both, level: level(), moves: game.moves.map(C.uci) };
   }
   var persist = window.bdnixSave.keep('chess', snapshot);
 
   // Replays a saved game; every move must be legal and the game not over.
   function restore(s){
-    if ((s.side !== 'w' && s.side !== 'b') || !window.bdnixSave.num(s.level) || s.level !== Math.floor(s.level) ||
+    // A save from before both sides could be played has no `both`.
+    if ((s.side !== 'w' && s.side !== 'b') || (s.both !== undefined && typeof s.both !== 'boolean') || !window.bdnixSave.num(s.level) || s.level !== Math.floor(s.level) ||
       s.level < 1 || s.level > LEVELS.length || !Array.isArray(s.moves) || !s.moves.length || s.moves.length > 2000) return false;
     var g = C.newGame();
     for (var i = 0; i < s.moves.length; i++) {
       if (typeof s.moves[i] !== 'string' || !C.play(g, s.moves[i])) return false;
     }
     if (C.status(g).over) return false;
-    game = g; side = s.side;
-    setSide(side);
+    game = g; side = s.side; both = !!s.both;
+    setSide(both ? 'both' : side);
     levelEl.value = String(s.level);
     showLevel();
     state = 'playing';
@@ -1508,7 +1532,7 @@
   [].forEach.call(sideInputs, function(input){
     input.addEventListener('change', function(){
       if (state !== 'idle') return;
-      side = chosenSide();
+      pickSide();
       render();
     });
   });
