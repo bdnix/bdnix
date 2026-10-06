@@ -256,6 +256,7 @@ body.reviewing .game{
 .alt-actions{display:flex;flex-wrap:wrap;gap:6px}
 .alt-actions .btn{flex:1 1 auto;padding:8px 10px;font-size:13px}
 .alt-actions .btn:disabled{opacity:.45;cursor:default;transform:none}
+.alt-actions [hidden]{display:none}
 .review-nav{display:flex;gap:6px}
 .review-nav .icon-btn{width:36px;height:36px}
 .review-nav .icon-btn:disabled{opacity:.4;cursor:default}
