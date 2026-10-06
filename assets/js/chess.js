@@ -559,27 +559,38 @@
   // In a review, a piece moved on the board starts a line of the visitor's
   // own from the position shown. `review.alt` holds it: the move it branches
   // off after (base), the game up to there and the moves tried since (game),
-  // the engine's look at each of its positions (evals), whether Stockfish is
-  // playing it on (auto) and how many moves it has played on (played).
-  // Playing the game's own move just steps on to it.
+  // how many of its moves the board shows (at), the engine's look at each of
+  // its positions (evals), whether Stockfish is playing it on (auto) and how
+  // many moves it has played on (played). Playing the game's own move just
+  // steps on to it, and so does playing the line's own next move; another
+  // move from part way along the line replaces the rest of it.
   function tryOut(uci){
-    var r = review;
+    var r = review, a = r.alt;
     stopReplay();
-    if (!r.alt) {
+    if (!a) {
       var next = r.game.moves[r.ply];
       if (next && C.uci(next) === uci) { goTo(r.ply + 1); return; }
-      r.alt = { base: r.ply, game: upTo(r.game, r.ply), evals: r.evals.slice(0, r.ply + 1), auto: false, played: 0 };
+      a = r.alt = { base: r.ply, game: upTo(r.game, r.ply), at: r.ply, evals: r.evals.slice(0, r.ply + 1), auto: false, played: 0 };
+    } else if (a.at < a.game.moves.length) {
+      if (C.uci(a.game.moves[a.at]) === uci) { lineTo(a.at + 1); return; }
+      cut(a);
     }
-    var m = C.play(r.alt.game, uci);
+    var m = C.play(a.game, uci);
     if (!m) return;
-    r.alt.played = 0;
+    a.played = 0;
     altMoved(m);
   }
+  // Drops the moves of the line after the one shown.
+  function cut(a){
+    a.game = upTo(a.game, a.at);
+    a.evals.length = a.at + 1;
+  }
   function altMoved(m){
-    var st = C.status(review.alt.game);
+    var a = review.alt, st = C.status(a.game);
+    a.at = a.game.moves.length;
     selected = -1; animate = m;
     sound.play(st.check ? 'check' : m.captured ? 'capture' : 'move');
-    if (st.over) review.alt.auto = false;
+    if (st.over) a.auto = false;
     afterAlt();
   }
   // The line has changed: the board, the panels, and what the engine does.
@@ -590,15 +601,18 @@
     refreshReview();
     work();
   }
-  // Takes back the last move tried; taking back the first goes back to the game.
-  function takeBack(){
+  // Shows the position after `k` moves of the line tried, keeping all of it,
+  // from where it branches off to its last move; stepping stops Stockfish
+  // playing on. A step forward slides the piece and plays the move's sound.
+  function lineTo(k){
     var a = review.alt;
-    C.undo(a.game);
+    k = Math.max(a.base, Math.min(a.game.moves.length, k));
+    if (k === a.at && !a.auto) return;
+    animate = k === a.at + 1 ? a.game.moves[k - 1] : null;
+    if (animate) sound.play(C.inCheck(a.game.positions[k]) ? 'check' : animate.captured ? 'capture' : 'move');
+    a.at = k;
     a.auto = false;
-    a.played = 0;
-    a.evals.length = a.game.positions.length;
-    selected = -1; animate = null;
-    if (a.game.moves.length === a.base) closeAlt();
+    selected = -1;
     afterAlt();
   }
   // Leaves the line tried for the game's own moves.
@@ -637,11 +651,12 @@
       }
     }, ['setoption name Skill Level value 20', C.positionCommand(g), 'go depth ' + PLAY_DEPTH]);
   }
+  // Playing on starts from the position shown, in place of the moves after it.
   function togglePlayOn(){
     var a = review.alt;
     if (!a) return;
     a.auto = !a.auto;
-    if (a.auto) a.played = 0;
+    if (a.auto) { cut(a); a.played = 0; }
     selected = -1;
     afterAlt();
   }
@@ -653,7 +668,7 @@
     $('alt').hidden = !a;
     $('altTip').hidden = !!a || C.status(shown()).over;
     if (!a) return;
-    var g = a.game, base = a.base, last = g.positions.length - 1, st = C.status(g);
+    var g = a.game, base = a.base, end = g.moves.length, st = C.status(shown());
     var mine = C.reviewGame(g, a.evals).moves[base], color = mine.color;
     var real = r.summary.moves[base], eReal = r.evals[base + 1], eMine = a.evals[base + 1];
     $('altGame').textContent = real ? about(moveName(r.game, base), real.kind, eReal, color) : 'The game stopped here.';
@@ -667,15 +682,16 @@
           COLOR[color] + '’s chances go ' + (now > was ? 'up' : 'down') + ' from ' + was + '% to ' + now + '%.';
     }
     $('altVerdict').textContent = verdict;
-    var e = a.evals[last], where;
+    var e = a.evals[a.at], where;
     if (st.over) where = ending(st);
     else if (a.auto) where = 'Stockfish is playing on…';
     else where = e ? C.formatEval(e) + ' · ' + C.outlook(e) : 'Analysing…';
-    $('altNow').textContent = (a.played && !a.auto ? 'After ' + a.played + ' more ' + (a.played === 1 ? 'move' : 'moves') + ' by Stockfish: ' : 'Now: ') +
+    $('altNow').textContent = (a.at < end ? (a.at > base ? 'After ' + moveName(g, a.at - 1) : 'Before your line') + ': '
+      : a.played && !a.auto ? 'After ' + a.played + ' more ' + (a.played === 1 ? 'move' : 'moves') + ' by Stockfish: ' : 'Now: ') +
       where + (/…$/.test(where) ? '' : '.') + (r.info.outcome ? ' In the game: ' + r.info.outcome + '.' : '');
     var play = $('playOnBtn');
     play.textContent = a.auto ? 'Stop' : 'Stockfish plays on';
-    play.disabled = st.over;
+    play.disabled = st.over || a.at === base;
   }
   // The moves tried, numbered as people write them; a long line keeps its
   // first two moves and its last three.
@@ -804,7 +820,7 @@
   // What the review says about the move shown: its evaluation, what kind of
   // move it was, and what the engine would have played.
   function showMove(){
-    var r = review, ply = r.ply, a = r.alt, e = a ? a.evals[a.game.positions.length - 1] : r.evals[ply];
+    var r = review, ply = r.ply, a = r.alt, e = a ? a.evals[a.at] : r.evals[ply];
     $('evalNow').textContent = e ? C.formatEval(e) : '…';
     var text;
     if (a) text = 'Your line: ' + lineOf(a);
@@ -819,9 +835,9 @@
       }
     }
     $('moveNow').textContent = text;
-    $('firstBtn').disabled = ply === 0;
-    $('prevBtn').disabled = ply === 0 && !a;
-    $('nextBtn').disabled = $('lastBtn').disabled = ply === r.game.moves.length;
+    // In a line tried, the buttons step along it rather than the game.
+    $('firstBtn').disabled = $('prevBtn').disabled = a ? a.at === a.base : ply === 0;
+    $('nextBtn').disabled = $('lastBtn').disabled = a ? a.at === a.game.moves.length : ply === r.game.moves.length;
   }
 
   // Shows the position after `ply` moves of the game, leaving a line tried.
@@ -915,10 +931,23 @@
     else failed();
   }
 
-  // One step back: the last move tried taken back, or the game's move before.
+  // A step back or on, or to the first or last move: along the line tried
+  // if there is one, which stays until it's reset, otherwise the game's.
   function back(){
-    if (review.alt) takeBack();
+    if (review.alt) lineTo(review.alt.at - 1);
     else goTo(review.ply - 1);
+  }
+  function forward(){
+    if (review.alt) lineTo(review.alt.at + 1);
+    else goTo(review.ply + 1);
+  }
+  function toFirst(){
+    if (review.alt) lineTo(review.alt.base);
+    else goTo(0);
+  }
+  function toLast(){
+    if (review.alt) lineTo(review.alt.game.moves.length);
+    else goTo(review.game.moves.length);
   }
 
   // ---------- Replaying a game ----------
@@ -1179,7 +1208,7 @@
   // The game on the board, up to the move shown.
   function shown(){
     if (!review) return game;
-    return review.alt ? review.alt.game : upTo(review.game, review.ply);
+    return review.alt ? upTo(review.alt.game, review.alt.at) : upTo(review.game, review.ply);
   }
 
   function render(){
@@ -1441,12 +1470,9 @@
     squares[n].focus();
   });
 
-  // In a review, ← and → step through the moves, Home and End jump to the ends.
-  // ← takes back a move tried, and Escape goes back to the game from one.
-  var NAV = {
-    ArrowRight: function(){ return review.ply + 1; },
-    Home: function(){ return 0; }, End: function(){ return review.game.moves.length; }
-  };
+  // In a review, ← and → step through the moves (of a line tried, if there's
+  // one), Home and End jump to the ends, and Escape goes back to the game.
+  var NAV = { ArrowLeft: back, ArrowRight: forward, Home: toFirst, End: toLast };
   document.addEventListener('keydown', function(e){
     if (modal) {
       if (e.code === 'Escape') { closeModal(); e.preventDefault(); }
@@ -1455,8 +1481,7 @@
     if (e.code === 'Escape' && !promoEl.hidden) { closePromo(); e.preventDefault(); return; }
     if (e.target === levelEl) return;
     if (state === 'review') {
-      if (NAV[e.key]) { goTo(NAV[e.key]()); e.preventDefault(); }
-      else if (e.key === 'ArrowLeft') { back(); e.preventDefault(); }
+      if (NAV[e.key]) { NAV[e.key](); e.preventDefault(); }
       else if (e.code === 'Escape' && review.alt) { backToGame(); e.preventDefault(); }
       // Space plays or pauses the replay, unless it's pressing a button.
       else if (e.code === 'Space' && !/^(BUTTON|SELECT|INPUT)$/.test(document.activeElement.tagName)) { toggleReplay(); e.preventDefault(); }
@@ -1530,10 +1555,10 @@
   });
 
   // The review's buttons, moves and graph.
-  $('firstBtn').addEventListener('click', function(){ goTo(0); });
+  $('firstBtn').addEventListener('click', toFirst);
   $('prevBtn').addEventListener('click', back);
-  $('nextBtn').addEventListener('click', function(){ goTo(review.ply + 1); });
-  $('lastBtn').addEventListener('click', function(){ goTo(review.game.moves.length); });
+  $('nextBtn').addEventListener('click', forward);
+  $('lastBtn').addEventListener('click', toLast);
   $('replayBtn').addEventListener('click', toggleReplay);
   $('flipBtn').addEventListener('click', function(){
     review.side = C.other(review.side);
@@ -1573,7 +1598,7 @@
     swipe = null;
     if (!review || Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
     swiped = true;
-    if (dx < 0) goTo(review.ply + 1);
+    if (dx < 0) forward();
     else back();
   });
   barEl.addEventListener('click', function(e){
@@ -1591,7 +1616,6 @@
   });
   $('againBtn').addEventListener('click', leaveReview);
   $('playOnBtn').addEventListener('click', togglePlayOn);
-  $('altUndoBtn').addEventListener('click', takeBack);
   $('altBackBtn').addEventListener('click', backToGame);
   $('retryBtn').addEventListener('click', work);
 

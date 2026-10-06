@@ -505,16 +505,51 @@ test('a different move can be tried in a review, against the game\'s own', async
   await move(page, 'g8', 'f6');
   await expect(page.locator('#moveNow')).toHaveText('Your line: 3… g6 4. Qf3 Nf6');
   await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal. In the game: White won.');
-  // ← takes a move back (off the board, where the arrows move round it),
-  // and so does Take back.
+  // ← steps back along the line (off the board, where the arrows move round
+  // it), and so do the buttons, keeping the whole line to step on through.
   await page.evaluate(() => document.activeElement.blur());
   await press(page, 'ArrowLeft');
-  await expect(page.locator('#moveNow')).toHaveText('Your line: 3… g6 4. Qf3');
+  await expect(page.locator('#moveNow')).toHaveText('Your line: 3… g6 4. Qf3 Nf6');
+  await expect(page.locator('#altNow')).toHaveText('After 4. Qf3: 0.00 · Equal. In the game: White won.');
   expect(await pieceOn(page, 'g8')).toBe('g8, Black knight');
-  await page.getByRole('button', { name: 'Take back' }).click();
-  await expect(page.locator('#moveNow')).toHaveText('Your line: 3… g6');
-  // Taking back the first move tried goes back to the game.
+  await expect(page.locator('#nextBtn')).toBeEnabled();
   await page.locator('#prevBtn').click();
+  expect(await pieceOn(page, 'f3')).toBe('f3');
+  await page.locator('#prevBtn').click();
+  // Where the line starts, it stops: the game's position, the line still kept.
+  await expect(alt(page)).toBeVisible();
+  await expect(page.locator('#altNow')).toHaveText('Before your line: 0.00 · Equal. In the game: White won.');
+  expect(await pieceOn(page, 'g7')).toBe('g7, Black pawn');
+  await expect(page.locator('#prevBtn')).toBeDisabled();
+  await expect(page.locator('#firstBtn')).toBeDisabled();
+  await expect(page.locator('#playOnBtn')).toBeDisabled();
+  await press(page, 'ArrowLeft');
+  await expect(alt(page)).toBeVisible();
+  // → and the buttons step on through it again, with each move's sound.
+  await heard(page);
+  await press(page, 'ArrowRight');
+  expect(await pieceOn(page, 'g6')).toBe('g6, Black pawn');
+  await page.locator('#lastBtn').click();
+  await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal. In the game: White won.');
+  expect(await pieceOn(page, 'f6')).toBe('f6, Black knight');
+  await expect(page.locator('#nextBtn')).toBeDisabled();
+  expect(await heard(page)).toEqual(['move']);
+  await press(page, 'Home');
+  await page.locator('#nextBtn').click();
+  await press(page, 'End');
+  await page.locator('#firstBtn').click();
+  await expect(page.locator('#altNow')).toHaveText('Before your line: 0.00 · Equal. In the game: White won.');
+  // Part way along, the line's own next move steps on; another move replaces
+  // the rest of the line.
+  await press(page, 'ArrowRight');
+  await move(page, 'h5', 'f3');
+  await expect(page.locator('#moveNow')).toHaveText('Your line: 3… g6 4. Qf3 Nf6');
+  await expect(page.locator('#altNow')).toHaveText('After 4. Qf3: 0.00 · Equal. In the game: White won.');
+  await move(page, 'g8', 'e7');
+  await expect(page.locator('#moveNow')).toHaveText('Your line: 3… g6 4. Qf3 Nge7');
+  await expect(page.locator('#nextBtn')).toBeDisabled();
+  // Reset to the game leaves it.
+  await page.getByRole('button', { name: 'Reset to the game' }).click();
   await expect(alt(page)).toBeHidden();
   await expect(page.locator('#moveNow')).toHaveText('3. Qh5: Good move. Best was a3.');
   await expect(status(page)).toHaveText('Reviewing');
@@ -526,10 +561,10 @@ test('a different move can be tried in a review, against the game\'s own', async
   await expect(page.locator('#moveNow')).toHaveText('3… Nf6: Blunder. Best was a5.');
   await expect(page.locator('.mv.on .san')).toHaveText('Nf6');
 
-  // Back to the game, and stepping to another move, leave a line tried.
+  // Reset to the game, Escape, and choosing a move of the game leave a line tried.
   await move(page, 'c4', 'f7');
   await expect(page.locator('#altVerdict')).toHaveText('Bxf7+ is worse than the game’s Qxf7#: White’s chances go down from 98% to 59%.');
-  await page.getByRole('button', { name: 'Back to the game' }).click();
+  await page.getByRole('button', { name: 'Reset to the game' }).click();
   await expect(alt(page)).toBeHidden();
   await expect(page.locator('#moveNow')).toHaveText('3… Nf6: Blunder. Best was a5.');
   expect(await pieceOn(page, 'f7')).toBe('f7, Black pawn');
@@ -538,7 +573,7 @@ test('a different move can be tried in a review, against the game\'s own', async
   await press(page, 'Escape');
   await expect(alt(page)).toBeHidden();
   await move(page, 'c4', 'f7');
-  await page.locator('#nextBtn').click();
+  await page.locator('.mv').nth(6).click();
   await expect(alt(page)).toBeHidden();
   await expect(page.locator('#moveNow')).toHaveText('4. Qxf7#: Best move.');
   // The game's over there, so there's nothing to try.
@@ -568,19 +603,23 @@ test('Stockfish plays on from a move tried, to show how the game would have gone
   expect(await pieceOn(page, 'f7')).toBe('f7, White queen');
   expect((await commands(page)).filter((c) => /^go /.test(c))).toEqual(['go depth 12', 'go depth 12', 'go depth 12']);
   expect(await heard(page)).toEqual(['move', 'move', 'check']);
-  // The board can't be moved on once it's over, but the line can be taken back.
+  // The board can't be moved on once it's over, but the line can be stepped
+  // back through, and all of it stays.
   await sq(page, 'e8').click();
   await expect(page.locator('#board .sel')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Take back' }).click();
+  await page.locator('#prevBtn').click();
   await expect(page.locator('#playOnBtn')).toBeEnabled();
-  await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal. In the game: White won.');
+  await expect(page.locator('#altNow')).toHaveText('After 4… a6: 0.00 · Equal. In the game: White won.');
+  await expect(page.locator('#moveNow')).toHaveText('Your line: 3… g6 4. Qf3 a6 5. Qxf7#');
 
-  // Stop halts it while Stockfish is thinking, and the moves don't come.
+  // Playing on again starts from the move shown, in place of the rest; Stop
+  // halts it while Stockfish is thinking, and the moves don't come.
   await page.evaluate(() => { window.hold = true; window.replies = ['f3f7']; });
   await page.getByRole('button', { name: 'Stockfish plays on' }).click();
   await expect(page.locator('#playOnBtn')).toHaveText('Stop');
   await expect(status(page)).toHaveText('Stockfish is playing on…');
   await expect(page.locator('#altNow')).toHaveText('Now: Stockfish is playing on… In the game: White won.');
+  await expect(page.locator('#moveNow')).toHaveText('Your line: 3… g6 4. Qf3 a6');
   await sq(page, 'f3').click();                              // no moving while it plays
   await expect(page.locator('#board .sel')).toHaveCount(0);
   await page.getByRole('button', { name: 'Stop' }).click();
@@ -604,7 +643,7 @@ test('a move tried while the review is still being worked out waits for the engi
   await page.evaluate(() => { window.hold = false; window.release(); });
   await expect(page.locator('#altMine')).toHaveText('1. d4 · Good move · 0.00 · White’s chances 50%');
   await expect(page.locator('#altNow')).toHaveText('Now: 0.00 · Equal. In the game: White won.');
-  await page.getByRole('button', { name: 'Back to the game' }).click();
+  await page.getByRole('button', { name: 'Reset to the game' }).click();
   await reviewed(page);
   // The one engine never crashed: each search started only once the one
   // stopped before it had answered.
