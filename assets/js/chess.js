@@ -561,7 +561,8 @@
   // off after (base), the game up to there and the moves tried since (game),
   // how many of its moves the board shows (at), the engine's look at each of
   // its positions (evals), whether Stockfish is playing it on (auto) and how
-  // many moves it has played on (played). Playing the game's own move just
+  // many moves it has played on (played), from how many moves into the line
+  // it last started playing on (from). Playing the game's own move just
   // steps on to it, and so does playing the line's own next move; another
   // move from part way along the line replaces the rest of it.
   function tryOut(uci){
@@ -570,7 +571,7 @@
     if (!a) {
       var next = r.game.moves[r.ply];
       if (next && C.uci(next) === uci) { goTo(r.ply + 1); return; }
-      a = r.alt = { base: r.ply, game: upTo(r.game, r.ply), at: r.ply, evals: r.evals.slice(0, r.ply + 1), auto: false, played: 0 };
+      a = r.alt = { base: r.ply, game: upTo(r.game, r.ply), at: r.ply, evals: r.evals.slice(0, r.ply + 1), auto: false, played: 0, from: -1 };
     } else if (a.at < a.game.moves.length) {
       if (C.uci(a.game.moves[a.at]) === uci) { lineTo(a.at + 1); return; }
       cut(a);
@@ -580,10 +581,12 @@
     a.played = 0;
     altMoved(m);
   }
-  // Drops the moves of the line after the one shown.
+  // Drops the moves of the line after the one shown, and with them where
+  // Stockfish started playing on if none of its moves are left.
   function cut(a){
     a.game = upTo(a.game, a.at);
     a.evals.length = a.at + 1;
+    if (a.from >= a.at) a.from = -1;
   }
   function altMoved(m){
     var a = review.alt, st = C.status(a.game);
@@ -656,7 +659,7 @@
     var a = review.alt;
     if (!a) return;
     a.auto = !a.auto;
-    if (a.auto) { cut(a); a.played = 0; }
+    if (a.auto) { cut(a); a.played = 0; a.from = a.at; }
     selected = -1;
     afterAlt();
   }
@@ -692,6 +695,10 @@
     var play = $('playOnBtn');
     play.textContent = a.auto ? 'Stop' : 'Stockfish plays on';
     play.disabled = st.over || a.at === base;
+    // Back to where Stockfish started playing on, once it has played a move.
+    var from = $('playFromBtn');
+    from.hidden = a.from < 0 || a.from >= end;
+    from.disabled = a.at === a.from;
   }
   // The moves tried, numbered as people write them; a long line keeps its
   // first two moves and its last three.
@@ -1616,6 +1623,7 @@
   });
   $('againBtn').addEventListener('click', leaveReview);
   $('playOnBtn').addEventListener('click', togglePlayOn);
+  $('playFromBtn').addEventListener('click', function(){ lineTo(review.alt.from); });
   $('altBackBtn').addEventListener('click', backToGame);
   $('retryBtn').addEventListener('click', work);
 
