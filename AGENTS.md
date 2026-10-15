@@ -6,7 +6,7 @@ Guidance for AI coding agents (and humans) working on this repository. Read this
 
 The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub Pages. There's no framework and no compile step: pages are plain HTML, CSS and vanilla JavaScript. On every push to `master` (and from no other branch), `.github/workflows/pages.yml` copies what's published into `_site/` with `npm run site` and deploys it; nothing is committed (see [docs/development.md](docs/development.md#deploying)).
 
-The site is being restructured into one folder per app: the plan, with what's done and what's next, is [docs/plans/modules.md](docs/plans/modules.md). Read it before working on the build, the tests or CI, and keep its checkboxes up to date.
+The site is being restructured into one folder per app: the plan, with what's done and what's next, is [docs/plans/modules.md](docs/plans/modules.md). Read it before working on the build, the tests or CI, and keep its checkboxes up to date. Its [Verification rules](docs/plans/modules.md#verification-rules) are not optional: an item is done only when every box is ticked with its evidence, including the check on `master` after the merge that no test reruns.
 
 | Page | Files |
 |---|---|
