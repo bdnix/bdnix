@@ -63,18 +63,34 @@
     return choice;
   }
 
+  // The banner's words, in the page's language.
+  var WORDS = {
+    en: {
+      label: 'Cookie consent',
+      text: 'bdnix would like to use Google Analytics cookies to count visits. ' +
+        'Files you open in the tools never leave your browser. ' +
+        'You can change this any time on <a href="/profile/">your profile</a>.',
+      decline: 'Decline', accept: 'Accept'
+    },
+    bn: {
+      label: 'কুকি ব্যবহারের সম্মতি',
+      text: 'ভিজিট গোনার জন্য bdnix, Google Analytics-এর কুকি ব্যবহার করতে চায়। টুলে খোলা আপনার ফাইল কখনো আপনার ব্রাউজারের বাইরে যায় না। <a href="/bn/profile/">আপনার প্রোফাইলে</a> গিয়ে যেকোনো সময় এটি বদলাতে পারবেন।',
+      decline: 'না, থাক', accept: 'সম্মতি দিচ্ছি'
+    }
+  };
+
   function showBanner(){
+    var root = document.documentElement;
+    var w = WORDS[root && root.lang] || WORDS.en;
     banner = document.createElement('div');
     banner.className = 'consent panel';
     banner.setAttribute('role', 'region');
-    banner.setAttribute('aria-label', 'Cookie consent');
+    banner.setAttribute('aria-label', w.label);
     banner.innerHTML =
-      '<p>bdnix would like to use Google Analytics cookies to count visits. ' +
-      'Files you open in the tools never leave your browser. ' +
-      'You can change this any time on <a href="/profile/">your profile</a>.</p>' +
+      '<p>' + w.text + '</p>' +
       '<div class="consent-actions">' +
-      '<button class="btn btn-ghost" type="button" data-consent="denied">Decline</button>' +
-      '<button class="btn btn-ghost" type="button" data-consent="granted">Accept</button>' +
+      '<button class="btn btn-ghost" type="button" data-consent="denied">' + w.decline + '</button>' +
+      '<button class="btn btn-ghost" type="button" data-consent="granted">' + w.accept + '</button>' +
       '</div>';
     [].forEach.call(banner.querySelectorAll('[data-consent]'), function(b){
       b.addEventListener('click', function(){ setConsent(b.getAttribute('data-consent')); });

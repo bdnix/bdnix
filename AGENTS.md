@@ -26,6 +26,8 @@ The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub 
 | Photo Collage `/photo-collage/` | `photo-collage/index.html`, `assets/css/collage.css`, `assets/js/collage.js`, `assets/js/collage-core.js` |
 | Resize Without Cropping `/fit-to-frame/` | `fit-to-frame/index.html`, `assets/css/frame.css`, `assets/js/frame.js`, `assets/js/frame-core.js` |
 | Profile `/profile/` | `profile/index.html`, `assets/css/profile.css`, `assets/js/profile-page.js` |
+| Landing in Bangla `/bn/` | `bn/index.html`, as the landing page, plus `assets/css/bangla.css` and `assets/css/lang.css` |
+| Profile in Bangla `/bn/profile/` | `bn/profile/index.html`, as the profile page, plus `assets/css/bangla.css` and `assets/css/lang.css` |
 
 Shared files hold only what is truly common (see [Keep apps modular](#keep-apps-modular)). Each is one concern, and a page links only the ones it uses.
 
@@ -34,7 +36,7 @@ Stylesheets:
 - `assets/css/game.css`: the layout every game page uses.
 - `assets/css/page.css`: the one-column layout of the tool pages and the profile page.
 - `assets/css/tool.css`: what every tool page has: the lede, the drop zone, fields, the files area and the action buttons.
-- Components, linked only by the pages that show them: `icon-btn.css` (square icon buttons), `avatar.css` (the visitor's initial), `profile-chip.css` (the name chip in the top bar), `footer.css`, `features.css` (the feature list under a tool's lede), `file.css` (a file's name and details), `editor.css` (a preview beside a settings panel), `settings.css` (a panel of settings), `seg.css` (a two-way switch), `tracks.css` (a list of files, each with its own download) and `gamepad.css` (the on-screen D-pad and action buttons of the games played with buttons on a phone).
+- Components, linked only by the pages that show them: `icon-btn.css` (square icon buttons), `avatar.css` (the visitor's initial), `profile-chip.css` (the name chip in the top bar), `footer.css`, `features.css` (the feature list under a tool's lede), `file.css` (a file's name and details), `editor.css` (a preview beside a settings panel), `settings.css` (a panel of settings), `seg.css` (a two-way switch), `lang.css` (the switch between a page's English and Bangla copies), `bangla.css` (the Bangla font, for the pages in Bangla), `tracks.css` (a list of files, each with its own download) and `gamepad.css` (the on-screen D-pad and action buttons of the games played with buttons on a phone).
 
 Scripts, each exposing one `window.bdnix*` object:
 - `assets/js/blocks.js`: the falling-block backdrop (`window.bdnix`).
@@ -98,6 +100,7 @@ Each game and tool is its own app. **Adding or changing a feature of one app mus
   - A file made after the click (Merge PDFs and Photo Collage save straight away) uses `var win = bdnixFiles.fileWindow()`, called in the click handler itself, since browsers block a window opened later. It says the file is on its way; call `win.save(url, name)` when the file is ready, or `win.close()` if it can't be made.
   - Never save a file any other way (no link with `download` made and clicked by hand).
   - UI tests download through `inNewWindow(page, trigger)` from `tests/ui/downloads.mjs` (or `download()` from `tests/ui/pdfs.mjs`), which fails unless the file downloads in a new window that names it, with the tool's page left where it was. `tests/ui/downloads.spec.mjs` covers the rest: the window's page, a window the browser blocks or the visitor closes, and a file that can't be made.
+- **Bangla pages.** The home and profile pages have Bangla copies under `bn/`; see [docs/development.md](docs/development.md#bangla) for how they're built and tested. Every Bangla string is verified by the owner before it ships: propose translations, have them reviewed, and only then build. A script that shows text picks its words by `document.documentElement.lang`, and a Bangla page shows numbers in Bangla digits.
 - **Phone-sized screens matter.** Every page must work at 390 px wide with no sideways scrolling, and with touch as well as mouse and keyboard.
 - **Browser storage is optional.** Wrap every `localStorage` / IndexedDB access in `try/catch`; pages must work without it (private browsing). The keys in use are `bdnix_visits`, `bdnix_name`, `bdnix_tetris_best`, `bdnix_pacman_best`, `bdnix_flappy_best`, `bdnix_hop_best`, `bdnix_snake_best`, `bdnix_bricks_best`, `bdnix_chess_best`, `bdnix_tetris_save`, `bdnix_pacman_save`, `bdnix_flappy_save`, `bdnix_hop_save`, `bdnix_snake_save`, `bdnix_bricks_save`, `bdnix_chess_save`, `bdnix_sound`, `bdnix_watermark_v1` and `bdnix_analytics` (localStorage), and the `bdnix-tools` and `bdnix-sign` databases (IndexedDB). Don't rename them, since visitors' saved data would be lost.
 

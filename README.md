@@ -9,6 +9,8 @@ There's nothing to install and no account to create. Files you open in a tool ar
 
 The search box on the home page narrows the list as you type: try "pdf", "photo" or a game's name. Press `/` to jump to it and Esc to clear it.
 
+The home and profile pages are also in Bangla, at **[www.bdnix.com/bn/](https://www.bdnix.com/bn/)**: the switch in the top bar goes between the two. The games and tools are being translated one by one; until each is, its card on the Bangla home page leads to its English page.
+
 ## Tools
 
 | Tool | What it does |

@@ -2,7 +2,9 @@
 // has one. It lives only in this browser; nothing is sent anywhere.
 (function(){
   var NAME_KEY = 'bdnix_name';
-  var DEFAULT_NAME = 'User';
+  // The name until one is set, in the page's language.
+  var root = document.documentElement;
+  var DEFAULT_NAME = root && root.lang === 'bn' ? 'ব্যবহারকারী' : 'User';
   var MAX_NAME = 24;
 
   function read(key){

@@ -27,7 +27,9 @@ test('robots.txt points to a sitemap of the site\'s public pages', async ({ requ
   expect(locs[0]).toBe(LIVE + '/');
   for (const loc of locs) {
     expect(loc.startsWith(LIVE + '/'), loc).toBe(true);
-    expect(loc.slice(LIVE.length)).toMatch(/^\/([a-z0-9-]+\/)?$/);
+    expect(loc.slice(LIVE.length)).toMatch(/^\/(bn\/)?([a-z0-9-]+\/)?$/);
   }
+  expect(locs).toContain(LIVE + '/bn/');
   expect(locs).not.toContain(LIVE + '/profile/');
+  expect(locs).not.toContain(LIVE + '/bn/profile/');
 });

@@ -3,12 +3,15 @@
 // the cards.
 (function(){
   // Lower case, accents dropped and anything that isn't a letter or digit
-  // turned into a space, so "Café-PDF" and "cafe pdf" read the same.
+  // turned into a space, so "Café-PDF" and "cafe pdf" read the same. Bangla
+  // letters count as letters, Bangla digits read as 0-9 (so "৩" finds "3"),
+  // and the invisible joiners Bangla text may carry are dropped.
   function fold(text){
     return String(text == null ? '' : text)
-      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .normalize('NFD').replace(/[\u0300-\u036f\u200c\u200d]/g, '')
+      .replace(/[\u09e6-\u09ef]/g, function(d){ return String(d.charCodeAt(0) - 0x09e6); })
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/[^a-z0-9\u0980-\u09ff]+/g, ' ')
       .trim();
   }
 
