@@ -223,7 +223,7 @@ test('pausing stops the snake, and it resumes where it was', async ({ page }) =>
   await page.clock.runFor(200);
   await press(page, 'KeyP');
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
-  await expect(page.locator('#pauseBtn')).toHaveAttribute('aria-label', 'Resume');
+  await expect(page.locator('#startBtn')).toHaveText('Resume');
   const stored = () => page.evaluate(() => localStorage.getItem('bdnix_snake_save'));
   const before = await stored();
   await page.clock.runFor(3000);
@@ -240,7 +240,7 @@ test('pausing stops the snake, and it resumes where it was', async ({ page }) =>
 
   await press(page, 'Escape');
   await expect(page.locator('#overlay')).toBeVisible();
-  await page.locator('#pauseBtn').click();
+  await page.locator('#startBtn').click();              // the overlay's Resume button
   await expect(page.locator('#overlay')).toBeHidden();
   await page.evaluate(() => window.dispatchEvent(new Event('blur'))); // switching away pauses
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
@@ -250,9 +250,9 @@ test('pausing stops the snake, and it resumes where it was', async ({ page }) =>
 
 test('pausing before the snake moves, and a hidden tab pauses too', async ({ page }) => {
   await page.getByRole('button', { name: 'Start game' }).click();
-  await page.locator('#pauseBtn').click();
+  await press(page, 'KeyP');
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
-  await page.locator('#pauseBtn').click();
+  await page.locator('#startBtn').click();
   await expect(page.locator('#overlay')).toBeHidden();
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });

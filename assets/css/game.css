@@ -9,7 +9,7 @@ body.play{
   -webkit-tap-highlight-color:transparent;
 }
 
-.bar-actions{display:flex;gap:8px}
+.bar-actions{display:flex;align-items:center;gap:8px}
 
 .box{display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 10px}
 .box canvas{display:block}

@@ -1,6 +1,7 @@
 // The checks every game gets, on top of checkPage(url, { game: true, ... })
-// from checks.mjs: mute and pause buttons, played upright, a short wide window,
-// the credit line and the gamepad. Each game calls checkGame() from its own
+// from checks.mjs: the top bar's mute button and languages, pausing when the
+// page is left, played upright, a short wide window, the credit line and the
+// gamepad. Each game calls checkGame() from its own
 // tests/ui/<app>.site.spec.mjs.
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { openGame, press } from './games.mjs';
@@ -8,33 +9,65 @@ import { inLanguage, expectTranslated } from './languages.mjs';
 
 const touch = (page) => page.evaluate(() => matchMedia('(pointer:coarse)').matches);
 
-const PAUSE = 'M4 2h3v12H4zM9 2h3v12H9z';
-
 // opts:
 //   credit    [the classic that inspired it, who created it], for its credit line
 //   gamepad   { dpad: { up, left, right, down }, face: { a, b } }: the names of
 //             its on-screen buttons, for a game played with buttons on a phone
 export function checkGame(url, opts = {}){
-  test(`${url}: the mute and pause buttons in the top bar follow the game`, async ({ page }) => {
+  // The top bar has the mute button and the language switch, and no pause
+  // button: P or Esc pauses, and so does leaving the page, which then shows
+  // the pause screen with its big Resume button when the visitor comes back.
+  test(`${url}: the top bar has mute and the languages, and leaving the page pauses the game`, async ({ page }) => {
     await openGame(page, url);
-    const sound = page.locator('#soundBtn');
+    const sound = page.locator('.bar #soundBtn');
     await expect(sound).toHaveAttribute('aria-label', 'Mute sound');
     await expect(sound.locator('svg')).toBeVisible();
-    const pause = page.locator('#pauseBtn');
-    const icon = () => pause.locator('svg path').getAttribute('d');
+    await expect(page.locator('#pauseBtn')).toHaveCount(0);
+    const langs = page.locator('.bar').getByRole('navigation', { name: 'Language' });
+    await expect(langs.getByRole('button', { name: 'বাংলা' })).toBeVisible();
+    await expectNoSideScroll(page);
+
+    const title = page.locator('#ovTitle');
+    const resume = page.locator('#startBtn');
     await page.getByRole('button', { name: 'Start game' }).click();
-    await expect(pause).toHaveAttribute('aria-label', 'Pause');
-    expect(await icon()).toBe(PAUSE);
-
-    await press(page, 'KeyP');
-    await expect(page.locator('#ovTitle')).toHaveText('Paused');
-    await expect(pause).toHaveAttribute('aria-label', 'Resume');
-    expect(await icon()).not.toBe(PAUSE);
-
-    await pause.click();
     await expect(page.locator('#overlay')).toBeHidden();
-    await expect(pause).toHaveAttribute('aria-label', 'Pause');
-    expect(await icon()).toBe(PAUSE);
+    await press(page, 'KeyP');
+    await expect(title).toHaveText('Paused');
+    await expect(resume).toHaveText('Resume');
+    await resume.click();
+    await expect(page.locator('#overlay')).toBeHidden();
+
+    // Another window or app takes the focus.
+    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    await expect(title).toHaveText('Paused');
+    await page.clock.runFor(1000);
+    await expect(resume).toBeVisible();
+    await resume.click();
+    await expect(page.locator('#overlay')).toBeHidden();
+
+    // Another tab, or the phone's home screen.
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect(title).toHaveText('Paused');
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await page.clock.runFor(1000);
+    await expect(title).toHaveText('Paused');   // still waiting for Resume
+    await resume.click();
+    await expect(page.locator('#overlay')).toBeHidden();
+  });
+
+  // The switch in the top bar shows the game in another language.
+  test(`${url}: the language switch in the top bar shows the game in Bangla`, async ({ page }) => {
+    await openGame(page, url);
+    await page.locator('.bar').getByRole('button', { name: 'বাংলা' }).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'bn');
+    await expect(page.locator('.bar').getByRole('navigation', { name: 'ভাষা' }).getByRole('button', { name: 'English' })).toBeVisible();
+    await expectTranslated(page, 'bn');
   });
 
   // Turned sideways, a phone gets a note asking for it to be turned back, and
@@ -75,8 +108,9 @@ export function checkGame(url, opts = {}){
       expect(board.y + board.height).toBeLessThanOrEqual(390);
       const fits = await page.evaluate(() => {
         const word = document.querySelector('.wordmark').getBoundingClientRect();
+        const langs = document.querySelector('.bar .langs').getBoundingClientRect();
         const sound = document.getElementById('soundBtn').getBoundingClientRect();
-        return word.height < 30 && word.right <= sound.left;
+        return word.height < 30 && word.right <= langs.left && langs.right <= sound.left;
       });
       expect(fits, 'the top bar fits beside the board').toBe(true);
       await expectNoSideScroll(page);
@@ -96,7 +130,8 @@ export function checkGame(url, opts = {}){
       await page.clock.runFor(20_000);
       await expectTranslated(page, code);
       if (await page.locator('#overlay').isHidden()) {
-        await page.locator('#pauseBtn').click();
+        await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+        await expect(page.locator('#overlay')).toBeVisible();
         await expect(page.locator('#ovTitle')).not.toHaveText('Paused');
       }
       await expectTranslated(page, code);

@@ -16,10 +16,10 @@ test('the top bar switches language, and every page follows the choice', async (
   expect(await page.evaluate(() => localStorage.getItem('bdnix_lang'))).toBe('bn');
   await expectNoSideScroll(page);
 
-  // A game, which has no switch of its own, follows it too.
+  // A game follows it too, and has the switch in its own top bar.
   await page.goto('/snake/');
   await expect(page.locator('#ovTitle')).toHaveText('সাপ');
-  await expect(page.locator('[data-languages]')).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'ভাষা' }).getByRole('button', { name: 'English' })).toBeVisible();
   await expectTranslated(page);
 
   await page.goto('/merge-pdf/');

@@ -37,7 +37,6 @@
   var ovText = document.getElementById('ovText');
   var startBtn = document.getElementById('startBtn');
   var newBtn = document.getElementById('newBtn');
-  var pauseBtn = document.getElementById('pauseBtn');
   var el = {
     score: document.getElementById('score'),
     best: document.getElementById('best'),
@@ -195,7 +194,6 @@
     overlay.hidden = true;
     newBtn.hidden = true;
     startBtn.blur();
-    window.bdnixGamebar.setPaused(false);
     lastTime = performance.now();
     sound.play('start');
     persist();
@@ -226,12 +224,10 @@
       startBtn.textContent = 'Resume';
       newBtn.hidden = false;
       overlay.hidden = false;
-      window.bdnixGamebar.setPaused(true);
       persist();
     } else if (state === 'paused') {
       state = 'playing';
       overlay.hidden = true;
-      window.bdnixGamebar.setPaused(false);
       lastTime = performance.now();
     }
   }
@@ -431,9 +427,6 @@
   }
   startBtn.addEventListener('click', startOrResume);
   newBtn.addEventListener('click', newGame);
-  pauseBtn.addEventListener('click', function(){
-    if (state === 'playing' || state === 'paused') togglePause();
-  });
 
   window.addEventListener('resize', resize);
   if (compactMQ.addEventListener) {

@@ -1119,7 +1119,7 @@ test('the engine moves when a game saved on its turn is resumed', async ({ page 
   await openSaved(page, { side: 'b', level: 2, moves: ['e2e4', 'e7e5'] });
   await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
   expect(await commands(page)).toEqual([]);              // nothing asked while paused
-  await page.locator('#pauseBtn').click();
+  await page.locator('#startBtn').click();               // Resume
   await expect(status(page)).toHaveText('Your move');
   expect(await pieceOn(page, 'a3')).toBe('a3, White pawn');
 });

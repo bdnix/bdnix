@@ -207,7 +207,6 @@
     state = 'playing';
     overlay.hidden = true;
     ovMsg.textContent = '';
-    window.bdnixGamebar.setPaused(false);
     startBtn.blur();
     sound.play('start');
     // Playing both sides needs Stockfish only for a hint or the review.
@@ -345,7 +344,6 @@
     ovTitle.textContent = 'Chess';
     ovText.textContent = INTRO;
     showOverlay('Start game', false);
-    window.bdnixGamebar.setPaused(false);
     render();
     updateHud();
   }
@@ -364,7 +362,6 @@
     ovTitle.textContent = 'Paused';
     ovText.textContent = text;
     showOverlay('Resume', true);
-    window.bdnixGamebar.setPaused(true);
     render();
     updateHud();
   }
@@ -373,7 +370,6 @@
     state = 'playing';
     overlay.hidden = true;
     ovMsg.textContent = '';
-    window.bdnixGamebar.setPaused(false);
     render();
     updateHud();
     think();
@@ -497,7 +493,6 @@
     overlay.hidden = true;
     reviewEl.hidden = barEl.hidden = false;
     ovMsg.textContent = reviewMsg.textContent = '';
-    window.bdnixGamebar.setPaused(false);
     // A game from a file: its names, event and file name stay as they are.
     ['reviewKicker', 'reviewTitle', 'reviewText'].forEach(function(id){ $(id).setAttribute('translate', info.file ? 'no' : 'yes'); });
     $('reviewKicker').textContent = info.kicker;
@@ -1555,10 +1550,15 @@
     }
   });
   window.bdnixUpright.onTurn(function(){ pause(); stopReplay(); });
+  // Leaving the page (another tab or window, or the phone's home screen)
+  // pauses the game, so it waits on the pause screen for Resume.
+  window.addEventListener('blur', function(){ pause(); });
+  document.addEventListener('visibilitychange', function(){
+    if (document.hidden) pause();
+  });
 
   startBtn.addEventListener('click', startOrResume);
   newBtn.addEventListener('click', newGame);
-  $('pauseBtn').addEventListener('click', togglePause);
   // Before the first game the board turns round to show the side picked.
   [].forEach.call(sideInputs, function(input){
     input.addEventListener('change', function(){

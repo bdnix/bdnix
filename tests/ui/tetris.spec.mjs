@@ -53,19 +53,17 @@ test('rotating and holding pieces', async ({ page }) => {
 
 test('pausing stops the game, and it resumes where it was', async ({ page }) => {
   const overlay = page.locator('#overlay');
-  const pause = page.locator('#pauseBtn');
 
   await press(page, 'KeyP');
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
-  await expect(pause).toHaveAttribute('aria-label', 'Resume');
+  await expect(page.locator('#startBtn')).toHaveText('Resume');
   await page.clock.runFor(5000);                    // nothing falls while paused
   await press(page, 'KeyP');
   await expect(overlay).toBeHidden();
-  await expect(pause).toHaveAttribute('aria-label', 'Pause');
 
   await press(page, 'Escape');
   await expect(overlay).toBeVisible();
-  await pause.click();
+  await page.locator('#startBtn').click();          // the overlay's Resume button
   await expect(overlay).toBeHidden();
 
   await page.evaluate(() => window.dispatchEvent(new Event('blur'))); // switching away pauses
@@ -114,7 +112,7 @@ test('a reload keeps the game, paused where it was', async ({ page }) => {
   await page.reload();
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
   await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
-  await expect(page.locator('#pauseBtn')).toHaveAttribute('aria-label', 'Resume');
+  await expect(page.locator('#startBtn')).toHaveText('Resume');
   await expect(page.locator('#score')).toHaveText('36');
   expect(await inkOn(page, '#hold')).toBeGreaterThan(0);             // the T is still held
   await page.clock.runFor(5000);                                     // nothing falls while paused
@@ -172,7 +170,7 @@ test('moves, drops, clears and the end of the game each have a sound', async ({ 
   expect(await heard(page)).toEqual(['hold', 'rotate', 'drop', 'lock']);
 
   // The route from the first test fills the bottom row.
-  await page.getByRole('button', { name: 'Pause' }).click();
+  await press(page, 'KeyP');
   await page.getByRole('button', { name: 'New game' }).click();
   await press(page, 'ArrowLeft', 4); await press(page, 'Space');
   await press(page, 'ArrowLeft'); await press(page, 'Space');
