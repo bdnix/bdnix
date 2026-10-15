@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <!-- build:meta -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://www.googletagmanager.com; style-src 'self'; font-src 'self' data:; img-src 'self' data: blob: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' data: blob: https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; media-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>PDF আনলক করুন — ফ্রিতে PDF-এর পাসওয়ার্ড সরান | bdnix</title>
+  <meta name="description" content="যে PDF আপনি খুলতে পারেন, ফ্রিতে তার পাসওয়ার্ড সরান: একবার পাসওয়ার্ড লিখুন, আর এমন একটি কপি ডাউনলোড করুন যা পাসওয়ার্ড ছাড়াই খোলে। আপনার ব্রাউজারেই চলে; আপনার ফাইল ও পাসওয়ার্ড কখনো আপলোড হয় না।">
+  <link rel="canonical" href="https://www.bdnix.com/bn/unlock-pdf/">
+  <link rel="alternate" hreflang="en" href="https://www.bdnix.com/unlock-pdf/">
+  <link rel="alternate" hreflang="bn" href="https://www.bdnix.com/bn/unlock-pdf/">
+  <link rel="alternate" hreflang="x-default" href="https://www.bdnix.com/unlock-pdf/">
+  <meta property="og:site_name" content="bdnix">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="bn_BD">
+  <meta property="og:url" content="https://www.bdnix.com/bn/unlock-pdf/">
+  <meta property="og:title" content="PDF আনলক করুন — ফ্রিতে PDF-এর পাসওয়ার্ড সরান | bdnix">
+  <meta property="og:description" content="যে PDF আপনি খুলতে পারেন, ফ্রিতে তার পাসওয়ার্ড সরান: একবার পাসওয়ার্ড লিখুন, আর এমন একটি কপি ডাউনলোড করুন যা পাসওয়ার্ড ছাড়াই খোলে। আপনার ব্রাউজারেই চলে; আপনার ফাইল ও পাসওয়ার্ড কখনো আপলোড হয় না।">
+  <meta property="og:image" content="https://www.bdnix.com/assets/img/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="bdnix: একটু খেলুন। একটু কাজ সেরে ফেলুন।">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "PDF আনলক করুন", "url": "https://www.bdnix.com/bn/unlock-pdf/", "description": "যে PDF আপনি খুলতে পারেন, ফ্রিতে তার পাসওয়ার্ড সরান: একবার পাসওয়ার্ড লিখুন, আর এমন একটি কপি ডাউনলোড করুন যা পাসওয়ার্ড ছাড়াই খোলে। আপনার ব্রাউজারেই চলে; আপনার ফাইল ও পাসওয়ার্ড কখনো আপলোড হয় না।", "inLanguage": "bn", "applicationCategory": "UtilitiesApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
+  <meta name="theme-color" content="#080a12">
+  <!-- /build:meta -->
+  <link rel="preload" href="/assets/fonts/inter-latin-400-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/inter-latin-800-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/hind-siliguri-bengali-400-normal.woff2?v=5.2.5" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/base.css?v=7e5309da52">
+  <link rel="stylesheet" href="/assets/css/avatar.css?v=1da16dde9f">
+  <link rel="stylesheet" href="/assets/css/profile-chip.css?v=9563092884">
+  <link rel="stylesheet" href="/assets/css/footer.css?v=5f3a8660bb">
+  <link rel="stylesheet" href="/assets/css/lang.css?v=1185137574">
+  <link rel="stylesheet" href="/assets/css/bangla.css?v=fe161e5d7d">
+  <link rel="stylesheet" href="/assets/css/page.css?v=6ee9010c44">
+  <link rel="stylesheet" href="/assets/css/tool.css?v=a70bc4eb15">
+  <link rel="stylesheet" href="/assets/css/features.css?v=e27c70799f">
+  <link rel="stylesheet" href="/assets/css/file.css?v=6d62676c6d">
+  <link rel="stylesheet" href="/assets/css/unlock.css?v=78128f023f">
+  <script src="/assets/js/analytics.js?v=7fa4c31691"></script>
+</head>
+<body>
+  <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
+
+  <header class="bar">
+    <a class="wordmark" href="/bn/" aria-label="bdnix-এ ফিরে যান"><b>bdnix</b><span>/ unlock-pdf</span></a>
+    <div class="bar-end">
+      <nav aria-label="ভাষা"><a class="lang-switch" href="/unlock-pdf/" hreflang="en" lang="en">English</a></nav>
+      <a class="profile-chip" href="/bn/profile/" title="আপনার প্রোফাইল"><span class="avatar" data-profile-initial aria-hidden="true">ব</span><span data-profile-name>ব্যবহারকারী</span></a>
+    </div>
+  </header>
+
+  <main class="tool">
+    <p class="kicker">// টুল</p>
+    <h1>PDF আনলক করুন</h1>
+    <p class="lede">পাসওয়ার্ড দিয়ে সুরক্ষিত একটি PDF তার পাসওয়ার্ড দিয়ে খুলুন, আর এমন একটি কপি ডাউনলোড করুন যা পাসওয়ার্ড ছাড়াই খোলে। সবকিছু আপনার ব্রাউজারেই হয়। আপনার ফাইল আর পাসওয়ার্ড কখনো আপলোড হয় না।</p>
+    <ul class="features">
+      <li>পাসওয়ার্ডটি আপনাকে জানতে হবে: এই টুল আপনার জানা পাসওয়ার্ড সরায়, অনুমান করে বের করে না।</li>
+      <li><b>ইউজার পাসওয়ার্ড</b> (যেটি দিয়ে ফাইল খোলে) বা <b>ওনার পাসওয়ার্ড</b>, দুটো দিয়েই চলে; ওনার পাসওয়ার্ড প্রিন্ট, কপি আর এডিট করার বাধাও তুলে দেয়।</li>
+      <li>পৃষ্ঠা, লেখা আর লিংক ঠিক আগের মতোই থাকে। শুধু এনক্রিপশন সরানো হয়।</li>
+    </ul>
+
+    <label class="drop panel" id="drop">
+      <input type="file" id="picker" accept="application/pdf,.pdf">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <b>PDF ফাইলটি এখানে ছেড়ে দিন</b>
+      <span>অথবা <u>একটি ফাইল বেছে নিন</u></span>
+    </label>
+
+    <div class="file-bar panel" id="fileBar" hidden>
+      <div class="file-info">
+        <span class="file-name" id="fileName"></span>
+        <span class="file-meta" id="fileMeta"></span>
+      </div>
+      <button class="link-btn" id="changeBtn" type="button">ফাইল বদলান</button>
+    </div>
+
+    <form class="unlock panel" id="unlockForm" autocomplete="off" hidden>
+      <label class="label" for="password">পাসওয়ার্ড</label>
+      <div class="password-row">
+        <input type="password" id="password" name="password" autocomplete="off" spellcheck="false" aria-describedby="msg">
+        <button class="link-btn" id="showBtn" type="button" aria-pressed="false" aria-controls="password">দেখান</button>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" id="unlockBtn" type="submit" disabled>
+          <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 4.9-.7"/></svg>
+          <span id="unlockLabel">PDF আনলক করুন</span>
+        </button>
+      </div>
+    </form>
+
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+    <div class="actions" id="done" hidden>
+      <a class="btn btn-primary" id="downloadBtn">
+        <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4 7l4 4 4-4M2 14h12"/></svg>
+        <span id="downloadLabel">ডাউনলোড</span>
+      </a>
+    </div>
+  </main>
+
+  <!-- build:footer -->
+  <footer class="foot">
+    <span>© <span id="year">২০২৬</span> bdnix · <a href="https://github.com/bdnix/bdnix">GitHub-এ ওপেন সোর্স</a></span>
+    <span class="foot-links"><a href="/bn/#suggest">নতুন টুল বা গেমের প্রস্তাব দিন</a><a href="mailto:root@bdnix.com">root@bdnix.com</a></span>
+  </footer>
+  <!-- /build:footer -->
+
+  <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
+  <script src="/assets/js/profile.js?v=aeac36bccf"></script>
+  <script src="/assets/js/files.js?v=39ad551b35"></script>
+  <script src="/assets/js/pdftools.js?v=4ebfb53601"></script>
+  <script src="/assets/js/unlock-core.js?v=4eb1c3f7b8"></script>
+  <script src="/assets/js/unlock.js?v=45073b5c30"></script>
+</body>
+</html>

@@ -6,7 +6,71 @@
 (function(){
   var T = window.bdnixFiles, P = window.bdnixPdf;
   var S = window.bdnixSign;
+  var fillIn = T.fillIn;
   function $(id){ return document.getElementById(id); }
+
+  // Its words, in the page's language (bn/sign-pdf/ is the Bangla copy). The
+  // handwriting fonts only have Latin letters, so their samples stay in them.
+  var W = T.words({
+    en: {
+      pages: ['{n} page', '{n} pages'], signatures: ['{n} signature', '{n} signatures'], more: ['{n} more page', '{n} more pages'],
+      placed: '{signatures} on {pages}', nothing: 'Nothing placed yet',
+      addToPage: 'Add to the page', create: 'Create signature', sample: 'Your name',
+      notImage: 'That isn’t an image. Choose a PNG or JPG of your signature.',
+      blankImage: 'That image looks blank. Try one with darker ink, or untick “Make white paper see-through”.',
+      blank: 'There’s nothing to see. Try again.',
+      made: 'Made {sig}. Save it as an image, or open a PDF to put it on a page.',
+      badImage: '{name} couldn’t be read as an image.', cantMake: 'Couldn’t make the signature.',
+      sig: 'signature {n}', put: 'Put {sig} on this page', putTip: 'Put it on this page',
+      saveImage: 'Save image', saveAs: 'Save {sig} as an image', del: 'Delete', delSig: 'Delete {sig}',
+      onPages: 'Signature {n} is on {pages} of {file}.', offOne: ' Deleting it takes it off that page too, so sign and download the PDF first if you want it there.',
+      offMany: ' Deleting it takes it off them too, so sign and download the PDF first if you want it there.',
+      keep: 'Keep it', delAnyway: 'Delete anyway',
+      deletedOff: 'Deleted {sig} and took it off the pages.', deleted: 'Deleted {sig}.', kept: 'Kept {sig}. It’s still on the pages.',
+      keepAll: 'Your signatures will be here next time, in this browser only.',
+      keepNew: 'Signatures you make will be kept in this browser for next time.',
+      forget: 'Your signatures are no longer kept in this browser.',
+      placedLabel: 'Signature {n}. Drag to move it, or use the arrow keys. Delete removes it.',
+      copied: 'Copied to {more}.', everyPage: 'It’s already on every page.',
+      pageOf: 'Page {page} of {pages}',
+      cantShow: 'This file’s pages can’t be shown in this browser, so it can’t be signed here.',
+      loading: 'Loading the page…', cantDraw: 'Couldn’t draw this page: {error}',
+      notPdf: 'That isn’t a PDF file. Choose a .pdf to sign.', reading: 'Reading {name}…', meta: '{pages} · {size}',
+      locked: '{name} is password-protected, so it can’t be signed.', unreadable: '{name} could not be read as a PDF.',
+      closed: 'Closed {name}. Your signatures are still here for the next one.',
+      signing: 'Signing…', sign: 'Sign PDF', download: 'Download ({size})',
+      done: 'Done. Added {signatures} on {pages}.', failed: 'Something went wrong: {error}'
+    },
+    bn: {
+      pages: ['{n} পৃষ্ঠা', '{n} পৃষ্ঠা'], signatures: ['{n}টি সই', '{n}টি সই'], more: ['আরও {n} পৃষ্ঠা', 'আরও {n} পৃষ্ঠা'],
+      placed: '{count} পৃষ্ঠায় {signatures}', nothing: 'এখনো কিছু বসানো হয়নি',
+      addToPage: 'পৃষ্ঠায় বসান', create: 'সই তৈরি করুন', sample: 'Your name',
+      notImage: 'এটি ছবি নয়। আপনার সইয়ের একটি PNG বা JPG বেছে নিন।',
+      blankImage: 'ছবিটি ফাঁকা মনে হচ্ছে। আরও গাঢ় কালির ছবি দিয়ে চেষ্টা করুন, অথবা “সাদা কাগজ স্বচ্ছ করুন” থেকে টিক তুলে দিন।',
+      blank: 'দেখার মতো কিছু নেই। আবার চেষ্টা করুন।',
+      made: '{sig} তৈরি হয়েছে। ছবি হিসেবে সেভ করুন, অথবা পৃষ্ঠায় বসাতে একটি PDF খুলুন।',
+      badImage: '{name} ছবি হিসেবে পড়া যায়নি।', cantMake: 'সই তৈরি করা যায়নি।',
+      sig: 'সই {n}', put: '{sig} এই পৃষ্ঠায় বসান', putTip: 'এই পৃষ্ঠায় বসান',
+      saveImage: 'ছবি সেভ করুন', saveAs: '{sig} ছবি হিসেবে সেভ করুন', del: 'মুছুন', delSig: '{sig} মুছুন',
+      onPages: 'সই {n} {file}-এর {count} পৃষ্ঠায় আছে।', offOne: ' মুছলে সেই পৃষ্ঠা থেকেও উঠে যাবে, তাই সেখানে রাখতে চাইলে আগে PDF-এ সই করে ডাউনলোড করুন।',
+      offMany: ' মুছলে সেই পৃষ্ঠাগুলো থেকেও উঠে যাবে, তাই সেখানে রাখতে চাইলে আগে PDF-এ সই করে ডাউনলোড করুন।',
+      keep: 'রেখে দিন', delAnyway: 'তবুও মুছুন',
+      deletedOff: '{sig} মুছে পৃষ্ঠাগুলো থেকে সরানো হয়েছে।', deleted: '{sig} মোছা হয়েছে।', kept: '{sig} রাখা হয়েছে। এটি এখনো পৃষ্ঠাগুলোতে আছে।',
+      keepAll: 'আপনার সইগুলো পরের বার এখানে থাকবে, শুধু এই ব্রাউজারে।',
+      keepNew: 'আপনার তৈরি করা সইগুলো পরের বারের জন্য এই ব্রাউজারে রাখা হবে।',
+      forget: 'আপনার সইগুলো আর এই ব্রাউজারে রাখা হচ্ছে না।',
+      placedLabel: 'সই {n}। সরাতে টেনে নিন, অথবা অ্যারো কি ব্যবহার করুন। Delete চাপলে সরে যাবে।',
+      copied: 'আরও {count} পৃষ্ঠায় কপি করা হয়েছে।', everyPage: 'এটি আগেই প্রতিটি পৃষ্ঠায় আছে।',
+      pageOf: 'পৃষ্ঠা {page} / {pages}',
+      cantShow: 'এই ব্রাউজারে ফাইলটির পৃষ্ঠা দেখানো যাচ্ছে না, তাই এখানে এতে সই করা যাবে না।',
+      loading: 'পৃষ্ঠা লোড হচ্ছে…', cantDraw: 'পৃষ্ঠাটি আঁকা যায়নি: {error}',
+      notPdf: 'এটি PDF ফাইল নয়। সই করতে একটি .pdf বেছে নিন।', reading: '{name} পড়া হচ্ছে…', meta: '{pages} · {size}',
+      locked: '{name} পাসওয়ার্ড দিয়ে সুরক্ষিত, তাই এতে সই করা যাবে না।', unreadable: '{name} PDF হিসেবে পড়া যায়নি।',
+      closed: '{name} বন্ধ করা হয়েছে। আপনার সইগুলো পরের ফাইলের জন্য এখানেই আছে।',
+      signing: 'সই করা হচ্ছে…', sign: 'PDF-এ সই করুন', download: 'ডাউনলোড ({size})',
+      done: 'হয়ে গেছে। {count} পৃষ্ঠায় {signatures} বসানো হয়েছে।', failed: 'একটা সমস্যা হয়েছে: {error}'
+    }
+  });
 
   var drop = $('drop'), picker = $('picker');
   var fileBar = $('fileBar'), fileName = $('fileName'), fileMeta = $('fileMeta'), closeBtn = $('closeBtn');
@@ -27,7 +91,7 @@
   var applyBtn = $('applyBtn'), applyLabel = $('applyLabel');
   var downloadBtn = $('downloadBtn'), downloadLabel = $('downloadLabel');
 
-  $('year').textContent = new Date().getFullYear();
+  $('year').textContent = T.num(new Date().getFullYear());
 
   // src: { name, bytes, pages, views: [{ box, rot, vw, vh }], view (pdf.js) and its viewTask }
   var src = null;
@@ -81,15 +145,15 @@
 
   function syncUi(){
     var n = placed.length;
-    summary.textContent = n ? T.plural(n, 'signature') + ' on ' + T.plural(pagesWith().length, 'page') : 'Nothing placed yet';
+    summary.textContent = n ? fillIn(W.placed, { signatures: T.count(n, W.signatures), pages: T.count(pagesWith().length, W.pages), count: pagesWith().length }) : W.nothing;
     clearBtn.disabled = busy || !n;
     applyBtn.disabled = busy || !src || !n;
     // Signatures can be made, saved and kept without a PDF; one opened
     // lets them be put on its pages too.
     addBtn.disabled = busy || !canAdd();
-    addLabel.textContent = src ? 'Add to the page' : 'Create signature';
+    addLabel.textContent = src ? W.addToPage : W.create;
     sigTip.hidden = !src || !sigs.length;
-    sigCountEl.textContent = sigs.length;
+    sigCountEl.textContent = T.num(sigs.length);
     sigCountEl.hidden = !sigs.length;
     placeTip.hidden = n > 0;
     Array.prototype.forEach.call(sigList.querySelectorAll('.sig-place'), function(b){ b.disabled = !src; });
@@ -98,9 +162,9 @@
     selectedBox.hidden = !selected;
     if (selected) {
       sizeRange.value = Math.round(selected.w * 100);
-      sizeOut.textContent = Math.round(selected.w * 100) + '%';
+      sizeOut.textContent = T.num(Math.round(selected.w * 100)) + '%';
       angleRange.value = Math.round(selected.angle);
-      angleOut.textContent = Math.round(selected.angle) + '°';
+      angleOut.textContent = T.num(Math.round(selected.angle)) + '°';
       everyBtn.disabled = busy || !src || src.pages < 2;
     }
   }
@@ -240,7 +304,7 @@
 
   // The font samples show the name being typed.
   function showName(){
-    var name = S.cleanName(typed.value) || 'Your name';
+    var name = S.cleanName(typed.value) || W.sample;
     Array.prototype.forEach.call(fonts.querySelectorAll('span'), function(s){ s.textContent = name; });
     hint('');
     syncUi();
@@ -252,7 +316,7 @@
     imagePicker.value = '';
     if (!f) return;
     if (!/^image\//.test(f.type) && !/\.(png|jpe?g|webp|gif)$/i.test(f.name)) {
-      return hint('That isn’t an image. Choose a PNG or JPG of your signature.', true);
+      return hint(W.notImage, true);
     }
     image = f;
     imageName.textContent = f.name;
@@ -349,7 +413,7 @@
     syncUi();
     (m === 'draw' ? fromPad() : m === 'type' ? fromText() : fromImage()).then(function(made){
       if (!made) {
-        return hint(m === 'image' ? 'That image looks blank. Try one with darker ink, or untick “Make white paper see-through”.' : 'There’s nothing to see. Try again.', true);
+        return hint(m === 'image' ? W.blankImage : W.blank, true);
       }
       made.id = 'sig-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
       var s = addSig(made);
@@ -360,10 +424,10 @@
         closeDialog();
         place(s);
       } else {
-        sayDlg('Made ' + sigLabel(s) + '. Save it as an image, or open a PDF to put it on a page.');
+        sayDlg(fillIn(W.made, { sig: sigLabel(s) }));
       }
     }).catch(function(){
-      hint(m === 'image' ? image.name + ' couldn’t be read as an image.' : 'Couldn’t make the signature.', true);
+      hint(m === 'image' ? fillIn(W.badImage, { name: image.name }) : W.cantMake, true);
     }).then(function(){
       busy = false;
       syncUi();
@@ -371,7 +435,7 @@
   });
 
   // ---- Your signatures ----
-  function sigLabel(s){ return 'signature ' + s.n; }
+  function sigLabel(s){ return fillIn(W.sig, { n: s.n }); }
 
   function drawSigs(){
     sigList.textContent = '';
@@ -382,8 +446,8 @@
       put.type = 'button';
       put.className = 'sig-place';
       put.dataset.id = s.id;
-      put.setAttribute('aria-label', 'Put ' + sigLabel(s) + ' on this page');
-      put.title = 'Put it on this page';
+      put.setAttribute('aria-label', fillIn(W.put, { sig: sigLabel(s) }));
+      put.title = W.putTip;
       var img = document.createElement('img');
       img.src = s.url;
       img.alt = '';
@@ -393,14 +457,14 @@
       var save = document.createElement('a');
       save.className = 'link-btn';
       T.offer(save, s.url, 'signature-' + s.n + '.png');
-      save.textContent = 'Save image';
-      save.setAttribute('aria-label', 'Save ' + sigLabel(s) + ' as an image');
+      save.textContent = W.saveImage;
+      save.setAttribute('aria-label', fillIn(W.saveAs, { sig: sigLabel(s) }));
       var del = document.createElement('button');
       del.type = 'button';
       del.className = 'link-btn sig-del';
       del.dataset.id = s.id;
-      del.textContent = 'Delete';
-      del.setAttribute('aria-label', 'Delete ' + sigLabel(s));
+      del.textContent = W.del;
+      del.setAttribute('aria-label', fillIn(W.delSig, { sig: sigLabel(s) }));
       links.appendChild(save);
       links.appendChild(del);
       li.appendChild(put);
@@ -429,18 +493,17 @@
     var text = document.createElement('p');
     text.className = 'tip';
     var n = pagesOf(s).length;
-    text.textContent = 'Signature ' + s.n + ' is on ' + T.plural(n, 'page') + ' of ' + src.name + '. Deleting it takes it off ' +
-      (n === 1 ? 'that page' : 'them') + ' too, so sign and download the PDF first if you want it there.';
+    text.textContent = fillIn(W.onPages, { n: s.n, pages: T.count(n, W.pages), count: n, file: src.name }) + (n === 1 ? W.offOne : W.offMany);
     var keep = document.createElement('button');
     keep.type = 'button';
     keep.className = 'btn btn-ghost btn-sm sig-keep';
     keep.dataset.id = s.id;
-    keep.textContent = 'Keep it';
+    keep.textContent = W.keep;
     var yes = document.createElement('button');
     yes.type = 'button';
     yes.className = 'link-btn sig-del-yes';
     yes.dataset.id = s.id;
-    yes.textContent = 'Delete anyway';
+    yes.textContent = W.delAnyway;
     var row = document.createElement('div');
     row.className = 'row-btns';
     row.appendChild(keep);
@@ -459,7 +522,7 @@
     URL.revokeObjectURL(s.url);
     store();
     drawSigs();
-    sayDlg(had > placed.length ? 'Deleted ' + sigLabel(s) + ' and took it off the pages.' : 'Deleted ' + sigLabel(s) + '.');
+    sayDlg(fillIn(had > placed.length ? W.deletedOff : W.deleted, { sig: sigLabel(s) }));
     changed();
   }
 
@@ -487,7 +550,7 @@
       var k = sigById(keep.dataset.id);
       confirming = null;
       drawSigs();
-      sayDlg('Kept ' + sigLabel(k) + '. It’s still on the pages.');
+      sayDlg(fillIn(W.kept, { sig: sigLabel(k) }));
       sigList.querySelector('.sig-del[data-id="' + k.id + '"]').focus();
     }
     if (yes) deleteSig(sigById(yes.dataset.id));
@@ -539,10 +602,10 @@
   remember.addEventListener('change', function(){
     if (remember.checked) {
       store();
-      sayDlg(sigs.length ? 'Your signatures will be here next time, in this browser only.' : 'Signatures you make will be kept in this browser for next time.');
+      sayDlg(sigs.length ? W.keepAll : W.keepNew);
     } else {
       storing = storing.then(function(){ return db.remove(KEY); });
-      sayDlg('Your signatures are no longer kept in this browser.');
+      sayDlg(W.forget);
     }
   });
 
@@ -599,7 +662,7 @@
       el.className = 'placed' + (p === selected ? ' on' : '');
       el.tabIndex = 0;
       el.setAttribute('role', 'button');
-      el.setAttribute('aria-label', 'Signature ' + p.sig.n + '. Drag to move it, or use the arrow keys. Delete removes it.');
+      el.setAttribute('aria-label', fillIn(W.placedLabel, { n: p.sig.n }));
       el.setAttribute('aria-pressed', p === selected ? 'true' : 'false');
       var img = document.createElement('img');
       img.src = p.sig.url;
@@ -734,7 +797,7 @@
       placed.push({ sig: p.sig, page: i, x: p.x, y: p.y, w: p.w, angle: p.angle });
       added++;
     }
-    say(added ? 'Copied to ' + T.plural(added, 'more page') + '.' : 'It’s already on every page.');
+    say(added ? fillIn(W.copied, { more: T.count(added, W.more), count: added }) : W.everyPage);
     changed();
   });
 
@@ -762,13 +825,13 @@
   function showPage(){
     if (!src) return;
     var seq = ++showSeq, i = pageIndex;
-    pageLabel.textContent = 'Page ' + (i + 1) + ' of ' + src.pages;
+    pageLabel.textContent = fillIn(W.pageOf, { page: i + 1, pages: src.pages });
     prevBtn.disabled = i === 0;
     nextBtn.disabled = i >= src.pages - 1;
     drawPlaced();
     if (!src.view) {
       sheet.hidden = true;
-      setNote(src.viewFailed ? 'This file’s pages can’t be shown in this browser, so it can’t be signed here.' : 'Loading the page…');
+      setNote(src.viewFailed ? W.cantShow : W.loading);
       return;
     }
     var fit = stageSize(), dpr = Math.min(window.devicePixelRatio || 1, 2), cssWidth;
@@ -791,7 +854,7 @@
       setNote('');
     }).catch(function(err){
       if (seq !== showSeq) return;
-      setNote('Couldn’t draw this page: ' + errText(err));
+      setNote(fillIn(W.cantDraw, { error: errText(err) }));
     });
   }
 
@@ -818,10 +881,10 @@
   // ---- Choosing a file ----
   function openFile(file){
     if (!file || busy) return;
-    if (!P.isPdf(file)) return say('That isn’t a PDF file. Choose a .pdf to sign.', true);
+    if (!P.isPdf(file)) return say(W.notPdf, true);
     busy = true;
     syncUi();
-    say('Reading ' + file.name + '…');
+    say(fillIn(W.reading, { name: file.name }));
     var bytes;
     T.readBytes(file).then(function(buf){
       bytes = buf;
@@ -846,7 +909,7 @@
       fileBar.hidden = false;
       editor.hidden = false;
       fileName.textContent = file.name;
-      fileMeta.textContent = T.plural(src.pages, 'page') + ' · ' + T.fmtSize(file.size);
+      fileMeta.textContent = fillIn(W.meta, { pages: T.count(src.pages, W.pages), size: T.fmtSize(file.size) });
       say('');
       var current = src;
       P.loadPdfjs().then(function(lib){
@@ -864,7 +927,7 @@
     }).catch(function(err){
       if (err && err.library) return say(err.message, true);
       var encrypted = err && /encrypt/i.test(errText(err));
-      say(file.name + (encrypted ? ' is password-protected, so it can’t be signed.' : ' could not be read as a PDF.'), true);
+      say(fillIn(encrypted ? W.locked : W.unreadable, { name: file.name }), true);
     }).then(function(){
       busy = false;
       syncUi();
@@ -897,7 +960,7 @@
     drop.hidden = false;
     drawSigs();
     changed();
-    say('Closed ' + name + '. Your signatures are still here for the next one.');
+    say(fillIn(W.closed, { name: name }));
     drop.querySelector('input').focus();
   });
   T.onFileDrop(drop, function(list){ openFile(list[0]); });
@@ -908,7 +971,7 @@
     busy = true;
     syncUi();
     clearResult();
-    applyLabel.textContent = 'Signing…';
+    applyLabel.textContent = W.signing;
     var L, out, embedded = {}, count = placed.length, pages = pagesWith().length;
     P.loadPdfLib().then(function(lib){
       L = lib;
@@ -936,15 +999,15 @@
       resultUrl = URL.createObjectURL(blob);
       T.offer(downloadBtn, resultUrl, name);
       downloadBtn.title = name;
-      downloadLabel.textContent = 'Download (' + T.fmtSize(blob.size) + ')';
+      downloadLabel.textContent = fillIn(W.download, { size: T.fmtSize(blob.size) });
       downloadBtn.hidden = false;
-      say('Done. Added ' + T.plural(count, 'signature') + ' on ' + T.plural(pages, 'page') + '.');
+      say(fillIn(W.done, { signatures: T.count(count, W.signatures), pages: T.count(pages, W.pages), count: pages }));
       downloadBtn.focus();
     }).catch(function(err){
-      say('Something went wrong: ' + errText(err), true);
+      say(fillIn(W.failed, { error: errText(err) }), true);
     }).then(function(){
       busy = false;
-      applyLabel.textContent = 'Sign PDF';
+      applyLabel.textContent = W.sign;
       syncUi();
     });
   });

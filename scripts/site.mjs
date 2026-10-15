@@ -188,6 +188,10 @@ export const pages = [
     path: '/merge-pdf/',
     title: 'Merge PDFs — Combine PDF files free and private | bdnix',
     description: 'Combine several PDF files into one, free: put them in order and pick the pages you want from each. Runs in your browser; your files are never uploaded.',
+    bn: {
+      title: 'PDF জোড়া লাগান — ফ্রিতে PDF ফাইল একত্র করুন | bdnix',
+      description: 'কয়েকটি PDF ফাইল ফ্রিতে একটিতে জোড়া লাগান: ক্রম সাজিয়ে নিন আর প্রতিটি থেকে যে পৃষ্ঠাগুলো চান বেছে নিন। আপনার ব্রাউজারেই চলে; আপনার ফাইল কখনো আপলোড হয় না।'
+    },
     schema: 'WebApplication', category: 'UtilitiesApplication',
     app: {
       kind: 'tool', name: 'Merge PDFs', blurb: 'Combine PDFs into one',
@@ -204,6 +208,10 @@ export const pages = [
     path: '/watermark-pdf/',
     title: 'Watermark a PDF — Add text or image watermarks | bdnix',
     description: 'Add a text or image watermark to a PDF, free: pick the font, size, opacity, angle and position, or repeat it across the page. Runs in your browser; your file is never uploaded.',
+    bn: {
+      title: 'PDF-এ ওয়াটারমার্ক দিন — লেখা বা ছবির ওয়াটারমার্ক | bdnix',
+      description: 'PDF-এ ফ্রিতে লেখা বা ছবির ওয়াটারমার্ক দিন: ফন্ট, আকার, অস্বচ্ছতা, কোণ আর অবস্থান বেছে নিন, অথবা পুরো পৃষ্ঠায় বারবার বসান। আপনার ব্রাউজারেই চলে; আপনার ফাইল কখনো আপলোড হয় না।'
+    },
     schema: 'WebApplication', category: 'UtilitiesApplication',
     app: {
       kind: 'tool', name: 'Watermark a PDF', blurb: 'Stamp text or a logo',
@@ -220,6 +228,10 @@ export const pages = [
     path: '/redact-pdf/',
     title: 'Redact a PDF — Black out text for good | bdnix',
     description: 'Black out names, numbers and anything else in a PDF for good, free: find words on every page or draw boxes by hand. Runs in your browser; your file is never uploaded.',
+    bn: {
+      title: 'PDF-এর লেখা ঢেকে দিন — চিরতরে কালো করুন | bdnix',
+      description: 'PDF-এ নাম, নম্বর বা অন্য যেকোনো কিছু ফ্রিতে চিরতরে কালো করে দিন: প্রতিটি পৃষ্ঠায় শব্দ খুঁজুন বা হাতে বাক্স আঁকুন। আপনার ব্রাউজারেই চলে; আপনার ফাইল কখনো আপলোড হয় না।'
+    },
     schema: 'WebApplication', category: 'UtilitiesApplication',
     app: {
       kind: 'tool', name: 'Redact a PDF', blurb: 'Black out text for good',
@@ -237,6 +249,10 @@ export const pages = [
     path: '/sign-pdf/',
     title: 'Sign a PDF — Add your signature free | bdnix',
     description: 'Sign a PDF free: draw your signature, type it in a handwriting font or upload a picture of it, then move, resize and turn it anywhere on the page. Runs in your browser; your file is never uploaded.',
+    bn: {
+      title: 'PDF-এ সই করুন — ফ্রিতে আপনার সই বসান | bdnix',
+      description: 'ফ্রিতে PDF-এ সই করুন: সই আঁকুন, হাতের লেখার মতো ফন্টে টাইপ করুন বা সইয়ের ছবি দিন, তারপর পৃষ্ঠার যেকোনো জায়গায় সরান, ছোট-বড় করুন ও ঘোরান। আপনার ব্রাউজারেই চলে; আপনার ফাইল কখনো আপলোড হয় না।'
+    },
     schema: 'WebApplication', category: 'UtilitiesApplication',
     app: {
       kind: 'tool', name: 'Sign a PDF', blurb: 'Draw, type or upload a signature',
@@ -254,6 +270,10 @@ export const pages = [
     path: '/unlock-pdf/',
     title: 'Unlock a PDF — Remove a PDF password free | bdnix',
     description: 'Remove the password from a PDF you can open, free: type its password once and download a copy that opens without one. Runs in your browser; your file and password are never uploaded.',
+    bn: {
+      title: 'PDF আনলক করুন — ফ্রিতে PDF-এর পাসওয়ার্ড সরান | bdnix',
+      description: 'যে PDF আপনি খুলতে পারেন, ফ্রিতে তার পাসওয়ার্ড সরান: একবার পাসওয়ার্ড লিখুন, আর এমন একটি কপি ডাউনলোড করুন যা পাসওয়ার্ড ছাড়াই খোলে। আপনার ব্রাউজারেই চলে; আপনার ফাইল ও পাসওয়ার্ড কখনো আপলোড হয় না।'
+    },
     schema: 'WebApplication', category: 'UtilitiesApplication',
     app: {
       kind: 'tool', name: 'Unlock a PDF', blurb: 'Remove a PDF’s password',

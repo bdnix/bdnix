@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <!-- build:meta -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://www.googletagmanager.com; style-src 'self'; font-src 'self' data:; img-src 'self' data: blob: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' data: blob: https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; media-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>PDF-এর লেখা ঢেকে দিন — চিরতরে কালো করুন | bdnix</title>
+  <meta name="description" content="PDF-এ নাম, নম্বর বা অন্য যেকোনো কিছু ফ্রিতে চিরতরে কালো করে দিন: প্রতিটি পৃষ্ঠায় শব্দ খুঁজুন বা হাতে বাক্স আঁকুন। আপনার ব্রাউজারেই চলে; আপনার ফাইল কখনো আপলোড হয় না।">
+  <link rel="canonical" href="https://www.bdnix.com/bn/redact-pdf/">
+  <link rel="alternate" hreflang="en" href="https://www.bdnix.com/redact-pdf/">
+  <link rel="alternate" hreflang="bn" href="https://www.bdnix.com/bn/redact-pdf/">
+  <link rel="alternate" hreflang="x-default" href="https://www.bdnix.com/redact-pdf/">
+  <meta property="og:site_name" content="bdnix">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="bn_BD">
+  <meta property="og:url" content="https://www.bdnix.com/bn/redact-pdf/">
+  <meta property="og:title" content="PDF-এর লেখা ঢেকে দিন — চিরতরে কালো করুন | bdnix">
+  <meta property="og:description" content="PDF-এ নাম, নম্বর বা অন্য যেকোনো কিছু ফ্রিতে চিরতরে কালো করে দিন: প্রতিটি পৃষ্ঠায় শব্দ খুঁজুন বা হাতে বাক্স আঁকুন। আপনার ব্রাউজারেই চলে; আপনার ফাইল কখনো আপলোড হয় না।">
+  <meta property="og:image" content="https://www.bdnix.com/assets/img/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="bdnix: একটু খেলুন। একটু কাজ সেরে ফেলুন।">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "PDF-এর লেখা ঢেকে দিন", "url": "https://www.bdnix.com/bn/redact-pdf/", "description": "PDF-এ নাম, নম্বর বা অন্য যেকোনো কিছু ফ্রিতে চিরতরে কালো করে দিন: প্রতিটি পৃষ্ঠায় শব্দ খুঁজুন বা হাতে বাক্স আঁকুন। আপনার ব্রাউজারেই চলে; আপনার ফাইল কখনো আপলোড হয় না।", "inLanguage": "bn", "applicationCategory": "UtilitiesApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
+  <meta name="theme-color" content="#080a12">
+  <!-- /build:meta -->
+  <link rel="preload" href="/assets/fonts/inter-latin-400-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/inter-latin-800-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/hind-siliguri-bengali-400-normal.woff2?v=5.2.5" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/base.css?v=7e5309da52">
+  <link rel="stylesheet" href="/assets/css/icon-btn.css?v=20fd350a8d">
+  <link rel="stylesheet" href="/assets/css/avatar.css?v=1da16dde9f">
+  <link rel="stylesheet" href="/assets/css/profile-chip.css?v=9563092884">
+  <link rel="stylesheet" href="/assets/css/footer.css?v=5f3a8660bb">
+  <link rel="stylesheet" href="/assets/css/lang.css?v=1185137574">
+  <link rel="stylesheet" href="/assets/css/bangla.css?v=fe161e5d7d">
+  <link rel="stylesheet" href="/assets/css/page.css?v=6ee9010c44">
+  <link rel="stylesheet" href="/assets/css/tool.css?v=a70bc4eb15">
+  <link rel="stylesheet" href="/assets/css/file.css?v=6d62676c6d">
+  <link rel="stylesheet" href="/assets/css/editor.css?v=23a907ae4f">
+  <link rel="stylesheet" href="/assets/css/settings.css?v=e8dcb9f30c">
+  <link rel="stylesheet" href="/assets/css/redact.css?v=981d2e77af">
+  <script src="/assets/js/analytics.js?v=7fa4c31691"></script>
+</head>
+<body>
+  <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
+
+  <header class="bar">
+    <a class="wordmark" href="/bn/" aria-label="bdnix-এ ফিরে যান"><b>bdnix</b><span>/ redact-pdf</span></a>
+    <div class="bar-end">
+      <nav aria-label="ভাষা"><a class="lang-switch" href="/redact-pdf/" hreflang="en" lang="en">English</a></nav>
+      <a class="profile-chip" href="/bn/profile/" title="আপনার প্রোফাইল"><span class="avatar" data-profile-initial aria-hidden="true">ব</span><span data-profile-name>ব্যবহারকারী</span></a>
+    </div>
+  </header>
+
+  <main class="tool wide">
+    <p class="kicker">// টুল</p>
+    <h1>PDF-এর লেখা ঢেকে দিন</h1>
+    <p class="lede">নাম, নম্বর বা অন্য যেকোনো কিছু কালো করে ঢেকে দিন, তারপর এমন একটি কপি ডাউনলোড করুন যেখানে সেই লেখা শুধু ঢাকা পড়েনি, সত্যিই মুছে গেছে। সবকিছু আপনার ব্রাউজারেই হয়। আপনার ফাইল কখনো আপলোড হয় না।</p>
+
+    <label class="drop panel" id="drop">
+      <input type="file" id="picker" accept="application/pdf,.pdf">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <b>PDF ফাইলটি এখানে ছেড়ে দিন</b>
+      <span>অথবা <u>একটি ফাইল বেছে নিন</u></span>
+    </label>
+
+    <div class="file-bar panel" id="fileBar" hidden>
+      <div class="file-info">
+        <span class="file-name" id="fileName"></span>
+        <span class="file-meta" id="fileMeta"></span>
+      </div>
+      <button class="link-btn" id="changeBtn" type="button">ফাইল বদলান</button>
+    </div>
+
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+    <section class="editor" id="editor" hidden>
+      <div class="preview panel">
+        <div class="preview-stage" id="stage">
+          <div class="sheet" id="sheet" hidden>
+            <canvas id="pageCanvas" role="img" aria-label="পৃষ্ঠাটি, ঢাকার জন্য চিহ্নিত জায়গাসহ"></canvas>
+            <div class="marks" id="marks"></div>
+          </div>
+          <p class="preview-note" id="previewNote">পৃষ্ঠা লোড হচ্ছে…</p>
+        </div>
+        <div class="preview-nav">
+          <button class="icon-btn" id="prevPage" type="button" aria-label="আগের পৃষ্ঠা"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg></button>
+          <span class="label" id="pageLabel">পৃষ্ঠা ১ / ১</span>
+          <button class="icon-btn" id="nextPage" type="button" aria-label="পরের পৃষ্ঠা"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg></button>
+        </div>
+      </div>
+
+      <div class="settings panel">
+        <form class="field" id="findForm" autocomplete="off">
+          <label class="label" for="query">লেখা খুঁজুন</label>
+          <div class="find-row">
+            <input type="text" id="query" maxlength="200" spellcheck="false" placeholder="যেমন একটি নাম বা অ্যাকাউন্ট নম্বর">
+            <button class="btn btn-ghost btn-sm" id="findBtn" type="submit">সব চিহ্নিত করুন</button>
+          </div>
+          <span class="hint" id="findHint">প্রতিটি পৃষ্ঠায় লেখাটি যেখানে যেখানে আছে, সব চিহ্নিত করে। বড় হাতের বা ছোট হাতের অক্ষরে পার্থক্য হয় না।</span>
+        </form>
+
+        <div class="field">
+          <span class="label">আঁকুন</span>
+          <p class="tip">অন্য কিছু ঢাকতে, যেমন সই বা ছবি, পৃষ্ঠার ওপর টেনে বাক্স আঁকুন। কোনো বাক্স সরাতে তার × চাপুন।</p>
+        </div>
+
+        <div class="field">
+          <span class="label">চিহ্নিত</span>
+          <div class="marked-row">
+            <span class="marked" id="summary">এখনো কিছু চিহ্নিত করা হয়নি</span>
+            <button class="link-btn" id="undoBtn" type="button" disabled>ফিরিয়ে নিন</button>
+            <button class="link-btn" id="clearBtn" type="button" disabled>সব মুছুন</button>
+          </div>
+        </div>
+
+        <p class="tip">চিহ্নিত পৃষ্ঠাগুলো ছবিতে বদলে ফেলা হয়, আর চিহ্নিত জায়গাগুলো কালো করে দেওয়া হয়, তাই লুকানো লেখা কপি বা উদ্ধার করা যায় না। ওই পৃষ্ঠাগুলোর বাকি লেখাও পরে আর সিলেক্ট করা যাবে না। অন্য পৃষ্ঠাগুলো যেমন আছে তেমনই থাকে।</p>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="applyBtn" type="button" disabled>
+            <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="12" height="6" rx="1" fill="currentColor"/></svg>
+            <span id="applyLabel">লেখা ঢেকে দিন</span>
+          </button>
+          <a class="btn btn-ghost" id="downloadBtn" hidden>
+            <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4 7l4 4 4-4M2 14h12"/></svg>
+            <span id="downloadLabel">ডাউনলোড</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- build:footer -->
+  <footer class="foot">
+    <span>© <span id="year">২০২৬</span> bdnix · <a href="https://github.com/bdnix/bdnix">GitHub-এ ওপেন সোর্স</a></span>
+    <span class="foot-links"><a href="/bn/#suggest">নতুন টুল বা গেমের প্রস্তাব দিন</a><a href="mailto:root@bdnix.com">root@bdnix.com</a></span>
+  </footer>
+  <!-- /build:footer -->
+
+  <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
+  <script src="/assets/js/profile.js?v=aeac36bccf"></script>
+  <script src="/assets/js/files.js?v=39ad551b35"></script>
+  <script src="/assets/js/pdftools.js?v=4ebfb53601"></script>
+  <script src="/assets/js/redact-core.js?v=8dda3de171"></script>
+  <script src="/assets/js/redact.js?v=5977f9f6e6"></script>
+</body>
+</html>

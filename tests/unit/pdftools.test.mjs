@@ -128,3 +128,15 @@ test('loadPdfLib: fetches the vendored pdf-lib, with a message for the visitor i
   tags[1].onload();
   assert.equal(await ok, w.PDFLib);
 });
+
+test('parseRange: Bangla digits work too', () => {
+  assert.deepEqual(pages('১-৩, ৫', 10), { pages: [0, 1, 2, 4] });
+  assert.deepEqual(pages('৯-', 10), { pages: [8, 9] });
+  assert.deepEqual(pages('1-২', 10), { pages: [0, 1] });
+});
+
+test('parseRange: on a page in Bangla, its problems are explained in Bangla', () => {
+  const { bdnixPdf: B } = load(FILES, { document: { documentElement: { lang: 'bn' } } });
+  assert.deepEqual(plain(B.parseRange('১২', 10)), { error: '১২ নম্বর পৃষ্ঠা নেই (এই ফাইলে ১০ পৃষ্ঠা আছে)' });
+  assert.deepEqual(plain(B.parseRange('abc', 10)), { error: '“abc” কোনো পৃষ্ঠা বা পৃষ্ঠার পরিসর নয়' });
+});

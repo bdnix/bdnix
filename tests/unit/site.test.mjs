@@ -138,7 +138,7 @@ test('site: titles and descriptions are unique, and short enough for search resu
 
 test('bangla: a page\'s Bangla copy is at /bn<path>, with its own title, description and share tags', () => {
   const home = pages[0], profile = pages.find((p) => p.path === '/profile/');
-  assert.deepEqual(translated.map((p) => p.path), ['/', '/profile/']);
+  assert.deepEqual(translated.map((p) => p.path), ['/', '/merge-pdf/', '/watermark-pdf/', '/redact-pdf/', '/sign-pdf/', '/unlock-pdf/', '/profile/']);
   assert.equal(href(home, 'bn'), '/bn/');
   assert.equal(href(home, 'en'), '/');
   assert.equal(href(pages.find((p) => p.path === '/snake/'), 'bn'), '/snake/');   // no Bangla copy yet

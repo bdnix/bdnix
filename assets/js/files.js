@@ -2,12 +2,49 @@
 // every tool page uses these. Nothing is uploaded; files are read here in
 // the browser.
 (function(){
+  // The page's language: 'bn' on a tool's Bangla copy (under /bn/), where
+  // numbers are shown in Bangla digits, and 'en' everywhere else. A tool
+  // keeps its words for both in its own script and picks them with words().
+  var root = typeof document !== 'undefined' && document.documentElement;
+  var lang = root && root.lang === 'bn' ? 'bn' : 'en';
+  var DIGITS = '০১২৩৪৫৬৭৮৯';
+  function words(table){ return table[lang] || table.en; }
+  function num(n){
+    var s = String(n);
+    return lang === 'bn' ? s.replace(/[0-9]/g, function(d){ return DIGITS[d]; }) : s;
+  }
+  // "{n} of {total}" with each {name} put in, numbers in the page's digits.
+  function fillIn(text, values){
+    return String(text).replace(/\{(\w+)\}/g, function(all, key){
+      var v = values && values[key];
+      return v === undefined || v === null ? all : typeof v === 'number' ? num(v) : String(v);
+    });
+  }
+  // A count with the right form of its word: count(3, ['{n} page', '{n} pages']).
+  function count(n, forms){ return fillIn(forms[n === 1 ? 0 : 1], { n: n }); }
+
   function fmtSize(n){
-    if (n < 1024) return n + ' B';
-    if (n < 1048576) return (n / 1024).toFixed(0) + ' KB';
-    return (n / 1048576).toFixed(1) + ' MB';
+    if (n < 1024) return num(n) + ' B';
+    if (n < 1048576) return num((n / 1024).toFixed(0)) + ' KB';
+    return num((n / 1048576).toFixed(1)) + ' MB';
   }
   function plural(n, word){ return n + ' ' + word + (n === 1 ? '' : 's'); }
+
+  // What the download window says.
+  var W = words({
+    en: {
+      preparing: 'Preparing your file', preparingTitle: 'Preparing your file…',
+      wait: 'It downloads here as soon as it’s ready. Keep the other tab open until then.',
+      started: 'Your download has started. If it didn’t, use the button below. You can close this tab once the file is saved.',
+      download: 'Download {name}'
+    },
+    bn: {
+      preparing: 'আপনার ফাইল তৈরি হচ্ছে', preparingTitle: 'আপনার ফাইল তৈরি হচ্ছে…',
+      wait: 'তৈরি হলেই এখানে ডাউনলোড হবে। ততক্ষণ অন্য ট্যাবটি খোলা রাখুন।',
+      started: 'আপনার ডাউনলোড শুরু হয়েছে। না হলে নিচের বোতামটি ব্যবহার করুন। ফাইলটি সেভ হয়ে গেলে এই ট্যাবটি বন্ধ করতে পারেন।',
+      download: '{name} ডাউনলোড করুন'
+    }
+  });
 
   function readBytes(file){
     if (file.arrayBuffer) return file.arrayBuffer();
@@ -90,15 +127,15 @@
         return '<link rel="stylesheet" href="' + l.href.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '">';
       }).join('');
       d.open();
-      d.write('<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+      d.write('<!doctype html><html lang="' + lang + '"><head><meta charset="utf-8">' +
         '<meta name="viewport" content="width=device-width,initial-scale=1">' + links + '</head><body></body></html>');
       d.close();
     }
-    d.title = name ? name + ' · bdnix' : 'Preparing your file · bdnix';
+    d.title = (name || W.preparing) + ' · bdnix';
     var main = d.createElement('main');
     main.className = 'tool';
     var h1 = d.createElement('h1');
-    h1.textContent = name || 'Preparing your file…';
+    h1.textContent = name || W.preparingTitle;
     var lede = d.createElement('p');
     lede.className = 'lede';
     main.appendChild(h1);
@@ -106,17 +143,17 @@
     d.body.textContent = '';
     d.body.appendChild(main);
     if (!url) {
-      lede.textContent = 'It downloads here as soon as it’s ready. Keep the other tab open until then.';
+      lede.textContent = W.wait;
       return;
     }
-    lede.textContent = 'Your download has started. If it didn’t, use the button below. You can close this tab once the file is saved.';
+    lede.textContent = W.started;
     var actions = d.createElement('p');
     actions.className = 'actions';
     var a = d.createElement('a');
     a.className = 'btn btn-primary';
     a.href = url;
     a.download = name;
-    a.textContent = 'Download ' + name;
+    a.textContent = fillIn(W.download, { name: name });
     actions.appendChild(a);
     main.appendChild(actions);
     a.click();
@@ -178,5 +215,8 @@
     };
   }
 
-  window.bdnixFiles = { fmtSize: fmtSize, plural: plural, readBytes: readBytes, onFileDrop: onFileDrop, loadScript: loadScript, offer: offer, fileWindow: fileWindow };
+  window.bdnixFiles = {
+    lang: lang, words: words, num: num, fillIn: fillIn, count: count,
+    fmtSize: fmtSize, plural: plural, readBytes: readBytes, onFileDrop: onFileDrop, loadScript: loadScript, offer: offer, fileWindow: fileWindow
+  };
 })();

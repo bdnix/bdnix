@@ -129,18 +129,21 @@
   }
 
   // 0-based page indices (at least one) as the reader counts them: "page 2",
-  // "pages 1–5", "pages 1, 3 and 5–7".
-  function pageList(indices){
+  // "pages 1–5", "pages 1, 3 and 5–7". Another language passes its own
+  // words: { page, pages, and, num } (num writes a number in its digits).
+  var ENGLISH = { page: 'page ', pages: 'pages ', and: ' and ', num: String };
+  function pageList(indices, words){
+    var w = words || ENGLISH;
     var runs = [];
     indices.slice().sort(function(a, b){ return a - b; }).forEach(function(i){
       var last = runs[runs.length - 1];
       if (last && i === last[1] + 1) last[1] = i;
       else if (!last || i > last[1]) runs.push([i, i]);
     });
-    var parts = runs.map(function(r){ return r[0] === r[1] ? String(r[0] + 1) : (r[0] + 1) + '–' + (r[1] + 1); });
+    var parts = runs.map(function(r){ return r[0] === r[1] ? w.num(r[0] + 1) : w.num(r[0] + 1) + '–' + w.num(r[1] + 1); });
     var one = runs.length === 1 && runs[0][0] === runs[0][1];
-    var text = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : parts[0];
-    return (one ? 'page ' : 'pages ') + text;
+    var text = parts.length > 1 ? parts.slice(0, -1).join(', ') + w.and + parts[parts.length - 1] : parts[0];
+    return (one ? w.page : w.pages) + text;
   }
 
   window.bdnixRedact = {
