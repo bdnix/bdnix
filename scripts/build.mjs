@@ -5,7 +5,8 @@
 // their markers: each page's title, description and share tags
 // (<!-- build:meta -->), the footer (<!-- build:footer -->), the landing
 // page's cards (<!-- build:cards games|tools -->) and the profile page's
-// scores (<!-- build:scores -->). sitemap.xml is written from it too.
+// scores (<!-- build:scores -->). sitemap.xml is written from it too. A page
+// under bn/ is a page's Bangla copy, and gets them in Bangla.
 //
 // Every <script src="/assets/js/foo.js?v=..."> and
 // <link href="/assets/css/foo.css?v=..."> in the pages gets ?v= set to a
@@ -38,14 +39,15 @@ const changed = [];
 const missing = [];
 for (const page of pages(root)) {
   const html = fs.readFileSync(page, 'utf8');
-  const route = '/' + path.relative(root, path.dirname(page)).split(path.sep).join('/') + '/';
-  const entry = site.find((p) => p.path === route.replace('//', '/'));
+  const route = ('/' + path.relative(root, path.dirname(page)).split(path.sep).join('/') + '/').replace('//', '/');
+  const lang = /^\/bn\//.test(route) ? 'bn' : 'en';
+  const entry = site.find((p) => p.path === (lang === 'bn' ? route.slice(3) : route) && (lang === 'en' || p.bn));
   let next = html;
-  if (entry) next = fill(next, 'meta', () => meta(entry));
-  else if (next.includes('<!-- build:meta')) missing.push(`${path.relative(root, page)}: not in scripts/site.mjs`);
-  next = fill(next, 'footer', footer);
-  next = fill(next, 'cards', (list) => cards(site, list));
-  next = fill(next, 'scores', () => scores(site));
+  if (entry) next = fill(next, 'meta', () => meta(entry, lang));
+  else if (next.includes('<!-- build:meta')) missing.push(`${path.relative(root, page)}: not in scripts/site.mjs${lang === 'bn' ? ' with a bn title and description' : ''}`);
+  next = fill(next, 'footer', () => footer(lang));
+  next = fill(next, 'cards', (list) => cards(site, list, lang));
+  next = fill(next, 'scores', () => scores(site, lang));
   next = next.replace(/\/assets\/(js|css)\/([\w-]+)\.(js|css)(?:\?v=[\w.-]*)?(?=["'])/g, (match, dir, name, ext) => {
     const file = path.join(root, 'assets', dir, `${name}.${ext}`);
     if (!fs.existsSync(file)) { missing.push(`${path.relative(root, page)}: ${match}`); return match; }
@@ -56,9 +58,9 @@ for (const page of pages(root)) {
     if (!check) fs.writeFileSync(page, next);
   }
 }
-for (const p of site) {
-  const file = path.join(root, p.path, 'index.html');
-  if (!fs.existsSync(file)) missing.push(`scripts/site.mjs: ${p.path} has no index.html`);
+for (const route of site.flatMap((p) => p.bn ? [p.path, '/bn' + p.path] : [p.path])) {
+  const file = path.join(root, route, 'index.html');
+  if (!fs.existsSync(file)) missing.push(`scripts/site.mjs: ${route} has no index.html`);
   else if (!fs.readFileSync(file, 'utf8').includes('<!-- build:meta -->')) missing.push(`${path.relative(root, file)}: no <!-- build:meta --> markers`);
 }
 const map = path.join(root, 'sitemap.xml');

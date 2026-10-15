@@ -27,6 +27,7 @@ python3 -m http.server 8000   # http://localhost:8000
 - Shared scripts expose one `window.bdnix*` object each: the falling-block backdrop, file helpers (`files.js`), PDF helpers (`pdftools.js`), image-file helpers (`images.js`), the visitor's name, saved games, the sound engine and analytics. Each game adds its own sounds to the engine with `bdnixSound.add()`.
 - Pure logic (layout maths, parsing, encoding, game rules) is kept in separate `*-core.js` style files so it can be unit tested without a browser.
 - The landing page's search box matches what's typed against each card's name, description and `data-keywords` attribute (`search-core.js`). A new game or tool card needs a few `data-keywords` so it turns up for the words people are likely to try.
+- Pages in Bangla live under `bn/` (see [Bangla](#bangla)).
 - Third-party libraries are vendored in `assets/vendor/`, each with its licence file, and fetched only when a tool first needs one (`bdnixFiles.loadScript()`), never linked from a page.
 
 ## Tests
@@ -91,6 +92,17 @@ A new page needs:
 - A mention in the [README](../README.md) and the relevant guide in this directory.
 
 The share image (`assets/img/og.png`, 1200×630) and `assets/img/apple-touch-icon.png` are drawn by [scripts/og-image.mjs](../scripts/og-image.mjs). To change them, edit the script, run `npm run og-image` and commit the PNGs.
+
+## Bangla
+
+The home and profile pages have Bangla copies, `bn/index.html` and `bn/profile/index.html`, served at `/bn/` and `/bn/profile/`. Each is an ordinary page written in Bangla, with `<html lang="bn">`, and the switch in the top bar (`lang.css`) links it to its English page and back.
+
+- **What the build writes.** A page with a `bn` title and description in [scripts/site.mjs](../scripts/site.mjs) has a Bangla copy. `npm run build` writes its head tags, footer, cards and score rows in Bangla (the words are `bangla` in `site.mjs`, and each app's `bn` name, blurb and search words), links the two copies to each other for search engines (`hreflang`), and lists the Bangla copy in the sitemap. A game's or tool's card links to its English page until that page has a Bangla copy too. The build fails if a page with `bn` has no `bn/` file.
+- **Words in scripts.** A script that shows text keeps both languages' words in itself and picks them by `document.documentElement.lang` (see `main.js`, `profile-page.js`, `profile.js` and `analytics.js`). Numbers on a Bangla page use Bangla digits (`toLocaleString('bn-BD')`).
+- **Font.** Inter has no Bangla letters, so Bangla pages link `bangla.css`, which serves Hind Siliguri (Bengali letters only, OFL, in `assets/fonts/`) after Inter in the font stacks, turns off letter spacing for Bangla text and enlarges the small labels.
+- **Search.** `search-core.js` keeps Bangla letters, reads Bangla digits as 0-9 and ignores zero-width joiners, so a Bangla card is found by its Bangla name, blurb and search words and still by its English keywords.
+- **Tests.** Each Bangla page has its own site spec calling `checkPage(url, { lang: 'bn', ... })`, which checks it in Bangla, and `tests/unit/site.test.mjs` fails until it's there. Title and description lengths count a Bangla letter and the marks joined to it as one. Behaviour is checked in `tests/ui/landing-bn.spec.mjs` and `tests/ui/profile-bn.spec.mjs`.
+- **Translating a page.** Every string is reviewed by the site's owner before it ships. Give the page a `bn` title and description in `site.mjs`, write its `bn/` copy and its words in its script, add its site and behaviour specs, and run `npm run build`.
 
 ## Third-party libraries
 

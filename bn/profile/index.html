@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <!-- build:meta -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://www.googletagmanager.com; style-src 'self'; font-src 'self' data:; img-src 'self' data: blob: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' data: blob: https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; media-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>আপনার প্রোফাইল — bdnix</title>
+  <meta name="description" content="আপনার bdnix নাম আর গেমের সেরা স্কোর, এই ব্রাউজারেই রাখা।">
+  <link rel="canonical" href="https://www.bdnix.com/bn/profile/">
+  <link rel="alternate" hreflang="en" href="https://www.bdnix.com/profile/">
+  <link rel="alternate" hreflang="bn" href="https://www.bdnix.com/bn/profile/">
+  <link rel="alternate" hreflang="x-default" href="https://www.bdnix.com/profile/">
+  <meta name="robots" content="noindex">
+  <meta property="og:site_name" content="bdnix">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="bn_BD">
+  <meta property="og:url" content="https://www.bdnix.com/bn/profile/">
+  <meta property="og:title" content="আপনার প্রোফাইল — bdnix">
+  <meta property="og:description" content="আপনার bdnix নাম আর গেমের সেরা স্কোর, এই ব্রাউজারেই রাখা।">
+  <meta property="og:image" content="https://www.bdnix.com/assets/img/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="bdnix: একটু খেলুন। একটু কাজ সেরে ফেলুন।">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
+  <meta name="theme-color" content="#080a12">
+  <!-- /build:meta -->
+  <link rel="preload" href="/assets/fonts/inter-latin-400-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/inter-latin-800-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/hind-siliguri-bengali-400-normal.woff2?v=5.2.5" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/base.css?v=7e5309da52">
+  <link rel="stylesheet" href="/assets/css/avatar.css?v=1da16dde9f">
+  <link rel="stylesheet" href="/assets/css/footer.css?v=5f3a8660bb">
+  <link rel="stylesheet" href="/assets/css/page.css?v=6ee9010c44">
+  <link rel="stylesheet" href="/assets/css/lang.css?v=1185137574">
+  <link rel="stylesheet" href="/assets/css/bangla.css?v=fe161e5d7d">
+  <link rel="stylesheet" href="/assets/css/profile.css?v=4c1426d654">
+  <script src="/assets/js/analytics.js?v=7fa4c31691"></script>
+</head>
+<body>
+  <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
+
+  <header class="bar">
+    <a class="wordmark" href="/bn/" aria-label="bdnix-এ ফিরে যান"><b>bdnix</b><span>/ প্রোফাইল</span></a>
+    <nav aria-label="ভাষা"><a class="lang-switch" href="/profile/" hreflang="en" lang="en">English</a></nav>
+  </header>
+
+  <main class="tool">
+    <p class="kicker">// প্রোফাইল</p>
+
+    <section class="who panel">
+      <span class="avatar avatar-lg" data-profile-initial aria-hidden="true">ব</span>
+      <div class="who-text" id="nameView">
+        <h1 data-profile-name>ব্যবহারকারী</h1>
+        <button class="link-btn" id="editBtn" type="button">নাম বদলান</button>
+      </div>
+      <form class="name-form" id="nameForm" hidden>
+        <label class="label" for="nameInput">আপনার নাম</label>
+        <div class="name-row">
+          <input type="text" id="nameInput" maxlength="24" autocomplete="nickname" spellcheck="false">
+          <button class="btn btn-primary btn-sm" type="submit">সেভ করুন</button>
+          <button class="btn btn-ghost btn-sm" id="cancelBtn" type="button">বাতিল</button>
+        </div>
+        <p class="hint">সর্বোচ্চ ২৪টি অক্ষর। “ব্যবহারকারী”-তে ফিরে যেতে ঘরটি খালি রাখুন।</p>
+      </form>
+    </section>
+
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+    <section aria-labelledby="scoresLabel">
+      <p class="label" id="scoresLabel">সেরা স্কোর</p>
+      <div class="scores" id="scores">
+        <!-- build:scores -->
+        <div class="score panel" data-best="bdnix_tetris_best">
+          <svg class="score-icon" viewBox="0 0 40 40" aria-hidden="true"><rect x="4" y="18" width="10" height="10" rx="2" fill="#a855f7"/><rect x="15" y="18" width="10" height="10" rx="2" fill="#a855f7"/><rect x="26" y="18" width="10" height="10" rx="2" fill="#a855f7"/><rect x="15" y="7" width="10" height="10" rx="2" fill="#a855f7"/><rect x="4" y="29" width="10" height="10" rx="2" fill="#22d3ee" opacity=".55"/><rect x="15" y="29" width="10" height="10" rx="2" fill="#22d3ee" opacity=".55"/><rect x="26" y="29" width="10" height="10" rx="2" fill="#22d3ee" opacity=".55"/></svg>
+          <div class="score-text"><span>ইটের খেলা</span><b></b></div>
+          <a class="btn btn-ghost" href="/falling-blocks/">খেলুন</a>
+        </div>
+        <div class="score panel" data-best="bdnix_pacman_best">
+          <svg class="score-icon" viewBox="0 0 40 40" aria-hidden="true"><path d="M14 20 L24.4 14 A12 12 0 1 0 24.4 26 Z" fill="#facc15"/><circle cx="29" cy="20" r="2" fill="#eef1f8" opacity=".8"/><circle cx="36" cy="20" r="2" fill="#eef1f8" opacity=".8"/></svg>
+          <div class="score-text"><span>গোলকধাঁধা</span><b></b></div>
+          <a class="btn btn-ghost" href="/maze-chase/">খেলুন</a>
+        </div>
+        <div class="score panel" data-best="bdnix_flappy_best">
+          <svg class="score-icon" viewBox="0 0 40 40" aria-hidden="true"><rect x="27" y="2" width="9" height="11" rx="1.5" fill="#22d3ee" opacity=".55"/><rect x="27" y="27" width="9" height="11" rx="1.5" fill="#22d3ee" opacity=".55"/><circle cx="14" cy="20" r="9" fill="#facc15"/><ellipse cx="11" cy="22" rx="4.5" ry="2.6" fill="#f59e0b"/><circle cx="17.5" cy="17" r="2.6" fill="#fff"/><path d="M21 20l6 2-6 2z" fill="#fb923c"/></svg>
+          <div class="score-text"><span>ঝাপটা</span><b></b></div>
+          <a class="btn btn-ghost" href="/flap/">খেলুন</a>
+        </div>
+        <div class="score panel" data-best="bdnix_hop_best">
+          <svg class="score-icon" viewBox="0 0 40 40" aria-hidden="true"><rect x="0" y="4" width="40" height="10" rx="2" fill="#22d3ee" opacity=".3"/><rect x="24" y="5.5" width="12" height="7" rx="2.5" fill="#f472b6"/><rect x="0" y="26" width="40" height="10" rx="2" fill="#22d3ee" opacity=".3"/><rect x="3" y="27.5" width="12" height="7" rx="2.5" fill="#a855f7"/><ellipse cx="20" cy="21" rx="7" ry="7.5" fill="#f8fafc"/><ellipse cx="20" cy="15" rx="2" ry="2.6" fill="#ef4444"/><path d="M18 14l2-3.5 2 3.5z" fill="#fb923c"/></svg>
+          <div class="score-text"><span>রাস্তা পার</span><b></b></div>
+          <a class="btn btn-ghost" href="/road-hop/">খেলুন</a>
+        </div>
+        <div class="score panel" data-best="bdnix_snake_best">
+          <svg class="score-icon" viewBox="0 0 40 40" aria-hidden="true"><path d="M6 32h14V20h12V9" fill="none" stroke="#a855f7" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 20h12V9" fill="none" stroke="#22d3ee" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="30.5" cy="8" r="1.3" fill="#080a12"/><circle cx="33.5" cy="8" r="1.3" fill="#080a12"/><circle cx="10" cy="11" r="4" fill="#f472b6"/></svg>
+          <div class="score-text"><span>সাপ</span><b></b></div>
+          <a class="btn btn-ghost" href="/snake/">খেলুন</a>
+        </div>
+        <div class="score panel" data-best="bdnix_bricks_best">
+          <svg class="score-icon" viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="5" width="10" height="6" rx="1.5" fill="#f472b6"/><rect x="15" y="5" width="10" height="6" rx="1.5" fill="#f472b6"/><rect x="27" y="5" width="10" height="6" rx="1.5" fill="#f472b6"/><rect x="3" y="13" width="10" height="6" rx="1.5" fill="#a855f7"/><rect x="27" y="13" width="10" height="6" rx="1.5" fill="#a855f7"/><circle cx="20" cy="26" r="3" fill="#eef1f8"/><rect x="11" y="32" width="18" height="4" rx="2" fill="#22d3ee"/></svg>
+          <div class="score-text"><span>ইট ভাঙা</span><b></b></div>
+          <a class="btn btn-ghost" href="/brick-bounce/">খেলুন</a>
+        </div>
+        <div class="score panel" data-best="bdnix_chess_best" data-best-label="লেভেল">
+          <svg class="score-icon" viewBox="0 0 40 40" aria-hidden="true"><rect x="4" y="4" width="32" height="32" rx="3" fill="#22d3ee" opacity=".3"/><rect x="4" y="4" width="16" height="16" rx="3" fill="#a855f7" opacity=".55"/><rect x="20" y="20" width="16" height="16" rx="3" fill="#a855f7" opacity=".55"/><path d="M13 34h16c.4-6.5-.4-12-2.8-16.5C24.2 14 21.4 11.5 18 10.8L17.2 8l-2 3.2c-3.2 1.2-5.2 3.6-6 6.4l-1.2 4.4c-.3 1.3.7 2.4 2 2.2l3.2-1c1.3-.4 2.6-.8 3.8-.7C14.6 26.8 13 30 13 34z" fill="#eef1f8"/><circle cx="13.6" cy="15.6" r="1.2" fill="#080a12"/></svg>
+          <div class="score-text"><span>দাবা</span><b></b></div>
+          <a class="btn btn-ghost" href="/chess/">খেলুন</a>
+        </div>
+        <!-- /build:scores -->
+      </div>
+    </section>
+
+    <p class="stat" id="visits"></p>
+    <section class="analytics panel" aria-labelledby="analyticsLabel">
+      <div class="analytics-text">
+        <p class="label" id="analyticsLabel">অ্যানালিটিক্স কুকি</p>
+        <p id="analyticsState"></p>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="analyticsBtn" type="button"></button>
+    </section>
+
+    <p class="note">আপনার প্রোফাইল শুধু এই ব্রাউজারেই রাখা থাকে। এটি আপলোড বা শেয়ার করা হয় না, তাই অন্য ডিভাইসে এটি পাবেন না, আর এই সাইটের ডেটা মুছে ফেললে এটিও মুছে যাবে।</p>
+  </main>
+
+  <!-- build:footer -->
+  <footer class="foot">
+    <span>© <span id="year">২০২৬</span> bdnix · <a href="https://github.com/bdnix/bdnix">GitHub-এ ওপেন সোর্স</a></span>
+    <span class="foot-links"><a href="/bn/#suggest">নতুন টুল বা গেমের প্রস্তাব দিন</a><a href="mailto:root@bdnix.com">root@bdnix.com</a></span>
+  </footer>
+  <!-- /build:footer -->
+
+  <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
+  <script src="/assets/js/profile.js?v=aeac36bccf"></script>
+  <script src="/assets/js/profile-page.js?v=0177ac780d"></script>
+</body>
+</html>

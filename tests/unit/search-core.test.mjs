@@ -65,3 +65,16 @@ test('matches: an empty search matches everything', () => {
   assert.equal(S.matches('', ''), true);
   assert.equal(S.matches('', 'x'), false);
 });
+
+test('Bangla: letters are kept, digits read as 0-9, joiners dropped', () => {
+  assert.equal(S.fold('৩, ৬ বা ৯টি ছবি একসাথে।'), '3 6 বা 9টি ছবি একসাথে');
+  assert.equal(S.fold('র‍যা'), S.fold('রযা'));
+  assert.equal(S.matches('খান, বড় হন, নিজের লেজে কামড় দেবেন না সাপ', 'সাপ'), true);
+  assert.equal(S.matches('ইটের খেলা', 'ইট'), true);              // the start of a word
+  assert.equal(S.matches('ইটের খেলা', 'টের'), false);            // not the middle
+  assert.equal(S.matches('৩, ৬ বা ৯টি ছবি একসাথে', '6'), true);
+  assert.equal(S.matches('3, 6 or 9 photos in one', '৯'), true);
+  assert.equal(S.matches('ছবি ছোট করুন tool image', 'ছবি image'), true);
+  assert.equal(S.matches('পড়ন্ত', 'পড়'), true);                  // ড় typed as one letter or two
+  assert.deepEqual(plain(S.terms('ছবি ছবি pdfs')), ['ছবি', 'pdf']);
+});

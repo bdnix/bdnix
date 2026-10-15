@@ -26,3 +26,23 @@ test('the preloaded fonts are the ones the stylesheet asks for', async ({ page, 
     expect(res.headers()['content-type'], href).toBe('font/woff2');
   }
 });
+
+// Bangla pages add Hind Siliguri for the Bangla letters (bangla.css), also
+// from assets/fonts, and preload what the landing page's headline uses.
+test('the Bangla pages draw Bangla in the site\'s own Bangla font', async ({ page, request }) => {
+  await page.goto('/bn/');
+  const loaded = await page.evaluate(async () => {
+    const faces = ['400 16px "Hind Siliguri"', '600 16px "Hind Siliguri"', '700 16px "Hind Siliguri"'];
+    await Promise.all(faces.map((f) => document.fonts.load(f, 'বাংলা')));
+    return faces.map((f) => [f, document.fonts.check(f, 'বাংলা')]);
+  });
+  expect(loaded).toEqual(loaded.map(([f]) => [f, true]));
+  expect(await page.locator('h1').evaluate((h) => getComputedStyle(h).fontFamily)).toContain('Hind Siliguri');
+  const css = await (await request.get('/assets/css/bangla.css')).text();
+  const preloads = await page.locator('link[rel="preload"][href*="hind-siliguri"]').evaluateAll((els) => els.map((l) => l.getAttribute('href')));
+  expect(preloads.length).toBeGreaterThan(0);
+  for (const href of preloads) expect(css, href).toContain(`url(${href})`);
+  // The English pages don't need it.
+  await page.goto('/');
+  expect(await page.evaluate(() => [...document.fonts].some((f) => f.family.includes('Hind')))).toBe(false);
+});

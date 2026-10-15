@@ -3,12 +3,18 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SITE, pages } from '../../scripts/site.mjs';
-import { schema, meta, footer, cards, scores, fill, sitemap, esc, CSP } from '../../scripts/parts.mjs';
+import { SITE, pages, bangla } from '../../scripts/site.mjs';
+import { schema, meta, footer, cards, scores, fill, sitemap, esc, CSP, digits, href } from '../../scripts/parts.mjs';
 
 // scripts/site.mjs lists every page; scripts/parts.mjs turns it into the
 // parts of the pages that scripts/build.mjs writes.
 const apps = pages.filter((p) => p.app);
+// Pages with a Bangla copy at /bn<path>.
+const translated = pages.filter((p) => p.bn);
+// Length as a reader counts it: Bangla vowel signs and other marks joined to
+// a letter don't count as letters of their own (for English, the same as
+// .length).
+const length = (s) => [...new Intl.Segmenter('bn').segment(s)].length;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 test('site: every page once, each with a title and description', () => {
@@ -33,6 +39,9 @@ test('site: every game and tool has a card, and every game a best-score key', ()
     else assert.equal(p.app.best, undefined, p.path);
   }
   assert.equal(apps.filter((p) => p.app.kind === 'game').length, 7);
+  // In Bangla too, for the Bangla landing page.
+  for (const p of apps) assert.ok(p.app.bn && p.app.bn.name && p.app.bn.blurb && p.app.bn.keywords, p.path);
+  assert.equal(new Set(apps.map((p) => p.app.bn.name)).size, apps.length);
   assert.equal(apps.filter((p) => p.app.kind === 'tool').length, 9);
 });
 
@@ -93,7 +102,7 @@ test('the footer and sitemap', () => {
   const xml = sitemap(pages);
   assert.ok(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>\n<urlset'));
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
-  assert.deepEqual(locs, pages.filter((p) => !p.noindex).map((p) => SITE + p.path));
+  assert.deepEqual(locs, pages.filter((p) => !p.noindex).flatMap((p) => p.bn ? [p.path, '/bn' + p.path] : [p.path]).map((path) => SITE + path));
   assert.ok(!locs.includes(SITE + '/profile/'));
   assert.equal(esc('a&b<c>"d"'), 'a&amp;b&lt;c&gt;&quot;d&quot;');
 });
@@ -114,13 +123,72 @@ test('the content security policy: the site\'s own files, Google Analytics, noth
 });
 
 test('site: titles and descriptions are unique, and short enough for search results', () => {
-  assert.equal(new Set(pages.map((p) => p.title)).size, pages.length);
-  assert.equal(new Set(pages.map((p) => p.description)).size, pages.length);
-  for (const p of pages) {
-    assert.ok(p.title.length <= 60, p.path);
-    assert.ok(p.description.length <= 230, p.path);
-    if (!p.noindex) assert.ok(p.description.length >= 70, p.path);
+  const all = [...pages, ...translated.map((p) => ({ ...p, ...p.bn, path: '/bn' + p.path }))];
+  assert.equal(new Set(all.map((p) => p.title)).size, all.length);
+  assert.equal(new Set(all.map((p) => p.description)).size, all.length);
+  for (const p of all) {
+    assert.ok(length(p.title) <= 60, p.path);
+    assert.ok(length(p.description) <= 230, p.path);
+    if (!p.noindex) assert.ok(length(p.description) >= 70, p.path);
   }
+  // A Bangla letter with its vowel sign is one letter to a reader.
+  assert.equal(length('কি'), 1);
+  assert.equal(length('Snake'), 5);
+});
+
+test('bangla: a page\'s Bangla copy is at /bn<path>, with its own title, description and share tags', () => {
+  const home = pages[0], profile = pages.find((p) => p.path === '/profile/');
+  assert.deepEqual(translated.map((p) => p.path), ['/', '/profile/']);
+  assert.equal(href(home, 'bn'), '/bn/');
+  assert.equal(href(home, 'en'), '/');
+  assert.equal(href(pages.find((p) => p.path === '/snake/'), 'bn'), '/snake/');   // no Bangla copy yet
+  for (const p of translated) assert.ok(p.bn.title.includes('bdnix') && p.bn.description, p.path);
+
+  const tags = meta(home, 'bn');
+  assert.equal(tags[1], `<title>${esc(home.bn.title)}</title>`);
+  assert.ok(tags.includes(`<meta name="description" content="${esc(home.bn.description)}">`));
+  assert.ok(tags.includes(`<link rel="canonical" href="${SITE}/bn/">`));
+  assert.ok(tags.includes(`<meta property="og:url" content="${SITE}/bn/">`));
+  assert.ok(tags.includes('<meta property="og:locale" content="bn_BD">'));
+  assert.ok(tags.includes(`<meta property="og:image:alt" content="${bangla.shareAlt}">`));
+  assert.deepEqual(schema(home, 'bn'), { '@context': 'https://schema.org', '@type': 'WebSite', name: 'bdnix', url: SITE + '/bn/', description: home.bn.description, inLanguage: 'bn' });
+  // Both copies point search engines at each other, English as the default.
+  const alternates = [
+    `<link rel="alternate" hreflang="en" href="${SITE}/">`,
+    `<link rel="alternate" hreflang="bn" href="${SITE}/bn/">`,
+    `<link rel="alternate" hreflang="x-default" href="${SITE}/">`
+  ];
+  for (const lang of ['en', 'bn']) assert.deepEqual(meta(home, lang).filter((t) => t.includes('hreflang')), alternates);
+  assert.ok(!meta(home, 'en').some((t) => t.includes('og:locale')));
+  assert.ok(!meta(pages.find((p) => p.path === '/snake/')).some((t) => t.includes('hreflang')));
+  assert.ok(meta(profile, 'bn').includes('<meta name="robots" content="noindex">'));
+  assert.ok(meta(profile, 'bn').includes(`<link rel="canonical" href="${SITE}/bn/profile/">`));
+  // A game's own page, once it has a Bangla copy, is named in Bangla.
+  const snake = pages.find((p) => p.path === '/snake/');
+  assert.equal(schema({ ...snake, bn: { title: 'সাপ | bdnix', description: 'খেলুন' } }, 'bn').name, snake.app.bn.name);
+});
+
+test('bangla: cards, scores and footer in Bangla, with Bangla digits', () => {
+  const html = cards(pages, 'games', 'bn').join('\n');
+  const snake = pages.find((p) => p.path === '/snake/');
+  assert.ok(html.includes(`<a class="card panel" href="/snake/" data-keywords="${snake.app.bn.keywords} ${snake.app.keywords}">`));
+  assert.ok(html.includes(`<b>${snake.app.bn.name}</b><span>${snake.app.bn.blurb}</span>`));
+  assert.ok(!html.includes(`<b>${snake.app.name}</b>`));
+  const rows = scores(pages, 'bn').join('\n');
+  assert.ok(rows.includes(`data-best="bdnix_chess_best" data-best-label="${bangla.level}"`));
+  assert.ok(rows.includes(`<a class="btn btn-ghost" href="/snake/">${bangla.play}</a>`));
+  assert.ok(rows.includes(`<span>${snake.app.bn.name}</span>`));
+  const foot = footer('bn').join('\n');
+  assert.ok(foot.includes('<span id="year">২০২৬</span>'));
+  assert.ok(foot.includes(`<a href="https://github.com/bdnix/bdnix">${bangla.openSource}</a>`));
+  assert.ok(foot.includes(`<a href="/bn/#suggest">${bangla.suggest}</a>`));
+  assert.ok(footer().join('\n').includes('<a href="/#suggest">Suggest a tool or game</a>'));
+  assert.equal(digits('1,234 / 2026', 'bn'), '১,২৩৪ / ২০২৬');
+  assert.equal(digits(2026, 'en'), '2026');
+  // The sitemap lists each public page's Bangla copy after it.
+  const locs = [...sitemap(pages).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+  assert.deepEqual(locs.slice(0, 3), [SITE + '/', SITE + '/bn/', SITE + '/falling-blocks/']);
+  assert.ok(!locs.includes(SITE + '/bn/profile/'));
 });
 
 test('site: sitemap.xml lists exactly the public pages', () => {
@@ -137,6 +205,10 @@ test('site: every page has its own site spec, which runs the shared checks for i
     .map((f) => ({ file: f, text: fs.readFileSync(path.join(dir, f), 'utf8') }));
   const calls = (fn) => specs.flatMap((s) => [...s.text.matchAll(new RegExp(`\\b${fn}\\('([^']*)'`, 'g'))].map((m) => [m[1], s.file]));
   const pageChecks = calls('checkPage'), gameChecks = calls('checkGame');
+  for (const p of translated) {
+    const own = pageChecks.filter(([url]) => url === '/bn' + p.path);
+    assert.equal(own.length, 1, `/bn${p.path}: one checkPage() in a tests/ui/*.site.spec.mjs`);
+  }
   for (const p of pages) {
     const own = pageChecks.filter(([url]) => url === p.path);
     assert.equal(own.length, 1, `${p.path}: one checkPage() in a tests/ui/*.site.spec.mjs`);
@@ -145,6 +217,6 @@ test('site: every page has its own site spec, which runs the shared checks for i
     if (games.length) assert.equal(games[0][1], own[0][1], `${p.path}: both in the same spec`);
   }
   // Nothing checked that isn't a page, and one page per site spec.
-  for (const [url, file] of pageChecks) assert.ok(pages.some((p) => p.path === url), `${file}: ${url} isn't in scripts/site.mjs`);
+  for (const [url, file] of pageChecks) assert.ok(pages.some((p) => p.path === url || (p.bn && '/bn' + p.path === url)), `${file}: ${url} isn't in scripts/site.mjs`);
   assert.equal(new Set(pageChecks.map(([, file]) => file)).size, pageChecks.length);
 });

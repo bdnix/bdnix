@@ -37,6 +37,20 @@ export async function serveLive(page){
 }
 
 const meta = (page, attr, name) => page.locator(`head meta[${attr}="${name}"]`);
+// Length as a reader counts it: a Bangla letter and the marks joined to it
+// are one (for English, the same as .length).
+const length = (s) => [...new Intl.Segmenter('bn').segment(s)].length;
+// What the footer and the cookie banner say, in a page's language.
+const WORDS = {
+  en: {
+    openSource: 'Open source on GitHub', suggest: 'Suggest a tool or game', home: '/',
+    consent: 'Cookie consent', banner: 'Google Analytics cookies', accept: 'Accept', decline: 'Decline', profile: 'your profile'
+  },
+  bn: {
+    openSource: 'GitHub-এ ওপেন সোর্স', suggest: 'নতুন টুল বা গেমের প্রস্তাব দিন', home: '/bn/',
+    consent: 'কুকি ব্যবহারের সম্মতি', banner: 'Google Analytics-এর কুকি', accept: 'সম্মতি দিচ্ছি', decline: 'না, থাক', profile: 'আপনার প্রোফাইলে'
+  }
+};
 // Other games' names, which only a credit line may use.
 const TRADEMARKS = /tetris|pac-?man|flappy|crossy|blockade|breakout/i;
 
@@ -46,7 +60,9 @@ const TRADEMARKS = /tetris|pac-?man|flappy|crossy|blockade|breakout/i;
 //   noindex   kept out of search engines (no minimum description length)
 //   footer    has the site's footer
 //   game      a game: asks for the phone upright (see checks-game.mjs)
+//   lang      'bn' for a page's Bangla copy (under /bn/); English otherwise
 export function checkPage(url, opts = {}){
+  const lang = opts.lang || 'en', words = WORDS[lang];
   test(`${url}: its head has the security policy first, analytics, and search and share tags`, async ({ page, request }) => {
     const google = watchGoogle(page);
     await page.goto(url);
@@ -75,11 +91,13 @@ export function checkPage(url, opts = {}){
     // Title, description, canonical URL and share tags.
     const title = await page.title();
     expect(title).toMatch(/bdnix/);
-    expect(title.length, 'title length').toBeLessThanOrEqual(60);
+    expect(length(title), 'title length').toBeLessThanOrEqual(60);
     const description = await meta(page, 'name', 'description').getAttribute('content');
     // Long enough for search results to show something useful.
-    if (!opts.noindex) expect(description.length, 'description length').toBeGreaterThanOrEqual(70);
-    expect(description.length, 'description length').toBeLessThanOrEqual(230);
+    if (!opts.noindex) expect(length(description), 'description length').toBeGreaterThanOrEqual(70);
+    expect(length(description), 'description length').toBeLessThanOrEqual(230);
+    // The page says what language it's in.
+    expect(await page.locator('html').getAttribute('lang')).toBe(lang);
     await expect(page.locator('head link[rel="canonical"]')).toHaveAttribute('href', LIVE + url);
     await expect(meta(page, 'property', 'og:url')).toHaveAttribute('content', LIVE + url);
     await expect(meta(page, 'property', 'og:title')).toHaveAttribute('content', title);
@@ -156,8 +174,8 @@ export function checkPage(url, opts = {}){
 
     if (opts.footer) {
       const foot = page.locator('footer.foot');
-      await expect(foot.getByRole('link', { name: 'Open source on GitHub' })).toHaveAttribute('href', 'https://github.com/bdnix/bdnix');
-      await expect(foot.getByRole('link', { name: 'Suggest a tool or game' })).toHaveAttribute('href', '/#suggest');
+      await expect(foot.getByRole('link', { name: words.openSource })).toHaveAttribute('href', 'https://github.com/bdnix/bdnix');
+      await expect(foot.getByRole('link', { name: words.suggest })).toHaveAttribute('href', words.home + '#suggest');
       await expect(foot.getByRole('link', { name: 'root@bdnix.com' })).toHaveAttribute('href', 'mailto:root@bdnix.com');
     }
     await expectNoSideScroll(page);
@@ -175,12 +193,12 @@ export function checkPage(url, opts = {}){
     page.on('request', (r) => { if (!r.url().startsWith(LIVE + '/') && !r.url().startsWith('data:')) elsewhere.push(r.url()); });
     await page.goto(LIVE + url);
     await page.evaluate(() => document.fonts.ready);
-    const banner = page.getByRole('region', { name: 'Cookie consent' });
+    const banner = page.getByRole('region', { name: words.consent });
     await expect(banner).toBeVisible();
-    await expect(banner).toContainText('Google Analytics cookies');
-    await expect(banner.getByRole('button', { name: 'Accept' })).toBeVisible();
-    await expect(banner.getByRole('button', { name: 'Decline' })).toBeVisible();
-    await expect(banner.getByRole('link', { name: 'your profile' })).toHaveAttribute('href', '/profile/');
+    await expect(banner).toContainText(words.banner);
+    await expect(banner.getByRole('button', { name: words.accept })).toBeVisible();
+    await expect(banner.getByRole('button', { name: words.decline })).toBeVisible();
+    await expect(banner.getByRole('link', { name: words.profile })).toHaveAttribute('href', words.home + 'profile/');
     await expectNoSideScroll(page);
     expect(await page.evaluate(() => typeof window.gtag)).toBe('undefined');
     expect(elsewhere).toEqual([]);
