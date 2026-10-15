@@ -16,7 +16,7 @@
   // build:languages
   var LANGUAGES = [
     {"code":"en","name":"English"},
-    {"code":"bn","name":"বাংলা","digits":"০১২৩৪৫৬৭৮৯","file":"/assets/lang/bn.js?v=2e6b5f69f0","style":"/assets/css/bangla.css?v=c9504f1488"}
+    {"code":"bn","name":"বাংলা","digits":"০১২৩৪৫৬৭৮৯","file":"/assets/lang/bn.js?v=55d4ec33f3","style":"/assets/css/bangla.css?v=c9504f1488"}
   ];
   // /build:languages
 
