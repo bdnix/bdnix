@@ -97,10 +97,14 @@ test('the typewriter types in Bangla, and screen readers hear one steady Bangla 
   await expect(page.locator('.terminal')).toMatchAriaSnapshot(`- paragraph: ${said}`);
   const typed = page.locator('#typed');
   await expect(typed).toHaveText('এক রাউন্ড ইটের খেলা খেলুন।');
-  await page.clock.runFor(4000);
-  await expect(typed).not.toHaveText('এক রাউন্ড ইটের খেলা খেলুন।');
-  await page.clock.runFor(4000);
-  await expect(typed).toHaveText(/^গোলকধাঁধায়/);
+  // It rubs the line out and types the next one, letter by letter. The pause
+  // between letters is random, so step through time and collect what it shows.
+  const seen = new Set();
+  for (let i = 0; i < 200 && !seen.has('গোলকধাঁধায় ভূতদের ফাঁকি দিন।'); i++) {
+    await page.clock.runFor(100);
+    seen.add(await typed.textContent());
+  }
+  expect(seen).toContain('গোলকধাঁধায় ভূতদের ফাঁকি দিন।');
 });
 
 test('asks for requests in Bangla, with a Bangla email ready to send', async ({ page }) => {
