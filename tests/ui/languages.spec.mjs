@@ -78,12 +78,16 @@ test('text a page adds later, and its numbers, are translated as it appears', as
     q.innerHTML = 'Mixed <b>and</b> 12';
     q.setAttribute('translate', 'no');
     document.body.appendChild(q);
+    const odd = document.createElement('p');
+    odd.innerHTML = 'Odd <b>words</b>  here';
+    document.body.appendChild(odd);
     await new Promise((r) => setTimeout(r, 0));
     p.textContent = '2026';
     await new Promise((r) => setTimeout(r, 0));
     return [p.textContent, p.title, q.textContent, window.bdnixLang.t('{n} of {total}', { n: 3, total: 'x' })];
   });
   expect(shown).toEqual(['২০২৬', 'আপনার প্রোফাইল', 'Mixed and 12', '৩ of x']);
-  // The test asked for a phrase with no translation: it's listed.
-  expect(await page.evaluate(() => window.bdnixLang.missing)).toEqual(['{n} of {total}']);
+  // Text with no translation is listed: a paragraph with words in bold as
+  // it reads, and a phrase the test asked for.
+  expect(await page.evaluate(() => window.bdnixLang.missing)).toEqual(['Odd words here', '{n} of {total}']);
 });

@@ -171,7 +171,7 @@
 
   function translateNode(node){
     if (node.nodeType === 3) {
-      if (keep(node.parentNode) || mixed(node.parentNode)) return;
+      if (keep(node.parentNode) || inMixed(node)) return;
       var v = digits(translateText(node.nodeValue));
       if (v !== node.nodeValue) node.nodeValue = v;
       return;
@@ -186,7 +186,8 @@
       if (done) done.add(node);
     }
     if (node.hasAttribute('data-languages')) switcher(node);
-    if (mixed(node)) translateMixed(node);
+    // Text with words in bold or a link in it is translated as a whole.
+    if (mixed(node)) return translateMixed(node);
     for (var c = node.firstChild; c; c = c.nextSibling) translateNode(c);
   }
 
@@ -214,11 +215,17 @@
     return text && inline;
   }
 
+  // Text that's part of such a whole, there or in its bold words or link.
+  function inMixed(node){
+    var p = node.parentNode;
+    return mixed(p) || (!!p && INLINE.test(p.nodeName) && mixed(p.parentNode));
+  }
+
   function translateMixed(el){
     if (done && done.has(el)) return;
     var key = el.innerHTML.replace(/<(\w+)[^>]*>/g, '<$1>').replace(/\s+/g, ' ').trim();
     var to = pack[key];
-    if (typeof to !== 'string') { miss(key.replace(/<[^>]*>/g, ''), true); return; }
+    if (typeof to !== 'string') { miss(el.textContent.replace(/\s+/g, ' ').trim(), true); return; }
     if (done) done.add(el);
     var own = Array.prototype.filter.call(el.childNodes, function(c){ return c.nodeType === 1; });
     var box = document.createElement('template');
