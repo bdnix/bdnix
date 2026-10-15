@@ -12,7 +12,9 @@ export function load(files, globals = {}){
   const sandbox = { console, ...globals };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
-  for (const file of [].concat(files)) {
+  // Every page loads lang.js first (the visitor's language), so the scripts
+  // can count on it. In English, as here, it leaves their words as they are.
+  for (const file of ['assets/js/lang.js'].concat(files)) {
     // An absolute filename lets coverage tools attribute the code to the file.
     const abs = path.join(root, file);
     vm.runInContext(fs.readFileSync(abs, 'utf8'), sandbox, { filename: abs });

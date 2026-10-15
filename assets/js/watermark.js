@@ -3,53 +3,9 @@
 (function(){
   var L = null;   // pdf-lib, once pdfLib() has loaded it
   var T = window.bdnixFiles, P = window.bdnixPdf;
+  var Lang = window.bdnixLang, t = Lang.t, count = Lang.count;
   var Layout = window.bdnixWatermarkLayout;
-  var fillIn = T.fillIn, count = T.count;
   function $(id){ return document.getElementById(id); }
-
-  // Its words, in the page's language (bn/watermark-pdf/ is the Bangla copy).
-  var W = T.words({
-    en: {
-      pages: ['{n} page', '{n} pages'],
-      fontLibrary: 'Couldn’t load the font tools. Check your connection.',
-      pageOf: 'Page {page} of {pages}',
-      noPreview: 'The preview isn’t available for this file or browser, but you can still add the watermark.',
-      loading: 'Loading preview…', fixPages: 'Fix the page list to see the watermark.',
-      notIncluded: 'Page {page} isn’t in your page list, so it stays as it is.',
-      chooseImage: 'Choose an image to see it here.', chooseFont: 'Choose a font file to see it here.',
-      typeText: 'Type some text to see it here.', cantDraw: 'Couldn’t draw the preview: {error}',
-      some: '{pages} of {total} will be watermarked', all: 'All {pages} will be watermarked',
-      notPdf: 'That isn’t a PDF file. Choose a .pdf to watermark.', reading: 'Reading {name}…',
-      meta: '{pages} · {size}',
-      locked: '{name} is password-protected, so it can’t be watermarked.', unreadable: '{name} could not be read as a PDF.',
-      badImage: 'Couldn’t use {name}. Try a PNG or JPG image.', badFont: 'Couldn’t use {name}. Choose a .ttf or .otf font file.',
-      imageTip: 'PNG or JPG, e.g. a logo', fontTip: 'A .ttf or .otf file',
-      reset: 'Settings reset to the defaults.',
-      adding: 'Adding watermark…', add: 'Add watermark',
-      noImage: 'choose an image first', noText: 'type some text first',
-      download: 'Download ({size})', done: 'Done. Watermarked {pages}.', failed: 'Something went wrong: {error}'
-    },
-    bn: {
-      pages: ['{n} পৃষ্ঠা', '{n} পৃষ্ঠা'],
-      fontLibrary: 'ফন্টের টুলগুলো লোড করা যায়নি। আপনার ইন্টারনেট সংযোগ দেখুন।',
-      pageOf: 'পৃষ্ঠা {page} / {pages}',
-      noPreview: 'এই ফাইল বা ব্রাউজারে প্রিভিউ দেখানো যাচ্ছে না, তবে ওয়াটারমার্ক দিতে পারবেন।',
-      loading: 'প্রিভিউ লোড হচ্ছে…', fixPages: 'ওয়াটারমার্ক দেখতে পৃষ্ঠার তালিকা ঠিক করুন।',
-      notIncluded: '{page} নম্বর পৃষ্ঠা আপনার তালিকায় নেই, তাই এটি যেমন আছে তেমনই থাকবে।',
-      chooseImage: 'এখানে দেখতে একটি ছবি বেছে নিন।', chooseFont: 'এখানে দেখতে একটি ফন্ট ফাইল বেছে নিন।',
-      typeText: 'এখানে দেখতে কিছু লেখা লিখুন।', cantDraw: 'প্রিভিউ আঁকা যায়নি: {error}',
-      some: '{total} পৃষ্ঠার মধ্যে {count} পৃষ্ঠায় ওয়াটারমার্ক বসবে', all: 'সব {count} পৃষ্ঠায় ওয়াটারমার্ক বসবে',
-      notPdf: 'এটি PDF ফাইল নয়। ওয়াটারমার্ক দিতে একটি .pdf বেছে নিন।', reading: '{name} পড়া হচ্ছে…',
-      meta: '{pages} · {size}',
-      locked: '{name} পাসওয়ার্ড দিয়ে সুরক্ষিত, তাই এতে ওয়াটারমার্ক দেওয়া যাবে না।', unreadable: '{name} PDF হিসেবে পড়া যায়নি।',
-      badImage: '{name} ব্যবহার করা যায়নি। একটি PNG বা JPG ছবি দিয়ে চেষ্টা করুন।', badFont: '{name} ব্যবহার করা যায়নি। একটি .ttf বা .otf ফন্ট ফাইল বেছে নিন।',
-      imageTip: 'PNG বা JPG, যেমন একটি লোগো', fontTip: 'একটি .ttf বা .otf ফাইল',
-      reset: 'সেটিংস আগের অবস্থায় ফেরানো হয়েছে।',
-      adding: 'ওয়াটারমার্ক দেওয়া হচ্ছে…', add: 'ওয়াটারমার্ক দিন',
-      noImage: 'আগে একটি ছবি বেছে নিন', noText: 'আগে কিছু লেখা লিখুন',
-      download: 'ডাউনলোড ({size})', done: 'হয়ে গেছে। {count} পৃষ্ঠায় ওয়াটারমার্ক বসানো হয়েছে।', failed: 'একটা সমস্যা হয়েছে: {error}'
-    }
-  });
 
   var drop = $('drop'), picker = $('picker');
   var fileBar = $('fileBar'), fileName = $('fileName'), fileMeta = $('fileMeta'), changeBtn = $('changeBtn');
@@ -64,7 +20,7 @@
   var layerHint = $('layerHint'), resetBtn = $('resetBtn');
   var F = form.elements;
 
-  $('year').textContent = T.num(new Date().getFullYear());
+  $('year').textContent = Lang.num(new Date().getFullYear());
 
   // src: { name, size, bytes, pages, doc (pdf-lib, read only), view (pdf.js) and its viewTask }
   var src = null;
@@ -196,7 +152,7 @@
   function pdfLib(){ return P.loadPdfLib().then(function(lib){ return (L = lib); }); }
   function loadFontkit(){
     return T.loadScript('/assets/vendor/fontkit.umd.min.js?v=1.1.1', 'fontkit').catch(function(){
-      throw new Error(W.fontLibrary);
+      throw new Error(t('Couldn’t load the font tools. Check your connection.'));
     });
   }
 
@@ -447,13 +403,13 @@
     if (!src) return;
     var seq = ++previewSeq;
     var i = previewIndex;
-    pageLabel.textContent = fillIn(W.pageOf, { page: i + 1, pages: src.pages });
+    pageLabel.textContent = t('Page {page} of {pages}', { page: i + 1, pages: src.pages });
     prevBtn.disabled = i === 0;
     nextBtn.disabled = i >= src.pages - 1;
 
     if (!src.view) {
       canvas.hidden = true;
-      setNote(src.viewFailed ? W.noPreview : W.loading);
+      setNote(src.viewFailed ? t('The preview isn’t available for this file or browser, but you can still add the watermark.') : t('Loading preview…'));
       return;
     }
 
@@ -480,15 +436,15 @@
       if (over) ctx.drawImage(over, 0, 0);
       canvas.hidden = false;
       setNote(
-        sel.error ? W.fixPages :
-        !included ? fillIn(W.notIncluded, { page: i + 1 }) :
-        s.kind === 'image' && !image ? W.chooseImage :
-        s.kind === 'text' && s.font === 'custom' && !customFont ? W.chooseFont :
-        s.kind === 'text' && !s.text ? W.typeText : ''
+        sel.error ? t('Fix the page list to see the watermark.') :
+        !included ? t('Page {page} isn’t in your page list, so it stays as it is.', { page: i + 1 }) :
+        s.kind === 'image' && !image ? t('Choose an image to see it here.') :
+        s.kind === 'text' && s.font === 'custom' && !customFont ? t('Choose a font file to see it here.') :
+        s.kind === 'text' && !s.text ? t('Type some text to see it here.') : ''
       );
     }).catch(function(err){
       if (seq !== previewSeq) return;
-      setNote(fillIn(W.cantDraw, { error: err && err.message ? err.message : err }));
+      setNote(t('Couldn’t draw the preview: {error}', { error: err && err.message ? err.message : err }));
     });
   }
 
@@ -513,9 +469,9 @@
     fontPick.hidden = s.font !== 'custom';
     F.bold.disabled = F.italic.disabled = s.font === 'custom';
     layerHint.hidden = s.layer !== 'back';
-    $('sizeOut').textContent = T.num(s.size) + '%';
-    $('opacityOut').textContent = T.num(Math.round(s.opacity * 100)) + '%';
-    $('rotationOut').textContent = T.num(s.rotation) + '°';
+    $('sizeOut').textContent = Lang.num(s.size) + '%';
+    $('opacityOut').textContent = Lang.num(Math.round(s.opacity * 100)) + '%';
+    $('rotationOut').textContent = Lang.num(s.rotation) + '°';
     Array.prototype.forEach.call(chips.children, function(b){
       b.classList.toggle('on', +b.dataset.rot === s.rotation);
     });
@@ -528,8 +484,8 @@
       F.pages.classList.toggle('invalid', !!sel.error);
       pagesHint.classList.toggle('error', !!sel.error);
       pagesHint.textContent = sel.error ? sel.error :
-        s.pages.trim() ? fillIn(W.some, { pages: count(uniquePages(sel).length, W.pages), count: uniquePages(sel).length, total: src.pages }) :
-        fillIn(W.all, { pages: count(src.pages, W.pages), count: src.pages });
+        s.pages.trim() ? t('{pages} of {total} will be watermarked', { pages: count(uniquePages(sel).length, '{n} page', '{n} pages'), count: uniquePages(sel).length, total: src.pages }) :
+        t('All {pages} will be watermarked', { pages: count(src.pages, '{n} page', '{n} pages'), count: src.pages });
       ok = !sel.error && (s.kind === 'image' ? !!image : !!s.text && (s.font !== 'custom' || !!customFont));
     }
     applyBtn.disabled = busy || !ok;
@@ -569,10 +525,10 @@
   // ---- Choosing files ----
   function openFile(file){
     if (!file || busy) return;
-    if (!P.isPdf(file)) return say(W.notPdf, true);
+    if (!P.isPdf(file)) return say(t('That isn’t a PDF file. Choose a .pdf to watermark.'), true);
     busy = true;
     syncForm();
-    say(fillIn(W.reading, { name: file.name }));
+    say(t('Reading {name}…', { name: file.name }));
     var bytes;
     T.readBytes(file).then(function(buf){
       bytes = buf;
@@ -591,7 +547,7 @@
       editor.hidden = false;
       fileName.textContent = file.name;
       fileName.title = file.name;
-      fileMeta.textContent = fillIn(W.meta, { pages: count(src.pages, W.pages), size: T.fmtSize(file.size) });
+      fileMeta.textContent = t('{pages} · {size}', { pages: count(src.pages, '{n} page', '{n} pages'), size: T.fmtSize(file.size) });
       say('');
       var current = src;
       P.loadPdfjs().then(function(lib){
@@ -607,7 +563,7 @@
     }).catch(function(err){
       if (err && err.library) return say(err.message, true);
       var encrypted = err && /encrypt/i.test(err.message || String(err));
-      say(fillIn(encrypted ? W.locked : W.unreadable, { name: file.name }), true);
+      say(t(encrypted ? '{name} is password-protected, so it can’t be watermarked.' : '{name} could not be read as a PDF.', { name: file.name }), true);
     }).then(function(){
       busy = false;
       syncForm();
@@ -661,7 +617,7 @@
       say('');
       onChange();
     }).catch(function(err){
-      say(err && err.library ? err.message : fillIn(W.badImage, { name: file.name }), true);
+      say(err && err.library ? err.message : t('Couldn’t use {name}. Try a PNG or JPG image.', { name: file.name }), true);
     });
   }
   imagePicker.addEventListener('change', function(e){
@@ -705,7 +661,7 @@
         say('');
       });
     }).catch(function(){
-      say(fillIn(W.badFont, { name: file.name }), true);
+      say(t('Couldn’t use {name}. Choose a .ttf or .otf font file.', { name: file.name }), true);
     });
   });
 
@@ -720,13 +676,13 @@
     image = null;
     customFont = null;
     if (fontFace) { document.fonts.delete(fontFace); fontFace = null; }
-    imageName.textContent = W.imageTip;
-    fontName.textContent = W.fontTip;
+    imageName.textContent = t('PNG or JPG, e.g. a logo');
+    fontName.textContent = t('A .ttf or .otf file');
     sizes = { text: 80, image: 40 };
     lastKind = 'text';
     onChange();
     try { localStorage.removeItem(STORE_KEY); } catch (e) {}
-    say(W.reset);
+    say(t('Settings reset to the defaults.'));
   });
 
   // ---- Making the file ----
@@ -739,7 +695,7 @@
     busy = true;
     syncForm();
     clearResult();
-    applyLabel.textContent = W.adding;
+    applyLabel.textContent = t('Adding watermark…');
     var out, pages = uniquePages(sel);
 
     // Start from the original bytes each time so watermarks never stack up.
@@ -749,7 +705,7 @@
       out = doc;
       return prepareMark(doc, s);
     }).then(function(mark){
-      if (!mark) throw new Error(s.kind === 'image' ? W.noImage : W.noText);
+      if (!mark) throw new Error(s.kind === 'image' ? t('choose an image first') : t('type some text first'));
       var all = out.getPages();
       pages.forEach(function(i){ stamp(all[i], mark, s); });
       return out.save();
@@ -758,16 +714,16 @@
       var name = src.name.replace(/\.pdf$/i, '') + '-watermarked.pdf';
       resultUrl = URL.createObjectURL(blob);
       T.offer(downloadBtn, resultUrl, name);
-      downloadLabel.textContent = fillIn(W.download, { size: T.fmtSize(blob.size) });
+      downloadLabel.textContent = t('Download ({size})', { size: T.fmtSize(blob.size) });
       downloadBtn.title = name;
       downloadBtn.hidden = false;
-      say(fillIn(W.done, { pages: count(pages.length, W.pages), count: pages.length }));
+      say(t('Done. Watermarked {pages}.', { pages: count(pages.length, '{n} page', '{n} pages'), count: pages.length }));
       downloadBtn.focus();
     }).catch(function(err){
-      say(fillIn(W.failed, { error: err && err.message ? err.message : err }), true);
+      say(t('Something went wrong: {error}', { error: err && err.message ? err.message : err }), true);
     }).then(function(){
       busy = false;
-      applyLabel.textContent = W.add;
+      applyLabel.textContent = t('Add watermark');
       syncForm();
     });
   });

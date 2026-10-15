@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { load } from './load.mjs';
+import { load, fakeStorage } from './load.mjs';
 
 const FILE = 'assets/js/files.js';
 const { bdnixFiles: T } = load(FILE);
@@ -144,28 +144,9 @@ test('offer: a download link that opens in a new window', () => {
   assert.deepEqual(listeners.map(([type]) => type), ['click']);
 });
 
-test('words: English unless the page is in Bangla', () => {
-  assert.equal(T.lang, 'en');
-  assert.equal(T.words({ en: 'hi', bn: 'হ্যালো' }), 'hi');
-  assert.equal(T.num(2026), '2026');
-  assert.equal(T.fillIn('{n} of {total} for {name}', { n: 3, total: 10, name: 'A.pdf' }), '3 of 10 for A.pdf');
-  assert.equal(T.fillIn('{missing} stays', {}), '{missing} stays');
-  assert.equal(T.fillIn('no values'), 'no values');
-  assert.equal(T.count(1, ['{n} page', '{n} pages']), '1 page');
-  assert.equal(T.count(0, ['{n} page', '{n} pages']), '0 pages');
-});
-
-test('words: a page in Bangla gets its Bangla words and Bangla digits', () => {
-  const { bdnixFiles: B } = load(FILE, { document: { documentElement: { lang: 'bn' } } });
-  assert.equal(B.lang, 'bn');
-  assert.equal(B.words({ en: 'hi', bn: 'হ্যালো' }), 'হ্যালো');
-  assert.equal(B.words({ en: 'only English' }), 'only English');
-  assert.equal(B.num(2026), '২০২৬');
-  assert.equal(B.num('1.5 MB'), '১.৫ MB');
-  assert.equal(B.fillIn('পৃষ্ঠা {page} / {pages}', { page: 3, pages: 12 }), 'পৃষ্ঠা ৩ / ১২');
-  assert.equal(B.fillIn('{name}', { name: 'A1.pdf' }), 'A1.pdf', 'only numbers get Bangla digits, not text');
-  assert.equal(B.count(5, ['{n}টি ফাইল', '{n}টি ফাইল']), '৫টি ফাইল');
-  assert.equal(B.fmtSize(512), '৫১২ B');
-  assert.equal(B.fmtSize(1536), '২ KB');
-  assert.equal(B.fmtSize(5.5 * 1048576), '৫.৫ MB');
+test('fmtSize: in another language, sizes are in its digits', () => {
+  const { bdnixFiles } = load(['assets/lang/bn.js', FILE], { localStorage: fakeStorage({ bdnix_lang: 'bn' }) });
+  assert.equal(bdnixFiles.fmtSize(512), '৫১২ B');
+  assert.equal(bdnixFiles.fmtSize(2048), '২ KB');
+  assert.equal(bdnixFiles.fmtSize(1572864), '১.৫ MB');
 });

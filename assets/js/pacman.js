@@ -1,5 +1,7 @@
 // Maze Chase: running, drawing and input. The rules are in pacman-core.js.
 (function(){
+  // The visitor's language (lang.js): words drawn on the board, and numbers.
+  var Lang = window.bdnixLang;
   var P = window.bdnixPacman;
   var MAP = P.MAP, COLS = P.COLS, ROWS = P.ROWS;
   var UP = P.UP, LEFT = P.LEFT, DIR_BY_NAME = P.DIR_BY_NAME, MODES = P.MODES, GHOSTS = P.GHOSTS;
@@ -208,7 +210,7 @@
     updateHud();
     sound.play(score >= best && score > 0 ? 'best' : 'over');
     ovTitle.textContent = 'Game over';
-    ovText.textContent = 'Score ' + score + (score >= best && score > 0 ? ' — new best!' : ' · Best ' + best);
+    ovText.textContent = score >= best && score > 0 ? Lang.t('Score {score} — new best!', { score: score }) : Lang.t('Score {score} · Best {best}', { score: score, best: best });
     startBtn.textContent = 'Play again';
     newBtn.hidden = true;
     overlay.hidden = false;
@@ -390,7 +392,7 @@
       ctx.fillStyle = p.color;
       ctx.font = '600 ' + Math.round(CELL * 0.75) + 'px "JetBrains Mono", monospace';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(p.text, (p.x + .5) * CELL, (p.y + .5 - p.t * 0.8) * CELL);
+      ctx.fillText(Lang.num(p.text), (p.x + .5) * CELL, (p.y + .5 - p.t * 0.8) * CELL);
       ctx.globalAlpha = 1;
     });
 
@@ -398,7 +400,7 @@
       ctx.fillStyle = PAC_COLOR;
       ctx.font = '800 ' + Math.round(CELL * 0.95) + 'px Inter, system-ui, sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('READY!', 14 * CELL, 17.5 * CELL);
+      ctx.fillText(Lang.t('READY!'), 14 * CELL, 17.5 * CELL);
     }
   }
 
@@ -487,7 +489,7 @@
     livesCtx.clearRect(0, 0, w, h);
     var spare = Math.max(0, lives - (state === 'idle' || state === 'over' ? 0 : 1));
     // The canvas is a picture, so screen readers get the count from its label.
-    var label = 'Lives: ' + spare;
+    var label = Lang.t('Lives: {n}', { n: spare });
     if (livesCanvas.getAttribute('aria-label') !== label) livesCanvas.setAttribute('aria-label', label);
     livesCtx.fillStyle = PAC_COLOR;
     for (var i = 0; i < Math.min(spare, 4); i++) {

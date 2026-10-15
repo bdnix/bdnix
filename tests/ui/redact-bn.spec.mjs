@@ -1,10 +1,14 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { upload, secretPdf, picturePdf, download, imageCount } from './pdfs.mjs';
-import { expectNoEnglish } from './bangla.mjs';
+import { inLanguage, expectTranslated } from './languages.mjs';
 
-// Redact a PDF in Bangla (bn/redact-pdf/).
+test.beforeEach(({ page }) => inLanguage(page, 'bn'));
+// Whatever a test does, nothing is left in English.
+test.afterEach(({ page }) => expectTranslated(page));
+
+// Redact a PDF in Bangla.
 async function openSecret(page){
-  await page.goto('/bn/redact-pdf/');
+  await page.goto('/redact-pdf/');
   await page.locator('#picker').setInputFiles(upload('secret.pdf', (await secretPdf()).bytes));
   await expect(page.locator('#fileMeta')).toHaveText(/^৩ পৃষ্ঠা · [০-৯]+ KB$/);
   await expect(page.locator('#pageCanvas')).toBeVisible({ timeout: 20_000 });
@@ -24,7 +28,7 @@ test('finds and blacks out text, saying so in Bangla', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'এই বাক্সটি সরান' })).toHaveCount(1);
   await page.getByRole('button', { name: 'পরের পৃষ্ঠা' }).click();
   await expect(page.locator('#pageLabel')).toHaveText('পৃষ্ঠা ২ / ৩');
-  await expectNoEnglish(page, ['secret.pdf', 'jane doe']);
+  await expectTranslated(page);
 
   await find(page, 'jane doe');
   await expect(page.locator('#findHint')).toHaveText('সব “jane doe” আগেই চিহ্নিত করা আছে।');
@@ -44,7 +48,7 @@ test('finds and blacks out text, saying so in Bangla', async ({ page }) => {
 });
 
 test('says in Bangla which pages have pictures search can’t read', async ({ page }) => {
-  await page.goto('/bn/redact-pdf/');
+  await page.goto('/redact-pdf/');
   await page.locator('#picker').setInputFiles(upload('ticket.pdf', await picturePdf()));
   await expect(page.locator('#pageCanvas')).toBeVisible({ timeout: 20_000 });
   await find(page, 'tickets');

@@ -7,6 +7,7 @@
 // one kind's checks only runs that kind's specs.
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { expectTranslated } from './languages.mjs';
 
 export const LIVE = 'https://www.bdnix.com';
 export const GA = 'G-67D1H8GX6X';
@@ -40,16 +41,10 @@ const meta = (page, attr, name) => page.locator(`head meta[${attr}="${name}"]`);
 // Length as a reader counts it: a Bangla letter and the marks joined to it
 // are one (for English, the same as .length).
 const length = (s) => [...new Intl.Segmenter('bn').segment(s)].length;
-// What the footer and the cookie banner say, in a page's language.
+// What the footer and the cookie banner say.
 const WORDS = {
-  en: {
-    openSource: 'Open source on GitHub', suggest: 'Suggest a tool or game', home: '/',
-    consent: 'Cookie consent', banner: 'Google Analytics cookies', accept: 'Accept', decline: 'Decline', profile: 'your profile'
-  },
-  bn: {
-    openSource: 'GitHub-এ ওপেন সোর্স', suggest: 'নতুন টুল বা গেমের প্রস্তাব দিন', home: '/bn/',
-    consent: 'কুকি ব্যবহারের সম্মতি', banner: 'Google Analytics-এর কুকি', accept: 'সম্মতি দিচ্ছি', decline: 'না, থাক', profile: 'আপনার প্রোফাইলে'
-  }
+  openSource: 'Open source on GitHub', suggest: 'Suggest a tool or game', home: '/',
+  consent: 'Cookie consent', banner: 'Google Analytics cookies', accept: 'Accept', decline: 'Decline', profile: 'your profile'
 };
 // Other games' names, which only a credit line may use.
 const TRADEMARKS = /tetris|pac-?man|flappy|crossy|blockade|breakout/i;
@@ -60,9 +55,8 @@ const TRADEMARKS = /tetris|pac-?man|flappy|crossy|blockade|breakout/i;
 //   noindex   kept out of search engines (no minimum description length)
 //   footer    has the site's footer
 //   game      a game: asks for the phone upright (see checks-game.mjs)
-//   lang      'bn' for a page's Bangla copy (under /bn/); English otherwise
 export function checkPage(url, opts = {}){
-  const lang = opts.lang || 'en', words = WORDS[lang];
+  const words = WORDS;
   test(`${url}: its head has the security policy first, analytics, and search and share tags`, async ({ page, request }) => {
     const google = watchGoogle(page);
     await page.goto(url);
@@ -97,7 +91,7 @@ export function checkPage(url, opts = {}){
     if (!opts.noindex) expect(length(description), 'description length').toBeGreaterThanOrEqual(70);
     expect(length(description), 'description length').toBeLessThanOrEqual(230);
     // The page says what language it's in.
-    expect(await page.locator('html').getAttribute('lang')).toBe(lang);
+    expect(await page.locator('html').getAttribute('lang')).toBe('en');
     await expect(page.locator('head link[rel="canonical"]')).toHaveAttribute('href', LIVE + url);
     await expect(meta(page, 'property', 'og:url')).toHaveAttribute('content', LIVE + url);
     await expect(meta(page, 'property', 'og:title')).toHaveAttribute('content', title);
@@ -184,6 +178,24 @@ export function checkPage(url, opts = {}){
     if (!opts.game) {
       await page.setViewportSize({ width: 844, height: 390 });
       await expect(page.locator('.upright')).toHaveCount(0);
+    }
+  });
+
+  // Every language the site has (assets/lang), picked by the visitor: the
+  // page is all in it, with its numbers in its digits, and still fits a phone.
+  test(`${url}: in every language, nothing is left in English`, async ({ page }) => {
+    await page.goto(url);
+    const languages = await page.evaluate(() => window.bdnixLang.languages.map((l) => l.code).filter((c) => c !== 'en'));
+    expect(languages.length).toBeGreaterThan(0);
+    const english = await page.title();
+    for (const code of languages) {
+      await page.evaluate((c) => localStorage.setItem('bdnix_lang', c), code);
+      await page.goto(url);
+      await expectTranslated(page, code);
+      expect(await page.title()).not.toBe(english);
+      expect(length(await meta(page, 'name', 'description').getAttribute('content')), 'description length').toBeLessThanOrEqual(230);
+      expect(await axeProblems(page)).toEqual([]);
+      await expectNoSideScroll(page);
     }
   });
 

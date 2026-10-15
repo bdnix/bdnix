@@ -4,53 +4,9 @@
 // the result together. Everything runs in the browser; nothing is uploaded.
 (function(){
   var T = window.bdnixFiles, P = window.bdnixPdf;
+  var Lang = window.bdnixLang, t = Lang.t, count = Lang.count;
   var R = window.bdnixRedact;
-  var fillIn = T.fillIn, count = T.count;
   function $(id){ return document.getElementById(id); }
-
-  // Its words, in the page's language (bn/redact-pdf/ is the Bangla copy).
-  var W = T.words({
-    en: {
-      pages: ['{n} page', '{n} pages'], areas: ['{n} area', '{n} areas'], matches: ['{n} match', '{n} matches'],
-      list: { page: 'page ', pages: 'pages ', and: ' and ', num: T.num },
-      marked: '{areas} on {pages}', nothing: 'Nothing marked yet', removeBox: 'Remove this box',
-      pageOf: 'Page {page} of {pages}',
-      cantShow: 'This file’s pages can’t be shown in this browser, so it can’t be redacted here.',
-      loading: 'Loading the page…', cantDraw: 'Couldn’t draw this page: {error}',
-      typeText: 'Type the text you want to black out.', searching: 'Searching…',
-      pictures: ' Search can’t read words inside pictures, so drag boxes over any on {pages}.',
-      notFound: '“{text}” isn’t in this file’s text.',
-      scanned: ' Scanned pages are pictures with no text to search, so draw boxes over those instead.',
-      already: 'Every “{text}” is already marked.',
-      found: 'Marked {matches} on {pages}. Check them before you redact.',
-      cantSearch: 'Couldn’t search this file: {error}',
-      notPdf: 'That isn’t a PDF file. Choose a .pdf to redact.', reading: 'Reading {name}…',
-      meta: '{pages} · {size}',
-      locked: '{name} is password-protected, so it can’t be redacted.', unreadable: '{name} could not be read as a PDF.',
-      redacting: 'Redacting…', redact: 'Redact PDF', download: 'Download ({size})',
-      done: 'Done. Blacked out {areas} on {pages}.', failed: 'Something went wrong: {error}'
-    },
-    bn: {
-      pages: ['{n} পৃষ্ঠা', '{n} পৃষ্ঠা'], areas: ['{n}টি জায়গা', '{n}টি জায়গা'], matches: ['{n}টি মিল', '{n}টি মিল'],
-      list: { page: 'পৃষ্ঠা ', pages: 'পৃষ্ঠা ', and: ' ও ', num: T.num },
-      marked: '{count} পৃষ্ঠায় {areas}', nothing: 'এখনো কিছু চিহ্নিত করা হয়নি', removeBox: 'এই বাক্সটি সরান',
-      pageOf: 'পৃষ্ঠা {page} / {pages}',
-      cantShow: 'এই ব্রাউজারে ফাইলটির পৃষ্ঠা দেখানো যাচ্ছে না, তাই এখানে এর লেখা ঢাকা যাবে না।',
-      loading: 'পৃষ্ঠা লোড হচ্ছে…', cantDraw: 'পৃষ্ঠাটি আঁকা যায়নি: {error}',
-      typeText: 'যে লেখা কালো করে ঢাকতে চান, সেটি লিখুন।', searching: 'খোঁজা হচ্ছে…',
-      pictures: ' ছবির ভেতরের লেখা খোঁজা যায় না, তাই {pages}-র ছবিগুলোর ওপর টেনে বাক্স আঁকুন।',
-      notFound: '“{text}” এই ফাইলের লেখায় নেই।',
-      scanned: ' স্ক্যান করা পৃষ্ঠা আসলে ছবি, তাতে খোঁজার মতো লেখা নেই, তাই সেগুলোর ওপর বাক্স আঁকুন।',
-      already: 'সব “{text}” আগেই চিহ্নিত করা আছে।',
-      found: '{count} পৃষ্ঠায় {matches} চিহ্নিত করা হয়েছে। লেখা ঢাকার আগে দেখে নিন।',
-      cantSearch: 'এই ফাইলে খোঁজা যায়নি: {error}',
-      notPdf: 'এটি PDF ফাইল নয়। লেখা ঢাকতে একটি .pdf বেছে নিন।', reading: '{name} পড়া হচ্ছে…',
-      meta: '{pages} · {size}',
-      locked: '{name} পাসওয়ার্ড দিয়ে সুরক্ষিত, তাই এর লেখা ঢাকা যাবে না।', unreadable: '{name} PDF হিসেবে পড়া যায়নি।',
-      redacting: 'লেখা ঢাকা হচ্ছে…', redact: 'লেখা ঢেকে দিন', download: 'ডাউনলোড ({size})',
-      done: 'হয়ে গেছে। {count} পৃষ্ঠায় {areas} কালো করে ঢাকা হয়েছে।', failed: 'একটা সমস্যা হয়েছে: {error}'
-    }
-  });
 
   var drop = $('drop'), picker = $('picker');
   var fileBar = $('fileBar'), fileName = $('fileName'), fileMeta = $('fileMeta'), changeBtn = $('changeBtn');
@@ -62,7 +18,7 @@
   var applyBtn = $('applyBtn'), applyLabel = $('applyLabel');
   var downloadBtn = $('downloadBtn'), downloadLabel = $('downloadLabel');
 
-  $('year').textContent = T.num(new Date().getFullYear());
+  $('year').textContent = Lang.num(new Date().getFullYear());
 
   // src: { name, bytes, pages, doc (pdf-lib, read only), view (pdf.js) and its viewTask }
   var src = null;
@@ -96,7 +52,7 @@
 
   function syncUi(){
     var n = areaCount();
-    summary.textContent = n ? fillIn(W.marked, { areas: count(n, W.areas), pages: count(markedPages().length, W.pages), count: markedPages().length }) : W.nothing;
+    summary.textContent = n ? t('{areas} on {pages}', { areas: count(n, '{n} area', '{n} areas'), pages: count(markedPages().length, '{n} page', '{n} pages'), count: markedPages().length }) : t('Nothing marked yet');
     undoBtn.disabled = busy || !history.length;
     clearBtn.disabled = busy || !n;
     findBtn.disabled = busy || !src || !src.view;
@@ -152,7 +108,7 @@
       x.type = 'button';
       x.className = 'mark-x';
       x.dataset.index = i;
-      x.setAttribute('aria-label', W.removeBox);
+      x.setAttribute('aria-label', t('Remove this box'));
       x.textContent = '×';
       el.appendChild(x);
       marksEl.appendChild(el);
@@ -174,13 +130,13 @@
   function showPage(){
     if (!src) return;
     var seq = ++showSeq, i = pageIndex;
-    pageLabel.textContent = fillIn(W.pageOf, { page: i + 1, pages: src.pages });
+    pageLabel.textContent = t('Page {page} of {pages}', { page: i + 1, pages: src.pages });
     prevBtn.disabled = i === 0;
     nextBtn.disabled = i >= src.pages - 1;
     drawMarks();
     if (!src.view) {
       sheet.hidden = true;
-      setNote(src.viewFailed ? W.cantShow : W.loading);
+      setNote(src.viewFailed ? t('This file’s pages can’t be shown in this browser, so it can’t be redacted here.') : t('Loading the page…'));
       return;
     }
     var fit = stageSize(), dpr = Math.min(window.devicePixelRatio || 1, 2), cssWidth;
@@ -203,7 +159,7 @@
       setNote('');
     }).catch(function(err){
       if (seq !== showSeq) return;
-      setNote(fillIn(W.cantDraw, { error: err && err.message ? err.message : err }));
+      setNote(t('Couldn’t draw this page: {error}', { error: err && err.message ? err.message : err }));
     });
   }
 
@@ -323,10 +279,10 @@
     e.preventDefault();
     if (busy || !src || !src.view) return;
     var q = query.value.trim();
-    if (!q) return hint(W.typeText, true);
+    if (!q) return hint(t('Type the text you want to black out.'), true);
     busy = true;
     syncUi();
-    hint(W.searching);
+    hint(t('Searching…'));
     var found = [], hits = 0, firstPage = -1, pictures = [];
     P.loadPdfjs().then(function(lib){
       var chain = Promise.resolve();
@@ -344,20 +300,20 @@
     }).then(function(){
       var added = mark(found);
       // Search only sees real text, so point out the pictures it can't read.
-      var note = pictures.length ? fillIn(W.pictures, { pages: R.pageList(pictures, W.list) }) : '';
-      if (!hits) hint(fillIn(W.notFound, { text: q }) + (note || W.scanned), true);
-      else if (!added) hint(fillIn(W.already, { text: q }) + note);
+      var note = pictures.length ? t(' Search can’t read words inside pictures, so drag boxes over any on {pages}.', { pages: R.pageList(pictures, { one: t('page {list}'), many: t('pages {list}'), and: t('{rest} and {last}'), num: Lang.num }) }) : '';
+      if (!hits) hint(t('“{text}” isn’t in this file’s text.', { text: q }) + (note || t(' Scanned pages are pictures with no text to search, so draw boxes over those instead.')), true);
+      else if (!added) hint(t('Every “{text}” is already marked.', { text: q }) + note);
       else {
         var onPages = found.reduce(function(pages, f){
           if (pages.indexOf(f.page) < 0) pages.push(f.page);
           return pages;
         }, []).length;
-        hint(fillIn(W.found, { matches: count(hits, W.matches), pages: count(onPages, W.pages), count: onPages }) + note);
+        hint(t('Marked {matches} on {pages}. Check them before you redact.', { matches: count(hits, '{n} match|found', '{n} matches|found'), pages: count(onPages, '{n} page', '{n} pages'), count: onPages }) + note);
       }
       // Show the first one if there's none on this page.
       if (hits && !(marks[pageIndex] || []).length) goTo(firstPage);
     }).catch(function(err){
-      hint(fillIn(W.cantSearch, { error: err && err.message ? err.message : err }), true);
+      hint(t('Couldn’t search this file: {error}', { error: err && err.message ? err.message : err }), true);
     }).then(function(){
       busy = false;
       changed();
@@ -369,10 +325,10 @@
   // ---- Choosing a file ----
   function openFile(file){
     if (!file || busy) return;
-    if (!P.isPdf(file)) return say(W.notPdf, true);
+    if (!P.isPdf(file)) return say(t('That isn’t a PDF file. Choose a .pdf to redact.'), true);
     busy = true;
     syncUi();
-    say(fillIn(W.reading, { name: file.name }));
+    say(t('Reading {name}…', { name: file.name }));
     var bytes;
     T.readBytes(file).then(function(buf){
       bytes = buf;
@@ -393,7 +349,7 @@
       editor.hidden = false;
       fileName.textContent = file.name;
       fileName.title = file.name;
-      fileMeta.textContent = fillIn(W.meta, { pages: count(src.pages, W.pages), size: T.fmtSize(file.size) });
+      fileMeta.textContent = t('{pages} · {size}', { pages: count(src.pages, '{n} page', '{n} pages'), size: T.fmtSize(file.size) });
       say('');
       var current = src;
       P.loadPdfjs().then(function(lib){
@@ -411,7 +367,7 @@
     }).catch(function(err){
       if (err && err.library) return say(err.message, true);
       var encrypted = err && /encrypt/i.test(err.message || String(err));
-      say(fillIn(encrypted ? W.locked : W.unreadable, { name: file.name }), true);
+      say(t(encrypted ? '{name} is password-protected, so it can’t be redacted.' : '{name} could not be read as a PDF.', { name: file.name }), true);
     }).then(function(){
       busy = false;
       syncUi();
@@ -464,7 +420,7 @@
     busy = true;
     syncUi();
     clearResult();
-    applyLabel.textContent = W.redacting;
+    applyLabel.textContent = t('Redacting…');
     var lib, out, marked = markedPages(), areas = areaCount();
     var kept = [];
     for (var i = 0; i < src.pages; i++) if (marked.indexOf(i) < 0) kept.push(i);
@@ -497,15 +453,15 @@
       resultUrl = URL.createObjectURL(blob);
       T.offer(downloadBtn, resultUrl, name);
       downloadBtn.title = name;
-      downloadLabel.textContent = fillIn(W.download, { size: T.fmtSize(blob.size) });
+      downloadLabel.textContent = t('Download ({size})', { size: T.fmtSize(blob.size) });
       downloadBtn.hidden = false;
-      say(fillIn(W.done, { areas: count(areas, W.areas), pages: count(marked.length, W.pages), count: marked.length }));
+      say(t('Done. Blacked out {areas} on {pages}.', { areas: count(areas, '{n} area', '{n} areas'), pages: count(marked.length, '{n} page', '{n} pages'), count: marked.length }));
       downloadBtn.focus();
     }).catch(function(err){
-      say(fillIn(W.failed, { error: err && err.message ? err.message : err }), true);
+      say(t('Something went wrong: {error}', { error: err && err.message ? err.message : err }), true);
     }).then(function(){
       busy = false;
-      applyLabel.textContent = W.redact;
+      applyLabel.textContent = t('Redact PDF');
       syncUi();
     });
   });

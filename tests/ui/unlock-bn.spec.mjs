@@ -1,8 +1,12 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { upload, samplePdf, lockedPdf, download } from './pdfs.mjs';
-import { expectNoEnglish } from './bangla.mjs';
+import { inLanguage, expectTranslated } from './languages.mjs';
 
-// Unlock a PDF in Bangla (bn/unlock-pdf/).
+test.beforeEach(({ page }) => inLanguage(page, 'bn'));
+// Whatever a test does, nothing is left in English.
+test.afterEach(({ page }) => expectTranslated(page));
+
+// Unlock a PDF in Bangla.
 const sample = await samplePdf();
 const locked = (options) => lockedPdf(sample, { user: 'open sesame', owner: 'boss', ...options });
 
@@ -12,11 +16,11 @@ async function open(page, name, bytes){
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/bn/unlock-pdf/');
+  await page.goto('/unlock-pdf/');
 });
 
 test('unlocks a PDF, saying so in Bangla', async ({ page }) => {
-  await expectNoEnglish(page);
+  await expectTranslated(page);
   await open(page, 'report.pdf', await locked({ cipher: 'aes-256' }));
   await expect(page.locator('#fileMeta')).toHaveText(/^পাসওয়ার্ড দিয়ে সুরক্ষিত · AES ২৫৬-bit · [০-৯]+ KB$/);
   await expect(page.locator('#msg')).toHaveText('যে পাসওয়ার্ড দিয়ে এই PDF খোলেন, সেটি লিখুন।');
@@ -26,7 +30,7 @@ test('unlocks a PDF, saying so in Bangla', async ({ page }) => {
   await show.click();
   await expect(password).toHaveAttribute('type', 'text');
   await expect(page.getByRole('button', { name: 'লুকান' })).toBeVisible();
-  await expectNoEnglish(page, ['report.pdf']);
+  await expectTranslated(page);
 
   await password.fill('wrong');
   await page.getByRole('button', { name: 'PDF আনলক করুন' }).click();
@@ -36,7 +40,7 @@ test('unlocks a PDF, saying so in Bangla', async ({ page }) => {
   await expect(page.locator('#msg')).toHaveText('হয়ে গেছে। নতুন কপিটি পাসওয়ার্ড ছাড়াই খোলে।');
   await expect(page.locator('#fileMeta')).toHaveText(/^আনলক হয়েছে · ৩ পৃষ্ঠা · [০-৯]+ KB$/);
   await expect(page.locator('#downloadLabel')).toHaveText(/^report-unlocked\.pdf ডাউনলোড করুন \([০-৯]+ KB\)$/);
-  await expectNoEnglish(page, ['report.pdf', 'report-unlocked.pdf']);
+  await expectTranslated(page);
   const out = await download(page, () => page.locator('#downloadBtn').click());
   expect(out.name).toBe('report-unlocked.pdf');
   expect(out.doc.context.trailerInfo.Encrypt).toBeUndefined();

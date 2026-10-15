@@ -1,4 +1,5 @@
-/* What every page in Bangla (under /bn/) uses. Hind Siliguri draws the
+/* Bangla's stylesheet (assets/lang/bn/language.json names it, and lang.js
+   loads it for a visitor reading the site in Bangla). Hind Siliguri draws the
    Bangla letters. It is served from the site (assets/fonts, OFL) like Inter,
    so no page contacts a font service, and holds only the Bengali block: Inter
    and JetBrains Mono still draw the Latin letters, and come first. */

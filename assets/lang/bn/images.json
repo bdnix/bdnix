@@ -1,0 +1,23 @@
+{
+  "0 images": "০টি ছবি",
+  "<b>Private.</b> Location, camera and other hidden details are removed from the saved images.": "<b>গোপনীয়।</b> সেভ করা ছবি থেকে লোকেশন, ক্যামেরা আর অন্যান্য লুকানো তথ্য মুছে ফেলা হয়।",
+  "Done.": "হয়ে গেছে।",
+  "Download": "ডাউনলোড",
+  "Drop images here": "ছবিগুলো এখানে ছেড়ে দিন",
+  "JPEG · best for photos": "JPEG · ছবির জন্য সবচেয়ে ভালো",
+  "JPEG, PNG, WebP, GIF, AVIF and more, or <u>choose images</u>": "JPEG, PNG, WebP, GIF, AVIF সহ আরও অনেক ধরনের ছবি, অথবা <u>ছবি বেছে নিন</u>",
+  "Private.": "গোপনীয়।",
+  "Remove": "সরান",
+  "Remove {name}": "{name} সরিয়ে দিন",
+  "Same as original": "আসলটির মতোই",
+  "Save as": "যে ধরনে সেভ হবে",
+  "Skipped: {names} aren’t images.": "বাদ পড়েছে: {names} ছবি নয়।",
+  "Skipped: {names} isn’t an image.": "বাদ পড়েছে: {names} ছবি নয়।",
+  "WebP · smallest": "WebP · সবচেয়ে ছোট",
+  "What it does": "যা করে",
+  "Your browser can’t open this image": "আপনার ব্রাউজার এই ছবিটি খুলতে পারছে না",
+  "choose images": "ছবি বেছে নিন",
+  "your browser can’t save {format} images. Choose another format.": "আপনার ব্রাউজার {format} ছবি সেভ করতে পারে না। অন্য একটি ধরন বেছে নিন।",
+  "{n} image": "{n}টি ছবি",
+  "{n} images": "{n}টি ছবি"
+}

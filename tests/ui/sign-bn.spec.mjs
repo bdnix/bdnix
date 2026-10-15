@@ -1,11 +1,15 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { upload, secretPdf, download, imageCount } from './pdfs.mjs';
 import { png } from './images.mjs';
-import { expectNoEnglish } from './bangla.mjs';
+import { inLanguage, expectTranslated } from './languages.mjs';
 
-// Sign a PDF in Bangla (bn/sign-pdf/). secret.pdf has three pages.
+test.beforeEach(({ page }) => inLanguage(page, 'bn'));
+// Whatever a test does, nothing is left in English.
+test.afterEach(({ page }) => expectTranslated(page));
+
+// Sign a PDF in Bangla. secret.pdf has three pages.
 async function openSecret(page){
-  await page.goto('/bn/sign-pdf/');
+  await page.goto('/sign-pdf/');
   await page.locator('#picker').setInputFiles(upload('secret.pdf', (await secretPdf()).bytes));
   await expect(page.locator('#fileMeta')).toHaveText(/^৩ পৃষ্ঠা · [০-৯]+ KB$/);
   await expect(page.locator('#pageCanvas')).toBeVisible({ timeout: 20_000 });
@@ -23,11 +27,11 @@ const paper = () => png(200, 100, (x, y) => (x >= 50 && x < 150 && y >= 30 && y 
 test('signs every page, saying so in Bangla', async ({ page }) => {
   await openSecret(page);
   await expect(page.locator('#summary')).toHaveText('এখনো কিছু বসানো হয়নি');
-  await expectNoEnglish(page, ['secret.pdf']);
+  await expectTranslated(page);
   await openSigs(page);
   await page.locator('#modes label', { hasText: 'ছবি' }).click();
   await page.locator('#imagePicker').setInputFiles(upload('sig.png', paper(), 'image/png'));
-  await expectNoEnglish(page, ['secret.pdf', 'sig.png']);
+  await expectTranslated(page);
   await page.getByRole('button', { name: 'পৃষ্ঠায় বসান' }).click();
   await expect(page.locator('#sigDialog')).toBeHidden();
   await expect(page.locator('#summary')).toHaveText('১ পৃষ্ঠায় ১টি সই');
@@ -40,7 +44,7 @@ test('signs every page, saying so in Bangla', async ({ page }) => {
   await page.getByRole('button', { name: 'প্রতিটি পৃষ্ঠায় কপি করুন' }).click();
   await expect(page.locator('#msg')).toHaveText('এটি আগেই প্রতিটি পৃষ্ঠায় আছে।');
   await expect(page.locator('#summary')).toHaveText('৩ পৃষ্ঠায় ৩টি সই');
-  await expectNoEnglish(page, ['secret.pdf']);
+  await expectTranslated(page);
 
   const out = await download(page, async () => {
     await page.getByRole('button', { name: 'PDF-এ সই করুন' }).click();
@@ -74,7 +78,7 @@ test('deleting a signature that’s on the pages asks first, in Bangla', async (
 });
 
 test('makes a signature without a PDF, and explains pictures that won’t do', async ({ page }) => {
-  await page.goto('/bn/sign-pdf/');
+  await page.goto('/sign-pdf/');
   await openSigs(page);
   await page.locator('#modes label', { hasText: 'টাইপ করুন' }).click();
   // The handwriting fonts only have Latin letters, so their samples are in English.
@@ -84,7 +88,7 @@ test('makes a signature without a PDF, and explains pictures that won’t do', a
   await page.getByRole('button', { name: 'সই তৈরি করুন' }).click();
   await expect(page.locator('#sigMsg')).toHaveText('সই ১ তৈরি হয়েছে। ছবি হিসেবে সেভ করুন, অথবা পৃষ্ঠায় বসাতে একটি PDF খুলুন।');
   await expect(page.getByRole('link', { name: 'সই ১ ছবি হিসেবে সেভ করুন' })).toHaveText('ছবি সেভ করুন');
-  await expectNoEnglish(page, ['Musa']);
+  await expectTranslated(page);
 
   await page.locator('#modes label', { hasText: 'ছবি' }).click();
   await page.locator('#imagePicker').setInputFiles(upload('notes.txt', 'hello', 'text/plain'));

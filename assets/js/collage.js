@@ -3,7 +3,8 @@
 // layouts, shapes and sizes live in collage-core.js.
 (function(){
   var T = window.bdnixFiles, I = window.bdnixImages, C = window.bdnixCollage;
-  var fmtSize = T.fmtSize, plural = T.plural;
+  var Lang = window.bdnixLang, t = Lang.t, count = Lang.count;
+  var fmtSize = T.fmtSize;
 
   function $(id){ return document.getElementById(id); }
   var drop = $('drop'), picker = $('picker'), msg = $('msg'), editor = $('editor');
@@ -79,8 +80,8 @@
     var room = C.MAX - photos.length;
     var left = images.length - Math.max(0, room);
     var problems = [];
-    if (skipped.length) problems.push('Skipped: ' + skipped.map(function(f){ return f.name; }).join(', ') + (skipped.length === 1 ? ' isn’t an image.' : ' aren’t images.'));
-    if (left > 0) problems.push('A collage holds up to ' + C.MAX + ' photos, so ' + plural(left, 'photo') + (left === 1 ? ' was' : ' were') + ' left out.');
+    if (skipped.length) problems.push(t(skipped.length === 1 ? 'Skipped: {names} isn’t an image.' : 'Skipped: {names} aren’t images.', { names: skipped.map(function(f){ return f.name; }).join(', ') }));
+    if (left > 0) problems.push(t(left === 1 ? 'A collage holds up to {max} photos, so {photos} was left out.' : 'A collage holds up to {max} photos, so {photos} were left out.', { max: C.MAX, photos: count(left, '{n} photo', '{n} photos') }));
     images.slice(0, Math.max(0, room)).forEach(function(file){
       var f = { id: nextId++, file: file, src: URL.createObjectURL(file), small: null, pos: { x: 0.5, y: 0.5 }, zoom: 1 };
       f.tile = document.createElement('canvas');
@@ -89,7 +90,7 @@
       load(f).then(render, function(){
         // A photo the browser can't open is taken off the list.
         remove(f);
-        say('Your browser can’t open ' + file.name + '.', true);
+        say(t('Your browser can’t open {name}.', { name: file.name }), true);
       });
     });
     selected = -1;
@@ -122,7 +123,7 @@
 
   function render(){
     editor.hidden = photos.length === 0;
-    summary.textContent = plural(photos.length, 'photo');
+    summary.textContent = count(photos.length, '{n} photo', '{n} photos');
     renderTray();
     renderLayouts();
     showSettings();
@@ -144,7 +145,7 @@
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'photo-btn';
-      btn.setAttribute('aria-label', 'Photo ' + (i + 1) + ': ' + f.file.name);
+      btn.setAttribute('aria-label', t('Photo {n}: {name}', { n: i + 1, name: f.file.name }));
       btn.setAttribute('aria-pressed', String(selected === i));
       btn.title = f.file.name;
       btn.disabled = busy;
@@ -159,7 +160,7 @@
       var rm = document.createElement('button');
       rm.type = 'button';
       rm.className = 'icon-btn rm';
-      rm.setAttribute('aria-label', 'Remove ' + f.file.name);
+      rm.setAttribute('aria-label', t('Remove {name}', { name: f.file.name }));
       rm.title = 'Remove';
       rm.disabled = busy;
       rm.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
@@ -191,7 +192,7 @@
       input.name = 'layout';
       input.value = l.id;
       input.checked = l === current;
-      input.setAttribute('aria-label', l.name);
+      input.setAttribute('aria-label', t(l.name));
       var rects = C.boxes(l.cells, 40, 40, 3).map(function(b){
         return '<rect x="' + b.x + '" y="' + b.y + '" width="' + b.w + '" height="' + b.h + '" rx="1.5"/>';
       }).join('');
@@ -205,8 +206,8 @@
 
   function showSettings(){
     var s = settings(), size = C.size(s.shape, s.longest);
-    gapOut.textContent = s.gap ? C.scaled(s.gap, s.longest) + ' px' : 'None';
-    radiusOut.textContent = s.radius ? C.scaled(s.radius, s.longest) + ' px' : 'Square';
+    gapOut.textContent = s.gap ? Lang.num(C.scaled(s.gap, s.longest)) + ' px' : t('None');
+    radiusOut.textContent = s.radius ? Lang.num(C.scaled(s.radius, s.longest)) + ' px' : t('Square');
     sizeHint.textContent = size.width + ' × ' + size.height + ' px';
   }
 
@@ -247,7 +248,7 @@
   function drawPreview(){
     var s = settings();
     var text = C.advice(photos.length);
-    if (!text && !photos.every(function(f){ return f.small; })) text = 'Loading photos…';
+    if (!text && !photos.every(function(f){ return f.small; })) text = t('Loading photos…');
     note.textContent = text;
     note.hidden = !text;
     canvas.hidden = !!text;
@@ -281,7 +282,7 @@
     var f = photos[selected];
     zoomField.hidden = !f || !previewBoxes.length;
     if (zoomField.hidden) return;
-    zoomName.textContent = 'Zoom photo ' + (selected + 1);
+    zoomName.textContent = t('Zoom photo {n}', { n: selected + 1 });
     zoomIn.value = Math.round(f.zoom * 100);
     zoomOut.textContent = Math.round(f.zoom * 100) + '%';
     zoomIn.disabled = busy;
@@ -384,7 +385,7 @@
     }).then(function(blob){
       var size = { width: out.width, height: out.height };
       out.width = out.height = 0;
-      if (!blob || blob.type !== C.FORMATS[s.format].type) throw new Error('your browser couldn’t save it. Try a smaller size.');
+      if (!blob || blob.type !== C.FORMATS[s.format].type) throw new Error(t('your browser couldn’t save it. Try a smaller size.'));
       return { blob: blob, size: size };
     });
   }
@@ -394,7 +395,7 @@
     if (busy || !s.layout) return;
     busy = true;
     render();
-    downloadLabel.textContent = 'Making collage…';
+    downloadLabel.textContent = t('Making collage…');
     say('');
     // The file downloads in a new window, opened now while the click counts.
     var win = T.fileWindow();
@@ -403,13 +404,13 @@
       saved = URL.createObjectURL(r.blob);
       var name = C.outName(s.format);
       win.save(saved, name);
-      say('Saved ' + name + ': ' + r.size.width + ' × ' + r.size.height + ' px, ' + fmtSize(r.blob.size) + '.');
+      say(t('Saved {name}: {width} × {height} px, {size}.', { name: name, width: r.size.width, height: r.size.height, size: fmtSize(r.blob.size) }));
     }, function(err){
       win.close();
-      say('Couldn’t make the collage: ' + (err && err.message ? err.message : 'one of the photos couldn’t be opened.'), true);
+      say(t('Couldn’t make the collage: {error}', { error: err && err.message ? err.message : t('one of the photos couldn’t be opened.') }), true);
     }).then(function(){
       busy = false;
-      downloadLabel.textContent = 'Download collage';
+      downloadLabel.textContent = t('Download collage');
       render();
     });
   });

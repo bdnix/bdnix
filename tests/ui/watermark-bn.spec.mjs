@@ -1,11 +1,15 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { upload, samplePdf, download, imageCount } from './pdfs.mjs';
-import { expectNoEnglish } from './bangla.mjs';
+import { inLanguage, expectTranslated } from './languages.mjs';
 
-// Watermark a PDF in Bangla (bn/watermark-pdf/). Its default text is Bangla,
+test.beforeEach(({ page }) => inLanguage(page, 'bn'));
+// Whatever a test does, nothing is left in English.
+test.afterEach(({ page }) => expectTranslated(page));
+
+// Watermark a PDF in Bangla. Its default text is Bangla,
 // which the built-in PDF fonts can't show, so it goes in as an image.
 async function openSample(page){
-  await page.goto('/bn/watermark-pdf/');
+  await page.goto('/watermark-pdf/');
   await page.locator('#picker').setInputFiles(upload('report.pdf', await samplePdf()));
   await expect(page.locator('#fileMeta')).toHaveText(/^৩ পৃষ্ঠা · [০-৯]+ KB$/);
   await expect(page.locator('#previewCanvas')).toBeVisible({ timeout: 20_000 });
@@ -19,7 +23,7 @@ test('watermarks the pages listed in Bangla digits, with Bangla text', async ({ 
   await expect(page.locator('#opacityOut')).toHaveText('২৫%');
   await expect(page.locator('#rotationOut')).toHaveText('৪৫°');
   await expect(page.locator('#pageLabel')).toHaveText('পৃষ্ঠা ১ / ৩');
-  await expectNoEnglish(page, ['report.pdf']);
+  await expectTranslated(page);
 
   const pages = page.getByRole('textbox', { name: 'পৃষ্ঠা' });
   await pages.fill('৯');

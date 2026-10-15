@@ -2,26 +2,7 @@
 // every tool page uses these. Nothing is uploaded; files are read here in
 // the browser.
 (function(){
-  // The page's language: 'bn' on a tool's Bangla copy (under /bn/), where
-  // numbers are shown in Bangla digits, and 'en' everywhere else. A tool
-  // keeps its words for both in its own script and picks them with words().
-  var root = typeof document !== 'undefined' && document.documentElement;
-  var lang = root && root.lang === 'bn' ? 'bn' : 'en';
-  var DIGITS = '০১২৩৪৫৬৭৮৯';
-  function words(table){ return table[lang] || table.en; }
-  function num(n){
-    var s = String(n);
-    return lang === 'bn' ? s.replace(/[0-9]/g, function(d){ return DIGITS[d]; }) : s;
-  }
-  // "{n} of {total}" with each {name} put in, numbers in the page's digits.
-  function fillIn(text, values){
-    return String(text).replace(/\{(\w+)\}/g, function(all, key){
-      var v = values && values[key];
-      return v === undefined || v === null ? all : typeof v === 'number' ? num(v) : String(v);
-    });
-  }
-  // A count with the right form of its word: count(3, ['{n} page', '{n} pages']).
-  function count(n, forms){ return fillIn(forms[n === 1 ? 0 : 1], { n: n }); }
+  var Lang = window.bdnixLang, t = Lang.t, num = Lang.num;
 
   function fmtSize(n){
     if (n < 1024) return num(n) + ' B';
@@ -29,22 +10,6 @@
     return num((n / 1048576).toFixed(1)) + ' MB';
   }
   function plural(n, word){ return n + ' ' + word + (n === 1 ? '' : 's'); }
-
-  // What the download window says.
-  var W = words({
-    en: {
-      preparing: 'Preparing your file', preparingTitle: 'Preparing your file…',
-      wait: 'It downloads here as soon as it’s ready. Keep the other tab open until then.',
-      started: 'Your download has started. If it didn’t, use the button below. You can close this tab once the file is saved.',
-      download: 'Download {name}'
-    },
-    bn: {
-      preparing: 'আপনার ফাইল তৈরি হচ্ছে', preparingTitle: 'আপনার ফাইল তৈরি হচ্ছে…',
-      wait: 'তৈরি হলেই এখানে ডাউনলোড হবে। ততক্ষণ অন্য ট্যাবটি খোলা রাখুন।',
-      started: 'আপনার ডাউনলোড শুরু হয়েছে। না হলে নিচের বোতামটি ব্যবহার করুন। ফাইলটি সেভ হয়ে গেলে এই ট্যাবটি বন্ধ করতে পারেন।',
-      download: '{name} ডাউনলোড করুন'
-    }
-  });
 
   function readBytes(file){
     if (file.arrayBuffer) return file.arrayBuffer();
@@ -127,15 +92,15 @@
         return '<link rel="stylesheet" href="' + l.href.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '">';
       }).join('');
       d.open();
-      d.write('<!doctype html><html lang="' + lang + '"><head><meta charset="utf-8">' +
+      d.write('<!doctype html><html lang="' + Lang.lang + '"><head><meta charset="utf-8">' +
         '<meta name="viewport" content="width=device-width,initial-scale=1">' + links + '</head><body></body></html>');
       d.close();
     }
-    d.title = (name || W.preparing) + ' · bdnix';
+    d.title = (name || t('Preparing your file')) + ' · bdnix';
     var main = d.createElement('main');
     main.className = 'tool';
     var h1 = d.createElement('h1');
-    h1.textContent = name || W.preparingTitle;
+    h1.textContent = name || t('Preparing your file…');
     var lede = d.createElement('p');
     lede.className = 'lede';
     main.appendChild(h1);
@@ -143,17 +108,17 @@
     d.body.textContent = '';
     d.body.appendChild(main);
     if (!url) {
-      lede.textContent = W.wait;
+      lede.textContent = t('It downloads here as soon as it’s ready. Keep the other tab open until then.');
       return;
     }
-    lede.textContent = W.started;
+    lede.textContent = t('Your download has started. If it didn’t, use the button below. You can close this tab once the file is saved.');
     var actions = d.createElement('p');
     actions.className = 'actions';
     var a = d.createElement('a');
     a.className = 'btn btn-primary';
     a.href = url;
     a.download = name;
-    a.textContent = fillIn(W.download, { name: name });
+    a.textContent = t('Download {name}', { name: name });
     actions.appendChild(a);
     main.appendChild(actions);
     a.click();
@@ -215,8 +180,5 @@
     };
   }
 
-  window.bdnixFiles = {
-    lang: lang, words: words, num: num, fillIn: fillIn, count: count,
-    fmtSize: fmtSize, plural: plural, readBytes: readBytes, onFileDrop: onFileDrop, loadScript: loadScript, offer: offer, fileWindow: fileWindow
-  };
+  window.bdnixFiles = { fmtSize: fmtSize, plural: plural, readBytes: readBytes, onFileDrop: onFileDrop, loadScript: loadScript, offer: offer, fileWindow: fileWindow };
 })();

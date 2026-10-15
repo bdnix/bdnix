@@ -1,26 +1,17 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { inNewWindow } from './downloads.mjs';
 import { upload, numberedPdf, download, widths } from './pdfs.mjs';
-import { expectNoEnglish } from './bangla.mjs';
+import { inLanguage, expectTranslated } from './languages.mjs';
 
-// Merge PDFs in Bangla (bn/merge-pdf/): the same tool, in Bangla words and
-// digits. Page widths encode file and page: A = 101..110, B = 201..203.
+test.beforeEach(({ page }) => inLanguage(page, 'bn'));
+// Whatever a test does, nothing is left in English.
+test.afterEach(({ page }) => expectTranslated(page));
 
-test('the top bar switches between the English and Bangla tool', async ({ page }) => {
-  await page.goto('/merge-pdf/');
-  await page.getByRole('navigation', { name: 'Language' }).getByRole('link', { name: 'বাংলা' }).click();
-  await expect(page).toHaveURL(/\/bn\/merge-pdf\/$/);
-  await expect(page.locator('h1')).toHaveText('PDF জোড়া লাগান');
-  await expect(page.getByRole('link', { name: 'bdnix-এ ফিরে যান' })).toHaveAttribute('href', '/bn/');
-  await expect(page.locator('.profile-chip')).toHaveAttribute('href', '/bn/profile/');
-  await expectNoEnglish(page);
-  await page.getByRole('navigation', { name: 'ভাষা' }).getByRole('link', { name: 'English' }).click();
-  await expect(page).toHaveURL(/\/merge-pdf\/$/);
-  await expect(page.locator('h1')).toHaveText('Merge PDFs');
-});
+// Merge PDFs in Bangla: the same tool, in Bangla words and digits.
+// Page widths encode file and page: A = 101..110, B = 201..203.
 
 test('merges in Bangla, with page ranges typed in Bangla digits', async ({ page }) => {
-  await page.goto('/bn/merge-pdf/');
+  await page.goto('/merge-pdf/');
   await page.locator('#picker').setInputFiles([
     upload('A.pdf', await numberedPdf(100, 10)),
     upload('B.pdf', await numberedPdf(200, 3)),
@@ -41,7 +32,7 @@ test('merges in Bangla, with page ranges typed in Bangla digits', async ({ page 
   await expect(page.locator('.file-name')).toHaveText(['B.pdf', 'A.pdf']);
   await expect(page.locator('#pageLabel')).toHaveText('পৃষ্ঠা ১ / ৮', { timeout: 20_000 });
   await expect(page.locator('#pageCanvas')).toHaveAttribute('aria-label', 'জোড়া লাগানো PDF-এর পৃষ্ঠা ১ / ৮');
-  await expectNoEnglish(page, ['A.pdf', 'B.pdf', 'notes.txt', 'broken.pdf', 'merged.pdf']);
+  await expectTranslated(page);
 
   const out = await download(page, () => page.getByRole('button', { name: 'PDF জোড়া লাগান' }).click());
   expect(out.name).toBe('merged.pdf');
@@ -51,7 +42,7 @@ test('merges in Bangla, with page ranges typed in Bangla digits', async ({ page 
 });
 
 test('the download window speaks Bangla too', async ({ page }) => {
-  await page.goto('/bn/merge-pdf/');
+  await page.goto('/merge-pdf/');
   await page.locator('#picker').setInputFiles([upload('A.pdf', await numberedPdf(100, 2))]);
   await expect(page.locator('.file')).toHaveCount(1);
   const { popup } = await inNewWindow(page, () => page.getByRole('button', { name: 'PDF জোড়া লাগান' }).click());
@@ -61,7 +52,7 @@ test('the download window speaks Bangla too', async ({ page }) => {
 });
 
 test('a page range that doesn’t work is explained in Bangla', async ({ page }) => {
-  await page.goto('/bn/merge-pdf/');
+  await page.goto('/merge-pdf/');
   await page.locator('#picker').setInputFiles([upload('A.pdf', await numberedPdf(100, 10))]);
   const input = page.locator('.file-range input');
   const meta = page.locator('.file-meta');

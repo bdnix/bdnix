@@ -135,9 +135,8 @@ test('pageList: pages counted from 1, with runs joined', () => {
   assert.equal(R.pageList([3, 3, 4]), 'pages 4–5', 'duplicates ignored');
 });
 
-test('pageList: in another language, with its own words and digits', () => {
-  const bn = { page: 'পৃষ্ঠা ', pages: 'পৃষ্ঠা ', and: ' ও ', num: (n) => String(n).replace(/[0-9]/g, (d) => '০১২৩৪৫৬৭৮৯'[d]) };
+test('pageList: in another language, its own words and digits', () => {
+  const bn = { one: 'পৃষ্ঠা {list}', many: 'পৃষ্ঠা {list}', and: '{rest} ও {last}', num: (n) => String(n).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[d]) };
   assert.equal(R.pageList([1], bn), 'পৃষ্ঠা ২');
-  assert.equal(R.pageList([0, 2], bn), 'পৃষ্ঠা ১ ও ৩');
-  assert.equal(R.pageList([6, 0, 4, 2, 5, 9, 10], bn), 'পৃষ্ঠা ১, ৩, ৫–৭ ও ১০–১১');
+  assert.equal(R.pageList([6, 0, 4, 2, 5], bn), 'পৃষ্ঠা ১, ৩ ও ৫–৭');
 });

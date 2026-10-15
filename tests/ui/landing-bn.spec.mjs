@@ -1,32 +1,14 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { inLanguage, expectTranslated } from './languages.mjs';
 
-// The landing page's Bangla copy (bn/index.html): the same page in Bangla,
-// counting in Bangla digits. Its cards still lead to the English pages of
-// the games and tools until they have Bangla copies of their own.
+// The landing page in Bangla: the same page, counting in Bangla digits.
+test.beforeEach(({ page }) => inLanguage(page, 'bn'));
+// Whatever a test does, nothing is left in English.
+test.afterEach(({ page }) => expectTranslated(page));
 const BANGLA = /[ঀ-৿]/;
 
-test('the top bar switches between the English and Bangla copies of the page', async ({ page }) => {
+test('a card in Bangla for every game and tool', async ({ page }) => {
   await page.goto('/');
-  const toBangla = page.getByRole('navigation', { name: 'Language' }).getByRole('link', { name: 'বাংলা' });
-  await expect(toBangla).toHaveAttribute('hreflang', 'bn');
-  await expect(toBangla).toHaveAttribute('lang', 'bn');
-  await toBangla.click();
-  await expect(page).toHaveURL(/\/bn\/$/);
-  await expect(page.locator('html')).toHaveAttribute('lang', 'bn');
-  await expect(page.locator('h1')).toHaveText('একটু খেলুন।কাজ সেরে ফেলুন।');
-
-  const toEnglish = page.getByRole('navigation', { name: 'ভাষা' }).getByRole('link', { name: 'English' });
-  await expect(toEnglish).toHaveAttribute('lang', 'en');
-  await toEnglish.click();
-  await expect(page).toHaveURL(/\/$/);
-  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await expectNoSideScroll(page);
-});
-
-test('a card in Bangla for every game and tool, each leading to its page', async ({ page }) => {
-  await page.goto('/');
-  const english = await page.locator('.card').evaluateAll((els) => els.map((a) => a.getAttribute('href')));
-  await page.goto('/bn/');
   await expect(page).toHaveTitle('bdnix — ফ্রি ব্রাউজার গেম আর PDF, অডিও ও ছবির টুল');
   for (const [section, count] of [['গেম', 7], ['টুল', 9]]) {
     const cards = page.getByRole('region', { name: section }).locator('.card');
@@ -36,13 +18,13 @@ test('a card in Bangla for every game and tool, each leading to its page', async
       await expect(card.locator('.card-text > span')).toHaveText(BANGLA);
     }
   }
-  expect(await page.locator('.card').evaluateAll((els) => els.map((a) => a.getAttribute('href')))).toEqual(english);
+  await expect(page.locator('.card[href="/snake/"]')).toHaveCount(1);
   await expect(page.locator('.card[href="/snake/"] b')).toHaveText('সাপ');
   await expectNoSideScroll(page);
 });
 
 test('search finds cards by their Bangla or English words, and counts in Bangla digits', async ({ page }) => {
-  await page.goto('/bn/');
+  await page.goto('/');
   const search = page.getByRole('searchbox', { name: 'গেম ও টুল খুঁজুন' });
   await expect(search).toHaveAttribute('placeholder', 'লিখে দেখুন “pdf”, “ছবি” বা “সাপ”');
   const status = page.locator('#search-status');
@@ -70,17 +52,17 @@ test('search finds cards by their Bangla or English words, and counts in Bangla 
   const empty = page.locator('#search-empty');
   await expect(empty).toHaveText('এর সঙ্গে মেলে এমন কিছু এখনো নেই। আপনি এর জন্যে অনুরোধ করতে পারেন।');
   await empty.getByRole('link', { name: 'অনুরোধ' }).click();
-  await expect(page).toHaveURL(/\/bn\/#suggest$/);
+  await expect(page).toHaveURL(/\/#suggest$/);
 });
 
-test('greets visitors in Bangla, with Bangla digits, and the chip leads to the Bangla profile', async ({ page }) => {
-  await page.goto('/bn/');
+test('greets visitors in Bangla, with Bangla digits, and the chip leads to the profile', async ({ page }) => {
+  await page.goto('/');
   const visit = page.locator('#visit');
   await expect(visit).toHaveText('স্বাগতম! শুরু করতে একটি গেম বা টুল বেছে নিন।');
   const chip = page.locator('.profile-chip');
   await expect(chip).toHaveText('বব্যবহারকারী');
   await expect(chip).toHaveAttribute('title', 'আপনার প্রোফাইল');
-  await expect(chip).toHaveAttribute('href', '/bn/profile/');
+  await expect(chip).toHaveAttribute('href', '/profile/');
   await page.reload();
   await expect(visit).toHaveText('আবার স্বাগতম।');
   await page.evaluate(() => { localStorage.setItem('bdnix_name', 'মুসা'); localStorage.setItem('bdnix_visits', '8'); });
@@ -92,7 +74,7 @@ test('greets visitors in Bangla, with Bangla digits, and the chip leads to the B
 
 test('the typewriter types in Bangla, and screen readers hear one steady Bangla line', async ({ page }) => {
   await page.clock.install();
-  await page.goto('/bn/');
+  await page.goto('/');
   const said = 'গেম আর টুল, যা চলে আপনার ব্রাউজারেই। কিছু ইনস্টল করতে হয় না, কিছু আপলোডও হয় না।';
   await expect(page.locator('.terminal')).toMatchAriaSnapshot(`- paragraph: ${said}`);
   const typed = page.locator('#typed');
@@ -108,7 +90,7 @@ test('the typewriter types in Bangla, and screen readers hear one steady Bangla 
 });
 
 test('asks for requests in Bangla, with a Bangla email ready to send', async ({ page }) => {
-  await page.goto('/bn/');
+  await page.goto('/');
   const suggest = page.getByRole('region', { name: 'এখানে নেই এমন কোনো টুল বা গেম চান?' });
   const mail = new URL(await suggest.getByRole('link', { name: 'ইমেইলে অনুরোধ পাঠান' }).getAttribute('href'));
   expect(mail.pathname).toBe('root@bdnix.com');

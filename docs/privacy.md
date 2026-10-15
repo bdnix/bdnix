@@ -4,7 +4,7 @@ bdnix has no server-side application and no accounts. Everything the site keeps 
 
 ## Files opened in the tools
 
-Files are read and processed by the browser (this includes chess game files). They are never uploaded or sent anywhere, and neither is anything typed into a tool. Third-party libraries (pdf-lib, PDF.js, fontkit, lamejs and the Stockfish chess engine) and the fonts (Inter, JetBrains Mono, Hind Siliguri for the Bangla pages and the signing tool's handwriting fonts) are served from this site, not from a CDN or a font service, so until a visitor accepts analytics a page contacts nothing but bdnix.com (checked by `tests/ui/analytics.spec.mjs`).
+Files are read and processed by the browser (this includes chess game files). They are never uploaded or sent anywhere, and neither is anything typed into a tool. Third-party libraries (pdf-lib, PDF.js, fontkit, lamejs and the Stockfish chess engine) and the fonts (Inter, JetBrains Mono, Hind Siliguri for Bangla and the signing tool's handwriting fonts) are served from this site, not from a CDN or a font service, so until a visitor accepts analytics a page contacts nothing but bdnix.com (checked by `tests/ui/analytics.spec.mjs`).
 
 ## Content security policy
 
@@ -12,7 +12,7 @@ Every page tells the browser what it may load: its own files, and Google Analyti
 
 ## Profile
 
-The chip in the top right of the landing and tool pages links to `/profile/` (`/bn/profile/` from the Bangla home page, which shows the same name and scores in Bangla). It shows the visitor's name ("User" until they set one, up to 24 characters), their best Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce scores, the highest chess level they've beaten, and the number of visits counted by the landing page. The profile page is marked `noindex`, since it only shows what's saved in the browser.
+The chip in the top right of the landing and tool pages links to `/profile/`. It shows the visitor's name ("User" until they set one, up to 24 characters), their best Falling Blocks, Maze Chase, Flap, Road Hop, Snake and Brick Bounce scores, the highest chess level they've beaten, and the number of visits counted by the landing page. The profile page is marked `noindex`, since it only shows what's saved in the browser.
 
 ## What is stored
 
@@ -28,6 +28,7 @@ In `localStorage`:
 | `bdnix_sound` | Whether game sounds are on (`on`) or muted (`off`) |
 | `bdnix_watermark_v1` | Watermark tool settings |
 | `bdnix_analytics` | Analytics consent choice |
+| `bdnix_lang` | The language the visitor picked |
 
 In IndexedDB, the `bdnix-tools` database holds the watermark tool's chosen image and font file, and the `bdnix-sign` database holds the signatures made in the signing tool, only if the visitor ticks **Remember them in this browser** (unticking it deletes them).
 

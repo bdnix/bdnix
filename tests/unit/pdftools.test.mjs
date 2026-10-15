@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { load, plain } from './load.mjs';
+import { load, plain, fakeStorage } from './load.mjs';
 
 const FILES = ['assets/js/files.js', 'assets/js/pdftools.js'];
 const { bdnixPdf: T } = load(FILES);
@@ -129,14 +129,12 @@ test('loadPdfLib: fetches the vendored pdf-lib, with a message for the visitor i
   assert.equal(await ok, w.PDFLib);
 });
 
-test('parseRange: Bangla digits work too', () => {
-  assert.deepEqual(pages('১-৩, ৫', 10), { pages: [0, 1, 2, 4] });
-  assert.deepEqual(pages('৯-', 10), { pages: [8, 9] });
-  assert.deepEqual(pages('1-২', 10), { pages: [0, 1] });
-});
-
-test('parseRange: on a page in Bangla, its problems are explained in Bangla', () => {
-  const { bdnixPdf: B } = load(FILES, { document: { documentElement: { lang: 'bn' } } });
-  assert.deepEqual(plain(B.parseRange('১২', 10)), { error: '১২ নম্বর পৃষ্ঠা নেই (এই ফাইলে ১০ পৃষ্ঠা আছে)' });
-  assert.deepEqual(plain(B.parseRange('abc', 10)), { error: '“abc” কোনো পৃষ্ঠা বা পৃষ্ঠার পরিসর নয়' });
+test('parseRange: digits typed in another script, and errors in the visitor\'s language', () => {
+  assert.deepEqual(pages('১-৩, ৫', 6), { pages: [0, 1, 2, 4] });   // Bangla
+  assert.deepEqual(pages('٢-٣', 6), { pages: [1, 2] });              // Arabic
+  assert.deepEqual(pages('४–', 6), { pages: [3, 4, 5] });            // Devanagari, with a dash
+  assert.deepEqual(pages('১a', 6), { error: '“1a” isn’t a page or range' });
+  const { bdnixPdf } = load(['assets/lang/bn.js'].concat(FILES), { localStorage: fakeStorage({ bdnix_lang: 'bn' }) });
+  assert.deepEqual(plain(bdnixPdf.parseRange('১-৯', 5)), { error: '৯ নম্বর পৃষ্ঠা নেই (এই ফাইলে ৫ পৃষ্ঠা আছে)' });
+  assert.deepEqual(plain(bdnixPdf.parseRange('abc', 5)), { error: '“abc” কোনো পৃষ্ঠা বা পৃষ্ঠার পরিসর নয়' });
 });

@@ -1,4 +1,6 @@
 (function(){
+  // The visitor's language (lang.js): words drawn on the board, and numbers.
+  var Lang = window.bdnixLang;
   // The rules live in bricks-core.js; this file draws them and handles input.
   var F = window.bdnixBricks;
   var W = F.W, H = F.H;
@@ -171,7 +173,7 @@
     sound.play(score >= best && score > 0 ? 'best' : 'over');
     ovKicker.textContent = ENDINGS[Math.min(ENDINGS.length - 1, Math.floor(Math.random() * ENDINGS.length))];
     ovTitle.textContent = 'Game over';
-    ovText.textContent = 'Score ' + score + (score >= best && score > 0 ? ' — new best!' : ' · Best ' + best);
+    ovText.textContent = score >= best && score > 0 ? Lang.t('Score {score} — new best!', { score: score }) : Lang.t('Score {score} · Best {best}', { score: score, best: best });
     startBtn.textContent = 'Play again';
     newBtn.hidden = true;
     overlay.hidden = false;
@@ -350,8 +352,8 @@
     if (since(missed) < MISS) drawMissed();
     else if (since(cleared) < CLEAR) drawCleared();
     else if (state === 'ready' || (state === 'paused' && pausedFrom === 'ready')) {
-      var hint = compactMQ.matches ? 'Tap to launch' : 'Press Space or click to launch';
-      var title = world.level > 1 && world.lives >= F.LIVES && !F.progress(world).broken ? 'Wall ' + world.level : 'Get ready';
+      var hint = Lang.t(compactMQ.matches ? 'Tap to launch' : 'Press Space or click to launch');
+      var title = world.level > 1 && world.lives >= F.LIVES && !F.progress(world).broken ? Lang.t('Wall {n}', { n: world.level }) : Lang.t('Get ready');
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = '800 30px Inter, system-ui, sans-serif';
       ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(8,10,18,.8)';
@@ -511,7 +513,7 @@
       var x = W / 2 + (i - (on.length - 1) / 2) * 56;
       ctx.fillStyle = ctx.strokeStyle = POWERS[k].color;
       icon(k, x - 8, 466, 10);
-      ctx.fillText(String(Math.ceil(world[k])), x + 1, 466.5);
+      ctx.fillText(Lang.num(Math.ceil(world[k])), x + 1, 466.5);
     });
   }
 
@@ -583,10 +585,10 @@
   function drawMissed(){
     var t = since(missed), left = missed.left;
     var tilt = Math.sin(t * 30) * 0.12 * Math.max(0, 1 - t / 0.5);
-    banner(left ? 'Missed!' : 'Out of balls', left === 1 ? 'Last ball!' : left ? left + ' balls left' : 'Game over', '#f43f5e', t, MISS, tilt);
+    banner(Lang.t(left ? 'Missed!' : 'Out of balls'), left === 1 ? Lang.t('Last ball!') : left ? Lang.t('{n} balls left', { n: left }) : Lang.t('Game over'), '#f43f5e', t, MISS, tilt);
   }
   function drawCleared(){
-    banner('Wall ' + cleared.level + ' cleared!', 'Here comes wall ' + (cleared.level + 1), '#facc15', since(cleared), CLEAR, 0);
+    banner(Lang.t('Wall {n} cleared!', { n: cleared.level }), Lang.t('Here comes wall {n}', { n: cleared.level + 1 }), '#facc15', since(cleared), CLEAR, 0);
   }
 
   // A cleared wall: a bright flash, then confetti in the bricks' colours

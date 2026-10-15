@@ -64,10 +64,10 @@ test('blocked storage (e.g. private mode) falls back quietly', () => {
   assert.equal(w.bdnixProfile.setName('Musa'), 'Musa');
 });
 
-test('on a page in Bangla the name until one is set is Bangla, and so is its initial', () => {
-  const localStorage = fakeStorage();
-  const document = { ...fakeDocument(), documentElement: { lang: 'bn' } };
-  const P = load(FILE, { localStorage, document, addEventListener(){} }).bdnixProfile;
+test('in Bangla the name until one is set is Bangla, and so is its initial', () => {
+  const localStorage = fakeStorage({ bdnix_lang: 'bn' });
+  const document = fakeDocument();
+  const P = load(['assets/lang/bn.js'].concat(FILE), { localStorage, document, addEventListener(){} }).bdnixProfile;
   assert.equal(P.DEFAULT_NAME, 'ব্যবহারকারী');
   assert.equal(P.getName(), 'ব্যবহারকারী');
   assert.equal(document.elements['[data-profile-initial]'][0].textContent, 'ব');

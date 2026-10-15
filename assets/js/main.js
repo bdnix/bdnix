@@ -1,49 +1,12 @@
 (function(){
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var Lang = window.bdnixLang, t = Lang.t;
 
-  // The page's words, in its language: English here, Bangla on its Bangla
-  // copy (bn/index.html), which also counts in Bangla digits.
-  var BN = document.documentElement.lang === 'bn';
-  function num(n){ return BN ? n.toLocaleString('bn-BD') : String(n); }
-  var WORDS = BN ? {
-    welcome: 'স্বাগতম! শুরু করতে একটি গেম বা টুল বেছে নিন।',
-    back: function(name){ return name ? 'আবার স্বাগতম, ' + name + '।' : 'আবার স্বাগতম।'; },
-    regular: function(n){ return ' এটি আপনার ' + num(n) + ' নম্বর ভিজিট, আপনি এখন নিয়মিত অতিথি।'; },
-    matches: function(n){ return num(n) + 'টি মিলেছে'; },
-    lines: [
-      'এক রাউন্ড ইটের খেলা খেলুন।',
-      'গোলকধাঁধায় ভূতদের ফাঁকি দিন।',
-      'ডানা ঝাপটে কয়েকটা পাইপ পেরিয়ে যান।',
-      'একটা মুরগিকে রাস্তা পার করান।',
-      'সবচেয়ে লম্বা সাপটা বানান।',
-      'ইটের দেয়াল ভেঙে ফেলুন।',
-      'একগাদা PDF জোড়া লাগান।',
-      'একটা রিপোর্টে ওয়াটারমার্ক দিন।',
-      'একটা ভিডিওকে MP3 বানিয়ে ফেলুন।',
-      'পাঠানোর আগে ছবিটা ছোট করুন।',
-      'কিছু ইনস্টল করতে হয় না। কিছু আপলোড হয় না।'
-    ]
-  } : {
-    welcome: 'Welcome! Pick a game or a tool to get started.',
-    back: function(name){ return 'Welcome back' + (name ? ', ' + name : '') + '.'; },
-    regular: function(n){ return ' Visit #' + n + ', you’re a regular now.'; },
-    matches: function(n){ return n === 1 ? '1 match' : n + ' matches'; },
-    lines: [
-      'play a round of falling blocks.',
-      'dodge ghosts in maze chase.',
-      'flap past a few pipes.',
-      'help a chicken cross the road.',
-      'grow the longest snake.',
-      'smash a wall of bricks.',
-      'merge a stack of pdfs.',
-      'watermark a report.',
-      'turn a video into an mp3.',
-      'shrink a photo to send.',
-      'nothing to install. nothing uploaded.'
-    ]
-  };
+  document.getElementById('year').textContent = new Date().getFullYear();
 
-  document.getElementById('year').textContent = BN ? new Date().getFullYear().toLocaleString('bn-BD', { useGrouping: false }) : new Date().getFullYear();
+  // The request email, in the visitor's language.
+  var email = document.querySelector('.suggest a[href^="mailto:"]');
+  email.href = 'mailto:root@bdnix.com?subject=' + encodeURIComponent(t('bdnix request: ')) + '&body=' + encodeURIComponent(t('What should it do?') + '\n\n');
 
   // Visit counter (per browser, just for fun)
   var visits = 1;
@@ -54,11 +17,11 @@
   // Greet returning visitors by the name they set on their profile, if any.
   var P = window.bdnixProfile;
   var name = P && P.getName() !== P.DEFAULT_NAME ? P.getName() : '';
-  var hello = WORDS.back(name);
+  var hello = name ? t('Welcome back, {name}.', { name: name }) : t('Welcome back.');
   document.getElementById('visit').textContent =
-    visits === 1 ? WORDS.welcome :
+    visits === 1 ? t('Welcome! Pick a game or a tool to get started.') :
     visits < 5   ? hello :
-                   hello + WORDS.regular(visits);
+                   hello + t(' Visit #{n}, you’re a regular now.', { n: visits });
 
   // Search: hide the cards that don't match, and a section with none left.
   var S = window.bdnixSearch;
@@ -80,7 +43,7 @@
       shown += left;
     }
     var searching = S.terms(query).length > 0;
-    status.textContent = searching ? WORDS.matches(shown) : '';
+    status.textContent = searching ? Lang.count(shown, '{n} match', '{n} matches') : '';
     empty.hidden = !searching || shown > 0;
   }
   search.addEventListener('input', filter);
@@ -100,7 +63,19 @@
 
   // Typewriter
   if (reduce) return;
-  var lines = WORDS.lines;
+  var lines = [
+    'play a round of falling blocks.',
+    'dodge ghosts in maze chase.',
+    'flap past a few pipes.',
+    'help a chicken cross the road.',
+    'grow the longest snake.',
+    'smash a wall of bricks.',
+    'merge a stack of pdfs.',
+    'watermark a report.',
+    'turn a video into an mp3.',
+    'shrink a photo to send.',
+    'nothing to install. nothing uploaded.'
+  ].map(function(line){ return t(line); });
   var typed = document.getElementById('typed');
   var li = 0, ci = lines[0].length, deleting = false;
   function tick(){

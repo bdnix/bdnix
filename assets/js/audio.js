@@ -3,7 +3,8 @@
 // in audio-core.js.
 (function(){
   var T = window.bdnixFiles, A = window.bdnixAudio;
-  var fmtSize = T.fmtSize, plural = T.plural, readBytes = T.readBytes;
+  var Lang = window.bdnixLang, t = Lang.t, count = Lang.count;
+  var fmtSize = T.fmtSize, readBytes = T.readBytes;
 
   // Audio decoded whole is resampled to this rate, which MP3 and WAV both
   // suit.
@@ -66,7 +67,7 @@
     });
     render();
     if (skipped.length) {
-      say('Skipped: ' + skipped.map(function(f){ return f.name; }).join(', ') + (skipped.length === 1 ? ' isn’t' : ' aren’t') + ' a video or audio file.', true);
+      say(t(skipped.length === 1 ? 'Skipped: {names} isn’t a video or audio file.' : 'Skipped: {names} aren’t a video or audio file.', { names: skipped.map(function(f){ return f.name; }).join(', ') }), true);
     } else {
       say('');
     }
@@ -102,7 +103,7 @@
         var a = document.createElement('a');
         a.className = 'btn btn-ghost dl';
         T.offer(a, f.url, f.out);
-        a.setAttribute('aria-label', 'Download ' + f.out);
+        a.setAttribute('aria-label', t('Download {name}', { name: f.out }));
         a.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4 7l4 4 4-4M2 14h12"/></svg><span>Download</span>';
         li.appendChild(a);
       }
@@ -110,7 +111,7 @@
       var rm = document.createElement('button');
       rm.type = 'button';
       rm.className = 'icon-btn rm';
-      rm.setAttribute('aria-label', 'Remove ' + f.file.name);
+      rm.setAttribute('aria-label', t('Remove {name}', { name: f.file.name }));
       rm.title = 'Remove';
       rm.disabled = busy;
       rm.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
@@ -125,8 +126,8 @@
     });
 
     var ready = files.filter(function(f){ return f.state === 'ready'; }).length;
-    summary.textContent = plural(files.length, 'file');
-    if (!busy) convertLabel.textContent = ready ? 'Convert ' + plural(ready, 'file') : 'Convert';
+    summary.textContent = count(files.length, '{n} file', '{n} files');
+    if (!busy) convertLabel.textContent = ready ? t('Convert {files}', { files: count(ready, '{n} file', '{n} files') }) : t('Convert');
     convertBtn.disabled = busy || !ready;
     clearBtn.disabled = busy;
     picker.disabled = busy;
@@ -138,7 +139,7 @@
     var meta = f.meta;
     meta.classList.toggle('error', f.state === 'error');
     if (f.state === 'error') meta.textContent = f.error;
-    else if (f.state === 'working') meta.textContent = 'Converting… ' + Math.floor(f.progress * 100) + '%';
+    else if (f.state === 'working') meta.textContent = t('Converting… {percent}%', { percent: Math.floor(f.progress * 100) });
     else if (f.state === 'done') meta.textContent = A.fmtTime(f.seconds) + ' · ' + f.out + ' · ' + fmtSize(f.outSize);
     else meta.textContent = fmtSize(f.file.size);
     f.bar.style.setProperty('--p', f.progress);
@@ -285,7 +286,7 @@
   function loadEncoder(opts){
     if (opts.format !== 'mp3') return Promise.resolve(null);
     return T.loadScript('/assets/vendor/lame.min.js?v=1.2.1', 'lamejs').catch(function(){
-      throw new Error('the MP3 encoder didn’t load. Check your connection and try again');
+      throw new Error(t('the MP3 encoder didn’t load. Check your connection and try again'));
     });
   }
 
@@ -310,8 +311,8 @@
       f.state = 'done';
     }).catch(function(err){
       f.state = 'error';
-      f.error = err === unreadable ? 'No audio your browser can read in this file'
-        : 'Couldn’t convert: ' + (err && err.message ? err.message : err);
+      f.error = err === unreadable ? t('No audio your browser can read in this file')
+        : t('Couldn’t convert: {error}', { error: err && err.message ? err.message : err });
     });
   }
 
@@ -323,7 +324,7 @@
     var opts = settings();
     todo.reduce(function(chain, f, i){
       return chain.then(function(){
-        convertLabel.textContent = 'Converting ' + (i + 1) + ' of ' + todo.length + '…';
+        convertLabel.textContent = t('Converting {i} of {total}…', { i: i + 1, total: todo.length });
         return convert(f, opts);
       });
     }, Promise.resolve()).then(function(){
@@ -331,8 +332,9 @@
       render();
       var failed = todo.filter(function(f){ return f.state === 'error'; }).length;
       var done = todo.length - failed;
-      if (!failed) say('Done. Converted ' + plural(done, 'file') + '.');
-      else say((done ? 'Converted ' + plural(done, 'file') + '. ' : '') + plural(failed, 'file') + ' couldn’t be converted. Your browser may not support ' + (failed === 1 ? 'its' : 'their') + ' audio format.', true);
+      var files = function(n){ return count(n, '{n} file', '{n} files'); };
+      if (!failed) say(t('Done. Converted {files}.', { files: files(done) }));
+      else say((done ? t('Converted {files}. ', { files: files(done) }) : '') + t(failed === 1 ? '{files} couldn’t be converted. Your browser may not support its audio format.' : '{files} couldn’t be converted. Your browser may not support their audio format.', { files: files(failed) }), true);
       var first = list.querySelector('.dl');
       if (first) first.focus();
     });

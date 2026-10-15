@@ -13,26 +13,8 @@
 // data), words its card is found by in the landing page search, its icon (the
 // inside of a 40×40 SVG) and, for a game, the key of its best score (and
 // optionally a word shown before it, bestLabel).
-//
-// The site in Bangla: a page with `bn` (its Bangla title and description)
-// also has a Bangla copy at /bn<path>, an ordinary page written by hand
-// (bn/index.html, bn/profile/index.html) that the build fills in the same
-// way, in Bangla. An app's `bn` is its card on the Bangla landing page: its
-// name, blurb and the Bangla words it is found by (the English keywords still
-// work). Its card links to the English page until that page has a Bangla copy.
 
 export const SITE = 'https://www.bdnix.com';
-
-// The words the build writes into the Bangla pages: the footer, the profile
-// page's score rows and the share image's description.
-export const bangla = {
-  locale: 'bn_BD',
-  shareAlt: 'bdnix: একটু খেলুন। একটু কাজ সেরে ফেলুন।',
-  openSource: 'GitHub-এ ওপেন সোর্স',
-  suggest: 'নতুন টুল বা গেমের প্রস্তাব দিন',
-  play: 'খেলুন',
-  level: 'লেভেল'
-};
 
 export const pages = [
   {
@@ -40,10 +22,6 @@ export const pages = [
     title: 'bdnix — Free browser games and PDF, audio and image tools',
     description: 'Play Falling Blocks, Maze Chase, Flap, Road Hop, Snake, Brick Bounce and chess, merge, watermark, redact, sign and unlock PDFs, turn videos into MP3s, compress, frame or collage photos, all in your browser. Nothing uploaded.',
     schema: 'WebSite',
-    bn: {
-      title: 'bdnix — ফ্রি ব্রাউজার গেম আর PDF, অডিও ও ছবির টুল',
-      description: 'ইটের খেলা, গোলকধাঁধা, ঝাপটা, রাস্তা পার, সাপ, ইট ভাঙা আর দাবা খেলুন; PDF জোড়া লাগান, ওয়াটারমার্ক দিন, লেখা ঢাকুন, সই করুন ও আনলক করুন; ভিডিও থেকে MP3 বানান; ছবি ছোট করুন, ফ্রেমে বসান বা কোলাজ করুন। সবই আপনার ব্রাউজারে, কিছুই আপলোড হয় না।'
-    }
   },
   {
     path: '/falling-blocks/',
@@ -54,7 +32,6 @@ export const pages = [
       kind: 'game', name: 'Falling Blocks', blurb: 'Stack blocks, clear lines',
       best: 'bdnix_tetris_best',   // the key the game keeps its best score under
       keywords: 'game puzzle blocks stack lines arcade',
-      bn: { name: 'ইটের খেলা', blurb: 'ব্লক সাজান, লাইন মুছুন', keywords: 'গেম ধাঁধা ব্লক ইটের দেয়াল আর্কেড' },
       icon: [
         '<rect x="4" y="18" width="10" height="10" rx="2" fill="#a855f7"/>',
         '<rect x="15" y="18" width="10" height="10" rx="2" fill="#a855f7"/>',
@@ -75,7 +52,6 @@ export const pages = [
       kind: 'game', name: 'Maze Chase', blurb: 'Eat dots, dodge ghosts',
       best: 'bdnix_pacman_best',   // the key the game keeps its best score under
       keywords: 'game arcade maze ghosts dots',
-      bn: { name: 'গোলকধাঁধা', blurb: 'বিন্দু খান, ভূত এড়ান', keywords: 'গেম আর্কেড গোলকধাঁধা ভূত বিন্দু' },
       icon: [
         '<path d="M14 20 L24.4 14 A12 12 0 1 0 24.4 26 Z" fill="#facc15"/>',
         '<circle cx="29" cy="20" r="2" fill="#eef1f8" opacity=".8"/>',
@@ -92,7 +68,6 @@ export const pages = [
       kind: 'game', name: 'Flap', blurb: 'Flap through the pipes',
       best: 'bdnix_flappy_best',   // the key the game keeps its best score under
       keywords: 'game arcade bird pipes fly tap',
-      bn: { name: 'ঝাপটা', blurb: 'পাইপের ফাঁক দিয়ে উড়ে যান', keywords: 'গেম আর্কেড পাখি পাইপ ওড়া উড়ুন' },
       icon: [
         '<rect x="27" y="2" width="9" height="11" rx="1.5" fill="#22d3ee" opacity=".55"/>',
         '<rect x="27" y="27" width="9" height="11" rx="1.5" fill="#22d3ee" opacity=".55"/>',
@@ -112,7 +87,6 @@ export const pages = [
       kind: 'game', name: 'Road Hop', blurb: 'Help a chicken cross the road',
       best: 'bdnix_hop_best',   // the key the game keeps its best score under
       keywords: 'game arcade chicken cross road cars traffic',
-      bn: { name: 'রাস্তা পার', blurb: 'মুরগিকে রাস্তা পার করান', keywords: 'গেম আর্কেড মুরগি রাস্তা পার গাড়ি' },
       icon: [
         '<rect x="0" y="4" width="40" height="10" rx="2" fill="#22d3ee" opacity=".3"/>',
         '<rect x="24" y="5.5" width="12" height="7" rx="2.5" fill="#f472b6"/>',
@@ -133,7 +107,6 @@ export const pages = [
       kind: 'game', name: 'Snake', blurb: 'Eat, grow, don’t bite your tail',
       best: 'bdnix_snake_best',   // the key the game keeps its best score under
       keywords: 'game arcade classic grow',
-      bn: { name: 'সাপ', blurb: 'খান, বড় হন, নিজের লেজে কামড় দেবেন না', keywords: 'গেম আর্কেড ক্লাসিক বাড়ুন' },
       icon: [
         '<path d="M6 32h14V20h12V9" fill="none" stroke="#a855f7" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>',
         '<path d="M20 20h12V9" fill="none" stroke="#22d3ee" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -152,7 +125,6 @@ export const pages = [
       kind: 'game', name: 'Brick Bounce', blurb: 'Bounce the ball, smash the bricks',
       best: 'bdnix_bricks_best',   // the key the game keeps its best score under
       keywords: 'game arcade ball paddle bricks',
-      bn: { name: 'ইট ভাঙা', blurb: 'বল দিয়ে দেয়াল ভাঙুন', keywords: 'গেম আর্কেড বল প্যাডেল ইট' },
       icon: [
         '<rect x="3" y="5" width="10" height="6" rx="1.5" fill="#f472b6"/>',
         '<rect x="15" y="5" width="10" height="6" rx="1.5" fill="#f472b6"/>',
@@ -174,7 +146,6 @@ export const pages = [
       best: 'bdnix_chess_best',   // the key the game keeps the highest level beaten under
       bestLabel: 'Level',         // shown before it on the profile page
       keywords: 'game board chess stockfish engine strategy checkmate pgn analysis review',
-      bn: { name: 'দাবা', blurb: 'Stockfish-এর সঙ্গে খেলুন, দশটি লেভেল', keywords: 'গেম দাবা চেস কিস্তিমাত বোর্ড কৌশল বিশ্লেষণ' },
       icon: [
         '<rect x="4" y="4" width="32" height="32" rx="3" fill="#22d3ee" opacity=".3"/>',
         '<rect x="4" y="4" width="16" height="16" rx="3" fill="#a855f7" opacity=".55"/>',
@@ -188,15 +159,10 @@ export const pages = [
     path: '/merge-pdf/',
     title: 'Merge PDFs — Combine PDF files free and private | bdnix',
     description: 'Combine several PDF files into one, free: put them in order and pick the pages you want from each. Runs in your browser; your files are never uploaded.',
-    bn: {
-      title: 'PDF জোড়া লাগান — ফ্রিতে PDF ফাইল একত্র করুন | bdnix',
-      description: 'কয়েকটি PDF ফাইল ফ্রিতে একটিতে জোড়া লাগান: ক্রম সাজিয়ে নিন আর প্রতিটি থেকে যে পৃষ্ঠাগুলো চান বেছে নিন। আপনার ব্রাউজারেই চলে; আপনার ফাইল কখনো আপলোড হয় না।'
-    },
     schema: 'WebApplication', category: 'UtilitiesApplication',
     app: {
       kind: 'tool', name: 'Merge PDFs', blurb: 'Combine PDFs into one',
       keywords: 'tool pdf combine join documents',
-      bn: { name: 'PDF জোড়া লাগান', blurb: 'কয়েকটি PDF এক করুন', keywords: 'টুল পিডিএফ জোড়া একত্র মার্জ ডকুমেন্ট' },
       icon: [
         '<rect x="5" y="5" width="18" height="23" rx="3" fill="#22d3ee" opacity=".55"/>',
         '<rect x="17" y="12" width="18" height="23" rx="3" fill="#a855f7"/>',
@@ -208,15 +174,10 @@ export const pages = [
     path: '/watermark-pdf/',
     title: 'Watermark a PDF — Add text or image watermarks | bdnix',
     description: 'Add a text or image watermark to a PDF, free: pick the font, size, opacity, angle and position, or repeat it across the page. Runs in your browser; your file is never uploaded.',
-    bn: {
-      title: 'PDF-এ ওয়াটারমার্ক দিন — লেখা বা ছবির ওয়াটারমার্ক | bdnix',
-      description: 'PDF-এ ফ্রিতে লেখা বা ছবির ওয়াটারমার্ক দিন: ফন্ট, আকার, অস্বচ্ছতা, কোণ আর অবস্থান বেছে নিন, অথবা পুরো পৃষ্ঠায় বারবার বসান। আপনার ব্রাউজারেই চলে; আপনার ফাইল কখনো আপলোড হয় না।'
-    },
     schema: 'WebApplication', category: 'UtilitiesApplication',
     app: {
       kind: 'tool', name: 'Watermark a PDF', blurb: 'Stamp text or a logo',
       keywords: 'tool pdf stamp logo text documents',
-      bn: { name: 'PDF-এ ওয়াটারমার্ক দিন', blurb: 'লেখা বা লোগোর ছাপ দিন', keywords: 'টুল পিডিএফ ওয়াটারমার্ক ছাপ লোগো লেখা' },
       icon: [
         '<rect x="9" y="4" width="22" height="32" rx="3" fill="#22d3ee" opacity=".55"/>',
         '<path d="M12 28 L28 12" stroke="#f472b6" stroke-width="4" stroke-linecap="round"/>',
@@ -228,15 +189,10 @@ export const pages = [
     path: '/redact-pdf/',
     title: 'Redact a PDF — Black out text for good | bdnix',
     description: 'Black out names, numbers and anything else in a PDF for good, free: find words on every page or draw boxes by hand. Runs in your browser; your file is never uploaded.',
-    bn: {
-      title: 'PDF-এর লেখা ঢেকে দিন — চিরতরে কালো করুন | bdnix',
-      description: 'PDF-এ নাম, নম্বর বা অন্য যেকোনো কিছু ফ্রিতে চিরতরে কালো করে দিন: প্রতিটি পৃষ্ঠায় শব্দ খুঁজুন বা হাতে বাক্স আঁকুন। আপনার ব্রাউজারেই চলে; আপনার ফাইল কখনো আপলোড হয় না।'
-    },
     schema: 'WebApplication', category: 'UtilitiesApplication',
     app: {
       kind: 'tool', name: 'Redact a PDF', blurb: 'Black out text for good',
       keywords: 'tool pdf black out hide censor private documents',
-      bn: { name: 'PDF-এর লেখা ঢেকে দিন', blurb: 'লেখা চিরতরে মুছে দিন', keywords: 'টুল পিডিএফ লুকানো গোপন মুছুন কালো' },
       icon: [
         '<rect x="9" y="4" width="22" height="32" rx="3" fill="#22d3ee" opacity=".55"/>',
         '<rect x="12" y="11" width="16" height="5" rx="1" fill="#080a12"/>',
@@ -249,15 +205,10 @@ export const pages = [
     path: '/sign-pdf/',
     title: 'Sign a PDF — Add your signature free | bdnix',
     description: 'Sign a PDF free: draw your signature, type it in a handwriting font or upload a picture of it, then move, resize and turn it anywhere on the page. Runs in your browser; your file is never uploaded.',
-    bn: {
-      title: 'PDF-এ সই করুন — ফ্রিতে আপনার সই বসান | bdnix',
-      description: 'ফ্রিতে PDF-এ সই করুন: সই আঁকুন, হাতের লেখার মতো ফন্টে টাইপ করুন বা সইয়ের ছবি দিন, তারপর পৃষ্ঠার যেকোনো জায়গায় সরান, ছোট-বড় করুন ও ঘোরান। আপনার ব্রাউজারেই চলে; আপনার ফাইল কখনো আপলোড হয় না।'
-    },
     schema: 'WebApplication', category: 'UtilitiesApplication',
     app: {
       kind: 'tool', name: 'Sign a PDF', blurb: 'Draw, type or upload a signature',
       keywords: 'tool pdf signature sign esign autograph initials documents',
-      bn: { name: 'PDF-এ সই করুন', blurb: 'সই করুন, টাইপ করুন বা আপলোড করুন', keywords: 'টুল পিডিএফ সই স্বাক্ষর দস্তখত' },
       icon: [
         '<rect x="9" y="4" width="22" height="32" rx="3" fill="#22d3ee" opacity=".55"/>',
         '<path d="M13 10h14M13 15h10" stroke="#eef1f8" stroke-width="2" stroke-linecap="round" opacity=".7"/>',
@@ -270,15 +221,10 @@ export const pages = [
     path: '/unlock-pdf/',
     title: 'Unlock a PDF — Remove a PDF password free | bdnix',
     description: 'Remove the password from a PDF you can open, free: type its password once and download a copy that opens without one. Runs in your browser; your file and password are never uploaded.',
-    bn: {
-      title: 'PDF আনলক করুন — ফ্রিতে PDF-এর পাসওয়ার্ড সরান | bdnix',
-      description: 'যে PDF আপনি খুলতে পারেন, ফ্রিতে তার পাসওয়ার্ড সরান: একবার পাসওয়ার্ড লিখুন, আর এমন একটি কপি ডাউনলোড করুন যা পাসওয়ার্ড ছাড়াই খোলে। আপনার ব্রাউজারেই চলে; আপনার ফাইল ও পাসওয়ার্ড কখনো আপলোড হয় না।'
-    },
     schema: 'WebApplication', category: 'UtilitiesApplication',
     app: {
       kind: 'tool', name: 'Unlock a PDF', blurb: 'Remove a PDF’s password',
       keywords: 'tool pdf password unlock decrypt remove protection encryption security documents',
-      bn: { name: 'PDF আনলক করুন', blurb: 'PDF-এর পাসওয়ার্ড সরান', keywords: 'টুল পিডিএফ পাসওয়ার্ড আনলক তালা খুলুন' },
       icon: [
         '<rect x="9" y="4" width="22" height="32" rx="3" fill="#22d3ee" opacity=".55"/>',
         '<path d="M13 9h14M13 14h9" stroke="#eef1f8" stroke-width="2" stroke-linecap="round" opacity=".7"/>',
@@ -296,7 +242,6 @@ export const pages = [
     app: {
       kind: 'tool', name: 'MP4 to MP3', blurb: 'Video or audio to MP3 or WAV',
       keywords: 'tool audio video music sound convert extract wav',
-      bn: { name: 'MP4 থেকে MP3', blurb: 'ভিডিও বা অডিও থেকে MP3 বা WAV', keywords: 'টুল অডিও ভিডিও গান শব্দ রূপান্তর এমপিথ্রি' },
       icon: [
         '<rect x="3" y="8" width="22" height="17" rx="3" fill="#22d3ee" opacity=".55"/>',
         '<path d="M11 12.5v8l6.5-4z" fill="#eef1f8" opacity=".8"/>',
@@ -314,7 +259,6 @@ export const pages = [
     app: {
       kind: 'tool', name: 'Compress Images', blurb: 'Make photos smaller',
       keywords: 'tool image photo picture jpg jpeg png webp shrink smaller resize',
-      bn: { name: 'ছবি ছোট করুন', blurb: 'ছবির সাইজ কমান', keywords: 'টুল ছবি ফটো ছোট সাইজ কমান কমপ্রেস' },
       icon: [
         '<rect x="3" y="5" width="26" height="22" rx="3" fill="#22d3ee" opacity=".55"/>',
         '<circle cx="11" cy="12" r="3" fill="#eef1f8" opacity=".8"/>',
@@ -332,7 +276,6 @@ export const pages = [
     app: {
       kind: 'tool', name: 'Photo Collage', fullName: 'Photo Collage Maker', blurb: '3, 6 or 9 photos in one',
       keywords: 'tool image photo picture grid combine',
-      bn: { name: 'ছবির কোলাজ', blurb: '৩, ৬ বা ৯টি ছবি একসাথে', keywords: 'টুল ছবি ফটো কোলাজ গ্রিড একসাথে' },
       icon: [
         '<rect x="4" y="4" width="19" height="19" rx="3" fill="#22d3ee" opacity=".55"/>',
         '<rect x="26" y="4" width="10" height="8" rx="2" fill="#a855f7"/>',
@@ -352,7 +295,6 @@ export const pages = [
     app: {
       kind: 'tool', name: 'Resize Without Cropping', blurb: 'Add space to fit any shape',
       keywords: 'tool image photo picture resize crop pad border frame square social',
-      bn: { name: 'ছবিতে বর্ডার', blurb: 'ফাঁকা জায়গা যোগ করে যেকোনো মাপে মেলান', keywords: 'টুল ছবি ফটো মাপ ফ্রেম বর্গ বর্ডার সোশ্যাল' },
       icon: [
         '<rect x="4" y="4" width="32" height="32" rx="3" fill="#eef1f8" opacity=".85"/>',
         '<rect x="4" y="11" width="32" height="18" fill="#22d3ee" opacity=".75"/>',
@@ -365,7 +307,6 @@ export const pages = [
     path: '/profile/',
     title: 'Your profile — bdnix',
     description: 'Your bdnix name and best game scores, kept in this browser.',
-    noindex: true,
-    bn: { title: 'আপনার প্রোফাইল — bdnix', description: 'আপনার bdnix নাম আর গেমের সেরা স্কোর, এই ব্রাউজারেই রাখা।' }
+    noindex: true
   }
 ];

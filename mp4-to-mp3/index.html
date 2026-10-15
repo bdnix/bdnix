@@ -22,6 +22,7 @@
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
   <meta name="theme-color" content="#080a12">
+  <script src="/assets/js/lang.js?v=a861aaefc2"></script>
   <!-- /build:meta -->
   <link rel="preload" href="/assets/fonts/inter-latin-400-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/inter-latin-800-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
@@ -30,6 +31,7 @@
   <link rel="stylesheet" href="/assets/css/avatar.css?v=1da16dde9f">
   <link rel="stylesheet" href="/assets/css/profile-chip.css?v=9563092884">
   <link rel="stylesheet" href="/assets/css/footer.css?v=5f3a8660bb">
+  <link rel="stylesheet" href="/assets/css/lang.css?v=c89d363f3d">
   <link rel="stylesheet" href="/assets/css/page.css?v=6ee9010c44">
   <link rel="stylesheet" href="/assets/css/tool.css?v=a70bc4eb15">
   <link rel="stylesheet" href="/assets/css/features.css?v=e27c70799f">
@@ -38,14 +40,17 @@
   <link rel="stylesheet" href="/assets/css/seg.css?v=9c1df52699">
   <link rel="stylesheet" href="/assets/css/tracks.css?v=e95229c8f1">
   <link rel="stylesheet" href="/assets/css/audio.css?v=26d34b34bf">
-  <script src="/assets/js/analytics.js?v=7fa4c31691"></script>
+  <script src="/assets/js/analytics.js?v=72c93189e3"></script>
 </head>
 <body>
   <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
 
   <header class="bar">
-    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ mp4-to-mp3</span></a>
-    <a class="profile-chip" href="/profile/" title="Your profile"><span class="avatar" data-profile-initial aria-hidden="true">U</span><span data-profile-name>User</span></a>
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span translate="no">/ mp4-to-mp3</span></a>
+    <div class="bar-end">
+      <nav class="langs" aria-label="Language" data-languages></nav>
+      <a class="profile-chip" href="/profile/" title="Your profile"><span class="avatar" data-profile-initial translate="no" aria-hidden="true">U</span><span data-profile-name translate="no">User</span></a>
+    </div>
   </header>
 
   <main class="tool">
@@ -119,9 +124,9 @@
   <!-- /build:footer -->
 
   <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
-  <script src="/assets/js/profile.js?v=aeac36bccf"></script>
-  <script src="/assets/js/files.js?v=39ad551b35"></script>
+  <script src="/assets/js/profile.js?v=c69f36ae2a"></script>
+  <script src="/assets/js/files.js?v=15fbbbfa53"></script>
   <script src="/assets/js/audio-core.js?v=11fbd584a4"></script>
-  <script src="/assets/js/audio.js?v=37a1f95334"></script>
+  <script src="/assets/js/audio.js?v=355252af3c"></script>
 </body>
 </html>

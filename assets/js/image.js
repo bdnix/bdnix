@@ -3,7 +3,13 @@
 // is uploaded. The rules for names, sizes and formats live in image-core.js.
 (function(){
   var T = window.bdnixFiles, Images = window.bdnixImages, I = window.bdnixImage;
-  var fmtSize = T.fmtSize, plural = T.plural;
+  var Lang = window.bdnixLang, t = Lang.t, count = Lang.count;
+  // How much smaller a file got ("45% smaller"), from image-core.js, in the visitor's language.
+  function saving(before, after){
+    var said = I.saving(before, after), pct = /^(\d+)% smaller$/.exec(said);
+    return pct ? t('{percent}% smaller', { percent: +pct[1] }) : t(said);
+  }
+  var fmtSize = T.fmtSize;
 
   var drop = document.getElementById('drop');
   var picker = document.getElementById('picker');
@@ -77,7 +83,7 @@
     });
     render();
     if (skipped.length) {
-      say('Skipped: ' + skipped.map(function(f){ return f.name; }).join(', ') + (skipped.length === 1 ? ' isn’t an image.' : ' aren’t images.'), true);
+      say(t(skipped.length === 1 ? 'Skipped: {names} isn’t an image.' : 'Skipped: {names} aren’t images.', { names: skipped.map(function(f){ return f.name; }).join(', ') }), true);
     } else {
       say('');
     }
@@ -110,7 +116,7 @@
         var a = document.createElement('a');
         a.className = 'btn btn-ghost dl';
         T.offer(a, f.url, f.out);
-        a.setAttribute('aria-label', 'Download ' + f.out);
+        a.setAttribute('aria-label', t('Download {name}', { name: f.out }));
         a.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4 7l4 4 4-4M2 14h12"/></svg><span>Download</span>';
         li.appendChild(a);
       }
@@ -118,7 +124,7 @@
       var rm = document.createElement('button');
       rm.type = 'button';
       rm.className = 'icon-btn rm';
-      rm.setAttribute('aria-label', 'Remove ' + f.file.name);
+      rm.setAttribute('aria-label', t('Remove {name}', { name: f.file.name }));
       rm.title = 'Remove';
       rm.disabled = busy;
       rm.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
@@ -133,8 +139,8 @@
     });
 
     var ready = files.filter(function(f){ return f.state === 'ready'; }).length;
-    summary.textContent = plural(files.length, 'image');
-    if (!busy) compressLabel.textContent = ready ? 'Compress ' + plural(ready, 'image') : 'Compress';
+    summary.textContent = count(files.length, '{n} image', '{n} images');
+    if (!busy) compressLabel.textContent = ready ? t('Compress {images}', { images: count(ready, '{n} image', '{n} images') }) : t('Compress');
     compressBtn.disabled = busy || !ready;
     clearBtn.disabled = busy;
     picker.disabled = busy;
@@ -147,8 +153,8 @@
     if (f.state === 'working') return 'Compressing…';
     if (f.state !== 'done') return fmtSize(f.file.size);
     var dims = f.width + '×' + f.height;
-    if (f.kept) return dims + ' · ' + fmtSize(f.outSize) + ' · already as small as these settings allow, so it’s unchanged';
-    return dims + ' · ' + fmtSize(f.file.size) + ' → ' + fmtSize(f.outSize) + ' · ' + I.saving(f.file.size, f.outSize);
+    if (f.kept) return dims + ' · ' + fmtSize(f.outSize) + ' · ' + t('already as small as these settings allow, so it’s unchanged');
+    return dims + ' · ' + fmtSize(f.file.size) + ' → ' + fmtSize(f.outSize) + ' · ' + saving(f.file.size, f.outSize);
   }
 
   // Quality only applies to JPEG and WebP. PNG is lossless, so say how a
@@ -197,7 +203,7 @@
         canvas.width = canvas.height = 0;
         // Browsers that can't save a format quietly save a PNG instead.
         if (!blob || blob.type !== Images.FORMATS[format].type) {
-          throw new Error('your browser can’t save ' + Images.FORMATS[format].name + ' images. Choose another format.');
+          throw new Error(t('your browser can’t save {format} images. Choose another format.', { format: Images.FORMATS[format].name }));
         }
         f.kept = I.keepOriginal(f.file, format, blob.size, size.scaled);
         var out = f.kept ? f.file : blob;
@@ -210,8 +216,8 @@
       });
     }).catch(function(err){
       f.state = 'error';
-      f.error = err === unreadable ? 'Your browser can’t open this image'
-        : 'Couldn’t compress: ' + (err && err.message ? err.message : err);
+      f.error = err === unreadable ? t('Your browser can’t open this image')
+        : t('Couldn’t compress: {error}', { error: err && err.message ? err.message : err });
     });
   }
 
@@ -223,7 +229,7 @@
     var opts = settings();
     todo.reduce(function(chain, f, i){
       return chain.then(function(){
-        compressLabel.textContent = 'Compressing ' + (i + 1) + ' of ' + todo.length + '…';
+        compressLabel.textContent = t('Compressing {i} of {total}…', { i: i + 1, total: todo.length });
         return compress(f, opts);
       });
     }, Promise.resolve()).then(function(){
@@ -233,9 +239,9 @@
       var failed = todo.length - ok.length;
       var before = 0, after = 0;
       ok.forEach(function(f){ before += f.file.size; after += f.outSize; });
-      var total = ok.length ? 'Compressed ' + plural(ok.length, 'image') + ': ' + fmtSize(before) + ' → ' + fmtSize(after) + ', ' + I.saving(before, after) + '.' : '';
-      if (!failed) say('Done. ' + total);
-      else say((total ? total + ' ' : '') + plural(failed, 'image') + ' couldn’t be compressed.', true);
+      var total = ok.length ? t('Compressed {images}: {before} → {after}, {saving}.', { images: count(ok.length, '{n} image', '{n} images'), before: fmtSize(before), after: fmtSize(after), saving: saving(before, after) }) : '';
+      if (!failed) say(t('Done.') + ' ' + total);
+      else say((total ? total + ' ' : '') + t('{images} couldn’t be compressed.', { images: count(failed, '{n} image', '{n} images') }), true);
       var first = list.querySelector('.dl');
       if (first) first.focus();
     });
