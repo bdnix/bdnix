@@ -4,10 +4,10 @@ The working plan for the restructure proposed in *One folder per app, and tests 
 
 ## How to use this plan
 
-- **Start of a session:** read this file top to bottom, then `git log --oneline -20 origin/master` and the open pull requests, and tick anything that has happened since the file was last updated (a pull request merged, a live check done). The first unticked box is the next thing to do.
+- **Start of a session:** read this file top to bottom, then `git log --oneline -20 origin/master` and the open pull requests, and tick anything that has happened since the file was last updated (a pull request merged). The first unticked box is the next thing to do.
 - **One pull request per numbered item** (1.1, 1.2, ...), opened against `master` as [AGENTS.md](../../AGENTS.md) describes, and driven to green CI. Its description links back to this plan.
-- **Tick boxes in the pull request that does the work**, so the plan on `master` always matches what is merged. Boxes that can only be ticked after a merge (the live checks) are ticked in the next pull request, or in a small one of their own if nothing else follows.
-- **Every item has a verification step, and every merge has a live check.** The live check is not optional: after the owner merges, load the deployed site, `https://www.bdnix.com`, and confirm it is the merged commit and works (see [Checking the live site](#checking-the-live-site)). Write down what was checked in the item's "Live" box.
+- **Tick boxes in the pull request that does the work**, so the plan on `master` always matches what is merged. The "Pull request merged" box is ticked in the next pull request.
+- **Every item has a verification step,** done before its pull request is opened. There are no checks after a deploy: the tests on the pull request are what stand between a change and the live site (decision 4).
 - If something here turns out to be wrong, change the plan in the same pull request and say why under [Changes to the plan](#changes-to-the-plan).
 
 ## Decisions (owner, 15 October 2026)
@@ -15,15 +15,7 @@ The working plan for the restructure proposed in *One folder per app, and tests 
 1. **Publish with a custom GitHub Actions workflow.** The owner has switched Settings → Pages → Source to GitHub Actions and turned off publishing from the branch. Until 1.1 is merged, merges to `master` do not reach the live site.
 2. **Folder names as proposed:** `apps/`, `shared/`, `site/`, `tools/`.
 3. **Start with step 1 and the Snake pilot.** This plan is committed to the repository and kept up to date with checkboxes.
-
-## Checking the site, before and after it goes live
-
-`tools/check-site.mjs` (added in 1.1) checks the site in two modes:
-
-- **`npm run check:site`, before a deploy.** Builds `_site/`, serves it locally as www.bdnix.com and opens every page in Chromium at desktop and phone size, in English and Bangla: no error on the page, no failed request, nothing blocked by the security policy, nothing untranslated, the consent banner shown, nothing contacted but bdnix.com before consent. The Pages workflow runs it on every pull request and before every deploy, and a failure stops the deploy. So a broken build shows up on its pull request and never goes live.
-- **`npm run check:live`, after a deploy.** Every file of the build is fetched from www.bdnix.com past the CDN cache and must match byte for byte (the live site is exactly this commit), then the same page checks run on the live site. The workflow runs only the file comparison after a deploy; if it fails, the deploy didn't land, and re-running the workflow is the fix.
-
-Screenshots of every page go to `.test-cache/site/`. After each merge, run `npm run check:live` from the merged `master`, look at a few screenshots, and record the result in the plan's "Live" box.
+4. **The deploy is just a deploy.** The Pages workflow runs only on `master`: it copies the published files and deploys them, nothing else. No checks in it, none on pull requests, and none after a deploy, by tool or by hand. The tests on each pull request are the safeguard.
 
 ## Step 1: foundations, and Snake as the pilot
 
@@ -34,13 +26,11 @@ The proposal's step 1 is too big for one reviewable pull request, so it is split
 Urgent, because branch publishing is already off. Nothing about the site changes: the published copy is the same files Jekyll published.
 
 - [ ] `tools/site.mjs` (`npm run site`) assembles the published site in `_site/`: the landing page, every page folder listed in `scripts/site.mjs`, `assets/`, `CNAME`, `robots.txt`, `sitemap.xml` and `LICENSE`. Repository tooling (tests, scripts, docs, configs) is left out by not being listed, rather than by an exclude list.
-- [ ] `.github/workflows/pages.yml`: builds `_site/` and runs `npm run check:site` on every pull request and push; on `master` only, then deploys the checked build and confirms with `npm run check:live -- --files-only` that it landed. Only `master` ever deploys: the upload and deploy steps are conditioned on `refs/heads/master`, and a unit test fails if that guard goes.
-- [ ] `tools/check-site.mjs` (`npm run check:site` and `npm run check:live`), as described above; a unit test keeps the check ahead of the upload in the workflow.
-- [ ] `_config.yml` removed (Jekyll no longer runs). The test server can serve `_site/` (`SITE_DIR=_site`), so the UI tests can run against the published copy.
+- [ ] `.github/workflows/pages.yml`: on a push to `master` (or by hand), one job copies the files with `npm run site` and deploys `_site/` to GitHub Pages. Only `master` ever deploys: the job is conditioned on `refs/heads/master`, and a unit test fails if that guard goes.
+- [ ] `_config.yml` removed (Jekyll no longer runs).
 - [ ] Docs: `docs/development.md` (publishing), AGENTS.md (hosting line, `_site/`), `.gitignore`.
-- [ ] **Verify:** unit tests for the published file list; `npm run site`, then the full UI suite against `_site/` (`SITE_DIR=_site npm run test:ui`) passes; `npm run check:site` passes, and fails on a page with a deliberate error; `npm run check:live` shows the files in `_site/` are exactly the files the live site serves today, apart from `eslint.config.mjs` (a config file Jekyll published by accident); `npm run lint`, `npm test` pass; CI green.
+- [ ] **Verify:** unit tests for the published file list and the `master`-only guard (which fails without the guard); the files in `_site/` are exactly the files the live site serves today, apart from `eslint.config.mjs` (a config file Jekyll published by accident), checked once by comparing every file with www.bdnix.com; `npm run lint`, `npm test` pass; CI green.
 - [ ] Pull request merged.
-- [ ] **Live:** the Pages workflow's check, deploy and confirmation passed on `master`; `npm run check:live` from merged `master` passes locally and the screenshots look right.
 
 ### 1.2 Version stamps and generated parts only in the published copy
 
@@ -53,7 +43,6 @@ Source files stop carrying `?v=` stamps and generated blocks, so a change to one
 - [ ] Docs: AGENTS.md "Cache-busting" and "Commands", `docs/development.md`.
 - [ ] **Verify:** unit tests for the transform (stamps, blocks, languages list); the HTML the test server serves for every page equals the page in `_site/`; `_site/` equals the `_site/` of 1.1 for every page except where a stamp's hash input legitimately changed (diff reviewed and explained in the pull request); full `npm test` passes; a change to `assets/lang/bn/site.json` alone reruns only the specs that load Bangla (shown with `npm run coverage:ui:cached -- --plan` before and after a test edit); CI green.
 - [ ] Pull request merged.
-- [ ] **Live:** Pages check, deploy and confirmation green; `npm run check:live` locally passes, screenshots look right, and the stamps on the live pages are the build's.
 
 ### 1.3 Modules: `module.json`, the graph, and the shared modules Snake uses
 
@@ -64,7 +53,6 @@ Source files stop carrying `?v=` stamps and generated blocks, so a change to one
 - [ ] Coverage paths: `tests/coverage/shared.mjs` maps a published URL back to its source file, so Codecov reports `shared/sound/sound.js`. Note the moved paths on the pull request.
 - [ ] **Verify:** unit tests for `modules.mjs` (graph, publish map, errors for a bad `module.json`); `_site/` is identical to before apart from translation packs and stamps (diff reviewed); every page still passes in English and Bangla; full `npm test` and `npm run coverage` pass; CI green.
 - [ ] Pull request merged.
-- [ ] **Live:** Pages check, deploy and confirmation green; `npm run check:live` locally passes, Snake and one tool checked by hand in both languages, screenshots look right.
 
 ### 1.4 Snake in `apps/snake/`, test targets, `affected.mjs` and `boundaries.mjs`
 
@@ -76,19 +64,18 @@ Source files stop carrying `?v=` stamps and generated blocks, so a change to one
 - [ ] Docs: AGENTS.md and `docs/development.md` describe modules for moved apps, alongside the old layout for the rest; `docs/games.md` paths.
 - [ ] **Verify:** unit tests for `affected.mjs` (each row of the proposal's "What a change would rerun" table that applies so far, as a test) and `boundaries.mjs` (each rule, failing and passing); a deliberate undeclared file makes a target fail; a one-word change to Snake's Bangla selects only `snake/i18n`; Snake plays, saves and restores in both languages (its existing tests, moved); CI green.
 - [ ] Pull request merged.
-- [ ] **Live:** Pages check, deploy and confirmation green; `npm run check:live` locally passes; on www.bdnix.com/snake/: a game started, reloaded mid-game and resumed, in English and Bangla, on desktop and phone size; screenshots look right.
 
 ## Step 2: the remaining shared modules
 
 Each with contract tests on a fixture page (not an app), its own `lang/`, and published at its old URL. One pull request per group:
 
-- [ ] 2.1 `files`, `pdftools`, `images` (and the components only tools use: `tool.css`, `page.css`, `file.css`, `tracks.css`, `editor.css`, `settings.css`, `seg.css`, `features.css`, `footer.css`). **Verify:** contract tests; every tool page passes unchanged; CI green. **Live:** deploy, `check:live`, one tool of each kind used by hand (a PDF, an image and an audio file).
-- [ ] 2.2 `profile`, `avatar.css`, `profile-chip.css`, `search-core`. **Verify:** contract tests; landing and profile pages pass; CI green. **Live:** deploy, `check:live`, name set and shown on the profile page.
-- [ ] 2.3 Anything left in `assets/js` or `assets/css` that isn't an app's. **Verify:** `assets/js` and `assets/css` hold only files of apps not yet moved; CI green. **Live:** deploy, `check:live`.
+- [ ] 2.1 `files`, `pdftools`, `images` (and the components only tools use: `tool.css`, `page.css`, `file.css`, `tracks.css`, `editor.css`, `settings.css`, `seg.css`, `features.css`, `footer.css`). **Verify:** contract tests; every tool page passes unchanged; CI green.
+- [ ] 2.2 `profile`, `avatar.css`, `profile-chip.css`, `search-core`. **Verify:** contract tests; landing and profile pages pass; CI green.
+- [ ] 2.3 Anything left in `assets/js` or `assets/css` that isn't an app's. **Verify:** `assets/js` and `assets/css` hold only files of apps not yet moved; CI green.
 
 ## Step 3: the apps
 
-Two or three per pull request, each moved like Snake in 1.4 (module, four targets, `lang/`, URL and storage keys unchanged). For every pull request: **Verify** that each moved app's moved tests pass, `affected.mjs` selects only its targets for a change inside it, and CI is green; **Live** deploy and `check:live`, then each moved app used by hand on the live site in both languages (a game played, saved and resumed; a tool run on a real file and its download opened).
+Two or three per pull request, each moved like Snake in 1.4 (module, four targets, `lang/`, URL and storage keys unchanged). For every pull request: **Verify** that each moved app's moved tests pass, `affected.mjs` selects only its targets for a change inside it, and CI is green.
 
 - [ ] 3.1 Falling Blocks, Maze Chase
 - [ ] 3.2 Flap, Road Hop, Brick Bounce
@@ -101,14 +88,14 @@ Two or three per pull request, each moved like Snake in 1.4 (module, four target
 
 ## Step 4: remove the old plumbing
 
-- [ ] 4.1 Remove `scripts/site.mjs`, `scripts/ui-cache.mjs`, `scripts/ui-deps.mjs` (if nothing uses it), the empty old folders and the old CI cache steps; `tools/boundaries.mjs` replaces the lists in `tests/unit/site.test.mjs`. **Verify:** nothing references the removed files; the full suite passes; CI green. **Live:** deploy, `check:live`.
-- [ ] 4.2 Rewrite AGENTS.md and `docs/development.md` around modules. **Verify:** every path and command in them exists and runs. **Live:** deploy, `check:live`.
+- [ ] 4.1 Remove `scripts/site.mjs`, `scripts/ui-cache.mjs`, `scripts/ui-deps.mjs` (if nothing uses it), the empty old folders and the old CI cache steps; `tools/boundaries.mjs` replaces the lists in `tests/unit/site.test.mjs`. **Verify:** nothing references the removed files; the full suite passes; CI green.
+- [ ] 4.2 Rewrite AGENTS.md and `docs/development.md` around modules. **Verify:** every path and command in them exists and runs.
 
 ## Step 5: sharded full runs
 
-- [ ] 5.1 A full run on every push to `master`, and on a pull request that changes a shared module, split across machines with Playwright's `--shard` and the reports merged; coverage still uploaded once. **Verify:** a full run's time and test count against an unsharded one; CI green. **Live:** deploy, `check:live`.
+- [ ] 5.1 A full run on every push to `master`, and on a pull request that changes a shared module, split across machines with Playwright's `--shard` and the reports merged; coverage still uploaded once. **Verify:** a full run's time and test count against an unsharded one; CI green.
 
 ## Changes to the plan
 
 - 15 October 2026: step 1 split into 1.1 to 1.4, with publishing first, since branch publishing was already off.
-- 15 October 2026: the browser checks moved from after the deploy to before it (`npm run check:site`), so a broken build fails its pull request instead of going live and needing a follow-up fix. After a deploy, the workflow only confirms the files landed.
+- 15 October 2026: no checks in the deploy and none after it (decision 4). Browser checks of the published copy, a pull-request build and a post-deploy check were tried in 1.1 and dropped: the pull request's tests already cover the code, the build is a plain copy covered by unit tests, and a check after the deploy could only report problems nobody can fix in code.

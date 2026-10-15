@@ -4,7 +4,7 @@ Guidance for AI coding agents (and humans) working on this repository. Read this
 
 ## What this is
 
-The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub Pages. There's no framework and no compile step: pages are plain HTML, CSS and vanilla JavaScript. `npm run site` copies what's published into `_site/`, and `.github/workflows/pages.yml` checks it with `npm run check:site` (every page, served as the live site) and deploys it on every push to `master` (and from no other branch), so a build that fails the check never goes live (see [docs/development.md](docs/development.md#deploying)).
+The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub Pages. There's no framework and no compile step: pages are plain HTML, CSS and vanilla JavaScript. On every push to `master` (and from no other branch), `.github/workflows/pages.yml` copies what's published into `_site/` with `npm run site` and deploys it; nothing is committed (see [docs/development.md](docs/development.md#deploying)).
 
 The site is being restructured into one folder per app: the plan, with what's done and what's next, is [docs/plans/modules.md](docs/plans/modules.md). Read it before working on the build, the tests or CI, and keep its checkboxes up to date.
 
@@ -63,7 +63,7 @@ When the owner asks for a feature, a fix or any other change to this repo, the w
 5. Handle review comments the same way: make the fix, push, and see CI through again.
 6. Report back only when the pull request is green and meets everything that was asked: give its link, what changed, and how it was tested. If something can't be fixed from the branch (it fails on `master` too, or needs access or a decision only the owner has), say so on the pull request and to the owner, with exactly what's needed.
 
-Leave merging to the owner: don't merge the pull request yourself. Once it's merged, check that it went live: the **Pages** workflow's check, deploy and confirmation pass on `master`, and `npm run check:live` from the merged `master` passes for you too (look at a few of its screenshots in `.test-cache/site/`).
+Leave merging to the owner: don't merge the pull request yourself.
 
 ## Keep apps modular
 
@@ -147,9 +147,7 @@ npm install
 npx playwright install chromium   # first time only
 npm run build          # write the parts generated from scripts/site.mjs and the ?v= hashes
 npm run build:check    # fail if any of those is stale (what CI runs)
-npm run site           # assemble the published copy in _site/
-npm run check:site     # every page of _site/, served as www.bdnix.com, in a browser (before a deploy)
-npm run check:live     # www.bdnix.com is this commit's _site/, and every page works (after a deploy)
+npm run site           # copy the published files into _site/ (what the Pages workflow deploys)
 npm run lint           # ESLint (scripts, tests) and Stylelint (stylesheets)
 npm test               # unit tests, then UI tests
 npm run test:unit

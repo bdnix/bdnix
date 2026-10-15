@@ -1,30 +1,19 @@
 name: Pages
 
-# Publishes www.bdnix.com, checked before it goes live.
+# Publishes www.bdnix.com from master: `npm run site` copies the published
+# files into _site/ (tools/site.mjs), and that goes to GitHub Pages. The code
+# is tested on its pull request (tests.yml) before it reaches master.
 #
-# 1. Build: `npm run site` assembles the published copy in _site/
-#    (tools/site.mjs), and `npm run check:site` (tools/check-site.mjs) serves
-#    it locally as www.bdnix.com and opens every page in Chromium, desktop and
-#    phone, English and Bangla. Any problem fails the run here, on the pull
-#    request, so a broken build never reaches the deploy.
-# 2. Deploy (master only): the checked _site/ goes to GitHub Pages.
-# 3. Confirm: `npm run check:live -- --files-only` fetches every file from
-#    www.bdnix.com and checks it's the build, byte for byte. The pages
-#    themselves were checked in step 1; this only proves the deploy landed.
-#    It retries for ten minutes while the CDN catches up. If it still fails,
-#    the deploy didn't take: re-run the workflow. There's no code to fix.
-#
-# Only master is ever published: the deploy runs only for refs/heads/master,
-# whatever started the run, so a pull request, a push to another branch or a
-# run started by hand on one only builds and checks. (The github-pages
-# environment's deployment branch rule should say the same, as a second lock.)
+# Only master is ever published. The workflow runs on a push to master, and
+# by hand; the job only runs for refs/heads/master, so a run started by hand
+# on any other branch does nothing. (The github-pages environment's
+# deployment branch rule should say the same, as a second lock.)
 #
 # Needs Settings → Pages → Source set to GitHub Actions.
 
 on:
   push:
     branches: [master]
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -32,72 +21,29 @@ permissions:
 
 # One deploy at a time, and a deploy in progress always finishes.
 concurrency:
-  group: pages-${{ github.ref }}
+  group: pages
   cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build and check the site
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - name: Assemble _site/
-        run: npm run site
-      - id: playwright
-        name: Playwright version
-        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-      - id: browsers
-        name: Restore Chromium from cache
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-      - name: Install Chromium
-        if: steps.browsers.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-      - name: Install Chromium's system libraries
-        if: steps.browsers.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
-      # Every page of _site/, served as www.bdnix.com. Rebuilds _site/ first.
-      - name: Check every page of the build
-        run: npm run check:site
-      - name: Upload screenshots
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: site-screenshots
-          path: .test-cache/site/
-          retention-days: 14
-      - if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: _site
-
   deploy:
     name: Deploy to GitHub Pages
-    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
-    needs: build
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
-
-  live:
-    name: Confirm the deploy
-    needs: deploy
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - name: www.bdnix.com is this build
-        run: npm run check:live -- --files-only --wait 600
+      - name: Copy the published files into _site/
+        run: npm run site
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

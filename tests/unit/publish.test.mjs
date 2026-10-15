@@ -65,36 +65,16 @@ test('publish: build copies exactly the published files, replacing the last buil
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-// Only master is ever published: the steps that upload or deploy the site
-// run only for refs/heads/master, never for a pull request or a run started
-// by hand on another branch.
+// Only master is ever published: the workflow runs on a push to master or by
+// hand, and its one job only for refs/heads/master, so a run started by hand
+// on another branch deploys nothing.
 test('publish: only master deploys', () => {
   const workflow = fs.readFileSync(path.join(root, '.github/workflows/pages.yml'), 'utf8');
-  const MASTER = "if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'";
-  const upload = workflow.split('\n').findIndex((l) => l.includes('actions/upload-pages-artifact@'));
-  assert.ok(upload > 0);
-  assert.equal(workflow.split('\n')[upload - 1].trim(), '- ' + MASTER);
-  const deploy = /\n {2}deploy:\n((?: {4}.*\n|\n)*)/.exec(workflow);
-  assert.ok(deploy, 'a deploy job');
-  assert.ok(deploy[1].split('\n').includes('    ' + MASTER), 'the deploy job is for master only');
-  assert.ok(deploy[1].includes('actions/deploy-pages@'));
-  // Nothing else in the workflow deploys.
+  const on = /\non:\n((?: {2}.*\n)*)/.exec(workflow)[1];
+  assert.equal(on, '  push:\n    branches: [master]\n  workflow_dispatch:\n');
+  const jobs = workflow.slice(workflow.indexOf('\njobs:\n'));
+  assert.deepEqual(jobs.match(/^ {2}[\w-]+:$/gm), ['  deploy:'], 'one job');
+  assert.match(jobs, /\n {4}if: github\.ref == 'refs\/heads\/master'\n/);
   assert.equal(workflow.match(/actions\/deploy-pages@/g).length, 1);
   assert.equal(workflow.match(/actions\/upload-pages-artifact@/g).length, 1);
-  assert.match(workflow, /\n {2}push:\n {4}branches: \[master\]\n/);
-});
-
-// Every page of the build is checked before it can be deployed: the check
-// runs in the job that uploads the site, before the upload, and the deploy
-// waits for that job.
-test('publish: the build is checked before it can go live', () => {
-  const workflow = fs.readFileSync(path.join(root, '.github/workflows/pages.yml'), 'utf8');
-  const lines = workflow.split('\n');
-  const check = lines.findIndex((l) => l.trim() === 'run: npm run check:site');
-  const upload = lines.findIndex((l) => l.includes('actions/upload-pages-artifact@'));
-  const build = lines.indexOf('  build:');
-  assert.ok(build >= 0 && check > build && upload > check, 'check:site runs in the build job, before the upload');
-  assert.ok(!lines.slice(check, upload).some((l) => /^ {2}\w/.test(l)), 'in the same job');
-  assert.ok(!lines.slice(check, upload).some((l) => /continue-on-error|if: .*(always|failure)\(\)/.test(l)), 'a failed check stops the upload');
-  assert.match(workflow, /\n {2}deploy:\n(?: {4}.*\n)*? {4}needs: build\n/);
 });
