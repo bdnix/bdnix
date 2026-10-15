@@ -62,7 +62,7 @@ export function checkPage(url, opts = {}){
     await page.goto(url);
 
     // The content security policy comes before anything is loaded (written
-    // by scripts/build.mjs from scripts/parts.mjs).
+    // by tools/page.mjs from scripts/parts.mjs).
     const head = await page.locator('head > *').evaluateAll((els) => els.map((e) => ({
       tag: e.tagName, csp: e.getAttribute('http-equiv') === 'Content-Security-Policy', data: e.type === 'application/ld+json'
     })));

@@ -4,3 +4,6 @@ playwright-report/
 /coverage/
 /.test-cache/
 /_site/
+# Made by the build (tools/languages.mjs, scripts/parts.mjs), never committed.
+/assets/lang/*.js
+/sitemap.xml

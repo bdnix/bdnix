@@ -14,10 +14,7 @@
 // and num(n) for a number they draw themselves, on a canvas say.
 (function(){
   // build:languages
-  var LANGUAGES = [
-    {"code":"en","name":"English"},
-    {"code":"bn","name":"বাংলা","digits":"০১২৩৪৫৬৭৮৯","file":"/assets/lang/bn.js?v=55d4ec33f3","style":"/assets/css/bangla.css?v=c9504f1488"}
-  ];
+  var LANGUAGES = [{"code":"en","name":"English"}];
   // /build:languages
 
   var KEY = 'bdnix_lang';

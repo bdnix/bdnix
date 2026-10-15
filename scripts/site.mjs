@@ -1,10 +1,10 @@
 // Every page of the site, and the games and tools the landing page lists.
-// scripts/build.mjs writes what the pages share from this: each page's
-// title, description and share tags (between <!-- build:meta --> markers),
-// the footer (<!-- build:footer -->), the landing page's cards
-// (<!-- build:cards games|tools -->), the profile page's scores
-// (<!-- build:scores -->) and sitemap.xml. Adding a game or tool means adding
-// it here, then running `npm run build`.
+// tools/page.mjs fills in what the pages share from this, for the build and
+// the test server alike: each page's title, description and share tags
+// (between <!-- build:meta --> markers), the footer (<!-- build:footer -->),
+// the landing page's cards (<!-- build:cards games|tools -->), the profile
+// page's scores (<!-- build:scores -->) and sitemap.xml. Adding a game or
+// tool means adding it here.
 //
 // A page has a path, a title and description (also used for its share tags),
 // and the structured data it describes itself with (schema, and a category

@@ -4,9 +4,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// The translations in assets/lang/<code>/*.json, which scripts/build.mjs
-// bundles into assets/lang/<code>.js. Adding a language is adding a folder;
-// these check it's complete and that each translation fits its English.
+// The translations in assets/lang/<code>/*.json, which tools/languages.mjs
+// bundles into the pack served at assets/lang/<code>.js. Adding a language
+// is adding a folder; these check it's complete and that each translation
+// fits its English.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const LANG = path.join(root, 'assets', 'lang');
 const codes = fs.readdirSync(LANG).filter((f) => fs.statSync(path.join(LANG, f)).isDirectory());
