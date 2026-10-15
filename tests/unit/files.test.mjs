@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { load } from './load.mjs';
+import { load, fakeStorage } from './load.mjs';
 
 const FILE = 'assets/js/files.js';
 const { bdnixFiles: T } = load(FILE);
@@ -142,4 +142,11 @@ test('offer: a download link that opens in a new window', () => {
   w.bdnixFiles.offer(a, 'blob:y', 'report-signed.pdf');
   assert.equal(a.href, 'blob:y');
   assert.deepEqual(listeners.map(([type]) => type), ['click']);
+});
+
+test('fmtSize: in another language, sizes are in its digits', () => {
+  const { bdnixFiles } = load(['assets/lang/bn.js', FILE], { localStorage: fakeStorage({ bdnix_lang: 'bn' }) });
+  assert.equal(bdnixFiles.fmtSize(512), '৫১২ B');
+  assert.equal(bdnixFiles.fmtSize(2048), '২ KB');
+  assert.equal(bdnixFiles.fmtSize(1572864), '১.৫ MB');
 });

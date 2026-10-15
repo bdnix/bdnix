@@ -1,7 +1,8 @@
 // PDF merger. Runs entirely in the browser with pdf-lib; nothing is uploaded.
 (function(){
   var T = window.bdnixFiles, P = window.bdnixPdf;
-  var fmtSize = T.fmtSize, plural = T.plural, parseRange = P.parseRange, isPdf = P.isPdf, readBytes = T.readBytes;
+  var Lang = window.bdnixLang, t = Lang.t, count = Lang.count;
+  var fmtSize = T.fmtSize, parseRange = P.parseRange, isPdf = P.isPdf, readBytes = T.readBytes;
 
   var drop = document.getElementById('drop');
   var picker = document.getElementById('picker');
@@ -20,7 +21,7 @@
   var nextBtn = document.getElementById('nextPage');
   var pageLabel = document.getElementById('pageLabel');
 
-  document.getElementById('year').textContent = new Date().getFullYear();
+  document.getElementById('year').textContent = Lang.num(new Date().getFullYear());
 
   // Each entry: { id, name, size, pages, doc, range, sel }
   // range is what the user typed; sel is the parsed 0-based page list, or an error.
@@ -80,10 +81,10 @@
     if (files.some(function(f){ return f.sel.error; })) {
       dropView();
       showPage();
-      setNote('Fix the page ranges marked in red to see the preview.');
+      setNote(t('Fix the page ranges marked in red to see the preview.'));
       return;
     }
-    setNote(view ? 'Updating the preview…' : 'Loading the preview…');
+    setNote(view ? t('Updating the preview…') : t('Loading the preview…'));
     viewTimer = setTimeout(function(){
       var lib;
       P.loadPdfjs().then(function(l){
@@ -106,7 +107,7 @@
         if (seq !== viewSeq) return;
         dropView();
         showPage();
-        setNote('The preview can’t be shown in this browser, but you can still merge your files.');
+        setNote(t('The preview can’t be shown in this browser, but you can still merge your files.'));
       });
     }, 250);
   }
@@ -120,7 +121,7 @@
       return;
     }
     var i = pageIndex, n = view.pages;
-    pageLabel.textContent = 'Page ' + (i + 1) + ' of ' + n;
+    pageLabel.textContent = t('Page {page} of {pages}', { page: i + 1, pages: n });
     prevBtn.disabled = i === 0;
     nextBtn.disabled = i >= n - 1;
     var cs = getComputedStyle(stage);
@@ -143,7 +144,7 @@
       canvas.height = c.height;
       canvas.style.width = Math.round(c.width / dpr) + 'px';
       canvas.getContext('2d').drawImage(c, 0, 0);
-      canvas.setAttribute('aria-label', 'Page ' + (i + 1) + ' of ' + n + ' of the merged PDF');
+      canvas.setAttribute('aria-label', t('Page {page} of {pages} of the merged PDF', { page: i + 1, pages: n }));
       canvas.hidden = false;
       setNote('');
     }, function(){
@@ -165,14 +166,14 @@
     var skipped = incoming.filter(function(f){ return !isPdf(f); });
     var pdfs = incoming.filter(isPdf);
     if (!pdfs.length) {
-      if (skipped.length) say('Only PDF files can be merged.', true);
+      if (skipped.length) say(t('Only PDF files can be merged.'), true);
       return;
     }
     busy = true;
     render();
-    say('Reading ' + plural(pdfs.length, 'file') + '…');
+    say(t('Reading {files}…', { files: count(pdfs.length, '{n} file', '{n} files') }));
 
-    var problems = skipped.map(function(f){ return f.name + ' is not a PDF'; });
+    var problems = skipped.map(function(f){ return t('{name} is not a PDF', { name: f.name }); });
     var PDFDocument;
     // Read in order so the list matches the order the files were picked in.
     pdfs.reduce(function(chain, file){
@@ -185,14 +186,14 @@
           })
           .catch(function(err){
             var encrypted = err && /encrypt/i.test(err.message || String(err));
-            problems.push(file.name + (encrypted ? ' is password-protected' : ' could not be read'));
+            problems.push(t(encrypted ? '{name} is password-protected' : '{name} could not be read', { name: file.name }));
           });
       });
     }, P.loadPdfLib().then(function(lib){ PDFDocument = lib.PDFDocument; })).then(function(){
       busy = false;
       render();
       changed();
-      say(problems.length ? 'Skipped: ' + problems.join('; ') + '.' : '', problems.length > 0);
+      say(problems.length ? t('Skipped: {list}.', { list: problems.join('; ') }) : '', problems.length > 0);
     }, function(err){
       busy = false;
       render();
@@ -244,16 +245,16 @@
       var field = document.createElement('label');
       field.className = 'file-range';
       var cap = document.createElement('span');
-      cap.textContent = 'Pages';
+      cap.textContent = t('Pages');
       var input = document.createElement('input');
       input.type = 'text';
       input.inputMode = 'numeric';
       input.autocomplete = 'off';
       input.spellcheck = false;
       input.value = f.range;
-      input.placeholder = f.pages === 1 ? 'all' : 'all, or e.g. 1-' + Math.min(3, f.pages) + (f.pages > 4 ? ', ' + f.pages : '');
+      input.placeholder = f.pages === 1 ? t('all') : t('all, or e.g. {example}', { example: Lang.num('1-' + Math.min(3, f.pages) + (f.pages > 4 ? ', ' + f.pages : '')) });
       input.disabled = busy;
-      input.setAttribute('aria-label', 'Pages to include from ' + f.name);
+      input.setAttribute('aria-label', t('Pages to include from {name}', { name: f.name }));
       // Typing only updates this row and the totals, so the input keeps focus.
       input.addEventListener('input', function(){
         f.range = input.value;
@@ -272,9 +273,9 @@
 
       var btns = document.createElement('div');
       btns.className = 'file-btns';
-      btns.appendChild(iconBtn('up', 'Move ' + f.name + ' up', 'M4 10l4-4 4 4', function(){ move(i, i - 1); }, busy || i === 0));
-      btns.appendChild(iconBtn('down', 'Move ' + f.name + ' down', 'M4 6l4 4 4-4', function(){ move(i, i + 1); }, busy || i === files.length - 1));
-      btns.appendChild(iconBtn('rm', 'Remove ' + f.name, 'M4 4l8 8M12 4l-8 8', function(){
+      btns.appendChild(iconBtn('up', t('Move {name} up', { name: f.name }), 'M4 10l4-4 4 4', function(){ move(i, i - 1); }, busy || i === 0));
+      btns.appendChild(iconBtn('down', t('Move {name} down', { name: f.name }), 'M4 6l4 4 4-4', function(){ move(i, i + 1); }, busy || i === files.length - 1));
+      btns.appendChild(iconBtn('rm', t('Remove {name}', { name: f.name }), 'M4 4l8 8M12 4l-8 8', function(){
         files.splice(i, 1);
         render();
         changed();
@@ -297,8 +298,8 @@
     input.classList.toggle('invalid', !!err);
     input.setAttribute('aria-invalid', err ? 'true' : 'false');
     if (err) meta.textContent = err;
-    else if (f.range.trim()) meta.textContent = f.sel.pages.length + ' of ' + plural(f.pages, 'page') + ' · ' + fmtSize(f.size);
-    else meta.textContent = plural(f.pages, 'page') + ' · ' + fmtSize(f.size);
+    else if (f.range.trim()) meta.textContent = t('{some} of {pages} · {size}', { some: f.sel.pages.length, pages: count(f.pages, '{n} page', '{n} pages'), size: fmtSize(f.size) });
+    else meta.textContent = t('{pages} · {size}', { pages: count(f.pages, '{n} page', '{n} pages'), size: fmtSize(f.size) });
   }
 
   function updateTotals(){
@@ -307,9 +308,9 @@
       if (f.sel.error) errors++;
       else total += f.sel.pages.length;
     });
-    summary.textContent = plural(files.length, 'file') + ' · ' + plural(total, 'page') + ' selected';
+    summary.textContent = t('{files} · {pages} selected', { files: count(files.length, '{n} file', '{n} files'), pages: count(total, '{n} page', '{n} pages') });
     mergeBtn.disabled = busy || files.length === 0 || errors > 0;
-    mergeBtn.title = errors ? 'Fix the page ranges marked in red first' : '';
+    mergeBtn.title = errors ? t('Fix the page ranges marked in red first') : '';
   }
 
   // Drag to reorder (mouse). The arrow buttons cover touch and keyboard.
@@ -382,22 +383,22 @@
     // The file downloads in a new window, opened now while the click counts.
     var win = T.fileWindow();
 
-    build(function(i){ mergeLabel.textContent = 'Merging ' + (i + 1) + ' of ' + total + '…'; }).then(function(doc){
+    build(function(i){ mergeLabel.textContent = t('Merging {i} of {total}…', { i: i + 1, total: total }); }).then(function(doc){
       out = doc;
-      mergeLabel.textContent = 'Saving…';
+      mergeLabel.textContent = t('Saving…');
       return out.save();
     }).then(function(bytes){
       var blob = new Blob([bytes], { type: 'application/pdf' });
       if (saved) URL.revokeObjectURL(saved);
       saved = URL.createObjectURL(blob);
       win.save(saved, 'merged.pdf');
-      say('Saved merged.pdf: ' + plural(out.getPageCount(), 'page') + ' from ' + plural(total, 'file') + ', ' + fmtSize(blob.size) + '.');
+      say(t('Saved merged.pdf: {pages} from {files}, {size}.', { pages: count(out.getPageCount(), '{n} page', '{n} pages'), files: count(total, '{n} file', '{n} files'), size: fmtSize(blob.size) }));
     }).catch(function(err){
       win.close();
-      say('Something went wrong while merging: ' + (err && err.message ? err.message : err), true);
+      say(t('Something went wrong while merging: {error}', { error: err && err.message ? err.message : err }), true);
     }).then(function(){
       busy = false;
-      mergeLabel.textContent = 'Merge PDFs';
+      mergeLabel.textContent = t('Merge PDFs');
       render();
     });
   });

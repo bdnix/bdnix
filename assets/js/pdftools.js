@@ -1,28 +1,38 @@
 // Helpers for the PDF tools (merge-pdf, watermark-pdf, redact-pdf): page
 // ranges, spotting a PDF, and loading pdf-lib and pdf.js. Needs files.js first.
 (function(){
-  var plural = window.bdnixFiles.plural;
+  var Lang = window.bdnixLang, t = Lang.t;
   var PDF_LIB = '/assets/vendor/pdf-lib.min.js?v=1.17.1';
 
   // Parses "1-3, 5, 8-" into 0-based page indices, in the order written.
   // Empty means every page. "8-" runs to the last page, "-3" from the first,
-  // and "5-3" runs backwards.
+  // and "5-3" runs backwards. Digits in another script work too: "১-৩".
   function parseRange(text, max){
-    var t = text.replace(/[\u2012-\u2015]/g, '-').replace(/\s*-\s*/g, '-').trim();
-    if (!t) return { pages: all(max) };
-    var parts = t.split(/[\s,;]+/).filter(Boolean);
+    var typed = western(text).replace(/[\u2012-\u2015]/g, '-').replace(/\s*-\s*/g, '-').trim();
+    if (!typed) return { pages: all(max) };
+    var parts = typed.split(/[\s,;]+/).filter(Boolean);
     var pages = [];
     for (var i = 0; i < parts.length; i++) {
       var m = /^(\d*)-(\d*)$/.exec(parts[i]) || /^(\d+)$/.exec(parts[i]);
-      if (!m || (m[1] === '' && m[2] === '')) return { error: '“' + parts[i] + '” isn’t a page or range' };
+      if (!m || (m[1] === '' && m[2] === '')) return { error: t('“{part}” isn’t a page or range', { part: parts[i] }) };
       var a = m[1] === '' ? 1 : +m[1];
       var b = m[2] === undefined ? a : m[2] === '' ? max : +m[2];
       var bad = [a, b].filter(function(n){ return n < 1 || n > max; })[0];
-      if (bad !== undefined) return { error: 'No page ' + bad + ' (this file has ' + plural(max, 'page') + ')' };
+      if (bad !== undefined) return { error: t('No page {page} (this file has {pages})', { page: bad, pages: Lang.count(max, '{n} page', '{n} pages') }) };
       var step = a <= b ? 1 : -1;
       for (var n = a; n !== b + step; n += step) pages.push(n - 1);
     }
     return { pages: pages };
+  }
+  // Digits as 0-9, whatever script they were typed in: Bangla ০-৯, Arabic
+  // ٠-٩, Devanagari ०-९ and others. Each runs from its own zero.
+  var ZEROS = [0x0660, 0x06f0, 0x0966, 0x09e6, 0x0a66, 0x0ae6, 0x0b66, 0x0be6, 0x0c66, 0x0ce6, 0x0d66, 0x0e50, 0x0ed0];
+  function western(text){
+    return String(text).replace(/[\u0080-\uffff]/g, function(ch){
+      var c = ch.charCodeAt(0);
+      for (var i = 0; i < ZEROS.length; i++) if (c >= ZEROS[i] && c <= ZEROS[i] + 9) return String(c - ZEROS[i]);
+      return ch;
+    });
   }
   function all(max){
     var out = [];
@@ -81,7 +91,7 @@
   // with a message for the visitor if it can't load.
   function loadPdfLib(){
     return window.bdnixFiles.loadScript(PDF_LIB, 'PDFLib').catch(function(){
-      var err = new Error('Couldn’t load the PDF tools. Check your connection and try again.');
+      var err = new Error(t('Couldn’t load the PDF tools. Check your connection and try again.'));
       err.library = true;
       throw err;
     });

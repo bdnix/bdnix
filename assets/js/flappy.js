@@ -1,4 +1,6 @@
 (function(){
+  // The visitor's language (lang.js): words drawn on the board, and numbers.
+  var Lang = window.bdnixLang;
   // The rules live in flappy-core.js; this file draws them and handles input.
   var F = window.bdnixFlappy;
   var W = F.W, H = F.H, GROUND = F.GROUND;
@@ -111,7 +113,7 @@
     var medal = F.medal(score);
     ovKicker.textContent = medal ? MEDALS[medal] : 'bdnix arcade';
     ovTitle.textContent = 'Game over';
-    ovText.textContent = 'Score ' + score + (score >= best && score > 0 ? ' — new best!' : ' · Best ' + best);
+    ovText.textContent = score >= best && score > 0 ? Lang.t('Score {score} — new best!', { score: score }) : Lang.t('Score {score} · Best {best}', { score: score, best: best });
     startBtn.textContent = 'Play again';
     newBtn.hidden = true;
     overlay.hidden = false;
@@ -231,10 +233,10 @@
       ctx.fillStyle = '#eef1f8';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = '800 30px Inter, system-ui, sans-serif';
-      ctx.fillText('Get ready', W / 2, 130);
+      ctx.fillText(Lang.t('Get ready'), W / 2, 130);
       ctx.fillStyle = '#8e97ab';
       ctx.font = '600 13px "JetBrains Mono", monospace';
-      ctx.fillText(compactMQ.matches ? 'Tap to flap' : 'Space, ↑ or click to flap', W / 2, 300);
+      ctx.fillText(Lang.t(compactMQ.matches ? 'Tap to flap' : 'Space, ↑ or click to flap'), W / 2, 300);
     }
     if (hitFlash > 0) {
       ctx.fillStyle = 'rgba(255,255,255,' + (hitFlash / 0.18 * 0.6).toFixed(3) + ')';
@@ -342,9 +344,9 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = '800 40px Inter, system-ui, sans-serif';
     ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(8,10,18,.8)';
-    ctx.strokeText(world.score, W / 2, 56);
+    ctx.strokeText(Lang.num(world.score), W / 2, 56);
     ctx.fillStyle = '#eef1f8';
-    ctx.fillText(world.score, W / 2, 56);
+    ctx.fillText(Lang.num(world.score), W / 2, 56);
   }
 
   var last = performance.now();

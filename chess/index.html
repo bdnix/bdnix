@@ -22,6 +22,7 @@
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
   <meta name="theme-color" content="#080a12">
+  <script src="/assets/js/lang.js?v=80373c64d4"></script>
   <!-- /build:meta -->
   <link rel="preload" href="/assets/fonts/inter-latin-400-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/inter-latin-800-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
@@ -30,7 +31,7 @@
   <link rel="stylesheet" href="/assets/css/game.css?v=5d7bc45b69">
   <link rel="stylesheet" href="/assets/css/seg.css?v=9c1df52699">
   <link rel="stylesheet" href="/assets/css/chess.css?v=caa15d26da">
-  <script src="/assets/js/analytics.js?v=7fa4c31691"></script>
+  <script src="/assets/js/analytics.js?v=72c93189e3"></script>
 </head>
 <body class="play">
   <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
@@ -46,7 +47,7 @@
   </svg>
 
   <header class="bar">
-    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ chess</span></a>
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span translate="no">/ chess</span></a>
     <div class="bar-actions">
       <button type="button" id="soundBtn" class="icon-btn" aria-label="Mute sound"></button>
       <button type="button" id="pauseBtn" class="icon-btn" aria-label="Pause">
@@ -60,12 +61,12 @@
       <div><span class="label">Turn</span><b id="turn">White</b></div>
       <div class="status-row"><span class="label">Status</span><b id="status" aria-live="polite">Pick a side</b></div>
       <div class="best-row"><span class="label">Best win</span><b id="best">None yet</b></div>
-      <div class="opening-row"><span class="label">Opening</span><b id="opening">—</b></div>
+      <div class="opening-row"><span class="label">Opening</span><b id="opening" translate="no">—</b></div>
     </section>
 
     <div class="board-col" id="boardCol">
     <div class="strip" id="stripTop">
-      <span class="who"><b id="nameTop">Stockfish</b> <span class="elo" id="eloTop"></span></span>
+      <span class="who"><b id="nameTop" translate="no">Stockfish</b> <span class="elo" id="eloTop"></span></span>
       <span class="caps" id="capThem" role="img"></span><b class="adv" id="advThem"></b>
     </div>
     <div class="board-wrap">
@@ -100,7 +101,7 @@
       </div>
     </div>
     <div class="strip" id="stripBottom">
-      <span class="who"><b id="nameBottom">You</b> <span class="elo" id="eloBottom"></span></span>
+      <span class="who"><b id="nameBottom" translate="no">You</b> <span class="elo" id="eloBottom"></span></span>
       <span class="caps" id="capYou" role="img"></span><b class="adv" id="advYou"></b>
     </div>
     </div>
@@ -233,8 +234,8 @@
   <script src="/assets/js/sound.js?v=7a74a68ae2"></script>
   <script src="/assets/js/gamebar.js?v=aefe068990"></script>
   <script src="/assets/js/upright.js?v=280cffb58a"></script>
-  <script src="/assets/js/files.js?v=e79c6ab54e"></script>
+  <script src="/assets/js/files.js?v=15fbbbfa53"></script>
   <script src="/assets/js/chess-core.js?v=d43471b716"></script>
-  <script src="/assets/js/chess.js?v=b16fbca0f7"></script>
+  <script src="/assets/js/chess.js?v=0058016bec"></script>
 </body>
 </html>

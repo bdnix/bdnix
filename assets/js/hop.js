@@ -1,4 +1,6 @@
 (function(){
+  // The visitor's language (lang.js): words drawn on the board, and numbers.
+  var Lang = window.bdnixLang;
   // The rules live in hop-core.js; this file draws them and handles input.
   var F = window.bdnixHop;
   var COLS = F.COLS, ROWS = F.ROWS;
@@ -118,7 +120,7 @@
     sound.play(score >= best && score > 0 ? 'best' : 'over');
     ovKicker.textContent = lines[Math.min(lines.length - 1, Math.floor(Math.random() * lines.length))];
     ovTitle.textContent = 'Game over';
-    ovText.textContent = 'Score ' + score + (score >= best && score > 0 ? ' — new best!' : ' · Best ' + best);
+    ovText.textContent = score >= best && score > 0 ? Lang.t('Score {score} — new best!', { score: score }) : Lang.t('Score {score} · Best {best}', { score: score, best: best });
     startBtn.textContent = 'Play again';
     newBtn.hidden = true;
     overlay.hidden = false;
@@ -251,13 +253,13 @@
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = '800 30px Inter, system-ui, sans-serif';
       ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(8,10,18,.8)';
-      ctx.strokeText('Get ready', W / 2, 110);
+      ctx.strokeText(Lang.t('Get ready'), W / 2, 110);
       ctx.fillStyle = '#eef1f8';
-      ctx.fillText('Get ready', W / 2, 110);
+      ctx.fillText(Lang.t('Get ready'), W / 2, 110);
       ctx.font = '600 13px "JetBrains Mono", monospace';
-      ctx.strokeText(compactMQ.matches ? 'Tap or swipe to hop' : 'Arrow keys to hop', W / 2, 140);
+      ctx.strokeText(Lang.t(compactMQ.matches ? 'Tap or swipe to hop' : 'Arrow keys to hop'), W / 2, 140);
       ctx.fillStyle = '#c3c9d8';
-      ctx.fillText(compactMQ.matches ? 'Tap or swipe to hop' : 'Arrow keys to hop', W / 2, 140);
+      ctx.fillText(Lang.t(compactMQ.matches ? 'Tap or swipe to hop' : 'Arrow keys to hop'), W / 2, 140);
     }
   }
 
@@ -466,9 +468,9 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = '800 34px Inter, system-ui, sans-serif';
     ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(8,10,18,.8)';
-    ctx.strokeText(world.score, W / 2, 34);
+    ctx.strokeText(Lang.num(world.score), W / 2, 34);
     ctx.fillStyle = '#eef1f8';
-    ctx.fillText(world.score, W / 2, 34);
+    ctx.fillText(Lang.num(world.score), W / 2, 34);
   }
 
   var last = performance.now();

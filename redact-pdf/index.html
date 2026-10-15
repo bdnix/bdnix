@@ -22,6 +22,7 @@
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
   <meta name="theme-color" content="#080a12">
+  <script src="/assets/js/lang.js?v=80373c64d4"></script>
   <!-- /build:meta -->
   <link rel="preload" href="/assets/fonts/inter-latin-400-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/inter-latin-800-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
@@ -30,20 +31,24 @@
   <link rel="stylesheet" href="/assets/css/avatar.css?v=1da16dde9f">
   <link rel="stylesheet" href="/assets/css/profile-chip.css?v=9563092884">
   <link rel="stylesheet" href="/assets/css/footer.css?v=5f3a8660bb">
+  <link rel="stylesheet" href="/assets/css/lang.css?v=c89d363f3d">
   <link rel="stylesheet" href="/assets/css/page.css?v=6ee9010c44">
   <link rel="stylesheet" href="/assets/css/tool.css?v=a70bc4eb15">
   <link rel="stylesheet" href="/assets/css/file.css?v=6d62676c6d">
   <link rel="stylesheet" href="/assets/css/editor.css?v=23a907ae4f">
   <link rel="stylesheet" href="/assets/css/settings.css?v=e8dcb9f30c">
   <link rel="stylesheet" href="/assets/css/redact.css?v=981d2e77af">
-  <script src="/assets/js/analytics.js?v=7fa4c31691"></script>
+  <script src="/assets/js/analytics.js?v=72c93189e3"></script>
 </head>
 <body>
   <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
 
   <header class="bar">
-    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span>/ redact-pdf</span></a>
-    <a class="profile-chip" href="/profile/" title="Your profile"><span class="avatar" data-profile-initial aria-hidden="true">U</span><span data-profile-name>User</span></a>
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span translate="no">/ redact-pdf</span></a>
+    <div class="bar-end">
+      <nav class="langs" aria-label="Language" data-languages></nav>
+      <a class="profile-chip" href="/profile/" title="Your profile"><span class="avatar" data-profile-initial translate="no" aria-hidden="true">U</span><span data-profile-name translate="no">User</span></a>
+    </div>
   </header>
 
   <main class="tool wide">
@@ -60,7 +65,7 @@
 
     <div class="file-bar panel" id="fileBar" hidden>
       <div class="file-info">
-        <span class="file-name" id="fileName"></span>
+        <span class="file-name" id="fileName" translate="no" translate="no"></span>
         <span class="file-meta" id="fileMeta"></span>
       </div>
       <button class="link-btn" id="changeBtn" type="button">Change file</button>
@@ -132,10 +137,10 @@
   <!-- /build:footer -->
 
   <script src="/assets/js/blocks.js?v=65771b7dfd"></script>
-  <script src="/assets/js/profile.js?v=aeac36bccf"></script>
-  <script src="/assets/js/files.js?v=e79c6ab54e"></script>
-  <script src="/assets/js/pdftools.js?v=876b24df99"></script>
-  <script src="/assets/js/redact-core.js?v=f4252badf4"></script>
-  <script src="/assets/js/redact.js?v=e0986d6619"></script>
+  <script src="/assets/js/profile.js?v=c69f36ae2a"></script>
+  <script src="/assets/js/files.js?v=15fbbbfa53"></script>
+  <script src="/assets/js/pdftools.js?v=4aa99ce202"></script>
+  <script src="/assets/js/redact-core.js?v=17f9806333"></script>
+  <script src="/assets/js/redact.js?v=6c104fdb37"></script>
 </body>
 </html>

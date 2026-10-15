@@ -1,10 +1,11 @@
-/* The link to the page in the other language (English or বাংলা), in the
-   top bar of a page that has both. */
+/* The buttons that show the site in another language, which lang.js puts
+   in a page's <nav data-languages> (in the top bar). */
 .bar-end{display:flex;align-items:center;gap:8px;min-width:0}
+.langs{display:flex;gap:6px}
 .lang-switch{
   display:inline-flex;align-items:center;min-height:32px;padding:0 12px;
   border:1px solid var(--line);border-radius:999px;background:var(--panel);
-  font:600 13px/1 var(--sans);color:var(--muted);text-decoration:none;white-space:nowrap;
+  font:600 13px/1 var(--sans);color:var(--muted);white-space:nowrap;
   transition:border-color .2s ease,color .2s ease;
 }
 .lang-switch:hover{border-color:rgba(168,85,247,.45);color:var(--fg)}

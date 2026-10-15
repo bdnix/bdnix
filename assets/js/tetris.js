@@ -1,5 +1,7 @@
 // Falling Blocks: drawing, input and timing. The rules are in tetris-core.js.
 (function(){
+  // The visitor's language (lang.js): words drawn on the board, and numbers.
+  var Lang = window.bdnixLang;
   var T = window.bdnixTetris;
   var COLS = T.COLS, ROWS = T.ROWS;
   var COLORS = window.bdnix.PALETTE;
@@ -208,7 +210,7 @@
     updateHud();
     sound.play(score >= best && score > 0 ? 'best' : 'over');
     ovTitle.textContent = 'Game over';
-    ovText.textContent = 'Score ' + score + (score >= best && score > 0 ? ' — new best!' : ' · Best ' + best);
+    ovText.textContent = score >= best && score > 0 ? Lang.t('Score {score} — new best!', { score: score }) : Lang.t('Score {score} · Best {best}', { score: score, best: best });
     startBtn.textContent = 'Play again';
     startBtn.blur();
     newBtn.hidden = true;

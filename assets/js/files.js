@@ -2,10 +2,12 @@
 // every tool page uses these. Nothing is uploaded; files are read here in
 // the browser.
 (function(){
+  var Lang = window.bdnixLang, t = Lang.t, num = Lang.num;
+
   function fmtSize(n){
-    if (n < 1024) return n + ' B';
-    if (n < 1048576) return (n / 1024).toFixed(0) + ' KB';
-    return (n / 1048576).toFixed(1) + ' MB';
+    if (n < 1024) return num(n) + ' B';
+    if (n < 1048576) return num((n / 1024).toFixed(0)) + ' KB';
+    return num((n / 1048576).toFixed(1)) + ' MB';
   }
   function plural(n, word){ return n + ' ' + word + (n === 1 ? '' : 's'); }
 
@@ -90,15 +92,15 @@
         return '<link rel="stylesheet" href="' + l.href.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '">';
       }).join('');
       d.open();
-      d.write('<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+      d.write('<!doctype html><html lang="' + Lang.lang + '"><head><meta charset="utf-8">' +
         '<meta name="viewport" content="width=device-width,initial-scale=1">' + links + '</head><body></body></html>');
       d.close();
     }
-    d.title = name ? name + ' · bdnix' : 'Preparing your file · bdnix';
+    d.title = (name || t('Preparing your file')) + ' · bdnix';
     var main = d.createElement('main');
     main.className = 'tool';
     var h1 = d.createElement('h1');
-    h1.textContent = name || 'Preparing your file…';
+    h1.textContent = name || t('Preparing your file…');
     var lede = d.createElement('p');
     lede.className = 'lede';
     main.appendChild(h1);
@@ -106,17 +108,17 @@
     d.body.textContent = '';
     d.body.appendChild(main);
     if (!url) {
-      lede.textContent = 'It downloads here as soon as it’s ready. Keep the other tab open until then.';
+      lede.textContent = t('It downloads here as soon as it’s ready. Keep the other tab open until then.');
       return;
     }
-    lede.textContent = 'Your download has started. If it didn’t, use the button below. You can close this tab once the file is saved.';
+    lede.textContent = t('Your download has started. If it didn’t, use the button below. You can close this tab once the file is saved.');
     var actions = d.createElement('p');
     actions.className = 'actions';
     var a = d.createElement('a');
     a.className = 'btn btn-primary';
     a.href = url;
     a.download = name;
-    a.textContent = 'Download ' + name;
+    a.textContent = t('Download {name}', { name: name });
     actions.appendChild(a);
     main.appendChild(actions);
     a.click();

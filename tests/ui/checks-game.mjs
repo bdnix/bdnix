@@ -4,6 +4,7 @@
 // tests/ui/<app>.site.spec.mjs.
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { openGame, press } from './games.mjs';
+import { inLanguage, expectTranslated } from './languages.mjs';
 
 const touch = (page) => page.evaluate(() => matchMedia('(pointer:coarse)').matches);
 
@@ -79,6 +80,32 @@ export function checkGame(url, opts = {}){
       });
       expect(fits, 'the top bar fits beside the board').toBe(true);
       await expectNoSideScroll(page);
+    }
+  });
+
+  // In every language the site has: the game, left to itself for a while
+  // (some end on their own), its pause screen and the note asking for a
+  // phone upright, with nothing left in English.
+  test(`${url}: in every language, playing it leaves nothing in English`, async ({ page }) => {
+    await page.goto(url);
+    const languages = await page.evaluate(() => window.bdnixLang.languages.map((l) => l.code).filter((c) => c !== 'en'));
+    for (const code of languages) {
+      await inLanguage(page, code);
+      await openGame(page, url);
+      await page.locator('#startBtn').click();
+      await page.clock.runFor(20_000);
+      await expectTranslated(page, code);
+      if (await page.locator('#overlay').isHidden()) {
+        await page.locator('#pauseBtn').click();
+        await expect(page.locator('#ovTitle')).not.toHaveText('Paused');
+      }
+      await expectTranslated(page, code);
+      if (await touch(page)) {
+        await page.setViewportSize({ width: 844, height: 390 });
+        await expect(page.locator('.upright')).toBeVisible();
+        await expect(page.locator('.upright')).not.toContainText('Turn your phone upright');
+        await expectTranslated(page, code);
+      }
     }
   });
 

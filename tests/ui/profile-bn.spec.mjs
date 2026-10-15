@@ -1,25 +1,18 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { LIVE, serveLive } from './checks.mjs';
+import { inLanguage, expectTranslated } from './languages.mjs';
 
-// The profile page's Bangla copy (bn/profile/index.html), counting in Bangla
-// digits. It reads and saves the same name and scores as the English page.
+// The profile page in Bangla, counting in Bangla digits.
+test.beforeEach(({ page }) => inLanguage(page, 'bn'));
+// Whatever a test does, nothing is left in English.
+test.afterEach(({ page }) => expectTranslated(page));
 const scores = (page) => page.locator('.score').evaluateAll((els) => els.map((e) => ({
   best: e.querySelector('b').textContent,
   link: e.querySelector('a').textContent
 })));
 
-test('the top bar switches between the English and Bangla profile', async ({ page }) => {
-  await page.goto('/profile/');
-  await page.getByRole('navigation', { name: 'Language' }).getByRole('link', { name: 'বাংলা' }).click();
-  await expect(page).toHaveURL(/\/bn\/profile\/$/);
-  await expect(page.getByRole('link', { name: 'bdnix-এ ফিরে যান' })).toHaveAttribute('href', '/bn/');
-  await page.getByRole('navigation', { name: 'ভাষা' }).getByRole('link', { name: 'English' }).click();
-  await expect(page).toHaveURL(/\/profile\/$/);
-  await expect(page.locator('h1')).toHaveText('User');
-});
-
 test('a new visitor is "ব্যবহারকারী", with no scores yet', async ({ page }) => {
-  await page.goto('/bn/profile/');
+  await page.goto('/profile/');
   await expect(page.locator('h1')).toHaveText('ব্যবহারকারী');
   await expect(page.locator('.avatar-lg')).toHaveText('ব');
   await expect(page.getByText('সেরা স্কোর')).toBeVisible();
@@ -31,7 +24,7 @@ test('a new visitor is "ব্যবহারকারী", with no scores yet',
 });
 
 test('scores, levels and visits in Bangla digits', async ({ page }) => {
-  await page.goto('/bn/profile/');
+  await page.goto('/profile/');
   await page.evaluate(() => {
     localStorage.setItem('bdnix_snake_best', '12450');
     localStorage.setItem('bdnix_chess_best', '3');
@@ -49,8 +42,8 @@ test('scores, levels and visits in Bangla digits', async ({ page }) => {
   await expect(page.locator('#year')).toHaveText(/^[০-৯]{4}$/);
 });
 
-test('editing the name in Bangla, which the English pages show too', async ({ page }) => {
-  await page.goto('/bn/profile/');
+test('editing the name in Bangla', async ({ page }) => {
+  await page.goto('/profile/');
   await page.getByRole('button', { name: 'নাম বদলান' }).click();
   await expect(page.getByLabel('আপনার নাম')).toBeFocused();
   await expect(page.getByText('সর্বোচ্চ ২৪টি অক্ষর। “ব্যবহারকারী”-তে ফিরে যেতে ঘরটি খালি রাখুন।')).toBeVisible();
@@ -61,7 +54,7 @@ test('editing the name in Bangla, which the English pages show too', async ({ pa
   await page.goto('/profile/');
   await expect(page.locator('h1')).toHaveText('মুসা');
 
-  await page.goto('/bn/profile/');
+  await page.goto('/profile/');
   await page.getByRole('button', { name: 'নাম বদলান' }).click();
   await page.getByLabel('আপনার নাম').fill('আর না');
   await page.getByRole('button', { name: 'বাতিল' }).click();
@@ -70,7 +63,7 @@ test('editing the name in Bangla, which the English pages show too', async ({ pa
 
 test('analytics in Bangla: the banner, and turning it on and off', async ({ page }) => {
   await serveLive(page);
-  await page.goto(LIVE + '/bn/profile/');
+  await page.goto(LIVE + '/profile/');
   await expect(page.getByText('অ্যানালিটিক্স কুকি')).toBeVisible();
   const state = page.locator('#analyticsState');
   const toggle = page.locator('#analyticsBtn');

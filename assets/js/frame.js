@@ -4,7 +4,8 @@
 // frame-core.js; formats and file names come from image-core.js.
 (function(){
   var T = window.bdnixFiles, I = window.bdnixImages, F = window.bdnixFrame;
-  var fmtSize = T.fmtSize, plural = T.plural;
+  var Lang = window.bdnixLang, t = Lang.t, count = Lang.count;
+  var fmtSize = T.fmtSize;
 
   var drop = document.getElementById('drop');
   var picker = document.getElementById('picker');
@@ -136,7 +137,7 @@
     render();
     preview();
     if (skipped.length) {
-      say('Skipped: ' + skipped.map(function(f){ return f.name; }).join(', ') + (skipped.length === 1 ? ' isn’t an image.' : ' aren’t images.'), true);
+      say(t(skipped.length === 1 ? 'Skipped: {names} isn’t an image.' : 'Skipped: {names} aren’t images.', { names: skipped.map(function(f){ return f.name; }).join(', ') }), true);
     } else {
       say('');
     }
@@ -154,7 +155,7 @@
       var pick = document.createElement('button');
       pick.type = 'button';
       pick.className = 'thumb-btn';
-      pick.setAttribute('aria-label', 'Preview ' + f.file.name);
+      pick.setAttribute('aria-label', t('Preview {name}', { name: f.file.name }));
       pick.appendChild(f.tile);
       pick.addEventListener('click', function(){ show(i); });
       li.appendChild(pick);
@@ -177,7 +178,7 @@
         var a = document.createElement('a');
         a.className = 'btn btn-ghost dl';
         T.offer(a, f.url, f.out);
-        a.setAttribute('aria-label', 'Download ' + f.out);
+        a.setAttribute('aria-label', t('Download {name}', { name: f.out }));
         a.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4 7l4 4 4-4M2 14h12"/></svg><span>Download</span>';
         li.appendChild(a);
       }
@@ -185,7 +186,7 @@
       var rm = document.createElement('button');
       rm.type = 'button';
       rm.className = 'icon-btn rm';
-      rm.setAttribute('aria-label', 'Remove ' + f.file.name);
+      rm.setAttribute('aria-label', t('Remove {name}', { name: f.file.name }));
       rm.title = 'Remove';
       rm.disabled = busy;
       rm.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
@@ -204,14 +205,14 @@
     var s = settings();
     var valid = s.width && s.height;
     var ready = files.filter(function(f){ return f.state === 'ready'; }).length;
-    summary.textContent = plural(files.length, 'image');
-    if (!busy) fitLabel.textContent = ready ? 'Resize ' + plural(ready, 'image') : 'Resize images';
+    summary.textContent = count(files.length, '{n} image', '{n} images');
+    if (!busy) fitLabel.textContent = ready ? t('Resize {images}', { images: count(ready, '{n} image', '{n} images') }) : t('Resize images');
     fitBtn.disabled = busy || !ready || !valid;
     clearBtn.disabled = busy;
     picker.disabled = busy;
     Array.prototype.forEach.call(form.elements, function(el){ el.disabled = busy; });
     nav.hidden = files.length < 2;
-    imageLabel.textContent = 'Image ' + (current + 1) + ' of ' + files.length;
+    imageLabel.textContent = t('Image {n} of {total}', { n: current + 1, total: files.length });
     prevBtn.disabled = current === 0;
     nextBtn.disabled = current >= files.length - 1;
   }
@@ -229,9 +230,9 @@
     marginOut.textContent = s.margin + '%';
     widthIn.classList.toggle('invalid', !s.width);
     heightIn.classList.toggle('invalid', !s.height);
-    dimsHint.textContent = s.width && s.height ? '' : 'Width and height are whole numbers of pixels, from 1 to ' + F.MAX_SIDE + '.';
+    dimsHint.textContent = s.width && s.height ? '' : t('Width and height are whole numbers of pixels, from 1 to {max}.', { max: F.MAX_SIDE });
     dimsHint.classList.toggle('error', !(s.width && s.height));
-    exactLabel.textContent = s.width && s.height ? 'Exactly ' + s.width + ' × ' + s.height : 'Exact size';
+    exactLabel.textContent = s.width && s.height ? t('Exactly {width} × {height}', { width: s.width, height: s.height }) : t('Exact size');
     Array.prototype.forEach.call(swatches.querySelectorAll('button'), function(b){
       var on = b.getAttribute('data-color') === s.color;
       b.classList.toggle('on', on);
@@ -266,7 +267,7 @@
     shown = { f: f, img: null };
     canvas.hidden = true;
     note.hidden = false;
-    note.textContent = 'Loading preview…';
+    note.textContent = t('Loading preview…');
     previewSize.textContent = '';
     decode(f).then(function(img){
       if (!shown || shown.f !== f) return;
@@ -274,7 +275,7 @@
       preview();
     }, function(){
       if (!shown || shown.f !== f) return;
-      note.textContent = 'Your browser can’t open this image';
+      note.textContent = t('Your browser can’t open this image');
     });
   }
 
@@ -294,7 +295,7 @@
         c.width = c.height = 0;
         // Browsers that can't save a format quietly save a PNG instead.
         if (!blob || blob.type !== I.FORMATS[format].type) {
-          throw new Error('your browser can’t save ' + I.FORMATS[format].name + ' images. Choose another format.');
+          throw new Error(t('your browser can’t save {format} images. Choose another format.', { format: I.FORMATS[format].name }));
         }
         f.url = URL.createObjectURL(blob);
         f.out = I.outName(f.file.name, format, 'framed');
@@ -305,8 +306,8 @@
       });
     }).catch(function(err){
       f.state = 'error';
-      f.error = err === unreadable ? 'Your browser can’t open this image'
-        : 'Couldn’t fit: ' + (err && err.message ? err.message : err);
+      f.error = err === unreadable ? t('Your browser can’t open this image')
+        : t('Couldn’t fit: {error}', { error: err && err.message ? err.message : err });
     });
   }
 
@@ -318,7 +319,7 @@
     say('');
     todo.reduce(function(chain, f, i){
       return chain.then(function(){
-        fitLabel.textContent = 'Resizing ' + (i + 1) + ' of ' + todo.length + '…';
+        fitLabel.textContent = t('Resizing {i} of {total}…', { i: i + 1, total: todo.length });
         return fit(f, s);
       });
     }, Promise.resolve()).then(function(){
@@ -326,9 +327,9 @@
       render();
       var ok = todo.filter(function(f){ return f.state === 'done'; }).length;
       var failed = todo.length - ok;
-      var done = ok ? plural(ok, 'image') + ' ready to download.' : '';
-      if (!failed) say('Done. ' + done);
-      else say((done ? done + ' ' : '') + plural(failed, 'image') + ' couldn’t be resized.', true);
+      var done = ok ? t('{images} ready to download.', { images: count(ok, '{n} image', '{n} images') }) : '';
+      if (!failed) say(t('Done.') + ' ' + done);
+      else say((done ? done + ' ' : '') + t('{images} couldn’t be resized.', { images: count(failed, '{n} image', '{n} images') }), true);
       var first = list.querySelector('.dl');
       if (first) first.focus();
     });

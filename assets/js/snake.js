@@ -1,4 +1,6 @@
 (function(){
+  // The visitor's language (lang.js): words drawn on the board, and numbers.
+  var Lang = window.bdnixLang;
   // The rules live in snake-core.js; this file draws them and handles input.
   var F = window.bdnixSnake;
   var COLS = F.COLS, ROWS = F.ROWS;
@@ -110,7 +112,7 @@
     sound.play(score >= best && score > 0 ? 'best' : 'over');
     ovKicker.textContent = lines[Math.min(lines.length - 1, Math.floor(Math.random() * lines.length))];
     ovTitle.textContent = world.dead === 'full' ? 'You win!' : 'Game over';
-    ovText.textContent = 'Score ' + score + (score >= best && score > 0 ? ' — new best!' : ' · Best ' + best);
+    ovText.textContent = score >= best && score > 0 ? Lang.t('Score {score} — new best!', { score: score }) : Lang.t('Score {score} · Best {best}', { score: score, best: best });
     startBtn.textContent = 'Play again';
     newBtn.hidden = true;
     overlay.hidden = false;
@@ -256,13 +258,13 @@
     drawSnake();
 
     if (state === 'ready' || (state === 'paused' && pausedFrom === 'ready')) {
-      var hint = compactMQ.matches ? 'Swipe or tap an arrow to go' : 'Press an arrow key to go';
+      var hint = Lang.t(compactMQ.matches ? 'Swipe or tap an arrow to go' : 'Press an arrow key to go');
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = '800 30px Inter, system-ui, sans-serif';
       ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(8,10,18,.8)';
-      ctx.strokeText('Get ready', W / 2, 110);
+      ctx.strokeText(Lang.t('Get ready'), W / 2, 110);
       ctx.fillStyle = '#eef1f8';
-      ctx.fillText('Get ready', W / 2, 110);
+      ctx.fillText(Lang.t('Get ready'), W / 2, 110);
       ctx.font = '600 13px "JetBrains Mono", monospace';
       ctx.strokeText(hint, W / 2, 140);
       ctx.fillStyle = '#c3c9d8';

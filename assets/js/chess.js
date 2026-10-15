@@ -4,6 +4,28 @@
   // (and games opened from a PGN or text file) with it. Stockfish runs in a
   // web worker (assets/vendor/stockfish) fetched the first time it's needed.
   var C = window.bdnixChess;
+  // The visitor's language (lang.js). chess-core.js writes some things in
+  // English (how a position stands, why a game file can't be read), so
+  // they're put in the visitor's language where they're shown.
+  var Lang = window.bdnixLang, t = Lang.t;
+  function colorName(c){ return t(COLOR[c]); }
+  function piece(p){ return t(NAMES[p]); }
+  function outlook(e){
+    var said = C.outlook(e), m = /^(White|Black) (has won|is slightly better|is better|is winning|mates in (\d+))$/.exec(said);
+    if (!m) return t(said);
+    var how = {
+      'has won': '{color} has won', 'is slightly better': '{color} is slightly better',
+      'is better': '{color} is better', 'is winning': '{color} is winning'
+    };
+    return m[3] ? t('{color} mates in {n}', { color: t(m[1]), n: +m[3] }) : t(how[m[2]], { color: t(m[1]) });
+  }
+  function pgnError(said){
+    var m = /^Move (.+) isn’t a legal move there\.$/.exec(said);
+    return m ? t('Move {move} isn’t a legal move there.', { move: m[1] }) : t(said);
+  }
+  // The name of a player: "You", "White" and "Black" are the page's words,
+  // anything else is a name from a game file.
+  function playerName(n){ return n === 'You' || n === 'White' || n === 'Black' ? t(n) : n; }
   var ENGINE = '/assets/vendor/stockfish/stockfish-19-lite-single.js?v=19.0.0';
   // Each level: Stockfish's skill (0 to 20), how many moves ahead it looks,
   // and roughly the rating of a player it plays like (a guide, not a measure).
@@ -224,10 +246,10 @@
     } else sound.play(won ? 'win' : 'over');
     var who = players(), now = new Date(), two = function(n){ return (n < 10 ? '0' : '') + n; };
     startReview(game, {
-      kicker: { checkmate: 'Checkmate', resign: 'Resigned' }[st.result] || 'Draw',
-      title: !st.winner ? 'Draw' : both ? COLOR[st.winner] + ' wins' : won ? 'You win!' : 'Stockfish wins',
-      text: both ? ending(st) + ' · You played both sides' : ending(st) + ' · Level ' + lv + (record ? ' — your best yet!' : ''),
-      outcome: ending(st), side: side, mine: both ? null : side, back: 'start', again: 'Play again', players: who,
+      kicker: t({ checkmate: 'Checkmate', resign: 'Resigned' }[st.result] || 'Draw|result'),
+      title: !st.winner ? t('Draw|result') : both ? t('{color} wins', { color: colorName(st.winner) }) : won ? t('You win!') : t('Stockfish wins'),
+      text: both ? t('{ending} · You played both sides', { ending: ending(st) }) : t(record ? '{ending} · Level {level} — your best yet!' : '{ending} · Level {level}', { ending: ending(st), level: lv }),
+      outcome: ending(st), side: side, mine: both ? null : side, back: 'start', again: t('Play again'), players: who,
       result: !st.winner ? '1/2-1/2' : st.winner === 'w' ? '1-0' : '0-1',
       tags: {
         Event: 'Casual game', Site: 'bdnix.com', Date: now.getFullYear() + '.' + two(now.getMonth() + 1) + '.' + two(now.getDate()),
@@ -238,9 +260,9 @@
 
   // How a game that's over ended, in words.
   function ending(st){
-    if (st.result === 'checkmate') return 'Checkmate — ' + COLOR[st.winner] + ' wins';
-    if (st.result === 'resign') return COLOR[C.other(st.winner)] + ' resigned — ' + COLOR[st.winner] + ' wins';
-    return ENDINGS[st.result];
+    if (st.result === 'checkmate') return t('Checkmate — {color} wins', { color: colorName(st.winner) });
+    if (st.result === 'resign') return t('{loser} resigned — {winner} wins', { loser: colorName(C.other(st.winner)), winner: colorName(st.winner) });
+    return t(ENDINGS[st.result]);
   }
 
   // ---------- Resigning, offering a draw, asking for a hint ----------
@@ -298,7 +320,7 @@
       var pos = C.current(game), m = C.findMove(pos, uci);
       if (state !== 'playing' || C.key(pos) !== k || !m) return;
       hint = { key: k, move: m };
-      say('Hint: ' + C.san(pos, m));
+      say(t('Hint: {move}', { move: C.san(pos, m) }));
       render();
       updateHud();
     } }, ['setoption name Skill Level value 20', C.positionCommand(game), 'go depth ' + HINT_DEPTH]);
@@ -438,7 +460,7 @@
     ['q', 'r', 'b', 'n'].forEach(function(t){
       var b = document.createElement('button');
       b.type = 'button';
-      b.setAttribute('aria-label', NAMES[t].charAt(0).toUpperCase() + NAMES[t].slice(1));
+      b.setAttribute('aria-label', Lang.t(NAMES[t].charAt(0).toUpperCase() + NAMES[t].slice(1)));
       b.innerHTML = pieceSvg(mover() === 'w' ? t.toUpperCase() : t);
       b.addEventListener('click', function(){
         var uci = C.name(promoFrom) + C.name(promoTo) + t;
@@ -476,6 +498,8 @@
     reviewEl.hidden = barEl.hidden = false;
     ovMsg.textContent = reviewMsg.textContent = '';
     window.bdnixGamebar.setPaused(false);
+    // A game from a file: its names, event and file name stay as they are.
+    ['reviewKicker', 'reviewTitle', 'reviewText'].forEach(function(id){ $(id).setAttribute('translate', info.file ? 'no' : 'yes'); });
     $('reviewKicker').textContent = info.kicker;
     $('reviewTitle').textContent = info.title;
     $('reviewText').textContent = info.text;
@@ -695,26 +719,27 @@
     var g = a.game, base = a.base, end = g.moves.length, st = C.status(shown());
     var mine = C.reviewGame(g, a.evals).moves[base], color = mine.color;
     var real = r.summary.moves[base], eReal = r.evals[base + 1], eMine = a.evals[base + 1];
-    $('altGame').textContent = real ? about(moveName(r.game, base), real.kind, eReal, color) : 'The game stopped here.';
+    $('altGame').textContent = real ? about(moveName(r.game, base), real.kind, eReal, color) : t('The game stopped here.');
     $('altMine').textContent = about(moveName(g, base), mine.kind, eMine, color);
     var verdict = '';
-    if (real && (!eReal || !eMine)) verdict = 'Working out how it compares…';
+    if (real && (!eReal || !eMine)) verdict = t('Working out how it compares…');
     else if (real) {
       var was = C.winChance(eReal, color), now = C.winChance(eMine, color);
-      verdict = Math.abs(now - was) < 2 ? mine.san + ' is about as good as the game’s ' + real.san + '.'
-        : mine.san + ' is ' + (now > was ? 'better' : 'worse') + ' than the game’s ' + real.san + ': ' +
-          COLOR[color] + '’s chances go ' + (now > was ? 'up' : 'down') + ' from ' + was + '% to ' + now + '%.';
+      var moves = { mine: mine.san, real: real.san, color: colorName(color), was: was, now: now };
+      verdict = Math.abs(now - was) < 2 ? t('{mine} is about as good as the game’s {real}.', moves)
+        : t(now > was ? '{mine} is better than the game’s {real}: {color}’s chances go up from {was}% to {now}%.'
+          : '{mine} is worse than the game’s {real}: {color}’s chances go down from {was}% to {now}%.', moves);
     }
     $('altVerdict').textContent = verdict;
     var e = a.evals[a.at], where;
     if (st.over) where = ending(st);
-    else if (a.auto) where = 'Stockfish is playing on…';
-    else where = e ? C.formatEval(e) + ' · ' + C.outlook(e) : 'Analysing…';
-    $('altNow').textContent = (a.at < end ? (a.at > base ? 'After ' + moveName(g, a.at - 1) : 'Before your line') + ': '
-      : a.played && !a.auto ? 'After ' + a.played + ' more ' + (a.played === 1 ? 'move' : 'moves') + ' by Stockfish: ' : 'Now: ') +
-      where + (/…$/.test(where) ? '' : '.') + (r.info.outcome ? ' In the game: ' + r.info.outcome + '.' : '');
+    else if (a.auto) where = t('Stockfish is playing on…');
+    else where = e ? C.formatEval(e) + ' · ' + outlook(e) : t('Analysing…');
+    $('altNow').textContent = (a.at < end ? (a.at > base ? t('After {move}: ', { move: moveName(g, a.at - 1) }) : t('Before your line: '))
+      : a.played && !a.auto ? Lang.count(a.played, 'After {n} more move by Stockfish: ', 'After {n} more moves by Stockfish: ') : t('Now: ')) +
+      (/…$/.test(where) ? where : t('{text}.', { text: where })) + (r.info.outcome ? t(' In the game: {outcome}.', { outcome: r.info.outcome }) : '');
     var play = $('playOnBtn');
-    play.textContent = a.auto ? 'Stop' : 'Stockfish plays on';
+    play.textContent = a.auto ? t('Stop') : t('Stockfish plays on');
     play.disabled = st.over || a.at === base;
     // Back to where Stockfish started playing on, once it has played a move.
     var from = $('playFromBtn');
@@ -737,8 +762,8 @@
   }
   // A move, what kind of move it was, and how the game stood after it.
   function about(name, kind, e, color){
-    return name + (kind ? ' · ' + KINDS[kind].name : '') +
-      (e ? ' · ' + C.formatEval(e) + ' · ' + COLOR[color] + '’s chances ' + C.winChance(e, color) + '%' : ' · analysing…');
+    return name + (kind ? ' · ' + t(KINDS[kind].name) : '') +
+      (e ? ' · ' + C.formatEval(e) + ' · ' + t('{color}’s chances {percent}%', { color: colorName(color), percent: C.winChance(e, color) }) : ' · ' + t('analysing…'));
   }
 
   // The move list: a row per move number, a button per move.
@@ -781,8 +806,8 @@
     var sum = r.summary = C.reviewGame(r.game, r.evals), n = r.game.positions.length;
     var done = r.next >= n, offline = !engine && !done && !job;
     $('reviewProgress').textContent = offline ? OFFLINE : done
-      ? 'Analysed by Stockfish, ' + REVIEW_DEPTH + ' moves deep.'
-      : 'Analysing… ' + r.next + ' of ' + n + ' positions';
+      ? t('Analysed by Stockfish, {depth} moves deep.', { depth: REVIEW_DEPTH })
+      : t('Analysing… {n} of {total} positions', { n: r.next, total: n });
     $('retryBtn').hidden = !offline;
     ['w', 'b'].forEach(function(c){
       var s = sum[c], k = c.toUpperCase();
@@ -795,7 +820,7 @@
       var b = moveBtns[i], kind = KINDS[mv.kind];
       b.className = 'mv' + (mv.kind ? ' ' + mv.kind : '') + (i + 1 === r.ply ? ' on' : '');
       b.querySelector('.mark').textContent = kind ? kind.mark : '';
-      b.setAttribute('aria-label', moveName(r.game, i) + (kind ? ', ' + kind.name.toLowerCase() : ''));
+      b.setAttribute('aria-label', kind ? t('{square}, {kind}', { square: moveName(r.game, i), kind: t(kind.name).toLowerCase() }) : moveName(r.game, i));
       if (i + 1 === r.ply) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
     });
     showMove();
@@ -804,7 +829,7 @@
     drawGraph();
     decorate();
     var acc = function(c){ return sum[c].accuracy === null ? '—' : sum[c].accuracy + '%'; };
-    $('accLine').textContent = 'Accuracy · White ' + acc('w') + ' · Black ' + acc('b');
+    $('accLine').textContent = t('Accuracy · White {white} · Black {black}', { white: acc('w'), black: acc('b') });
   }
 
   // The slips worth a second look, each with the engine's better move: the
@@ -817,8 +842,8 @@
       if (mv.kind && KINDS[mv.kind].mark && mv.best && (!r.info.mine || mv.color === r.info.mine)) list.push(i);
     });
     var done = r.next >= r.game.positions.length;
-    $('momentsNote').textContent = list.length ? '' : !done ? 'Looking for slips…'
-      : r.info.mine ? 'None: every move you made kept your chances.' : 'None: every move kept the chances.';
+    $('momentsNote').textContent = list.length ? '' : !done ? t('Looking for slips…')
+      : r.info.mine ? t('None: every move you made kept your chances.') : t('None: every move kept the chances.');
     var key = list.join(' ');
     if (key === moments) return;
     moments = key;
@@ -836,9 +861,10 @@
       mark.setAttribute('aria-hidden', 'true');
       mark.textContent = KINDS[mv.kind].mark;
       b.querySelector('b').appendChild(mark);
-      b.querySelector('.why').textContent = KINDS[mv.kind].name + '. ' + pos.full + (pos.turn === 'w' ? '. ' : '… ') + mv.bestSan +
-        ' was better: ' + COLOR[mv.color] + '’s chances fell from ' + C.winChance(r.evals[i], mv.color) + '% to ' +
-        C.winChance(r.evals[i + 1], mv.color) + '%.';
+      b.querySelector('.why').textContent = t('{kind}. {move} was better: {color}’s chances fell from {from}% to {to}%.', {
+        kind: t(KINDS[mv.kind].name), move: pos.full + (pos.turn === 'w' ? '. ' : '… ') + mv.bestSan, color: colorName(mv.color),
+        from: C.winChance(r.evals[i], mv.color), to: C.winChance(r.evals[i + 1], mv.color)
+      });
       var li = document.createElement('li');
       li.appendChild(b);
       ol.appendChild(li);
@@ -851,15 +877,14 @@
     var r = review, ply = r.ply, a = r.alt, e = a ? a.evals[a.at] : r.evals[ply];
     $('evalNow').textContent = e ? C.formatEval(e) : '…';
     var text;
-    if (a) text = 'Your line: ' + lineOf(a);
-    else if (!ply) text = 'The starting position.';
+    if (a) text = t('Your line: {line}', { line: lineOf(a) });
+    else if (!ply) text = t('The starting position.');
     else {
-      var mv = r.summary.moves[ply - 1];
-      text = moveName(r.game, ply - 1) + ': ';
-      if (!mv.kind) text += 'not analysed yet.';
+      var mv = r.summary.moves[ply - 1], name = moveName(r.game, ply - 1);
+      if (!mv.kind) text = t('{move}: not analysed yet.', { move: name });
       else {
-        text += KINDS[mv.kind].name + '.';
-        if (mv.kind !== 'best' && mv.bestSan) text += ' Best was ' + mv.bestSan + '.';
+        text = t('{move}: {kind}.', { move: name, kind: t(KINDS[mv.kind].name) });
+        if (mv.kind !== 'best' && mv.bestSan) text += t(' Best was {move}.', { move: mv.bestSan });
       }
     }
     $('moveNow').textContent = text;
@@ -924,7 +949,7 @@
       b.innerHTML = '<span class="san"></span><span class="mark" aria-hidden="true"></span>';
       b.querySelector('.san').textContent = m.san;
       b.querySelector('.mark').textContent = kind ? kind.mark : '';
-      b.setAttribute('aria-label', moveName(g, i) + (kind ? ', ' + kind.name.toLowerCase() : ''));
+      b.setAttribute('aria-label', kind ? t('{square}, {kind}', { square: moveName(g, i), kind: t(kind.name).toLowerCase() }) : moveName(g, i));
       if (i + 1 === r.ply) { b.className += ' on'; b.setAttribute('aria-current', 'true'); on = b; }
       // A move's number stays on the same line as the move.
       if (pos.turn === 'w' || num) {
@@ -938,7 +963,7 @@
         add(pair);
       } else add(b);
       num = !!(kind && kind.mark && mv.bestSan);
-      if (num) span('better', '(' + mv.bestSan + ' was better)');
+      if (num) span('better', t('({move} was better)', { move: mv.bestSan }));
     });
     if (r.info.outcome) span('result', r.info.outcome);
     // The game as PGN, to copy or download (as a new file each time).
@@ -995,7 +1020,7 @@
   function showSpeed(){
     var s = SPEEDS[speed], btn = $('speedBtn');
     btn.textContent = s.short;
-    btn.setAttribute('aria-label', 'Replay speed: ' + s.name.toLowerCase() + ', a move every ' + s.step / 1000 + ' seconds. Change it');
+    btn.setAttribute('aria-label', t('Replay speed: {speed}, a move every {seconds} seconds. Change it', { speed: t(s.name).toLowerCase(), seconds: s.step / 1000 }));
   }
   function startReplay(){
     var r = review;
@@ -1030,7 +1055,7 @@
   function showReplay(){
     var btn = $('replayBtn'), on = !!(review && review.playing);
     btn.innerHTML = on ? ICON_PAUSE : ICON_PLAY;
-    btn.setAttribute('aria-label', on ? 'Pause the replay' : 'Replay the moves');
+    btn.setAttribute('aria-label', on ? t('Pause the replay') : t('Replay the moves'));
     updateHud();
   }
 
@@ -1072,8 +1097,8 @@
     g.lineWidth = 2;
     g.beginPath(); g.moveTo(x(r.ply), 0); g.lineTo(x(r.ply), h); g.stroke();
     var s = r.summary;
-    graph.setAttribute('aria-label', 'How the evaluation changed over the game' +
-      (s.w.accuracy === null ? '' : '. Accuracy: White ' + s.w.accuracy + '%, Black ' + (s.b.accuracy === null ? '—' : s.b.accuracy + '%')));
+    graph.setAttribute('aria-label', t('How the evaluation changed over the game') +
+      (s.w.accuracy === null ? '' : t('. Accuracy: White {white}%, Black {black}', { white: s.w.accuracy, black: s.b.accuracy === null ? '—' : Lang.num(s.b.accuracy) + '%' })));
   }
 
   // ---------- Opening a game file, or pasting one ----------
@@ -1092,13 +1117,13 @@
   var fileFrom = null;
   function openFile(file){
     if (!file) return;
-    if (file.size > MAX_FILE) { importError(file.name + ' is too big to be a game file (over 50 MB).'); return; }
+    if (file.size > MAX_FILE) { importError(t('{name} is too big to be a game file (over 50 MB).', { name: file.name })); return; }
     file.text().then(function(text){
       var r = readGames(text);
-      if (r.error) importError('Couldn’t read a game from ' + file.name + '. ' + r.error);
+      if (r.error) importError(t('Couldn’t read a game from {name}. {error}', { name: file.name, error: pgnError(r.error) }));
       else if (r.games) pickFrom(r.games, file.name, fileFrom);
       else openGame(r, file.name);
-    }, function(){ importError('Couldn’t read ' + file.name + '.'); });
+    }, function(){ importError(t('Couldn’t read {name}.', { name: file.name })); });
   }
 
   // The boxes over the page, for pasting a game and picking one: one at a
@@ -1130,13 +1155,13 @@
   }
   function readPasted(){
     var text = pasteText.value;
-    if (!text.trim()) { pasteMsg.textContent = 'Paste a game first.'; return; }
+    if (!text.trim()) { pasteMsg.textContent = t('Paste a game first.'); return; }
     var r = readGames(text);
-    if (r.error) { pasteMsg.textContent = 'Couldn’t read a game from that. ' + r.error; return; }
+    if (r.error) { pasteMsg.textContent = t('Couldn’t read a game from that. {error}', { error: pgnError(r.error) }); return; }
     hideModal();
     pasteText.value = '';
-    if (r.games) pickFrom(r.games, 'the games pasted', modalFrom);
-    else openGame(r, 'Pasted game');
+    if (r.games) pickFrom(r.games, t('the games pasted'), modalFrom);
+    else openGame(r, t('Pasted game'));
   }
 
   // The list of a file's games to pick one from, searched by the words in
@@ -1151,7 +1176,7 @@
         return [t.White, t.Black, t.Event, t.Site, t.Date, t.Round, t.Result, t.ECO].join(' ').toLowerCase();
       })
     };
-    $('pickAbout').textContent = games.length.toLocaleString('en') + ' games in ' + name + '.';
+    $('pickAbout').textContent = t('{n} games in {name}.', { n: games.length.toLocaleString('en'), name: name });
     pickSearch.value = '';
     $('pickMsg').textContent = '';
     listPicks();
@@ -1171,22 +1196,24 @@
       b.className = 'pick-game';
       b.setAttribute('data-game', i);
       b.innerHTML = '<b></b><span></span>';
-      b.querySelector('b').textContent = (known(t.White) || 'White') + ' – ' + (known(t.Black) || 'Black') +
+      // What's in a game file stays as it is.
+      b.setAttribute('translate', 'no');
+      b.querySelector('b').textContent = (known(t.White) || Lang.t('White')) + ' – ' + (known(t.Black) || Lang.t('Black')) +
         (t.Result && t.Result !== '*' ? ' · ' + t.Result.replace('1/2-1/2', '½–½') : '');
-      b.querySelector('span').textContent = [known(t.Event), known(t.Date), known(t.Round) ? 'round ' + t.Round : '']
-        .filter(Boolean).join(' · ') || 'Game ' + (i + 1);
+      b.querySelector('span').textContent = [known(t.Event), known(t.Date), known(t.Round) ? Lang.t('round {n}', { n: t.Round }) : '']
+        .filter(Boolean).join(' · ') || Lang.t('Game {n}', { n: i + 1 });
       var li = document.createElement('li');
       li.appendChild(b);
       ol.appendChild(li);
     });
-    $('pickCount').textContent = !found.length ? 'No games match.'
-      : found.length > PICK_SHOW ? 'Showing the first ' + PICK_SHOW + ' of ' + found.length.toLocaleString('en') + '. Search to narrow them down.' : '';
+    $('pickCount').textContent = !found.length ? t('No games match.')
+      : found.length > PICK_SHOW ? t('Showing the first {shown} of {total}. Search to narrow them down.', { shown: PICK_SHOW, total: found.length.toLocaleString('en') }) : '';
   }
   function choose(i){
     var r = C.parsePgn(picking.games[i].text), n = picking.games.length;
-    if (r.error) { $('pickMsg').textContent = 'Couldn’t read game ' + (i + 1) + '. ' + r.error; return; }
+    if (r.error) { $('pickMsg').textContent = t('Couldn’t read game {n}. {error}', { n: i + 1, error: pgnError(r.error) }); return; }
     hideModal();
-    openGame(r, picking.name + ' · game ' + (i + 1).toLocaleString('en') + ' of ' + n.toLocaleString('en'), true);
+    openGame(r, picking.name + ' · ' + t('game {n} of {total}', { n: (i + 1).toLocaleString('en'), total: n.toLocaleString('en') }), true);
   }
 
   // Reviews a game read from a file. A game paused before is kept, and
@@ -1194,20 +1221,20 @@
   // can be swapped for another of them.
   function openGame(r, fileName, picked){
     var g = r.game, t = r.tags, st = C.status(g), paused = state === 'paused' || (review && review.info.back === 'paused');
-    var outcome = r.result !== '*' ? RESULTS[r.result]
-      : st.result === 'checkmate' ? 'Checkmate — ' + COLOR[st.winner] + ' wins'
-      : st.over ? ENDINGS[st.result] : RESULTS['*'];
-    var about = [outcome, t.Event && t.Event !== '?' ? t.Event : '', t.Date && !/\?/.test(t.Date) ? t.Date : '', g.moves.length + (g.moves.length === 1 ? ' move' : ' moves')];
+    var outcome = r.result !== '*' ? Lang.t(RESULTS[r.result])
+      : st.result === 'checkmate' ? Lang.t('Checkmate — {color} wins', { color: colorName(st.winner) })
+      : st.over ? Lang.t(ENDINGS[st.result]) : null;
+    var about = [outcome || Lang.t(RESULTS['*']), t.Event && t.Event !== '?' ? t.Event : '', t.Date && !/\?/.test(t.Date) ? t.Date : '', Lang.count(g.moves.length, '{n} move', '{n} moves')];
     var result = r.result !== '*' ? r.result : st.result === 'checkmate' ? (st.winner === 'w' ? '1-0' : '0-1') : st.over ? '1/2-1/2' : '*';
     startReview(g, {
-      kicker: fileName, outcome: outcome === RESULTS['*'] ? null : outcome, tags: t, result: result,
+      kicker: fileName, outcome: outcome, tags: t, result: result, file: true,
       players: {
         w: { name: known(t.White) || 'White', elo: known(t.WhiteElo) },
         b: { name: known(t.Black) || 'Black', elo: known(t.BlackElo) }
       },
-      title: (t.White && t.White !== '?' ? t.White : 'White') + ' vs ' + (t.Black && t.Black !== '?' ? t.Black : 'Black'),
+      title: Lang.t('{white} vs {black}', { white: t.White && t.White !== '?' ? t.White : Lang.t('White'), black: t.Black && t.Black !== '?' ? t.Black : Lang.t('Black') }),
       text: about.filter(Boolean).join(' · '),
-      side: 'w', back: paused ? 'paused' : 'start', again: paused ? 'Back to your game' : 'Play a game', replay: true, picked: !!picked
+      side: 'w', back: paused ? 'paused' : 'start', again: Lang.t(paused ? 'Back to your game' : 'Play a game'), replay: true, picked: !!picked
     });
   }
 
@@ -1231,7 +1258,7 @@
     return '<svg class="pc ' + C.colorOf(p) + '" viewBox="0 0 45 45" aria-hidden="true"><use href="#pc-' + p.toLowerCase() + '"/></svg>';
   }
   function describe(sq, p){
-    return C.name(sq) + (p ? ', ' + COLOR[C.colorOf(p)] + ' ' + NAMES[p.toLowerCase()] : '');
+    return C.name(sq) + (p ? ', ' + t('{color} {piece}', { color: colorName(C.colorOf(p)), piece: piece(p.toLowerCase()) }) : '');
   }
   // The game on the board, up to the move shown.
   function shown(){
@@ -1252,10 +1279,14 @@
         (sq === selected ? ' sel' : '') + (sq === check ? ' check' : '') +
         (target ? ' to' + (p ? ' take' : '') : '');
       el.setAttribute('data-sq', C.name(sq));
-      el.setAttribute('aria-label', describe(sq, p) + (sq === selected ? ', picked up' : '') + (target ? ', can move here' : ''));
+      var label = describe(sq, p);
+      if (sq === selected) label = t('{square}, picked up', { square: label });
+      if (target) label = t('{square}, can move here', { square: label });
+      el.setAttribute('data-label', label);
+      el.setAttribute('aria-label', label);
       var html = p ? pieceSvg(p) : '';
       if (v % 8 === 0) html += '<span class="coord rank" aria-hidden="true">' + C.name(sq)[1] + '</span>';
-      if (v >= 56) html += '<span class="coord file" aria-hidden="true">' + C.name(sq)[0] + '</span>';
+      if (v >= 56) html += '<span class="coord file" aria-hidden="true" translate="no">' + C.name(sq)[0] + '</span>';
       el.innerHTML = html;
     }
     if (animate) slide(animate);
@@ -1279,7 +1310,7 @@
       var b = el.querySelector('.badge');
       if (b) {
         el.removeChild(b);
-        el.setAttribute('aria-label', el.getAttribute('aria-label').replace(/, (inaccuracy|mistake|blunder)$/, ''));
+        el.setAttribute('aria-label', el.getAttribute('data-label'));
       }
     });
     if (arrow) {
@@ -1294,13 +1325,13 @@
       badge.setAttribute('aria-hidden', 'true');
       badge.textContent = kind.mark;
       el.appendChild(badge);
-      el.setAttribute('aria-label', el.getAttribute('aria-label') + ', ' + kind.name.toLowerCase());
+      el.setAttribute('aria-label', t('{square}, {kind}', { square: el.getAttribute('data-label'), kind: t(kind.name).toLowerCase() }));
     }
     // The bar keeps its last reading until the position shown is worked out.
     evalBar.hidden = !r;
     if (r && e) {
       evalPct = C.winChance(e, 'w');
-      evalBar.setAttribute('aria-label', 'Evaluation ' + C.formatEval(e) + ': White’s winning chances ' + evalPct + '%');
+      evalBar.setAttribute('aria-label', t('Evaluation {eval}: White’s winning chances {percent}%', { eval: C.formatEval(e), percent: evalPct }));
     }
     evalBar.style.setProperty('--w', evalPct + '%');
     evalBar.classList.toggle('flip', up() === 'b');
@@ -1332,29 +1363,29 @@
 
   // The status panel, the captures and the buttons.
   function updateHud(){
-    var g = shown(), st = C.status(g), pos = C.current(g), text, whose = COLOR[pos.turn];
+    var g = shown(), st = C.status(g), pos = C.current(g), text, whose = Lang.t(COLOR[pos.turn]);
     if (state === 'review') {
-      text = st.result === 'checkmate' ? 'Checkmate — ' + COLOR[st.winner] + ' wins' : st.over ? ENDINGS[st.result] : st.check ? 'Check!'
-        : review.alt ? (review.alt.auto ? 'Stockfish is playing on…' : 'Trying a move') : review.playing ? 'Replaying' : 'Reviewing';
+      text = st.result === 'checkmate' ? Lang.t('Checkmate — {color} wins', { color: Lang.t(COLOR[st.winner]) }) : st.over ? Lang.t(ENDINGS[st.result]) : st.check ? Lang.t('Check!')
+        : Lang.t(review.alt ? (review.alt.auto ? 'Stockfish is playing on…' : 'Trying a move') : review.playing ? 'Replaying' : 'Reviewing');
     } else {
-      if (state !== 'idle') whose += both || pos.turn === side ? ' · you' : ' · Stockfish';
-      if (state === 'idle') text = 'Pick a side';
-      else if (state === 'paused') text = 'Paused';
-      else if (st.check) text = 'Check!';
-      else if (both) text = COLOR[pos.turn] + ' to move';
-      else if (pos.turn === side) text = 'Your move';
-      else text = 'Stockfish is thinking…';
+      if (state !== 'idle') whose += both || pos.turn === side ? Lang.t(' · you') : ' · Stockfish';
+      if (state === 'idle') text = Lang.t('Pick a side');
+      else if (state === 'paused') text = Lang.t('Paused');
+      else if (st.check) text = Lang.t('Check!');
+      else if (both) text = Lang.t('{color} to move', { color: Lang.t(COLOR[pos.turn]) });
+      else if (pos.turn === side) text = Lang.t('Your move');
+      else text = Lang.t('Stockfish is thinking…');
     }
     $('turn').textContent = st.over ? '—' : whose;
     $('status').textContent = text;
-    $('best').textContent = best ? 'Level ' + best : 'None yet';
+    $('best').textContent = best ? Lang.t('Level {n}', { n: best }) : Lang.t('None yet');
 
     // The players above and below the board, each with what they've taken
     // and their lead in material.
     var mat = C.material(g), who = players();
     [['Top', 'Them', C.other(up())], ['Bottom', 'You', up()]].forEach(function(p){
       var c = p[2], lead = (c === 'w' ? 1 : -1) * mat.diff, caps = $('cap' + p[1]);
-      $('name' + p[0]).textContent = who[c].name;
+      $('name' + p[0]).textContent = playerName(who[c].name);
       $('elo' + p[0]).textContent = who[c].elo || '';
       caps.innerHTML = mat[c].map(function(t){ return pieceSvg(c === 'w' ? t : t.toUpperCase()); }).join('');
       caps.setAttribute('aria-label', taken(mat[c]));
@@ -1375,14 +1406,14 @@
     if (both) return { w: you, b: you };
     return side === 'w' ? { w: you, b: sf } : { w: sf, b: you };
   }
-  function levelName(lv){ return 'Level ' + lv + ' · about ' + LEVELS[lv - 1].rating; }
+  function levelName(lv){ return t('Level {n} · about {rating}', { n: lv, rating: LEVELS[lv - 1].rating }); }
   function showLevel(){
     var name = levelName(level());
     $('levelText').textContent = name;
     levelEl.setAttribute('aria-valuetext', name);
   }
   function taken(list){
-    return list.length ? 'Taken: ' + list.map(function(t){ return NAMES[t]; }).join(', ') : 'Nothing taken yet';
+    return list.length ? t('Taken: {pieces}', { pieces: list.map(piece).join(', ') }) : t('Nothing taken yet');
   }
 
   // ---------- Sizing ----------

@@ -3,7 +3,8 @@
 // nor the password goes anywhere.
 (function(){
   var T = window.bdnixFiles, P = window.bdnixPdf, U = window.bdnixUnlock;
-  var fmtSize = T.fmtSize, plural = T.plural;
+  var Lang = window.bdnixLang, t = Lang.t, count = Lang.count;
+  var fmtSize = T.fmtSize;
   function $(id){ return document.getElementById(id); }
 
   var drop = $('drop'), picker = $('picker'), msg = $('msg');
@@ -12,7 +13,7 @@
   var unlockBtn = $('unlockBtn'), unlockLabel = $('unlockLabel');
   var done = $('done'), downloadBtn = $('downloadBtn'), downloadLabel = $('downloadLabel');
 
-  document.getElementById('year').textContent = new Date().getFullYear();
+  document.getElementById('year').textContent = Lang.num(new Date().getFullYear());
 
   // The open file: { name, size, file } where file is what U.open() gives.
   var current = null;
@@ -55,7 +56,7 @@
     if (busy) return;
     var file = Array.prototype.filter.call(fileList, P.isPdf)[0];
     if (!file) {
-      if (fileList.length) say('Choose a PDF file to unlock.', true);
+      if (fileList.length) say(t('Choose a PDF file to unlock.'), true);
       return;
     }
     busy = true;
@@ -65,7 +66,7 @@
     password.value = '';
     setInvalid(false);
     update();
-    say('Reading ' + file.name + '…');
+    say(t('Reading {name}…', { name: file.name }));
 
     var lib;
     P.loadPdfLib().then(function(l){
@@ -77,19 +78,18 @@
       current = { name: file.name, size: file.size, file: opened };
       if (!opened.encrypted) {
         showFile(file.name, fmtSize(file.size));
-        say(file.name + ' isn’t password-protected, so there’s no password to remove.', true);
+        say(t('{name} isn’t password-protected, so there’s no password to remove.', { name: file.name }), true);
         return;
       }
-      showFile(file.name, 'Password-protected · ' + U.describe(opened.enc) + ' · ' + fmtSize(file.size));
+      // "AES 256-bit": only the key length is a number to show in the page's digits.
+      showFile(file.name, t('Password-protected · {how} · {size}', { how: U.describe(opened.enc).replace(/\d+(?=-bit)/, Lang.num), size: fmtSize(file.size) }));
       form.hidden = false;
-      say(opened.needsPassword ?
-        'Type the password you open this PDF with.' :
-        'This PDF opens without a password but limits printing, copying or editing. Type its owner password to lift the limits.');
+      say(opened.needsPassword ? t('Type the password you open this PDF with.') : t('This PDF opens without a password but limits printing, copying or editing. Type its owner password to lift the limits.'));
       return true;
     }).catch(function(err){
       if (err && err.library) say(err.message, true);
-      else if (err && err.unsupported) say(file.name + ': ' + err.message, true);
-      else say(file.name + ' could not be read as a PDF.', true);
+      else if (err && err.unsupported) say(t('{name}: This PDF uses a kind of encryption this tool can’t remove.', { name: file.name }), true);
+      else say(t('{name} could not be read as a PDF.', { name: file.name }), true);
     }).then(function(ready){
       busy = false;
       update();
@@ -102,7 +102,7 @@
     busy = true;
     update();
     clearResult();
-    unlockLabel.textContent = 'Unlocking…';
+    unlockLabel.textContent = t('Unlocking…');
     say('');
     var f = current.file, lib = f.lib, pages = 0;
 
@@ -114,7 +114,7 @@
     }).then(function(bytes){
       if (!bytes) {
         setInvalid(true);
-        say('That password doesn’t open this PDF. Check it and try again.', true);
+        say(t('That password doesn’t open this PDF. Check it and try again.'), true);
         return;
       }
       setInvalid(false);
@@ -122,18 +122,18 @@
       var name = current.name.replace(/\.pdf$/i, '') + '-unlocked.pdf';
       resultUrl = URL.createObjectURL(blob);
       T.offer(downloadBtn, resultUrl, name);
-      downloadLabel.textContent = 'Download ' + name + ' (' + fmtSize(blob.size) + ')';
+      downloadLabel.textContent = t('Download {name} ({size})', { name: name, size: fmtSize(blob.size) });
       form.hidden = true;
       password.value = '';
       done.hidden = false;
-      fileMeta.textContent = 'Unlocked · ' + plural(pages, 'page') + ' · ' + fmtSize(blob.size);
-      say('Done. The new copy opens without a password.');
+      fileMeta.textContent = t('Unlocked · {pages} · {size}', { pages: count(pages, '{n} page', '{n} pages'), size: fmtSize(blob.size) });
+      say(t('Done. The new copy opens without a password.'));
       downloadBtn.focus();
     }).catch(function(err){
-      say('Something went wrong while unlocking: ' + (err && err.message ? err.message : err), true);
+      say(t('Something went wrong while unlocking: {error}', { error: err && err.message ? err.message : err }), true);
     }).then(function(){
       busy = false;
-      unlockLabel.textContent = 'Unlock PDF';
+      unlockLabel.textContent = t('Unlock PDF');
       update();
       if (!form.hidden) password.select();
     });
@@ -153,7 +153,7 @@
   showBtn.addEventListener('click', function(){
     var show = password.type === 'password';
     password.type = show ? 'text' : 'password';
-    showBtn.textContent = show ? 'Hide' : 'Show';
+    showBtn.textContent = show ? t('Hide') : t('Show');
     showBtn.setAttribute('aria-pressed', show ? 'true' : 'false');
   });
   form.addEventListener('submit', function(e){

@@ -1,4 +1,5 @@
-/* What every page in Bangla (under /bn/) uses. Hind Siliguri draws the
+/* Bangla's stylesheet (assets/lang/bn/language.json names it, and lang.js
+   loads it for a visitor reading the site in Bangla). Hind Siliguri draws the
    Bangla letters. It is served from the site (assets/fonts, OFL) like Inter,
    so no page contacts a font service, and holds only the Bengali block: Inter
    and JetBrains Mono still draw the Latin letters, and come first. */
@@ -6,7 +7,9 @@
 @font-face{font-family:'Hind Siliguri';font-style:normal;font-weight:600;font-display:swap;src:url(/assets/fonts/hind-siliguri-bengali-600-normal.woff2?v=5.2.5) format('woff2');unicode-range:U+0951-0952,U+0964-0965,U+0980-09FE,U+1CD0,U+1CD2,U+1CD5-1CD6,U+1CD8,U+1CE1,U+1CEA,U+1CED,U+1CF2,U+1CF5-1CF7,U+200C-200D,U+20B9,U+25CC,U+A8F1}
 @font-face{font-family:'Hind Siliguri';font-style:normal;font-weight:700;font-display:swap;src:url(/assets/fonts/hind-siliguri-bengali-700-normal.woff2?v=5.2.5) format('woff2');unicode-range:U+0951-0952,U+0964-0965,U+0980-09FE,U+1CD0,U+1CD2,U+1CD5-1CD6,U+1CD8,U+1CE1,U+1CEA,U+1CED,U+1CF2,U+1CF5-1CF7,U+200C-200D,U+20B9,U+25CC,U+A8F1}
 
-:root{
+/* lang.js writes this in before the page's own stylesheets, so it outdoes
+   base.css's font stacks by being more specific, not by coming later. */
+:root:lang(bn){
   --sans:Inter,'Hind Siliguri',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
   --mono:'JetBrains Mono','Hind Siliguri',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
