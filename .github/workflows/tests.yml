@@ -38,15 +38,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      # Every page links its scripts and styles with ?v=<hash of the file>.
-      # Fails if a change to assets/js or assets/css wasn't followed by
-      # `npm run build`, which would let browsers keep a stale copy.
-      - name: Cache-busting hashes are up to date
-        run: npm run build:check
       # ESLint for the scripts and tests, Stylelint for the stylesheets.
-      # Quick, so never cached; runs even if the hash check failed.
+      # Quick, so never cached.
       - name: Lint
-        if: ${{ !cancelled() }}
         run: npm run lint
       # The newest cache from this branch, or else from master. It holds the
       # result, coverage and inputs of every unit test file that passed
@@ -59,8 +53,8 @@ jobs:
           key: unit-tests-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: unit-tests-
       # Runs the test files whose inputs changed, brings back the others'
-      # coverage, and caches every file that passed. Runs even if the hash
-      # check failed, so one run reports both.
+      # coverage, and caches every file that passed. Runs even if lint
+      # failed, so one run reports both.
       - name: Unit tests with coverage
         if: ${{ !cancelled() }}
         run: npm run coverage:unit:cached

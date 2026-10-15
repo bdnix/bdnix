@@ -1,4 +1,4 @@
-// The parts of the pages that scripts/build.mjs writes from scripts/site.mjs:
+// The parts of the pages that tools/page.mjs makes from scripts/site.mjs:
 // each page's head tags, the footer, the landing page's cards, the profile
 // page's scores and the sitemap. Pure functions of the site's data, so they
 // can be unit tested.

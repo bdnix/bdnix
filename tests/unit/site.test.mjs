@@ -7,7 +7,7 @@ import { SITE, pages } from '../../scripts/site.mjs';
 import { schema, meta, footer, cards, scores, fill, sitemap, esc, CSP } from '../../scripts/parts.mjs';
 
 // scripts/site.mjs lists every page; scripts/parts.mjs turns it into the
-// parts of the pages that scripts/build.mjs writes.
+// parts of the pages that tools/page.mjs fills in.
 const apps = pages.filter((p) => p.app);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -124,10 +124,6 @@ test('site: titles and descriptions are unique, and short enough for search resu
     assert.ok(p.description.length <= 230, p.path);
     if (!p.noindex) assert.ok(p.description.length >= 70, p.path);
   }
-});
-
-test('site: sitemap.xml lists exactly the public pages', () => {
-  assert.equal(fs.readFileSync(path.join(root, 'sitemap.xml'), 'utf8'), sitemap(pages));
 });
 
 // Every page runs the checks every page gets (checkPage in tests/ui/checks.mjs),

@@ -1,10 +1,13 @@
 // Runs the site's browser scripts inside a Node sandbox so their pure
 // functions can be unit tested without a browser. Each script attaches
-// itself to `window`, which here is the sandbox itself.
+// itself to `window`, which here is the sandbox itself. Each script is run
+// as the site serves it: lang.js with its list of languages, and a language's
+// pack (assets/lang/<code>.js) made from its translations (tools/languages.mjs).
 import vm from 'node:vm';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { serveLanguage } from '../../tools/languages.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -17,7 +20,8 @@ export function load(files, globals = {}){
   for (const file of ['assets/js/lang.js'].concat(files)) {
     // An absolute filename lets coverage tools attribute the code to the file.
     const abs = path.join(root, file);
-    vm.runInContext(fs.readFileSync(abs, 'utf8'), sandbox, { filename: abs });
+    const served = serveLanguage(root, file);
+    vm.runInContext(served ? served.body : fs.readFileSync(abs, 'utf8'), sandbox, { filename: abs });
   }
   return sandbox;
 }

@@ -1,6 +1,6 @@
 import { test, expect, takeCspViolations } from './fixtures.mjs';
 
-// Every page carries a content security policy (written by scripts/build.mjs
+// Every page carries a content security policy (written by tools/page.mjs
 // from scripts/parts.mjs); checkPage (checks.mjs) checks each page's. The
 // fixture fails any test in which the policy blocks something, so every other
 // spec checks the policy lets the site work. This checks it stops what it's for.

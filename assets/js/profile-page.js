@@ -12,7 +12,7 @@
     try { return localStorage.getItem(key); } catch (e) { return null; }
   }
 
-  // Each game's row is in the page (written by scripts/build.mjs from
+  // Each game's row is in the page (filled in by tools/page.mjs from
   // scripts/site.mjs), with the key its best score is kept under.
   function renderScores(){
     [].forEach.call(document.querySelectorAll('#scores [data-best]'), function(row){

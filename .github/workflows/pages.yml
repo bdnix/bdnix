@@ -1,7 +1,7 @@
 name: Pages
 
-# Publishes www.bdnix.com from master: `npm run site` copies the published
-# files into _site/ (tools/site.mjs), and that goes to GitHub Pages. The code
+# Publishes www.bdnix.com from master: `npm run build` makes the published
+# site in _site/ (tools/site.mjs), and that goes to GitHub Pages. The code
 # is tested on its pull request (tests.yml) before it reaches master.
 #
 # Only master is ever published. The workflow runs on a push to master, and
@@ -40,8 +40,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - name: Copy the published files into _site/
-        run: npm run site
+      - name: Make the published site in _site/
+        run: npm run build
       - uses: actions/upload-pages-artifact@v4
         with:
           path: _site
