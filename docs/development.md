@@ -1,6 +1,6 @@
 # Development
 
-The site is plain HTML, CSS and vanilla JavaScript, hosted on GitHub Pages from `master`. There is no framework, bundler or compile step, and nothing to install at runtime. `package.json` holds development tooling only.
+The site is plain HTML, CSS and vanilla JavaScript, hosted on GitHub Pages, deployed from `master` by a workflow (see [Deploying](#deploying)). There is no framework, bundler or compile step, and nothing to install at runtime. `package.json` holds development tooling only.
 
 [AGENTS.md](../AGENTS.md) is the authoritative guide to the project's conventions and review requirements. This page covers the practical side.
 
@@ -70,7 +70,14 @@ Tests that can't have changed aren't run again. The unit tests are cached as a w
 
 ## Deploying
 
-Anything merged to `master` goes live once GitHub Pages rebuilds. Pages builds the site from the branch with Jekyll: [_config.yml](../_config.yml) holds its settings and lists what isn't published (test tooling, `node_modules` and the repository docs). The build shows up in the Actions tab as **pages build and deployment**.
+Anything merged to `master` goes live through [.github/workflows/pages.yml](../.github/workflows/pages.yml) (Settings → Pages → Source is **GitHub Actions**). `npm run site` ([tools/site.mjs](../tools/site.mjs)) assembles the published copy in `_site/`: the landing page, the folder of every page in [scripts/site.mjs](../scripts/site.mjs), `assets/`, `CNAME`, `LICENSE`, `robots.txt` and `sitemap.xml`. What's published is a list, so test tooling, scripts and docs stay out without an exclude list. A pull request builds `_site/` too, so a missing page fails there; a push to `master` deploys it.
+
+After each deploy the workflow runs the live check, `npm run check:live` ([tools/check-live.mjs](../tools/check-live.mjs)), which you can also run yourself from a checkout of what was merged:
+
+1. Every file of the build is fetched from www.bdnix.com, past the CDN's cache, and must match byte for byte, so the live site is exactly that commit. `--wait <seconds>` keeps retrying files that don't match yet, for a CDN still catching up.
+2. Every page is opened in Chromium at desktop and phone size, in English and Bangla: no error on the page, no failed request to the site, nothing blocked by the security policy, nothing left untranslated, the consent banner shown, and no request anywhere else before consent. Screenshots go to `.test-cache/live/` (and the workflow's **live-screenshots** artifact). `--files-only` skips this part.
+
+To run the UI tests against the published copy rather than the repository, build it and point the test server at it: `npm run site && SITE_DIR=_site npm run test:ui`.
 
 ### Cache-busting
 

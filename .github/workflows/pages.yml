@@ -1,0 +1,89 @@
+name: Pages
+
+# Publishes www.bdnix.com. `npm run site` assembles the published copy in
+# _site/ (tools/site.mjs), which is deployed to GitHub Pages on every push to
+# master; a pull request only builds it, so a broken build fails there first.
+# After a deploy, the live check (tools/check-live.mjs) confirms the live site
+# is exactly this build and that every page works.
+#
+# Needs Settings → Pages → Source set to GitHub Actions.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time, and a deploy in progress always finishes.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the site
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Assemble _site/
+        run: npm run site
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  live:
+    name: Live site check
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - id: playwright
+        name: Playwright version
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - id: browsers
+        name: Restore Chromium from cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: Install Chromium
+        if: steps.browsers.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install Chromium's system libraries
+        if: steps.browsers.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      # The CDN can take a few minutes to serve the new files everywhere, so
+      # files that don't match yet are tried again for up to ten minutes.
+      - name: Check www.bdnix.com
+        run: npm run check:live -- --wait 600
+      - name: Upload screenshots
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: live-screenshots
+          path: .test-cache/live/
+          retention-days: 14

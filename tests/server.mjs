@@ -5,12 +5,14 @@
 // the spec that asked (the x-bdnix-spec header tests/ui/fixtures.mjs adds),
 // a tab, and the repository file it served or looked for. The UI result
 // cache (scripts/ui-cache.mjs) reads it to learn which files each spec uses.
+// With SITE_DIR set (SITE_DIR=_site), it serves that folder instead of the
+// repository: the published copy that `npm run site` makes.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', process.env.SITE_DIR || '');
 const port = Number(process.env.PORT) || 4173;
 const log = process.env.SERVED_LOG;
 const types = {

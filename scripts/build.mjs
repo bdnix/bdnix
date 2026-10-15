@@ -28,7 +28,7 @@ const hash = (file) => crypto.createHash('sha256').update(fs.readFileSync(file))
 // Pages: every .html file outside tooling folders.
 function pages(dir){
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-    if (e.name.startsWith('.') || ['node_modules', 'tests', 'scripts', 'assets', 'coverage'].includes(e.name)) return [];
+    if (e.name.startsWith('.') || ['node_modules', 'tests', 'scripts', 'tools', 'assets', 'coverage', '_site'].includes(e.name)) return [];
     const p = path.join(dir, e.name);
     return e.isDirectory() ? pages(p) : e.name.endsWith('.html') ? [p] : [];
   });
