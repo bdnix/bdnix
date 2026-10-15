@@ -64,3 +64,22 @@ test('publish: build copies exactly the published files, replacing the last buil
   assert.equal(fs.readFileSync(path.join(out, 'snake/index.html'), 'utf8'), 'snake/index.html');
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+// Only master is ever published: the steps that upload or deploy the site
+// run only for refs/heads/master, never for a pull request or a run started
+// by hand on another branch.
+test('publish: only master deploys', () => {
+  const workflow = fs.readFileSync(path.join(root, '.github/workflows/pages.yml'), 'utf8');
+  const MASTER = "if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'";
+  const upload = workflow.split('\n').findIndex((l) => l.includes('actions/upload-pages-artifact@'));
+  assert.ok(upload > 0);
+  assert.equal(workflow.split('\n')[upload - 1].trim(), '- ' + MASTER);
+  const deploy = /\n {2}deploy:\n((?: {4}.*\n|\n)*)/.exec(workflow);
+  assert.ok(deploy, 'a deploy job');
+  assert.ok(deploy[1].split('\n').includes('    ' + MASTER), 'the deploy job is for master only');
+  assert.ok(deploy[1].includes('actions/deploy-pages@'));
+  // Nothing else in the workflow deploys.
+  assert.equal(workflow.match(/actions\/deploy-pages@/g).length, 1);
+  assert.equal(workflow.match(/actions\/upload-pages-artifact@/g).length, 1);
+  assert.match(workflow, /\n {2}push:\n {4}branches: \[master\]\n/);
+});

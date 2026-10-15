@@ -35,7 +35,7 @@ The proposal's step 1 is too big for one reviewable pull request, so it is split
 Urgent, because branch publishing is already off. Nothing about the site changes: the published copy is the same files Jekyll published.
 
 - [ ] `tools/site.mjs` (`npm run site`) assembles the published site in `_site/`: the landing page, every page folder listed in `scripts/site.mjs`, `assets/`, `CNAME`, `robots.txt`, `sitemap.xml` and `LICENSE`. Repository tooling (tests, scripts, docs, configs) is left out by not being listed, rather than by an exclude list.
-- [ ] `.github/workflows/pages.yml`: on a pull request, builds `_site/` (so a broken build fails the pull request); on a push to `master` (and by hand), builds it, deploys it to GitHub Pages and then runs the live check against the deployed site.
+- [ ] `.github/workflows/pages.yml`: on a pull request, builds `_site/` (so a broken build fails the pull request); on a push to `master` (and by hand), builds it, deploys it to GitHub Pages and then runs the live check against the deployed site. Only `master` ever deploys: the upload and deploy steps are conditioned on `refs/heads/master`, and a unit test fails if that guard goes.
 - [ ] `tools/check-live.mjs` (`npm run check:live`), as described above.
 - [ ] `_config.yml` removed (Jekyll no longer runs). The test server can serve `_site/` (`SITE_DIR=_site`), so the UI tests can run against the published copy.
 - [ ] Docs: `docs/development.md` (publishing), AGENTS.md (hosting line, `_site/`), `.gitignore`.

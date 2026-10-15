@@ -4,7 +4,7 @@ Guidance for AI coding agents (and humans) working on this repository. Read this
 
 ## What this is
 
-The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub Pages. There's no framework and no compile step: pages are plain HTML, CSS and vanilla JavaScript. `npm run site` copies what's published into `_site/`, and `.github/workflows/pages.yml` deploys that on every push to `master`, then checks the live site with `npm run check:live` (see [docs/development.md](docs/development.md#deploying)).
+The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub Pages. There's no framework and no compile step: pages are plain HTML, CSS and vanilla JavaScript. `npm run site` copies what's published into `_site/`, and `.github/workflows/pages.yml` deploys that on every push to `master` (and from no other branch), then checks the live site with `npm run check:live` (see [docs/development.md](docs/development.md#deploying)).
 
 The site is being restructured into one folder per app: the plan, with what's done and what's next, is [docs/plans/modules.md](docs/plans/modules.md). Read it before working on the build, the tests or CI, and keep its checkboxes up to date.
 
@@ -177,7 +177,7 @@ Codecov then posts **codecov/project** and **codecov/patch** (see [Coverage must
 
 Tests whose inputs haven't changed since they last passed don't run again; CI reuses their cached result and coverage:
 
-- **Unit tests** are cached as a whole, keyed on `assets/js`, `assets/lang`, `assets/vendor`, `tests/unit`, `tools`, `tests/ui/pdfs.mjs` (the unlock tests build their encrypted PDFs with it), the site specs `tests/ui/*.site.spec.mjs` and `sitemap.xml` (`site.test.mjs` reads them), `scripts/site.mjs`, `scripts/ui-deps.mjs`, `scripts/parts.mjs`, `tests/coverage`, `package.json` and `package-lock.json`.
+- **Unit tests** are cached as a whole, keyed on `assets/js`, `assets/lang`, `assets/vendor`, `tests/unit`, `tools`, `.github/workflows/pages.yml`, `tests/ui/pdfs.mjs` (the unlock tests build their encrypted PDFs with it), the site specs `tests/ui/*.site.spec.mjs` and `sitemap.xml` (`site.test.mjs` reads them), `scripts/site.mjs`, `scripts/ui-deps.mjs`, `scripts/parts.mjs`, `tests/coverage`, `package.json` and `package-lock.json`.
 - **UI tests** are cached spec by spec by `scripts/ui-cache.mjs` (`npm run coverage:ui:cached`). The test server logs every file it serves and which spec asked for it (`tests/ui/fixtures.mjs` adds an `x-bdnix-spec` header to each request), and `scripts/ui-deps.mjs` follows each spec's imports to the test helpers it uses, and the helpers those use. So a spec runs again only when it, a file it loaded, a helper it imports, or what every spec runs on (`package.json`, the lock file, `playwright.config.mjs`, `tests/server.mjs`, `tests/coverage`, the runner itself) changes. Changing `tests/ui/media.mjs` reruns the specs that build media, not every spec. A spec that fails is never cached.
 - So a UI test must get every repository file it depends on **through the test server** (`page.goto`, `request.get`, ...), never by reading it with `fs`, or the cache won't see a change to it.
 - Run the workflow by hand with **full** ticked to ignore the cache. Locally, `npm test` and `npm run coverage` always run everything.

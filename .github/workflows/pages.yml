@@ -6,6 +6,11 @@ name: Pages
 # After a deploy, the live check (tools/check-live.mjs) confirms the live site
 # is exactly this build and that every page works.
 #
+# Only master is ever published: the deploy runs only for refs/heads/master,
+# whatever started the run, so a pull request, a push to another branch or a
+# run started by hand on one only builds. (The github-pages environment's
+# deployment branch rule should say the same, as a second lock.)
+#
 # Needs Settings → Pages → Source set to GitHub Actions.
 
 on:
@@ -32,14 +37,14 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Assemble _site/
         run: npm run site
-      - if: github.event_name != 'pull_request'
+      - if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v4
         with:
           path: _site
 
   deploy:
     name: Deploy to GitHub Pages
-    if: github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
