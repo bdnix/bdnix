@@ -2,6 +2,8 @@
 
 All seven games work with a keyboard, mouse or touch screen, and at phone size.
 
+There's no pause button: **P** or **Esc** pauses, and so does leaving the page (another tab, window or app, or the phone's home screen). Coming back shows the pause screen, with its big **Resume** button. The language switch sits in the top bar, beside the mute button.
+
 On a phone, the games are played upright. Turning the phone sideways pauses the game and shows a note asking for it to be turned back; the game then waits, paused, for Resume. On a computer, a short, wide window still shows the game, with the scores and buttons beside the board.
 
 On a phone, the buttons under the board are laid out like a gamepad: a D-pad on the left and round action buttons, each with its name, on the right (Rotate and Hold in Falling Blocks, Launch in Brick Bounce). Games that only need directions have the D-pad alone, in the middle. On a computer, the start screen shows the keys to press as keycaps.
@@ -28,7 +30,7 @@ On a phone, the buttons under the board are laid out like a gamepad: a D-pad on 
 | Soft drop | ↓ | D-pad ▼ |
 | Hard drop | Space | D-pad ▲ |
 | Hold | C / Shift | Hold button |
-| Pause | P / Esc | ❚❚ |
+| Pause | P / Esc | Leave the page |
 
 The level goes up every 10 lines, and pieces fall faster at each level.
 
@@ -39,7 +41,7 @@ The level goes up every 10 lines, and pieces fall faster at each level.
 | Action | Keyboard | Touch |
 |---|---|---|
 | Move | Arrow keys or WASD | Swipe anywhere, or the D-pad |
-| Pause | P / Esc | ❚❚ |
+| Pause | P / Esc | Leave the page |
 
 The maze is the site's own design. A game saved on an earlier maze doesn't fit it, so it's discarded and a new game starts.
 
@@ -50,7 +52,7 @@ The maze is the site's own design. A game saved on an earlier maze doesn't fit i
 | Action | Keyboard | Touch |
 |---|---|---|
 | Flap | Space, ↑ or W (or click) | Tap anywhere |
-| Pause | P / Esc | ❚❚ |
+| Pause | P / Esc | Leave the page |
 
 Each pipe passed scores a point. 10, 20, 30 and 40 points earn bronze, silver, gold and platinum medals.
 
@@ -63,7 +65,7 @@ Hitting a pipe (its wider end caps count too) ends the round with a jolt: the bo
 | Action | Keyboard | Touch |
 |---|---|---|
 | Hop | Arrow keys or WASD (Space or a click hops forward) | Tap to hop forward, swipe to hop any way, or the D-pad |
-| Pause | P / Esc | ❚❚ |
+| Pause | P / Esc | Leave the page |
 
 Each new row the chicken reaches scores a point. Lanes of grass, roads and rivers are laid out at random for every round, and the traffic and the rivers speed up the further the chicken goes. A car ends the round, and so does landing in the water, riding a log off the edge of the board, or standing still so long that the screen moves on without the chicken. Trees are in the way but harmless.
 
@@ -76,7 +78,7 @@ A car hit ends the round with a thump: the car stops dead, the board shakes, a r
 | Action | Keyboard | Touch |
 |---|---|---|
 | Turn | Arrow keys or WASD | Swipe anywhere, or the D-pad |
-| Pause | P / Esc | ❚❚ |
+| Pause | P / Esc | Leave the page |
 
 The snake waits until the first direction is pressed, then glides from cell to cell at about four and a half cells a second. Each piece of food scores a point and makes the snake one longer and a little faster, up to ten cells a second. Hitting a wall or the snake's own body ends the round; filling the whole board wins it. Two quick presses make two turns on the next two steps, so a U-turn is easy.
 
@@ -88,7 +90,7 @@ The snake waits until the first direction is pressed, then glides from cell to c
 |---|---|---|---|
 | Move the paddle | ← → (or A / D) | Point across the board | Drag anywhere, or ◀ ▶ |
 | Launch the ball | Space, ↑ or W | Click | Tap, or the Launch button |
-| Pause | P / Esc | ❚❚ | ❚❚ |
+| Pause | P / Esc | Leave the page | Leave the page |
 
 Each wall of bricks has its own shape: a house, a space invader, a heart, waves, a castle and a chessboard, then round again. The first, the house, is the gentlest: its bottom row is whole, so the first shots always find a brick. Bricks score by row: 1 point in the bottom two rows, then 3, 5 and 7 for the top two. The ball waits on the paddle until it's launched and bounces back off the paddle at an angle set by where it lands, straight up off the middle and steeper towards the ends. It starts slow and speeds up after the 10th and 25th bricks of a wall and the first time it breaks into the upper and top rows. Once it reaches the top of the board the paddle shrinks for the rest of that wall.
 
@@ -115,7 +117,7 @@ Each wall hides two multi-balls and one of each of the others. The seconds left 
 | Action | Keyboard | Mouse | Touch |
 |---|---|---|---|
 | Move a piece | Arrow keys to a square, Enter to pick it up, again to put it down | Click the piece, then its square, or drag it | Tap the piece, then its square, or drag it |
-| Pause | P / Esc | ❚❚ | ❚❚ |
+| Pause | P / Esc | Leave the page | Leave the page |
 
 The opponent is [Stockfish](https://stockfishchess.org/), the free and open-source chess engine, in its lite WebAssembly build. It runs in the browser in its own web worker, fetched (about 1.8 MB) when the first game starts; if it can't be fetched the game pauses and says so, and **Resume** tries again.
 
@@ -150,7 +152,7 @@ The summary gives each side's accuracy (the average over its moves of lichess's 
 
 Every game has sound effects: a jingle when a game starts, sounds for the main moves (moving, turning and dropping pieces, eating dots and power pellets, flapping, hopping, eating food, the ball hitting the paddle, the walls and bricks, catching a power and firing the laser, chess moves, captures and checks), for scoring and clearing lines, for each way a round can end (a car, the river, a crash, a lost ball), and a tune at game over, a brighter one for a new best score.
 
-The speaker button beside pause in the top bar, or **M**, turns sound off and on. The choice applies to every game and is remembered in the browser (`bdnix_sound`). Sound is on until it's turned off.
+The speaker button in the top bar, or **M**, turns sound off and on. The choice applies to every game and is remembered in the browser (`bdnix_sound`). Sound is on until it's turned off.
 
 The sounds are made in the browser with the Web Audio API, so there are no audio files to download. Browsers only let a page play sound after the visitor has pressed a key or tapped, so the first sound comes with the first press. Safari also stops a page's sound when the phone locks or another app takes over the sound; every tap and key press starts it again, so sounds that come from the game itself (a dot eaten, a ghost catching you) keep playing. On an iPhone, the sounds follow the ring/silent switch: with it on silent they don't play. Safari also stops a page's sound when the phone locks or another app takes over the sound; every tap and key press starts it again, so sounds that come from the game itself (a dot eaten, a ghost catching you) keep playing. On an iPhone, the sounds follow the ring/silent switch: with it on silent they don't play.
 

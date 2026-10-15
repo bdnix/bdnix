@@ -46,7 +46,7 @@ test('pausing stops the game, and it resumes where it was', async ({ page }) => 
   const score = page.locator('#score');
   await press(page, 'KeyP');
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
-  await expect(page.locator('#pauseBtn')).toHaveAttribute('aria-label', 'Resume');
+  await expect(page.locator('#startBtn')).toHaveText('Resume');
   await page.clock.runFor(5000);
   await expect(score).toHaveText('0');              // didn't move while paused
 
@@ -57,7 +57,7 @@ test('pausing stops the game, and it resumes where it was', async ({ page }) => 
 
   await press(page, 'Escape');
   await expect(page.locator('#overlay')).toBeVisible();
-  await page.locator('#pauseBtn').click();
+  await page.locator('#startBtn').click();              // the overlay's Resume button
   await expect(page.locator('#overlay')).toBeHidden();
   await page.evaluate(() => window.dispatchEvent(new Event('blur'))); // switching away pauses
   await expect(page.locator('#ovTitle')).toHaveText('Paused');

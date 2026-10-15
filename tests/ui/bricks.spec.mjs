@@ -216,7 +216,7 @@ test('pausing stops the ball, and it resumes where it was', async ({ page }) => 
   await page.clock.runFor(200);
   await press(page, 'KeyP');
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
-  await expect(page.locator('#pauseBtn')).toHaveAttribute('aria-label', 'Resume');
+  await expect(page.locator('#startBtn')).toHaveText('Resume');
   const stored = () => page.evaluate(() => localStorage.getItem('bdnix_bricks_save'));
   const before = await stored();
   await page.clock.runFor(3000);
@@ -234,7 +234,7 @@ test('pausing stops the ball, and it resumes where it was', async ({ page }) => 
 
   await press(page, 'Escape');
   await expect(page.locator('#overlay')).toBeVisible();
-  await page.locator('#pauseBtn').click();
+  await page.locator('#startBtn').click();              // the overlay's Resume button
   await expect(page.locator('#overlay')).toBeHidden();
   await page.evaluate(() => window.dispatchEvent(new Event('blur'))); // switching away pauses
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
