@@ -14,6 +14,7 @@
     "test:ui": "playwright test",
     "coverage": "npm run coverage:unit && npm run coverage:ui && npm run coverage:report",
     "coverage:unit": "mcr -c tests/coverage/unit.config.mjs node --test \"tests/unit/*.test.mjs\"",
+    "coverage:unit:cached": "node scripts/unit-cache.mjs",
     "coverage:ui": "COVERAGE=1 playwright test",
     "coverage:ui:cached": "node scripts/ui-cache.mjs",
     "coverage:report": "mcr merge -c tests/coverage/report.config.mjs",

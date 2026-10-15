@@ -28,8 +28,9 @@ Urgent, because branch publishing is already off. Nothing about the site changes
 - [ ] `tools/site.mjs` (`npm run site`) assembles the published site in `_site/`: the landing page, every page folder listed in `scripts/site.mjs`, `assets/`, `CNAME`, `robots.txt`, `sitemap.xml` and `LICENSE`. Repository tooling (tests, scripts, docs, configs) is left out by not being listed, rather than by an exclude list.
 - [ ] `.github/workflows/pages.yml`: on a push to `master` (or by hand), one job copies the files with `npm run site` and deploys `_site/` to GitHub Pages. Only `master` ever deploys: the job is conditioned on `refs/heads/master`, and a unit test fails if that guard goes.
 - [ ] `_config.yml` removed (Jekyll no longer runs).
-- [ ] Docs: `docs/development.md` (publishing), AGENTS.md (hosting line, `_site/`), `.gitignore`.
-- [ ] **Verify:** unit tests for the published file list and the `master`-only guard (which fails without the guard); the files in `_site/` are exactly the files the live site serves today, apart from `eslint.config.mjs` (a config file Jekyll published by accident), checked once by comparing every file with www.bdnix.com; `npm run lint`, `npm test` pass; CI green.
+- [ ] Tests rerun only for what they use (this pull request changed one line of `package.json`, and that reran all 53 UI spec files). A test's cache key is exactly its inputs (`scripts/test-deps.mjs`, renamed from `ui-deps.mjs`): its file, its helpers, the files it used, the npm packages those import at their locked versions, and the Node version. Not `package.json`, not the rest of the lock file, not the runners. Unit tests are cached file by file (`scripts/unit-cache.mjs`, with `tests/unit/track.mjs` recording what each reads), not as one block.
+- [ ] Docs: `docs/development.md` (publishing, the test caches), AGENTS.md (hosting line, `_site/`, CI), `.gitignore`.
+- [ ] **Verify:** unit tests for the published file list and the `master`-only guard (which fails without the guard); unit tests for the keys (a `package.json` script or lint-tool bump reruns nothing, a Playwright upgrade reruns only the UI specs, a changed file reruns only the tests that used it; the first fails if `package.json` is put back into the keys); the unit cache gives the same covered lines as the old runner; in CI, a follow-up commit touching only `package.json` scripts and docs runs 0 UI specs and 0 unit test files; the files in `_site/` are exactly the files the live site serves today, apart from `eslint.config.mjs` (a config file Jekyll published by accident), checked once by comparing every file with www.bdnix.com; `npm run lint`, `npm test` pass; CI green.
 - [ ] Pull request merged.
 
 ### 1.2 Version stamps and generated parts only in the published copy
@@ -88,7 +89,7 @@ Two or three per pull request, each moved like Snake in 1.4 (module, four target
 
 ## Step 4: remove the old plumbing
 
-- [ ] 4.1 Remove `scripts/site.mjs`, `scripts/ui-cache.mjs`, `scripts/ui-deps.mjs` (if nothing uses it), the empty old folders and the old CI cache steps; `tools/boundaries.mjs` replaces the lists in `tests/unit/site.test.mjs`. **Verify:** nothing references the removed files; the full suite passes; CI green.
+- [ ] 4.1 Remove `scripts/site.mjs`, `scripts/ui-cache.mjs`, `scripts/test-deps.mjs` (if nothing uses it), the empty old folders and the old CI cache steps; `tools/boundaries.mjs` replaces the lists in `tests/unit/site.test.mjs`. **Verify:** nothing references the removed files; the full suite passes; CI green.
 - [ ] 4.2 Rewrite AGENTS.md and `docs/development.md` around modules. **Verify:** every path and command in them exists and runs.
 
 ## Step 5: sharded full runs
@@ -98,4 +99,5 @@ Two or three per pull request, each moved like Snake in 1.4 (module, four target
 ## Changes to the plan
 
 - 15 October 2026: step 1 split into 1.1 to 1.4, with publishing first, since branch publishing was already off.
+- 15 October 2026: test caching made exact in 1.1 rather than later: a one-line `package.json` change reran every test, which the restructure exists to stop.
 - 15 October 2026: no checks in the deploy and none after it (decision 4). Browser checks of the published copy, a pull-request build and a post-deploy check were tried in 1.1 and dropped: the pull request's tests already cover the code, the build is a plain copy covered by unit tests, and a check after the deploy could only report problems nobody can fix in code.

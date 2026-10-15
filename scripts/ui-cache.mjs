@@ -3,9 +3,10 @@
 // coverage:ui` still runs everything.
 //
 // A spec's result depends on the spec itself, the test helpers it imports
-// (and those they import: scripts/ui-deps.mjs), what every spec runs on (see
-// GLOBAL), and the site files it fetched from the test server. So changing a
-// helper runs again only the specs that use it. When a spec
+// (and those they import), the npm packages those use, what every spec runs
+// on (see GLOBAL), and the site files it fetched from the test server
+// (scripts/test-deps.mjs). So changing a helper runs again only the specs that
+// use it, and nothing outside those inputs runs any spec again. When a spec
 // passes, the server's log (tests/server.mjs) says which files those were;
 // the cache keeps that list, a hash of all those files' contents, and the
 // spec's coverage. On the next run, a spec whose hash still matches isn't
@@ -20,10 +21,9 @@
 // and restores that folder with actions/cache. UI_CACHE=off runs everything.
 import fs from 'node:fs';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { helpersOf } from './ui-deps.mjs';
+import { inputs, keyOf } from './test-deps.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
@@ -36,36 +36,19 @@ const RESULTS = path.join(TMP, 'results.json');
 // Entries no run has used for this long are dropped, so the cache stays small.
 const MAX_AGE = 14 * 24 * 3600 * 1000;
 
-// What every spec runs on, whatever it imports: the packages, Playwright's
-// settings, the test server, coverage and this runner. A change to any of it
-// runs every spec again.
-const GLOBAL = [
-  'package-lock.json', 'package.json', 'playwright.config.mjs', 'tests/server.mjs',
-  'scripts/ui-cache.mjs', 'scripts/ui-deps.mjs', ...list('tests/coverage')
-];
+// What every spec runs on, whatever it imports: Playwright's settings, its
+// setup and teardown (coverage), and the test server. Their own imports and
+// the packages they use come along (scripts/test-deps.mjs). A change to any of
+// it runs every spec again. package.json, the rest of the lock file and this
+// runner aren't inputs: they don't change what a spec does.
+const GLOBAL = ['playwright.config.mjs', 'tests/server.mjs', 'tests/coverage/ui-setup.mjs', 'tests/coverage/ui-teardown.mjs'];
 
 function list(dir){
   return fs.readdirSync(dir).filter((f) => f.endsWith('.mjs')).map((f) => `${dir}/${f}`).sort();
 }
 
-function fileHash(file){
-  try { return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); }
-  catch (e) { return 'missing'; }   // a file that appears later must still count as a change
-}
-
-const base = crypto.createHash('sha256')
-  .update(`node ${process.versions.node.split('.')[0]}\n`)
-  .update(GLOBAL.map((f) => `${f} ${fileHash(f)}\n`).join(''))
-  .digest('hex');
-
-// The cache key of a spec, given the site files it used: those, the spec,
-// the helpers it imports, and what every spec runs on.
-function key(spec, deps){
-  const h = crypto.createHash('sha256').update(`${base}\n${spec} ${fileHash(spec)}\n`);
-  for (const helper of helpersOf(spec)) h.update(`helper ${helper} ${fileHash(helper)}\n`);
-  for (const dep of deps) h.update(`${dep} ${fileHash(dep)}\n`);
-  return h.digest('hex').slice(0, 32);
-}
+// The cache key of a spec, given the site files it used.
+const key = (spec, deps) => keyOf(inputs(spec, deps, { global: GLOBAL }));
 
 const specs = list('tests/ui').filter((f) => f.endsWith('.spec.mjs'));
 const name = (spec) => path.basename(spec, '.spec.mjs');
