@@ -12,7 +12,7 @@ test('the top bar switches language, and every page follows the choice', async (
   await expect(toBangla).toHaveAttribute('translate', 'no');
   await toBangla.click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'bn');
-  await expect(page.locator('h1')).toHaveText('একটু খেলুন।কাজ সেরে ফেলুন।');
+  await expect(page.locator('h1')).toHaveText('খেলুন প্রাণ খুলে,কাজ সারুন চোখের পলকে।');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_lang'))).toBe('bn');
   await expectNoSideScroll(page);
 
