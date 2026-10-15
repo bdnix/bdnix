@@ -104,7 +104,7 @@ Two or three per pull request, each moved like Snake in 1.4 (module, four target
 
 ## Step 5: tests split across machines
 
-- [ ] 5.1 The UI tests always run split across several machines, however many specs a run has to run: the cache's plan picks the specs, Playwright's `--shard` splits them, and the shards' results, caches and coverage are merged (coverage still uploaded once). No full run on `master`: a push reruns only what its change touched, as on a pull request. **Verify:** a run started by hand with **full** ticked, split across machines, against the same on one machine (time and test count); a pull request run with only a few specs to run splits them too and passes; every shard's results come back from the cache on the next run; CI green.
+- [ ] 5.1 The UI tests always run split across several machines, however many specs a run has to run: the cache's plan picks the specs, Playwright's `--shard` splits them, and the shards' results, caches and coverage are merged (coverage still uploaded once). The unit tests are not split: they stay on one machine (the owner's decision; they take seconds). No full run on `master`: a push reruns only what its change touched, as on a pull request. **Verify:** a run started by hand with **full** ticked, split across machines, against the same on one machine (time and test count); a pull request run with only a few specs to run splits them too and passes; every shard's results come back from the cache on the next run; CI green.
 
 ## Changes to the plan
 
