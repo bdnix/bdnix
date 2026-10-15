@@ -3,3 +3,4 @@ test-results/
 playwright-report/
 /coverage/
 /.test-cache/
+/_site/

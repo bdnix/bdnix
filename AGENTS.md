@@ -4,7 +4,9 @@ Guidance for AI coding agents (and humans) working on this repository. Read this
 
 ## What this is
 
-The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub Pages from `master`. There's no framework and no compile step: pages are plain HTML, CSS and vanilla JavaScript, served as they are in the repo.
+The static site behind [www.bdnix.com](https://www.bdnix.com), hosted on GitHub Pages. There's no framework and no compile step: pages are plain HTML, CSS and vanilla JavaScript. On every push to `master` (and from no other branch), `.github/workflows/pages.yml` copies what's published into `_site/` with `npm run site` and deploys it; nothing is committed (see [docs/development.md](docs/development.md#deploying)).
+
+The site is being restructured into one folder per app: the plan, with what's done and what's next, is [docs/plans/modules.md](docs/plans/modules.md). Read it before working on the build, the tests or CI, and keep its checkboxes up to date.
 
 | Page | Files |
 |---|---|
@@ -145,6 +147,7 @@ npm install
 npx playwright install chromium   # first time only
 npm run build          # write the parts generated from scripts/site.mjs and the ?v= hashes
 npm run build:check    # fail if any of those is stale (what CI runs)
+npm run site           # copy the published files into _site/ (what the Pages workflow deploys)
 npm run lint           # ESLint (scripts, tests) and Stylelint (stylesheets)
 npm test               # unit tests, then UI tests
 npm run test:unit
@@ -173,8 +176,9 @@ Codecov then posts **codecov/project** and **codecov/patch** (see [Coverage must
 
 Tests whose inputs haven't changed since they last passed don't run again; CI reuses their cached result and coverage:
 
-- **Unit tests** are cached as a whole, keyed on `assets/js`, `assets/lang`, `assets/vendor`, `tests/unit`, `tests/ui/pdfs.mjs` (the unlock tests build their encrypted PDFs with it), the site specs `tests/ui/*.site.spec.mjs` and `sitemap.xml` (`site.test.mjs` reads them), `scripts/site.mjs`, `scripts/ui-deps.mjs`, `scripts/parts.mjs`, `tests/coverage`, `package.json` and `package-lock.json`.
-- **UI tests** are cached spec by spec by `scripts/ui-cache.mjs` (`npm run coverage:ui:cached`). The test server logs every file it serves and which spec asked for it (`tests/ui/fixtures.mjs` adds an `x-bdnix-spec` header to each request), and `scripts/ui-deps.mjs` follows each spec's imports to the test helpers it uses, and the helpers those use. So a spec runs again only when it, a file it loaded, a helper it imports, or what every spec runs on (`package.json`, the lock file, `playwright.config.mjs`, `tests/server.mjs`, `tests/coverage`, the runner itself) changes. Changing `tests/ui/media.mjs` reruns the specs that build media, not every spec. A spec that fails is never cached.
+- **A test's inputs are what it uses, and nothing else** (`scripts/test-deps.mjs`): its own file, the test helpers it imports (and theirs), the repository files it used while it ran, the npm packages those import at the versions the lock file pins, and the Node version. Not `package.json`, not the rest of the lock file, not the runners. So adding a script or bumping a lint tool reruns no test, upgrading Playwright reruns the UI specs, and changing a file reruns exactly the tests that used it. `tests/unit/test-deps.test.mjs` checks this.
+- **Unit tests** are cached file by file by `scripts/unit-cache.mjs` (`npm run coverage:unit:cached`). Each test file runs in its own process with `tests/unit/track.mjs`, which records every repository file it reads, imports, lists or checks for.
+- **UI tests** are cached spec by spec by `scripts/ui-cache.mjs` (`npm run coverage:ui:cached`). The test server logs every file it serves and which spec asked for it (`tests/ui/fixtures.mjs` adds an `x-bdnix-spec` header to each request). What every spec runs on (`playwright.config.mjs`, its coverage setup and teardown, `tests/server.mjs`) counts for every spec. Changing `tests/ui/media.mjs` reruns the specs that build media, not every spec. A spec that fails is never cached.
 - So a UI test must get every repository file it depends on **through the test server** (`page.goto`, `request.get`, ...), never by reading it with `fs`, or the cache won't see a change to it.
 - Run the workflow by hand with **full** ticked to ignore the cache. Locally, `npm test` and `npm run coverage` always run everything.
 
