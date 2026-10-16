@@ -5,7 +5,7 @@ The working plan for the restructure proposed in *One folder per app, and tests 
 ## How to use this plan
 
 - **Start of a session:** read this file top to bottom, then `git log --oneline -20 origin/master` and the open pull requests, and tick anything that has happened since the file was last updated (a pull request merged). The first unticked box is the next thing to do.
-- **One pull request per numbered item** (1.1, 1.2, then one each for steps 2, 3 and 4), opened against `master` as [AGENTS.md](../../AGENTS.md) describes, and driven to green CI. Its description links back to this plan.
+- **One pull request per numbered item** (1.1, 1.2, then one each for steps 2 and 3), opened against `master` as [AGENTS.md](../../AGENTS.md) describes, and driven to green CI. Its description links back to this plan.
 - **Tick boxes in the pull request that does the work**, so the plan on `master` always matches what is merged. The "Pull request merged" box is ticked in the next pull request.
 - **Every item has a verification step, and it is never skipped.** See [Verification rules](#verification-rules). There are no checks of the live site after a deploy (decision 4); verification is of the code and CI, before and after the merge.
 - If something here turns out to be wrong, change the plan in the same pull request and say why under [Changes to the plan](#changes-to-the-plan).
@@ -26,6 +26,12 @@ These hold for every item, with no exceptions. An item that hasn't met all of th
 2. **Folder names as proposed:** `apps/`, `shared/`, `site/`, `tools/`.
 3. **Start with step 1 and the Snake pilot.** This plan is committed to the repository and kept up to date with checkboxes.
 4. **The deploy is just a deploy.** The Pages workflow runs only on pushes to `master`: it copies the published files and deploys them, nothing else. It has no checks of its own, doesn't run on pull requests, and nothing checks the live site after a deploy, by tool or by hand. The Tests workflow on each pull request is the safeguard.
+
+## Decisions (owner, 16 October 2026)
+
+5. **The rest in one pull request.** Steps 3 and 4 (every other app, the landing and profile pages, removing the old plumbing, the docs, and the UI tests split across machines) are one pull request, together with 6 and 7.
+6. **UI tests are cached on what they were served, not on the code that serves it.** A spec's result is kept against each URL it fetched and the exact response it got (status, type and body, a page's `?v=` stamps left out), and the cache answers those URLs again, in-process, to see whether anything changed. The build and the test server stop being inputs of every spec: what reruns every UI spec is only Playwright's settings, the fixture every spec runs on, a Playwright upgrade and a new Node version. This is a build system's early cutoff: code that serves the same bytes reruns nothing. (Nx was weighed and not chosen: its inputs are declared by hand, so a file nobody declared is missed, and it's coarser.)
+7. **A weekly full run.** The Tests workflow runs every test once a week, ignoring the cache, as a safety net against a mistake in the cache itself. It isn't a run on every push to `master` (decision 4 and step 5 stand).
 
 ## Step 1: publishing and the build
 
@@ -100,28 +106,35 @@ Snake, and the checks every moved app gets:
     - With both caches filled (`0 of 30 test files to run.`, `0 of 71 specs to run.`), one word changed in `apps/snake/lang/bn.json`: the UI plan is `1 of 71 specs to run.`, `apps/snake/test/i18n.spec.mjs` alone. The unit plan lists only `tests/unit/page.test.mjs`, whose last test builds the whole site and checks the test server serves every file of it byte for byte (1.2's Verify), so it reads every published file.
     - With both caches filled, a change to `apps/snake/snake-core.js`: the UI plan is `3 of 71 specs to run.`, Snake's `behaviour`, `i18n` and `page`; the unit plan `apps/snake/test/logic.test.mjs` and `tests/unit/page.test.mjs`. The page target reruns because the page it checks runs the game (`checkGame()` plays it: pausing, the gamepad, upright), so it depends on `snake-core.js`.
     - Snake plays, saves and restores in both languages: its moved tests pass (`behaviour.spec.mjs`, `i18n.spec.mjs`, `page.spec.mjs`, `logic.test.mjs`).
-- [ ] Pull request merged, and its merge commit's Tests run passed (rule 2).
+- [x] Pull request merged: #87, merge commit `eea0e77`, whose Tests run passed ([38835584458](https://github.com/bdnix/bdnix/actions/runs/38835584458)).
 
-## Step 3: every other app, and the landing and profile pages
+## Step 3: everything else, in one pull request
 
-One pull request (old items 3.1 to 3.8). Each app moved like Snake in step 2 (module, four targets, `lang/`, URL and storage keys unchanged), one commit per app so the diff can be read app by app:
+The owner's decision 5: what was steps 3 and 4 (old items 3.1 to 3.8, 4.1, 4.2 and 5.1), with the new UI cache (decision 6) and the weekly full run (decision 7). Each app is moved like Snake in step 2 (module, four targets, `lang/`, URL and storage keys unchanged), one commit per app so the diff can be read app by app.
+
+The UI cache:
+
+- [ ] Each passing spec's cache entry keeps every URL it fetched with a hash of the response (status, content type and body; a page's `?v=` stamps left out, since the files behind them are fetched and hashed in their own right; a 404 is an answer too). A spec is skipped when its own code and helpers, the few inputs every spec has (Playwright's settings, the fixture, the Playwright and Node versions) and every recorded response are unchanged. The responses are made again in-process by the code the test server uses, so they can't differ from what it serves.
+- [ ] What runs around the specs isn't an input of them: the undeclared-inputs check (`tests/ui/inputs.mjs`) and the coverage merge run in the cache's runner over every spec's record, run or cached; the fixture saves raw coverage without the coverage library.
+- [ ] **Verify:** unit tests for the new key (an identical rebuild reruns nothing; a change to one page reruns only the specs that fetched it; a file that appears or disappears reruns the specs that asked for it; a status or type change counts); with the cache filled, a change to `tools/page.mjs` that serves the same bytes reruns no spec, and the UI plan lists which specs every remaining global input reruns.
+
+The apps:
 
 - [ ] Falling Blocks, Maze Chase, Flap, Road Hop, Brick Bounce.
 - [ ] Chess, with the vendored Stockfish.
 - [ ] Merge PDFs, Watermark, Redact, Sign, Unlock.
 - [ ] MP4 to MP3, Compress Images, Photo Collage, Resize Without Cropping.
 - [ ] The landing and profile pages as `site/` modules, reading the generated catalogue of every app's card fields.
-- [ ] **Verify:** each moved app's moved tests pass; with the cache filled, a change inside each moved app reruns only its own targets; changing an app's card reruns the landing and profile targets, changing its rules doesn't; `_site/` is identical to step 2's apart from stamps (diff reviewed); full `npm test` and `npm run coverage` pass; CI green.
-- [ ] Pull request merged, and its merge commit's Tests run passed (rule 2).
+- [ ] The site-wide specs that used app pages as examples test the shared modules on fixture pages, or move into the app they were really about.
+- [ ] **Verify:** each moved app's moved tests pass; with the cache filled, a change inside each moved app reruns only its own targets (the whole-site build test aside, as in step 2); changing an app's card reruns the landing and profile targets, changing its rules doesn't; `_site/` is identical to step 2's apart from stamps and packs (diff reviewed).
 
-## Step 4: remove the old plumbing, and tests split across machines
-
-One pull request (old items 4.1, 4.2 and 5.1).
+The old plumbing, the docs and CI:
 
 - [ ] Remove `scripts/site.mjs` and the empty old folders; `tools/boundaries.mjs` replaces the lists in `tests/unit/site.test.mjs`. The test caches (`scripts/test-deps.mjs`, `scripts/unit-cache.mjs`, `scripts/ui-cache.mjs`) stay: they're how tests are picked.
 - [ ] Rewrite AGENTS.md and `docs/development.md` around modules.
-- [ ] The UI tests always run split across several machines, however many specs a run has to run: the cache's plan picks the specs, Playwright's `--shard` splits them, and the shards' results, caches and coverage are merged (coverage still uploaded once). The unit tests are not split: they stay on one machine (the owner's decision; they take seconds). No full run on `master`: a push reruns only what its change touched, as on a pull request.
-- [ ] **Verify:** nothing references the removed files; every path and command in AGENTS.md and `docs/development.md` exists and runs; a run started by hand with **full** ticked, split across machines, against the same on one machine (time and test count); a pull request run with only a few specs to run splits them too and passes; every shard's results come back from the cache on the next run; the full suite passes; CI green.
+- [ ] The UI tests always run split across several machines, however many specs a run has to run: the cache's plan picks the specs, Playwright's `--shard` splits them, and the shards' results, caches and coverage are merged (coverage still uploaded once). The unit tests are not split: they stay on one machine (the owner's decision; they take seconds). No full run on every push to `master`: a push reruns only what its change touched, as on a pull request.
+- [ ] A scheduled full run once a week (decision 7).
+- [ ] **Verify:** nothing references the removed files; every path and command in AGENTS.md and `docs/development.md` exists and runs; a run started by hand with **full** ticked, split across machines, against the same on one machine (time and test count); a pull request run with only a few specs to run splits them too and passes; every shard's results come back from the cache on the next run; the scheduled run is set to full and weekly (a unit test); full `npm test` and `npm run coverage` pass; CI green.
 - [ ] Pull request merged, and its merge commit's Tests run passed (rule 2).
 
 ## Changes to the plan
@@ -140,3 +153,4 @@ One pull request (old items 4.1, 4.2 and 5.1).
 - 16 October 2026 (step 2): "every translation string has one owner" means no English twice in the files that make a module's pack, or in two shared modules. The pages that haven't moved share one pack, in which each app still keeps its own copy of the words it uses (AGENTS.md: two apps that want the same small thing each keep their own copy); the rule reaches each of them as it moves.
 - 16 October 2026 (step 2): the unit tests' `load()` runs `lang.js` only for scripts whose module uses `lang` (or that are still in `assets/js`), with its list of languages filled in without the packs' stamps, so only each `language.json` is read. As served, with stamps, every unit test would depend on every translation file, and a change to Snake's Bangla would rerun them all.
 - 16 October 2026 (step 2, the owner's decision): step 2's cache Verify was widened to what the module's tests really use. A change to an app's logic also reruns its page target, which plays the game (`checkGame()`), and `tests/unit/page.test.mjs` reruns for any change to the published site, since it builds the whole site and checks the test server serves every file of it (1.2's Verify). The alternative, a page target that doesn't run the game and no whole-site check, would have tested less.
+- 16 October 2026 (owner's decisions 5 to 7): steps 3 and 4 are one pull request, now step 3, with a new UI cache keyed on what each spec was served (a full UI run had sixteen build and harness files as triggers) and a weekly full run as a safety net. #88, an earlier parallel attempt at old item 1.3, was closed as superseded by #87.
