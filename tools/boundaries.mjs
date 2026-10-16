@@ -98,7 +98,13 @@ export function boundaries(root){
       continue;
     }
     for (const t of TARGETS) if (!tests.includes(t)) errors.push(`${m.dir}: has no test/${t}`);
-    const calls = (file, fn) => fs.existsSync(path.join(root, file)) && new RegExp(`\\b${fn}\\('${m.url.replace(/\//g, '\\/')}'`).test(read(root, file));
+    // A call of fn with the page's URL, not of a longer name ending in fn.
+    const calls = (file, fn) => {
+      if (!fs.existsSync(path.join(root, file))) return false;
+      const text = read(root, file), call = `${fn}('${m.url}'`;
+      for (let at = text.indexOf(call); at >= 0; at = text.indexOf(call, at + 1)) if (!/\w/.test(text[at - 1] || '')) return true;
+      return false;
+    };
     const game = m.card && m.card.kind === 'game';
     const page = `${m.dir}/test/page.spec.mjs`, i18n = `${m.dir}/test/i18n.spec.mjs`;
     if (!calls(page, 'checkPage')) errors.push(`${page}: should call checkPage('${m.url}', ...)`);

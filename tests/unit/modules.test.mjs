@@ -260,6 +260,10 @@ test('boundaries: links, names, owners and tests, each failing and passing', () 
   write('shared/words/lang/xx.json', json({ Hello: 'Helo' }));
   write('assets/lang/xx/site.json', json({ Home: 'Hom', Look: 'Luk' }));
   assert.deepEqual(boundaries(dir), []);
+
+  // Only a call of the check itself counts, with the app's own URL.
+  write('apps/game/test/page.spec.mjs', "mycheckPage('/game/', {}); checkPage('/other/'); checkGame('/game/', {});");
+  assert.deepEqual(boundaries(dir), ['apps/game/test/page.spec.mjs: should call checkPage(\'/game/\', ...)']);
   done();
 });
 
