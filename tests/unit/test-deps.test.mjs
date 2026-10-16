@@ -210,3 +210,7 @@ test('testName: a short name for each test file, unique among them', () => {
   assert.equal(testName('/abs/repo/shared/files/test/files.test.mjs'), 'files--files');
   assert.equal(testName('site\\landing\\test\\i18n.spec.mjs'), 'landing--i18n');
 });
+
+test('importsOf: a relative require() counts, a package one doesn\'t', () => {
+  assert.deepEqual(importsOf("const L = require('../../shared/pdftools/vendor/pdf-lib.min.js');\nconst fs = require('node:fs');"), ['../../shared/pdftools/vendor/pdf-lib.min.js']);
+});

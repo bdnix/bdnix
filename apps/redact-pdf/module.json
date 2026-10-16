@@ -1,0 +1,30 @@
+{
+  "name": "redact-pdf",
+  "kind": "app",
+  "url": "/redact-pdf/",
+  "publish": {
+    "index.html": "/redact-pdf/index.html",
+    "redact.js": "/assets/js/redact.js",
+    "redact-core.js": "/assets/js/redact-core.js",
+    "redact.css": "/assets/css/redact.css"
+  },
+  "uses": ["analytics", "avatar", "backdrop", "base", "editor", "file", "files", "footer", "icon-btn", "lang", "page", "pdftools", "profile", "profile-chip", "settings", "tool"],
+  "page": {
+    "title": "Redact a PDF — Black out text for good | bdnix",
+    "description": "Black out names, numbers and anything else in a PDF for good, free: find words on every page or draw boxes by hand. Runs in your browser; your file is never uploaded.",
+    "schema": "WebApplication",
+    "category": "UtilitiesApplication"
+  },
+  "card": {
+    "kind": "tool",
+    "name": "Redact a PDF",
+    "blurb": "Black out text for good",
+    "keywords": "tool pdf black out hide censor private documents",
+    "icon": [
+      "<rect x=\"9\" y=\"4\" width=\"22\" height=\"32\" rx=\"3\" fill=\"#22d3ee\" opacity=\".55\"/>",
+      "<rect x=\"12\" y=\"11\" width=\"16\" height=\"5\" rx=\"1\" fill=\"#080a12\"/>",
+      "<path d=\"M13 22h14M13 28h8\" stroke=\"#eef1f8\" stroke-width=\"2\" stroke-linecap=\"round\" opacity=\".7\"/>",
+      "<rect x=\"19\" y=\"25.5\" width=\"9\" height=\"5\" rx=\"1\" fill=\"#080a12\"/>"
+    ]
+  }
+}

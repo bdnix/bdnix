@@ -1,0 +1,31 @@
+{
+  "name": "unlock-pdf",
+  "kind": "app",
+  "url": "/unlock-pdf/",
+  "publish": {
+    "index.html": "/unlock-pdf/index.html",
+    "unlock.js": "/assets/js/unlock.js",
+    "unlock-core.js": "/assets/js/unlock-core.js",
+    "unlock.css": "/assets/css/unlock.css"
+  },
+  "uses": ["analytics", "avatar", "backdrop", "base", "features", "file", "files", "footer", "lang", "page", "pdftools", "profile", "profile-chip", "tool"],
+  "page": {
+    "title": "Unlock a PDF — Remove a PDF password free | bdnix",
+    "description": "Remove the password from a PDF you can open, free: type its password once and download a copy that opens without one. Runs in your browser; your file and password are never uploaded.",
+    "schema": "WebApplication",
+    "category": "UtilitiesApplication"
+  },
+  "card": {
+    "kind": "tool",
+    "name": "Unlock a PDF",
+    "blurb": "Remove a PDF’s password",
+    "keywords": "tool pdf password unlock decrypt remove protection encryption security documents",
+    "icon": [
+      "<rect x=\"9\" y=\"4\" width=\"22\" height=\"32\" rx=\"3\" fill=\"#22d3ee\" opacity=\".55\"/>",
+      "<path d=\"M13 9h14M13 14h9\" stroke=\"#eef1f8\" stroke-width=\"2\" stroke-linecap=\"round\" opacity=\".7\"/>",
+      "<path d=\"M16 23v-4a4 4 0 0 1 7.6-1.7\" fill=\"none\" stroke=\"#f472b6\" stroke-width=\"2.4\" stroke-linecap=\"round\"/>",
+      "<rect x=\"13\" y=\"23\" width=\"14\" height=\"10\" rx=\"2\" fill=\"#a855f7\"/>",
+      "<circle cx=\"20\" cy=\"28\" r=\"1.6\" fill=\"#eef1f8\"/>"
+    ]
+  }
+}

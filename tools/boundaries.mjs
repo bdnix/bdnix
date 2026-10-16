@@ -13,7 +13,8 @@
 //   - every module has its test targets: an app the four in TARGETS (its
 //     page target running checkPage(), and checkGame() for a game, in
 //     English, its i18n target checkPageLanguages() and checkGameLanguages()),
-//     a shared module at least one test.
+//     a shared module at least one test. An app with one script (its page's)
+//     has no pure logic, so no logic target.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -65,7 +66,7 @@ export function boundaries(root){
     for (const file of filesOf(root, m.dir).filter((f) => !f.includes('/lang/') && /\.(js|mjs|css|html|json)$/.test(f))) {
       const text = read(root, file);
       for (const app of apps) {
-        const names = [app.url, `'${app.name}'`, `"${app.name}"`, ...app.files.map((f) => path.posix.basename(f.published)).filter((b) => b !== 'index.html')];
+        const names = [app.url, `'${app.name}'`, `"${app.name}"`, ...app.files.filter((f) => !/\/(vendor|fonts)\//.test(f.source)).map((f) => path.posix.basename(f.published)).filter((b) => b !== 'index.html')];
         if (app.card && app.card.best) names.push(app.card.best);
         for (const n of names) if (text.includes(n)) errors.push(`${file}: names the app ${app.name} (${n}); a shared module is about no app`);
       }
@@ -97,7 +98,10 @@ export function boundaries(root){
       if (!tests.some((f) => /\.(test|spec)\.mjs$/.test(f))) errors.push(`${m.dir}: has no tests in test/`);
       continue;
     }
-    for (const t of TARGETS) if (!tests.includes(t)) errors.push(`${m.dir}: has no test/${t}`);
+    // An app's logic target tests its pure logic, which an app with a single
+    // script (its page's) doesn't have.
+    const scripts = m.files.filter((f) => /\.js$/.test(f.source) && !f.source.includes('/vendor/'));
+    for (const t of TARGETS) if (!tests.includes(t) && !(t === 'logic.test.mjs' && scripts.length < 2)) errors.push(`${m.dir}: has no test/${t}`);
     // A call of fn with the page's URL, not of a longer name ending in fn.
     const calls = (file, fn) => {
       if (!fs.existsSync(path.join(root, file))) return false;

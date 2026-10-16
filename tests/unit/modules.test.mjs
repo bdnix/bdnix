@@ -28,7 +28,7 @@ const LANG_JS = '(function(){\n  // build:languages\n  var LANGUAGES = [{"code":
 const json = (v) => JSON.stringify(v, null, 2);
 const GAME = {
   name: 'game', kind: 'app', url: '/game/',
-  publish: { 'index.html': '/game/index.html', 'game.js': '/assets/js/game.js' },
+  publish: { 'index.html': '/game/index.html', 'game.js': '/assets/js/game.js', 'game-core.js': '/assets/js/game-core.js' },
   uses: ['look', 'words'],
   page: { title: 'Game | bdnix', description: 'A game.', schema: 'WebApplication', category: 'GameApplication' },
   card: { kind: 'game', name: 'Game', blurb: 'Play it', keywords: 'game', icon: ['<rect/>'], best: 'bdnix_game_best' }
@@ -41,6 +41,7 @@ function repo(){
   write('apps/game/module.json', json(GAME));
   write('apps/game/index.html', PAGE('  <script src="/assets/js/game.js"></script>'));
   write('apps/game/game.js', 'window.game = 1;\n');
+  write('apps/game/game-core.js', 'window.gameCore = 1;\n');
   write('apps/game/lang/xx.json', json({ Play: 'Plai' }));
   write('shared/look/module.json', json({ name: 'look', kind: 'shared', publish: { 'look.css': '/assets/css/look.css', 'fonts/': '/assets/fonts/' } }));
   write('shared/look/look.css', 'a { font: url(/assets/fonts/f.woff2) }\n');
@@ -185,7 +186,7 @@ test('packs: the pages that haven\'t moved get assets/lang and every shared modu
 test('publishing: a module\'s files at their published paths, and its pack', () => {
   const { dir, done } = repo();
   assert.deepEqual(publishedFiles(dir, pages(dir, LISTED)), [
-    'CNAME', 'LICENSE', 'assets/css/look.css', 'assets/fonts/f.woff2', 'assets/js/game.js', 'assets/js/lang.js',
+    'CNAME', 'LICENSE', 'assets/css/look.css', 'assets/fonts/f.woff2', 'assets/js/game-core.js', 'assets/js/game.js', 'assets/js/lang.js',
     'assets/lang/game.xx.js', 'assets/lang/xx.js', 'assets/lang/xx/language.json', 'assets/lang/xx/site.json',
     'game/index.html', 'index.html', 'robots.txt', 'sitemap.xml'
   ]);
@@ -264,6 +265,14 @@ test('boundaries: links, names, owners and tests, each failing and passing', () 
   // Only a call of the check itself counts, with the app's own URL.
   write('apps/game/test/page.spec.mjs', "mycheckPage('/game/', {}); checkPage('/other/'); checkGame('/game/', {});");
   assert.deepEqual(boundaries(dir), ['apps/game/test/page.spec.mjs: should call checkPage(\'/game/\', ...)']);
+  write('apps/game/test/page.spec.mjs', "checkPage('/game/', {}); checkGame('/game/', {});");
+
+  // An app with one script, its page's, has no pure logic to test.
+  fs.rmSync(path.join(dir, 'apps/game/test/logic.test.mjs'));
+  assert.deepEqual(boundaries(dir), ['apps/game: has no test/logic.test.mjs']);
+  const { 'game-core.js': core, ...one } = GAME.publish;
+  write('apps/game/module.json', json({ ...GAME, publish: one }));
+  assert.deepEqual(boundaries(dir), []);
   done();
 });
 

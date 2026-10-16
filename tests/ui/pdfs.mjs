@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 import { inNewWindow } from './downloads.mjs';
 
 const require = createRequire(import.meta.url);
-export const L = require('../../assets/vendor/pdf-lib.min.js');
+export const L = require('../../shared/pdftools/vendor/pdf-lib.min.js');
 
 export const upload = (name, buffer, mimeType = 'application/pdf') => ({ name, mimeType, buffer: Buffer.from(buffer) });
 

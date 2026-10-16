@@ -55,6 +55,7 @@ test('every translation is there, with only the {values} its English has and the
 
 test('every language has the words every script asks for', () => {
   const wanted = asked(scripts());
-  assert.ok(wanted.size > 300, `found only ${wanted.size}`);
+  // (The shared modules' scripts ask for a few dozen; each app checks its own.)
+  assert.ok(wanted.size > 20, `found only ${wanted.size}`);
   for (const code of codes) assert.deepEqual(lacking(wanted, words(code)), [], `${code} has no translation for these`);
 });

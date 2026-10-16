@@ -1,0 +1,30 @@
+{
+  "name": "fit-to-frame",
+  "kind": "app",
+  "url": "/fit-to-frame/",
+  "publish": {
+    "index.html": "/fit-to-frame/index.html",
+    "frame.js": "/assets/js/frame.js",
+    "frame-core.js": "/assets/js/frame-core.js",
+    "frame.css": "/assets/css/frame.css"
+  },
+  "uses": ["analytics", "avatar", "backdrop", "base", "editor", "features", "file", "files", "footer", "icon-btn", "images", "lang", "page", "profile", "profile-chip", "seg", "settings", "tool", "tracks"],
+  "page": {
+    "title": "Resize Without Cropping — Fit any shape, free | bdnix",
+    "description": "Make a photo fit a post, story or banner without cropping it: add white or coloured space to its sides or top and bottom. Runs in your browser; your images are never uploaded.",
+    "schema": "WebApplication",
+    "category": "MultimediaApplication"
+  },
+  "card": {
+    "kind": "tool",
+    "name": "Resize Without Cropping",
+    "blurb": "Add space to fit any shape",
+    "keywords": "tool image photo picture resize crop pad border frame square social",
+    "icon": [
+      "<rect x=\"4\" y=\"4\" width=\"32\" height=\"32\" rx=\"3\" fill=\"#eef1f8\" opacity=\".85\"/>",
+      "<rect x=\"4\" y=\"11\" width=\"32\" height=\"18\" fill=\"#22d3ee\" opacity=\".75\"/>",
+      "<circle cx=\"12\" cy=\"17\" r=\"2.5\" fill=\"#eef1f8\" opacity=\".85\"/>",
+      "<path d=\"M4 27l9-6 6 4 6-5 11 7v2H4z\" fill=\"#a855f7\"/>"
+    ]
+  }
+}

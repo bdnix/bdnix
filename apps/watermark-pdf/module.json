@@ -1,0 +1,30 @@
+{
+  "name": "watermark-pdf",
+  "kind": "app",
+  "url": "/watermark-pdf/",
+  "publish": {
+    "index.html": "/watermark-pdf/index.html",
+    "watermark.js": "/assets/js/watermark.js",
+    "watermark-layout.js": "/assets/js/watermark-layout.js",
+    "watermark.css": "/assets/css/watermark.css",
+    "vendor/": "/assets/vendor/"
+  },
+  "uses": ["analytics", "avatar", "backdrop", "base", "editor", "file", "files", "footer", "icon-btn", "lang", "page", "pdftools", "profile", "profile-chip", "seg", "settings", "tool"],
+  "page": {
+    "title": "Watermark a PDF — Add text or image watermarks | bdnix",
+    "description": "Add a text or image watermark to a PDF, free: pick the font, size, opacity, angle and position, or repeat it across the page. Runs in your browser; your file is never uploaded.",
+    "schema": "WebApplication",
+    "category": "UtilitiesApplication"
+  },
+  "card": {
+    "kind": "tool",
+    "name": "Watermark a PDF",
+    "blurb": "Stamp text or a logo",
+    "keywords": "tool pdf stamp logo text documents",
+    "icon": [
+      "<rect x=\"9\" y=\"4\" width=\"22\" height=\"32\" rx=\"3\" fill=\"#22d3ee\" opacity=\".55\"/>",
+      "<path d=\"M12 28 L28 12\" stroke=\"#f472b6\" stroke-width=\"4\" stroke-linecap=\"round\"/>",
+      "<path d=\"M13 9h9M13 33h7\" stroke=\"#eef1f8\" stroke-width=\"2\" stroke-linecap=\"round\" opacity=\".7\"/>"
+    ]
+  }
+}

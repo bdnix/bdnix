@@ -12,11 +12,11 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 // The relative paths a module's source imports from, as written: static
-// imports and re-exports (each starting a line) and dynamic imports. Package
-// imports are left out.
+// imports and re-exports (each starting a line), dynamic imports and
+// require() calls. Package imports are left out.
 export function importsOf(source){
   const found = [];
-  const re = /(?:^[ \t]*import\s+(?:[^'"`;]*?\s+from\s+)?|^[ \t]*export\s+[^'"`;]*?\s+from\s+|\bimport\s*\(\s*)['"](\.{1,2}\/[^'"]+)['"]/gm;
+  const re = /(?:^[ \t]*import\s+(?:[^'"`;]*?\s+from\s+)?|^[ \t]*export\s+[^'"`;]*?\s+from\s+|\bimport\s*\(\s*|\brequire\s*\(\s*)['"](\.{1,2}\/[^'"]+)['"]/gm;
   let m;
   while ((m = re.exec(source))) found.push(m[1]);
   return found;
