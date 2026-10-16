@@ -2,7 +2,7 @@
 //   assets/img/og.png               1200×630, shown when a page is shared
 //   assets/img/apple-touch-icon.png 180×180, the icon for a home-screen bookmark
 // Run `npm run og-image` after changing the design below, and commit the PNGs.
-// Uses the site's own fonts from assets/fonts.
+// Uses the site's own fonts, from the base module (shared/base/fonts).
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,7 +10,7 @@ import { chromium } from '@playwright/test';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const face = (family, weight, file) => `@font-face{font-family:'${family}';font-weight:${weight};src:url(data:font/woff2;base64,${
-  fs.readFileSync(path.join(root, 'assets/fonts', file)).toString('base64')}) format('woff2')}`;
+  fs.readFileSync(path.join(root, 'shared/base/fonts', file)).toString('base64')}) format('woff2')}`;
 const fonts = '<style>' + [
   face('Inter', 600, 'inter-latin-600-normal.woff2'),
   face('Inter', 800, 'inter-latin-800-normal.woff2'),
@@ -32,7 +32,7 @@ const og = `<!doctype html><html><head>${fonts}<style>
   p{margin:0;font:400 28px/1.45 'JetBrains Mono',ui-monospace,monospace;color:#8e97ab}
 </style></head><body>
   <div class="mark"><i>B</i>bdnix</div>
-  <h1>Play a little.<br><em>Get things done.</em></h1>
+  <h1>Time,<br><em>well lost.</em></h1>
   <p>Falling Blocks · Maze Chase · PDF, audio and image tools<br>Free, in your browser. Nothing uploaded.</p>
 </body></html>`;
 
