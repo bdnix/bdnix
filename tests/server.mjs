@@ -22,7 +22,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const port = Number(process.env.PORT) || 4173;
 const log = process.env.SERVED_LOG;
 
-http.createServer((req, res) => {
+const server = http.createServer((req, res) => {
   const urlPath = new URL(req.url, 'http://x').pathname;
   const r = respond(root, urlPath);
   if (log) {
@@ -31,4 +31,9 @@ http.createServer((req, res) => {
   }
   if (r.errors.length) console.error(r.errors.join('\n'));
   res.writeHead(r.status, { 'Content-Type': r.type }).end(r.body);
-}).listen(port, () => console.log(`Serving ${root} at http://localhost:${port}`));
+});
+// An idle connection stays open: Playwright reuses its connections, and one
+// closed after Node's default five idle seconds can close just as the next
+// request goes out on it, which the test sees as ECONNRESET.
+server.keepAliveTimeout = 0;
+server.listen(port, () => console.log(`Serving ${root} at http://localhost:${port}`));
