@@ -23,7 +23,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { inputs, keyOf } from './test-deps.mjs';
+import { inputs, keyOf, testFiles, testName } from './test-deps.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
@@ -35,12 +35,12 @@ const TRACK = pathToFileURL(path.resolve('tests/unit/track.mjs')).href;
 // Entries no run has used for this long are dropped, so the cache stays small.
 const MAX_AGE = 14 * 24 * 3600 * 1000;
 // Coverage counts only the site's own scripts (tests/coverage/shared.mjs).
-const OWN = /assets\/js\/[\w-]+\.js$/;
+const OWN = /(assets\/js|(apps|shared|site)\/[\w-]+)\/[\w-]+\.js$/;
 // Where the repository is, in stored coverage, so it can come back elsewhere.
 const ROOT_MARK = '<repository>';
 
-const tests = fs.readdirSync('tests/unit').filter((f) => f.endsWith('.test.mjs')).map((f) => `tests/unit/${f}`).sort();
-const name = (test) => path.basename(test, '.test.mjs');
+const tests = testFiles('unit');
+const name = testName;
 const key = (test, deps) => keyOf(inputs(test, deps));
 
 function entries(test){
@@ -163,8 +163,10 @@ function prune(){
   if (!fs.existsSync(CACHE)) return;
   const names = new Set(tests.map(name));
   for (const dir of fs.readdirSync(CACHE)) {
-    if (!names.has(dir)) { fs.rmSync(path.join(CACHE, dir), { recursive: true, force: true }); continue; }
-    for (const e of entries(`tests/unit/${dir}.test.mjs`)) {
+    if (!names.has(dir)) fs.rmSync(path.join(CACHE, dir), { recursive: true, force: true });
+  }
+  for (const test of tests) {
+    for (const e of entries(test)) {
       if (!(Date.now() - e.used < MAX_AGE)) fs.rmSync(e.dir, { recursive: true, force: true });
     }
   }

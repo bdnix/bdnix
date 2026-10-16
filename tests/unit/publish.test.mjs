@@ -20,6 +20,9 @@ test('publish: every page, every asset and the root files', () => {
   assert.ok(files.includes('sitemap.xml'));
   assert.ok(files.includes('assets/lang/bn.js'));
   assert.ok(files.includes('assets/js/lang.js'));
+  // The shared modules' files, where they always were.
+  for (const f of ['assets/js/sound.js', 'assets/css/base.css', 'assets/fonts/inter-latin-400-normal.woff2', 'assets/fonts/hind-siliguri-bengali-400-normal.woff2']) assert.ok(files.includes(f), f);
+  assert.ok(!files.some((f) => f.startsWith('shared/')));
   assert.ok(files.includes('assets/vendor/pdf-lib.min.js'));
   assert.deepEqual(files, [...files].sort());
 });

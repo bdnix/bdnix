@@ -11,7 +11,7 @@ export default {
   inputDir: ['coverage/unit/raw', 'coverage/ui/raw'],
   outputDir: 'coverage/report',
   reports: ['v8', 'console-details'],
-  all: { dir: ['assets/js'], filter: '**/*.js' },
+  all: { dir: ['assets/js', 'shared'], filter: '**/*.js' },
   sourcePath,
   sourceFilter
 };

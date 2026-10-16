@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { pages, SITE } from '../../scripts/site.mjs';
 import { sitemap } from '../../scripts/parts.mjs';
-import { transformPage, serve, check, PARTS } from '../../tools/page.mjs';
+import { transformPage, serve, check, PARTS, context, generated, modulePaths } from '../../tools/page.mjs';
 import { languages, list, fillLanguages, stamp } from '../../tools/languages.mjs';
 import { build } from '../../tools/site.mjs';
 
@@ -46,7 +46,7 @@ function repo(){
   write('assets/js/lang.js', LANG_JS);
   write('assets/css/a.css', 'a {}');
   write('assets/css/xx.css', 'x {}');
-  write('assets/lang/xx/language.json', JSON.stringify({ name: 'Xx', digits: '0123456789', style: 'assets/css/xx.css' }));
+  write('assets/lang/xx/language.json', JSON.stringify({ name: 'Xx', digits: '0123456789', style: '/assets/css/xx.css' }));
   write('assets/lang/xx/one.json', JSON.stringify({ Play: 'Plai', Hello: 'Helo' }));
   write('assets/lang/xx/two.json', JSON.stringify({ Hello: 'Helo' }));
   return { dir, write, done: () => fs.rmSync(dir, { recursive: true, force: true }) };
@@ -93,10 +93,10 @@ test('languages: each folder\'s translations in one pack, and lang.js lists them
   assert.equal(xx.code, 'xx');
   assert.deepEqual(xx.files, ['assets/lang/xx/one.json', 'assets/lang/xx/two.json']);
   assert.deepEqual(xx.errors, []);
-  assert.equal(xx.pack, '// Made by tools/languages.mjs from assets/lang/xx/*.json. Don\'t edit it here.\nwindow.bdnixLang.pack({\n "Hello": "Helo",\n "Play": "Plai"\n});\n');
+  assert.equal(xx.pack, '// Made by tools/languages.mjs from the site\'s translations into xx. Don\'t edit it here.\nwindow.bdnixLang.pack({\n "Hello": "Helo",\n "Play": "Plai"\n});\n');
   assert.deepEqual(list(dir), [
     { code: 'en', name: 'English' },
-    { code: 'xx', name: 'Xx', digits: '0123456789', file: `/assets/lang/xx.js?v=${stamp(xx.pack)}`, style: `assets/css/xx.css?v=${stamp('x {}')}` }
+    { code: 'xx', name: 'Xx', digits: '0123456789', file: `/assets/lang/xx.js?v=${stamp(xx.pack)}`, style: `/assets/css/xx.css?v=${stamp('x {}')}` }
   ]);
   // lang.js keeps every line where it is in the source (coverage reports against it).
   const js = text(serve(dir, 'assets/js/lang.js'));
@@ -110,7 +110,7 @@ test('languages: each folder\'s translations in one pack, and lang.js lists them
 test('languages: what each is made from, not counting the files behind its stamps', () => {
   const { dir, write, done } = repo();
   assert.deepEqual(serve(dir, 'assets/js/lang.js').from, ['assets/js/lang.js', 'assets/lang/', 'assets/lang/xx/language.json']);
-  assert.deepEqual(serve(dir, 'assets/lang/xx.js').from, ['assets/lang/xx/', 'assets/lang/xx/language.json', 'assets/lang/xx/one.json', 'assets/lang/xx/two.json']);
+  assert.deepEqual(serve(dir, 'assets/lang/xx.js').from, ['assets/lang/xx/', 'assets/lang/xx/language.json', 'apps/', 'shared/', 'site/', 'assets/lang/xx/one.json', 'assets/lang/xx/two.json']);
   assert.equal(serve(dir, 'assets/lang/yy.js'), null);
   // A changed translation changes the pack's stamp, so lang.js and every
   // page's stamp of it, but not what either is made from.
@@ -134,6 +134,57 @@ test('other files are served as they are; a missing one or a folder is nothing',
   done();
 });
 
+// An app module: its page from its module.json, its files at the paths it
+// publishes them at, and its own pack of the translations it needs.
+test('a module\'s page and files, and its own language pack', () => {
+  const { dir, write, done } = repo();
+  write('shared/ui/module.json', JSON.stringify({ name: 'ui', kind: 'shared', publish: { 'ui.js': '/assets/js/ui.js' } }));
+  write('shared/ui/ui.js', 'ui()');
+  write('shared/ui/lang/xx.json', JSON.stringify({ Close: 'Klose' }));
+  write('apps/snake/module.json', JSON.stringify({
+    name: 'snake', kind: 'app', url: '/snake/', uses: ['ui'],
+    page: { title: 'Snake game', description: 'Eat.', schema: 'WebApplication', category: 'GameApplication' },
+    card: { type: 'game', name: 'Snake', blurb: 'Eat', keywords: 'k', icon: ['<rect/>'], best: 'bdnix_snake_best' }
+  }));
+  write('apps/snake/index.html', PAGE.replace('/assets/css/a.css', '/assets/js/ui.js'));
+  write('apps/snake/lang/xx.json', JSON.stringify({ Eat: 'Iit' }));
+  const list = [LIST[0], { module: 'snake' }];
+  // Its files, at their published paths, made from the module's.
+  assert.deepEqual(serve(dir, 'assets/js/ui.js', list), { body: Buffer.from('ui()'), from: ['shared/ui/ui.js', 'shared/ui/module.json'], errors: [] });
+  // Its page: head tags from its module.json, and lang.js told where its packs are.
+  const page = serve(dir, 'snake/index.html', list);
+  assert.deepEqual(page.errors, []);
+  assert.deepEqual(page.from, ['apps/snake/index.html', 'apps/snake/module.json', ...PARTS]);
+  const html = text(page);
+  assert.match(html, /<title>Snake game<\/title>/);
+  assert.ok(html.includes(`<link rel="stylesheet" href="/assets/js/ui.js?v=${stamp('ui()')}">`));
+  const pack = /<script src="\/assets\/js\/lang\.js\?v=[0-9a-f]{10}" data-pack="\/snake\/lang\/\{code\}\.js\?v=([0-9a-f]{10})"><\/script>/.exec(html);
+  assert.ok(pack, 'lang.js names the page\'s pack');
+  // The landing page lists it, and has no pack of its own.
+  const home = text(serve(dir, 'index.html', list));
+  assert.match(home, /<a class="card panel" href="\/snake\/"/);
+  assert.doesNotMatch(home, /data-pack/);
+  // Its pack has what it and what it uses translate, and nothing else; the
+  // pack for the other pages has everything.
+  const own = serve(dir, 'snake/lang/xx.js', list);
+  assert.match(text(own), /"Close": "Klose",\n "Eat": "Iit"\n\}/);
+  assert.doesNotMatch(text(own), /Hello/);
+  assert.deepEqual(own.from, ['assets/lang/xx/language.json', 'apps/snake/module.json', 'apps/snake/lang/', 'shared/ui/module.json', 'shared/ui/lang/', 'apps/snake/lang/xx.json', 'shared/ui/lang/xx.json']);
+  assert.match(text(serve(dir, 'assets/lang/xx.js', list)), /"Close": "Klose",\n "Eat": "Iit",\n "Hello": "Helo",\n "Play": "Plai"\n\}/);
+  assert.equal(serve(dir, 'flap/lang/xx.js', list), null);
+  assert.equal(serve(dir, 'snake/lang/yy.js', list), null);
+  // A change to its translations changes its pack's stamp.
+  write('shared/ui/lang/xx.json', JSON.stringify({ Close: 'Shut' }));
+  assert.notEqual(/data-pack="[^"]*v=([0-9a-f]+)"/.exec(text(serve(dir, 'snake/index.html', list)))[1], pack[1]);
+  // What the build publishes: the module's files and page, and its pack.
+  const ctx = context(dir, list);
+  assert.deepEqual(modulePaths(dir, ctx), ['assets/js/ui.js', 'snake/index.html']);
+  assert.deepEqual(generated(dir, ctx), ['sitemap.xml', 'assets/lang/xx.js', 'snake/lang/xx.js']);
+  assert.deepEqual(check(dir, list), []);
+  assert.deepEqual(check(dir, LIST), ['scripts/site.mjs: no { module: \'snake\' } to say where snake\'s page goes']);
+  done();
+});
+
 // The source tree carries nothing generated: pages keep their markers with
 // nothing between them and link the site's own files without a stamp, and
 // lang.js has only English.
@@ -144,7 +195,7 @@ test('site: the sources carry nothing generated, and fit scripts/site.mjs', () =
     for (const m of html.matchAll(/^( *)<!-- build:(\w+)(?: \w+)? -->\n(.*)$/gm)) assert.equal(m[3], `${m[1]}<!-- /build:${m[2]} -->`, `${p.path}: ${m[2]}`);
     assert.doesNotMatch(html, /\/assets\/(js|css)\/[\w-]+\.(js|css)\?v=/, p.path);
   }
-  const js = fs.readFileSync(path.join(root, 'assets/js/lang.js'), 'utf8');
+  const js = fs.readFileSync(path.join(root, 'shared/lang/lang.js'), 'utf8');
   assert.match(js, /\n {2}\/\/ build:languages\n {2}var LANGUAGES = \[\{"code":"en","name":"English"\}\];\n {2}\/\/ \/build:languages\n/);
   assert.deepEqual(text(serve(root, 'sitemap.xml')).match(/<loc>[^<]+<\/loc>/g), pages.filter((p) => !p.noindex).map((p) => `<loc>${SITE}${p.path}</loc>`));
 });

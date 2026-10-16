@@ -6,6 +6,7 @@
 // teardown merges every spec's data into coverage/ui.
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { CoverageReport } from 'monocart-coverage-reports';
 import { suite } from './shared.mjs';
 
@@ -17,8 +18,16 @@ const SPECS = `${OUT}/specs`;
 export const enabled = !!process.env.COVERAGE;
 export const options = suite('ui', { entryFilter: (entry) => OWN.test(entry.url) });
 
-// Where a spec's raw data goes: tests/ui/snake.spec.mjs -> coverage/ui/specs/snake/.cache
-export const specDir = (file) => `${SPECS}/${path.basename(file).replace(/\.spec\.mjs$/, '')}/.cache`;
+// Where a spec's raw data goes, by the spec's name in the result cache
+// (testName in scripts/test-deps.mjs): tests/ui/snake.spec.mjs ->
+// coverage/ui/specs/snake/.cache, shared/sound/test/sound.spec.mjs ->
+// coverage/ui/specs/shared-sound-test-sound/.cache. file is the spec's
+// repository path, or its absolute path.
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+export const specDir = (file) => {
+  const rel = path.relative(ROOT, path.resolve(ROOT, file)).split(path.sep).join('/');
+  return `${SPECS}/${rel.replace(/^tests\/ui\//, '').replace(/\.spec\.mjs$/, '').replace(/\//g, '-')}/.cache`;
+};
 
 export async function save(file, entries){
   const own = entries.filter((e) => OWN.test(e.url));

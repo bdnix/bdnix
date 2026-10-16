@@ -1,5 +1,5 @@
-import { test, expect } from './fixtures.mjs';
-import { openGame } from './games.mjs';
+import { test, expect } from '../../../tests/ui/fixtures.mjs';
+import { openGame } from '../../../tests/ui/games.mjs';
 
 // On a phone the games' buttons are laid out like a gamepad (gamepad.css);
 // checkGame (checks.mjs) checks each game's layout. This checks the buttons

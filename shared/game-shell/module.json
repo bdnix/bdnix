@@ -1,0 +1,11 @@
+{
+  "name": "game-shell",
+  "kind": "shared",
+  "publish": {
+    "game.css": "/assets/css/game.css",
+    "icon-btn.css": "/assets/css/icon-btn.css"
+  },
+  "uses": [
+    "base"
+  ]
+}

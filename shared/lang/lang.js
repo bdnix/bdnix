@@ -1,13 +1,14 @@
 // The site's languages. Pages and scripts are written in English; every
-// other language is a pack, assets/lang/<code>.js, that the build makes from
-// that language's translations in assets/lang/<code>/*.json (English text →
-// translation). This runs first, in every page's <head>: it picks the
-// visitor's language (the one they chose on this site, kept in this browser,
-// or else their browser's own if the site has it), loads its pack, and then
-// translates the page while it's read and whenever a script changes it:
-// text, labels, placeholders and the page's title, with numbers in the
-// language's own digits. Text in an element marked translate="no" (a file's
-// name, the visitor's own name) is left as it is.
+// other language is a pack that the build makes from that language's
+// translations (English text → translation), in assets/lang/<code>/*.json
+// and each module's lang/<code>.json (tools/languages.mjs). This runs
+// first, in every page's <head>: it picks the visitor's language (the one
+// they chose on this site, kept in this browser, or else their browser's own
+// if the site has it), loads its pack, and then translates the page while
+// it's read and whenever a script changes it: text, labels, placeholders and
+// the page's title, with numbers in the language's own digits. Text in an
+// element marked translate="no" (a file's name, the visitor's own name) is
+// left as it is.
 //
 // Scripts only need this for text with something put into it:
 // t('Reading {name}…', { name: file.name }), count(n, '{n} page', '{n} pages'),
@@ -308,7 +309,12 @@
   watch();
   // Loaded before the rest of the page, so the page's own scripts find it.
   if (current.style) document.write('<link rel="stylesheet" href="' + current.style + '">');
-  if (current.file) document.write('<script src="' + current.file + '"></script>');
+  // A module's page has a pack of its own, named on this script's tag with
+  // {code} for the language (tools/languages.mjs); the others have the pack
+  // with every translation.
+  var own = document.currentScript && document.currentScript.getAttribute('data-pack');
+  var file = own ? own.replace('{code}', current.code) : current.file;
+  if (file) document.write('<script src="' + file + '"></script>');
   document.addEventListener('DOMContentLoaded', function(){
     loading = false;
     // No pack (it didn't load): the page stays in English.

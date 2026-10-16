@@ -130,3 +130,20 @@ export function inputs(test, deps, { global = [], read = readFile, node = proces
 
 // A test's cache key: a hash of its inputs.
 export const keyOf = (lines) => crypto.createHash('sha256').update(lines.join('\n')).digest('hex').slice(0, 32);
+
+// Where tests are: the site-wide ones in tests/unit and tests/ui, and each
+// module's own in its test/ folder (tools/modules.mjs). A suite's test files,
+// as sorted repository paths: 'unit' (*.test.mjs) or 'ui' (*.spec.mjs).
+export const TEST_DIRS = { unit: ['tests/unit'], ui: ['tests/ui'] };
+export const MODULE_TESTS = ['apps', 'shared', 'site'];
+export function testFiles(kind, root = '.'){
+  const ext = kind === 'unit' ? '.test.mjs' : '.spec.mjs';
+  const ls = (dir) => { try { return fs.readdirSync(path.join(root, dir)).sort(); } catch (e) { return []; } };
+  const dirs = [...TEST_DIRS[kind], ...MODULE_TESTS.flatMap((f) => ls(f).map((m) => `${f}/${m}/test`))];
+  return dirs.flatMap((dir) => ls(dir).filter((f) => f.endsWith(ext)).map((f) => `${dir}/${f}`)).sort();
+}
+
+// A test file's name in the caches: its file name in tests/unit or tests/ui
+// (snake for tests/ui/snake.spec.mjs), else its path (shared-sound-test-sound
+// for shared/sound/test/sound.spec.mjs).
+export const testName = (file) => file.replace(/^tests\/(unit|ui)\//, '').replace(/\.(test|spec)\.mjs$/, '').replace(/\//g, '-');

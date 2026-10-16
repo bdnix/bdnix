@@ -2,17 +2,19 @@
 // workflow (.github/workflows/pages.yml) deploys to www.bdnix.com.
 //
 // What's published is listed, not excluded: the landing page, every page in
-// scripts/site.mjs (its folder's index.html), assets/, the few files the
-// site's root needs, and the files only the build makes (sitemap.xml and the
-// language packs). Anything else in the repository (tests, tooling, docs,
-// configs) stays out because it isn't on the list. Each file is written as
+// scripts/site.mjs (its folder's index.html), assets/, what each module
+// publishes (tools/modules.mjs), the few files the site's root needs, and the
+// files only the build makes (sitemap.xml and the language packs). Anything
+// else in the repository (tests, tooling, docs, configs) stays out because
+// it isn't on the list. Each file is written as
 // tools/page.mjs serves it: pages with their generated parts and ?v= stamps,
 // lang.js with its list of languages. Nothing generated is committed.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pages } from '../scripts/site.mjs';
-import { serve, generated, check } from './page.mjs';
+import { serve, generated, check, context, modulePaths } from './page.mjs';
+import { sourceOf } from './modules.mjs';
 
 export const ROOT_FILES = ['CNAME', 'LICENSE', 'robots.txt'];
 
@@ -29,11 +31,12 @@ function walk(root, dir){
 // The paths of the published site, sorted. Fails if a page or a root file
 // is missing.
 export function publishedFiles(root, list = pages){
+  const ctx = context(root, list);
   const files = [...ROOT_FILES];
-  for (const p of list) files.push(p.path.slice(1) + 'index.html');
-  files.push(...walk(root, 'assets'));
-  for (const f of files) if (!fs.existsSync(path.join(root, f))) throw new Error(`${f} is published but doesn't exist`);
-  files.push(...generated(root));
+  for (const p of ctx.pages) files.push(p.path.slice(1) + 'index.html');
+  files.push(...walk(root, 'assets'), ...modulePaths(root, ctx));
+  for (const f of files) if (!fs.existsSync(path.join(root, sourceOf(root, f, ctx.mods).file))) throw new Error(`${f} is published but doesn't exist`);
+  files.push(...generated(root, ctx));
   return [...new Set(files)].sort();
 }
 
@@ -41,9 +44,10 @@ export function publishedFiles(root, list = pages){
 // every problem, if a page or translation is broken.
 export function build(root, out, list = pages){
   const files = publishedFiles(root, list);
-  const errors = check(root, list);
+  const ctx = context(root, list);
+  const errors = check(root, ctx);
   const made = files.map((f) => {
-    const served = serve(root, f, list);
+    const served = serve(root, f, ctx);
     errors.push(...served.errors);
     return [f, served.body];
   });

@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { load, fakeStorage, plain } from './load.mjs';
+import { load, fakeStorage, plain } from '../../../tests/unit/load.mjs';
 
-// assets/js/lang.js without a page: which language, and the words scripts
+// shared/lang/lang.js without a page: which language, and the words scripts
 // ask it for. (Translating a page is tested in tests/ui/languages.spec.mjs.)
 const open = (saved, browser = ['en-US']) => load([], {
   localStorage: fakeStorage(saved ? { bdnix_lang: saved } : {}),
@@ -105,4 +105,29 @@ test('before its words have loaded, nothing is listed and nothing is translated'
   assert.equal(L.t('Hello {n}', { n: 5 }), 'Hello 5');
   assert.equal(L.num(5), '5');
   assert.deepEqual(plain(L.missing), []);
+});
+
+// In a page, lang.js writes in the visitor's language's font and pack before
+// the rest of the page: the pack lang.js lists, or the page's own, which a
+// module's page names on lang.js's tag (data-pack, tools/languages.mjs).
+function inPage(script){
+  const written = [];
+  const document = {
+    documentElement: { lang: 'en' },
+    currentScript: script,
+    write: (s) => written.push(s),
+    addEventListener(){}
+  };
+  load([], { document, localStorage: fakeStorage({ bdnix_lang: 'bn' }) });
+  return { written, html: document.documentElement };
+}
+
+test('in a page, the pack lang.js lists, or the one the page names', () => {
+  const listed = inPage(null);
+  assert.equal(listed.html.lang, 'bn');
+  assert.match(listed.written[0], /^<link rel="stylesheet" href="\/assets\/css\/bangla\.css\?v=[0-9a-f]{10}">$/);
+  assert.match(listed.written[1], /^<script src="\/assets\/lang\/bn\.js\?v=[0-9a-f]{10}"><\/script>$/);
+  assert.equal(inPage({ getAttribute: () => null }).written[1], listed.written[1]);
+  const own = inPage({ getAttribute: (name) => (name === 'data-pack' ? '/snake/lang/{code}.js?v=abc' : null) });
+  assert.equal(own.written[1], '<script src="/snake/lang/bn.js?v=abc"></script>');
 });

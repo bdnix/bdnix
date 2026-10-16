@@ -1,11 +1,13 @@
 // UI tests: `npm run test:ui`. Runs every spec on a desktop and a phone-sized
-// Chromium against the site served by tests/server.mjs.
+// Chromium against the site served by tests/server.mjs: the site-wide specs
+// in tests/ui, and each module's own in its test/ folder.
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 4173;
 
 export default defineConfig({
-  testDir: 'tests/ui',
+  testDir: '.',
+  testMatch: ['tests/ui/*.spec.mjs', '{apps,shared,site}/*/test/*.spec.mjs'],
   // Coverage (COVERAGE=1): clear the last run first, write the raw report after.
   globalSetup: './tests/coverage/ui-setup.mjs',
   globalTeardown: './tests/coverage/ui-teardown.mjs',

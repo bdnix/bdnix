@@ -1,13 +1,16 @@
 // Runs the site's browser scripts inside a Node sandbox so their pure
 // functions can be unit tested without a browser. Each script attaches
-// itself to `window`, which here is the sandbox itself. Each script is run
-// as the site serves it: lang.js with its list of languages, and a language's
-// pack (assets/lang/<code>.js) made from its translations (tools/languages.mjs).
+// itself to `window`, which here is the sandbox itself. A script is named by
+// its repository path (shared/sound/sound.js) or the path it's published at
+// (assets/js/sound.js), and run as the site serves it: lang.js with its list
+// of languages, and a language's pack (assets/lang/<code>.js) made from its
+// translations (tools/languages.mjs).
 import vm from 'node:vm';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serveLanguage } from '../../tools/languages.mjs';
+import { sourceOf } from '../../tools/modules.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -19,7 +22,7 @@ export function load(files, globals = {}){
   // can count on it. In English, as here, it leaves their words as they are.
   for (const file of ['assets/js/lang.js'].concat(files)) {
     // An absolute filename lets coverage tools attribute the code to the file.
-    const abs = path.join(root, file);
+    const abs = path.join(root, sourceOf(root, file).file);
     const served = serveLanguage(root, file);
     vm.runInContext(served ? served.body : fs.readFileSync(abs, 'utf8'), sandbox, { filename: abs });
   }

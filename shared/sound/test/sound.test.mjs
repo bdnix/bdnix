@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { load, plain, fakeStorage } from './load.mjs';
+import { load, plain, fakeStorage } from '../../../tests/unit/load.mjs';
 
-const FILE = 'assets/js/sound.js';
+const FILE = 'shared/sound/sound.js';
 
 // Just enough Web Audio to see what gets scheduled: every oscillator, noise
 // source and gain made, with the changes asked of their values.

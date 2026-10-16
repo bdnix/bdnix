@@ -1,0 +1,11 @@
+{
+  "name": "sound",
+  "kind": "shared",
+  "publish": {
+    "sound.js": "/assets/js/sound.js"
+  },
+  "uses": [
+    "game-shell",
+    "lang"
+  ]
+}

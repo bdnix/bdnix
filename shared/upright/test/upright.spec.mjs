@@ -1,5 +1,5 @@
-import { test, expect } from './fixtures.mjs';
-import { openGame } from './games.mjs';
+import { test, expect } from '../../../tests/ui/fixtures.mjs';
+import { openGame } from '../../../tests/ui/games.mjs';
 
 // Every game is played with the phone upright (upright.js); checkGame
 // (checks.mjs) checks each game turned sideways, and checkPage that the other

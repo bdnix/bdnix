@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { load, plain, fakeStorage } from './load.mjs';
+import { load, plain, fakeStorage } from '../../../tests/unit/load.mjs';
 
 // Just enough `document` for analytics.js: a <head> that records the scripts
 // added to it, cookies, and (with no body yet) a DOMContentLoaded listener.
@@ -18,7 +18,7 @@ function page(hostname, saved, cookies){
   };
   const localStorage = fakeStorage(saved === undefined ? {} : { bdnix_analytics: saved });
   const events = [];
-  const win = load('assets/js/analytics.js', {
+  const win = load('shared/analytics/analytics.js', {
     location: { hostname }, document, localStorage,
     Event: class { constructor(type){ this.type = type; } },
     dispatchEvent: (e) => { events.push(e.type); }
@@ -53,7 +53,7 @@ test('reads the saved choice, ignoring anything else', () => {
 test('works without storage (private browsing)', () => {
   const broken = { getItem(){ throw new Error('blocked'); }, setItem(){ throw new Error('blocked'); } };
   const document = { head: { appendChild(){} }, body: null, addEventListener(){} };
-  const win = load('assets/js/analytics.js', { location: { hostname: 'localhost' }, document, localStorage: broken });
+  const win = load('shared/analytics/analytics.js', { location: { hostname: 'localhost' }, document, localStorage: broken });
   assert.equal(win.bdnixAnalytics.consent(), null);
   assert.equal(win.bdnixAnalytics.setConsent('granted'), 'granted');
 });
@@ -80,7 +80,7 @@ test('on the live site, with consent, it loads gtag.js and records a page view',
 
 test('keeps an existing dataLayer', () => {
   const document = { createElement: () => ({}), head: { appendChild(){} } };
-  const win = load('assets/js/analytics.js', {
+  const win = load('shared/analytics/analytics.js', {
     location: { hostname: 'bdnix.com' }, document,
     localStorage: fakeStorage({ bdnix_analytics: 'granted' }), dataLayer: [['earlier']]
   });

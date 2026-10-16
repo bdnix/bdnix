@@ -23,7 +23,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { inputs, keyOf } from './test-deps.mjs';
+import { inputs, keyOf, testFiles, testName } from './test-deps.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
@@ -43,15 +43,11 @@ const MAX_AGE = 14 * 24 * 3600 * 1000;
 // runner aren't inputs: they don't change what a spec does.
 const GLOBAL = ['playwright.config.mjs', 'tests/server.mjs', 'tests/coverage/ui-setup.mjs', 'tests/coverage/ui-teardown.mjs'];
 
-function list(dir){
-  return fs.readdirSync(dir).filter((f) => f.endsWith('.mjs')).map((f) => `${dir}/${f}`).sort();
-}
-
 // The cache key of a spec, given the site files it used.
 const key = (spec, deps) => keyOf(inputs(spec, deps, { global: GLOBAL }));
 
-const specs = list('tests/ui').filter((f) => f.endsWith('.spec.mjs'));
-const name = (spec) => path.basename(spec, '.spec.mjs');
+const specs = testFiles('ui');
+const name = testName;
 
 function entries(spec){
   const dir = path.join(CACHE, name(spec));
@@ -136,7 +132,7 @@ function passedSpecs(){
   const tests = new Map();
   (function walk(suites, file){
     for (const suite of suites || []) {
-      const spec = file || `tests/ui/${suite.file}`;
+      const spec = file || suite.file;
       for (const s of suite.specs || []) {
         const ok = s.tests.length > 0 && s.tests.every((t) => t.status === 'expected');
         tests.set(spec, (tests.get(spec) ?? true) && ok);
@@ -172,8 +168,10 @@ function prune(){
   if (!fs.existsSync(CACHE)) return;
   const names = new Set(specs.map(name));
   for (const dir of fs.readdirSync(CACHE)) {
-    if (!names.has(dir)) { fs.rmSync(path.join(CACHE, dir), { recursive: true, force: true }); continue; }
-    for (const e of entries(`tests/ui/${dir}.spec.mjs`)) {
+    if (!names.has(dir)) fs.rmSync(path.join(CACHE, dir), { recursive: true, force: true });
+  }
+  for (const spec of specs) {
+    for (const e of entries(spec)) {
       if (!(Date.now() - e.used < MAX_AGE)) fs.rmSync(e.dir, { recursive: true, force: true });
     }
   }

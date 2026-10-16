@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { load, plain, fakeStorage } from './load.mjs';
+import { load, plain, fakeStorage } from '../../../tests/unit/load.mjs';
 
-const FILE = 'assets/js/gamesave.js';
+const FILE = 'shared/gamesave/gamesave.js';
 
 function setup(localStorage = fakeStorage()){
   const listeners = {};

@@ -1,5 +1,5 @@
-import { test, expect } from './fixtures.mjs';
-import { openGame, press, listen, heard } from './games.mjs';
+import { test, expect } from '../../../tests/ui/fixtures.mjs';
+import { openGame, press, listen, heard } from '../../../tests/ui/games.mjs';
 
 // Every game has a mute button in its top bar (checkGame in checks.mjs
 // checks each). This checks the choice is shared: muting one game mutes the

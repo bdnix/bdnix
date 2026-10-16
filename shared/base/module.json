@@ -1,0 +1,8 @@
+{
+  "name": "base",
+  "kind": "shared",
+  "publish": {
+    "base.css": "/assets/css/base.css",
+    "fonts/": "/assets/fonts/"
+  }
+}

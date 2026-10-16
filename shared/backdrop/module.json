@@ -1,0 +1,10 @@
+{
+  "name": "backdrop",
+  "kind": "shared",
+  "publish": {
+    "blocks.js": "/assets/js/blocks.js"
+  },
+  "uses": [
+    "base"
+  ]
+}

@@ -3,20 +3,23 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { modules, sourceOf } from '../../tools/modules.mjs';
 
-// The translations in assets/lang/<code>/*.json, which tools/languages.mjs
-// bundles into the pack served at assets/lang/<code>.js. Adding a language
-// is adding a folder; these check it's complete and that each translation
-// fits its English.
+// The translations in assets/lang/<code>/*.json and each module's
+// lang/<code>.json, which tools/languages.mjs bundles into packs. Adding a
+// language is adding a folder; these check it's complete and that each
+// translation fits its English.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const LANG = path.join(root, 'assets', 'lang');
 const codes = fs.readdirSync(LANG).filter((f) => fs.statSync(path.join(LANG, f)).isDirectory());
 
+const mods = modules(root).list;
+// Every translation into a language: assets/lang/<code>/*.json, and every module's.
 function words(code){
   const dir = path.join(LANG, code), all = {};
-  for (const f of fs.readdirSync(dir).filter((f) => f.endsWith('.json') && f !== 'language.json')) {
-    Object.assign(all, JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')));
-  }
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json') && f !== 'language.json').map((f) => path.join(dir, f));
+  for (const m of mods) if (m.lang[code]) files.push(path.join(root, m.lang[code]));
+  for (const f of files) Object.assign(all, JSON.parse(fs.readFileSync(f, 'utf8')));
   return all;
 }
 const holes = (s) => [...new Set([...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]))].sort();
@@ -34,9 +37,11 @@ const Q = `(${Q1}(?:\\s*\\+\\s*${Q1})*)`;
 const unquote = (s) => [...s.matchAll(new RegExp(Q1, 'g'))].map((m) => m[0].slice(1, -1).replace(/\\(.)/g, '$1')).join('');
 function asked(){
   const found = new Map();
-  const dir = path.join(root, 'assets', 'js');
-  for (const f of fs.readdirSync(dir).filter((f) => f.endsWith('.js') && f !== 'lang.js')) {
-    const src = fs.readFileSync(path.join(dir, f), 'utf8');
+  // The scripts in assets/js and the modules' own (not their tests).
+  const scripts = fs.readdirSync(path.join(root, 'assets', 'js')).filter((f) => f.endsWith('.js')).map((f) => `assets/js/${f}`);
+  for (const m of mods) scripts.push(...fs.readdirSync(path.join(root, m.dir)).filter((f) => f.endsWith('.js')).map((f) => `${m.dir}/${f}`));
+  for (const f of scripts.filter((f) => !f.endsWith('/lang.js'))) {
+    const src = fs.readFileSync(path.join(root, f), 'utf8');
     const add = (s, plural) => found.set(unquote(s), { file: f, plural });
     for (const m of src.matchAll(new RegExp(`\\bt\\(\\s*${Q}`, 'g'))) add(m[1]);
     for (const m of src.matchAll(new RegExp(`\\bt\\([\\w.!=<>&|() ]+\\?\\s*${Q}\\s*:\\s*${Q}`, 'g'))) { add(m[1]); add(m[2]); }
@@ -53,7 +58,7 @@ test('each language has a name, and its digits and stylesheet if it has its own'
     assert.equal(typeof about.name, 'string', code);
     assert.ok(about.name.length > 0, code);
     if (about.digits) assert.equal([...about.digits].length, 10, code);
-    if (about.style) assert.ok(fs.existsSync(path.join(root, about.style)), about.style);
+    if (about.style) assert.ok(fs.existsSync(path.join(root, sourceOf(root, about.style.replace(/^\//, ''), mods).file)), about.style);
   }
 });
 

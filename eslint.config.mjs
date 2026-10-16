@@ -8,7 +8,7 @@ export default [
   { ignores: ['assets/vendor/**', 'assets/lang/*.js', 'coverage/**', 'test-results/**', 'playwright-report/**', '.test-cache/**', '_site/**'] },
   js.configs.recommended,
   {
-    files: ['assets/js/**/*.js'],
+    files: ['assets/js/**/*.js', '{apps,shared,site}/*/*.js'],
     // The vendored libraries' globals (assets/vendor).
     languageOptions: { ecmaVersion: 2020, sourceType: 'script', globals: { ...globals.browser, PDFLib: 'readonly', lamejs: 'readonly', fontkit: 'readonly' } },
     rules: {

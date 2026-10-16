@@ -1,5 +1,5 @@
-import { test, expect } from './fixtures.mjs';
-import { LIVE, GA, TAG, watchGoogle, serveLive } from './checks.mjs';
+import { test, expect } from '../../../tests/ui/fixtures.mjs';
+import { LIVE, GA, TAG, watchGoogle, serveLive } from '../../../tests/ui/checks.mjs';
 
 // Google Analytics (analytics.js) only runs on the live site, and only once
 // the visitor accepts. checkPage (checks.mjs) checks every page links it,
