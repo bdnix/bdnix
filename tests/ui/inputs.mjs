@@ -13,22 +13,33 @@ import { undeclared } from '../../tools/modules.mjs';
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const log = () => process.env.SERVED_LOG;
 
-// spec → the repository files served to it, from the log's lines.
-export function servedBySpec(text){
-  const served = new Map();
+// The test server's log (tests/server.mjs), one JSON line per response:
+// spec → { files (the source files the responses were made from), responses
+// (path → digest) }. A response no spec asked for ('') belongs to all of them.
+export function readLog(text){
+  const bySpec = new Map();
   for (const line of text.split('\n')) {
     if (!line) continue;
-    const [spec, file] = line.split('\t');
-    if (!served.has(spec)) served.set(spec, new Set());
-    served.get(spec).add(file);
+    const { spec, path, digest, from } = JSON.parse(line);
+    if (!bySpec.has(spec)) bySpec.set(spec, { files: new Set(), responses: {} });
+    const s = bySpec.get(spec);
+    for (const f of from) s.files.add(f);
+    s.responses[path] = digest;
   }
-  return served;
+  return bySpec;
 }
 
-// Every problem: "<spec> used <file>, which <module> doesn't declare".
-export function problems(text){
+// spec → the repository files served to it.
+export function servedBySpec(text){
+  return new Map([...readLog(text)].map(([spec, s]) => [spec, s.files]));
+}
+
+// Every problem: "<spec> used <file>, which its module doesn't declare".
+// filesBySpec is spec → the files it was served (servedBySpec()); the UI
+// result cache passes those of every spec, run or cached.
+export function problems(filesBySpec){
   const out = [];
-  for (const [spec, files] of servedBySpec(text)) {
+  for (const [spec, files] of filesBySpec) {
     for (const f of undeclared(root, spec, [...files])) out.push(`${spec} used ${f}, which its module doesn't declare (its own files, or a module in its uses)`);
   }
   return out;
@@ -42,6 +53,6 @@ export async function setup(){
 
 export async function teardown(){
   if (!log() || !fs.existsSync(log())) return;
-  const found = problems(fs.readFileSync(log(), 'utf8'));
+  const found = problems(servedBySpec(fs.readFileSync(log(), 'utf8')));
   if (found.length) throw new Error('Undeclared inputs:\n  ' + found.join('\n  '));
 }

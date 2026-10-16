@@ -9,6 +9,9 @@ const PORT = 4173;
 // cache (scripts/ui-cache.mjs sets its own) and the check that a module's
 // specs use only what it declares (tests/ui/inputs.mjs).
 process.env.SERVED_LOG ||= path.resolve('.test-cache/served.log');
+// With COVERAGE set, the fixture writes each test's coverage here, raw
+// (tests/ui/fixtures.mjs), and the teardown merges it into coverage/ui.
+if (process.env.COVERAGE) process.env.UI_COVERAGE ||= path.resolve('coverage/ui-raw');
 
 export default defineConfig({
   testDir: '.',

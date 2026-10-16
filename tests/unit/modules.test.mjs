@@ -271,15 +271,20 @@ test('boundaries: links, names, owners and tests, each failing and passing', () 
 // fails the run if a module's spec was served a file its module doesn't
 // declare.
 test('inputs: a module\'s spec served an undeclared file is a problem; other specs and declared files aren\'t', async () => {
-  const { servedBySpec, problems } = await import('../ui/inputs.mjs');
+  const { readLog, servedBySpec, problems } = await import('../ui/inputs.mjs');
+  const line = (spec, path, digest, from) => JSON.stringify({ spec, path, digest, from });
   const log = [
-    'apps/snake/test/page.spec.mjs\tapps/snake/snake.js',
-    'apps/snake/test/page.spec.mjs\tshared/sound/sound.js',
-    'apps/snake/test/page.spec.mjs\tassets/js/merge.js',
-    'tests/ui/merge.spec.mjs\tassets/js/merge.js',
+    line('apps/snake/test/page.spec.mjs', '/assets/js/snake.js', 'a1', ['apps/snake/snake.js', 'apps/snake/module.json']),
+    line('apps/snake/test/page.spec.mjs', '/assets/js/sound.js', 'b2', ['shared/sound/sound.js']),
+    line('apps/snake/test/page.spec.mjs', '/assets/js/merge.js', 'c3', ['assets/js/merge.js']),
+    line('tests/ui/merge.spec.mjs', '/assets/js/merge.js', 'c3', ['assets/js/merge.js']),
+    line('', '/robots.txt', 'd4', ['robots.txt']),
     ''
   ].join('\n');
-  assert.deepEqual([...servedBySpec(log).keys()], ['apps/snake/test/page.spec.mjs', 'tests/ui/merge.spec.mjs']);
-  assert.deepEqual(problems(log), ['apps/snake/test/page.spec.mjs used assets/js/merge.js, which its module doesn\'t declare (its own files, or a module in its uses)']);
-  assert.deepEqual(problems(log.replace('assets/js/merge.js\n', 'shared/base/base.css\n')), []);
+  const read = readLog(log);
+  assert.deepEqual([...read.keys()], ['apps/snake/test/page.spec.mjs', 'tests/ui/merge.spec.mjs', '']);
+  assert.deepEqual(read.get('apps/snake/test/page.spec.mjs').responses, { '/assets/js/snake.js': 'a1', '/assets/js/sound.js': 'b2', '/assets/js/merge.js': 'c3' });
+  assert.deepEqual([...servedBySpec(log).get('tests/ui/merge.spec.mjs')], ['assets/js/merge.js']);
+  assert.deepEqual(problems(servedBySpec(log)), ['apps/snake/test/page.spec.mjs used assets/js/merge.js, which its module doesn\'t declare (its own files, or a module in its uses)']);
+  assert.deepEqual(problems(new Map([['apps/snake/test/page.spec.mjs', ['shared/base/base.css', 'apps/snake/snake.js']]])), []);
 });

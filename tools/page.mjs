@@ -121,3 +121,33 @@ export function check(root, given){
   for (const p of packs(root)) errors.push(...p.errors);
   return [...new Set(errors)];
 }
+
+// The content type of each kind of file the site serves.
+export const TYPES = {
+  '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
+  '.json': 'application/json', '.xml': 'application/xml', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2',
+  '.ico': 'image/x-icon', '.wasm': 'application/wasm', '.pdf': 'application/pdf', '.txt': 'text/plain; charset=utf-8',
+  '.md': 'text/markdown; charset=utf-8'
+};
+
+// The whole answer to a request for a URL's path (its query ignored, as
+// GitHub Pages ignores ?v=): { status, type, body, from, errors }. A folder
+// answers with its index.html, whether it's in the repository or a module
+// publishes it. The test server answers every request with this, and the UI
+// result cache (scripts/ui-cache.mjs) asks it again to see whether what a
+// spec was served has changed, so the two can't differ.
+export function respond(root, urlPath, list){
+  const url = decodeURIComponent(urlPath.split('?')[0]);
+  const file = path.join(root, url);
+  if (!file.startsWith(root)) return { status: 403, type: 'text/plain', body: '', from: [], errors: [] };
+  let rel = path.relative(root, file).split(path.sep).join('/');
+  if (url.endsWith('/') || (fs.existsSync(file) && fs.statSync(file).isDirectory())) rel = path.posix.join(rel, 'index.html');
+  const pages = list || sitePages(root);
+  let served = serve(root, rel, pages);
+  const page = !served && !rel.endsWith('.html') && serve(root, rel + '/index.html', pages);
+  if (page) { served = page; rel += '/index.html'; }
+  if (!served) return { status: 404, type: 'text/plain', body: 'Not found', from: [rel], errors: [] };
+  if (served.errors.length) return { status: 500, type: 'text/plain', body: served.errors.join('\n'), from: served.from, errors: served.errors };
+  return { status: 200, type: TYPES[path.extname(rel)] || 'application/octet-stream', body: served.body, from: served.from, errors: [] };
+}

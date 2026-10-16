@@ -140,3 +140,23 @@ export function testName(file){
   const m = /(?:^|\/)(?:apps|shared|site)\/([\w-]+)\/test\/([\w.-]+?)\.(?:spec|test)\.mjs$/.exec(rel);
   return m ? `${m[1]}--${m[2]}` : path.posix.basename(rel).replace(/\.(spec|test)\.mjs$/, '');
 }
+
+// A digest of a response as a UI test saw it: its status, its content type
+// and its body. The site's ?v= stamps (ten hex digits, tools/page.mjs) are
+// left out of text: a stamp only names another file, which the test fetches,
+// and so has as a response of its own, if it uses it. Vendored libraries'
+// stamps are their version numbers, and stay.
+export function responseDigest({ status, type, body }){
+  let bytes = Buffer.isBuffer(body) ? body : Buffer.from(String(body));
+  if (/^(text\/|application\/(json|xml))/.test(type)) bytes = Buffer.from(bytes.toString('utf8').replace(/\?v=[0-9a-f]{10}(?![0-9a-f])/g, '?v='));
+  return crypto.createHash('sha256').update(`${status} ${type}\n`).update(bytes).digest('hex').slice(0, 32);
+}
+
+// Everything a UI spec's result depends on, one line each: its code and what
+// every spec runs on (inputs(), with no files of the site), and each path it
+// fetched with a digest of the response it gets now (responses: { path:
+// digest }). Not the code that made the responses: if the build or the test
+// server changes but answers the same, the spec's result can't change.
+export function uiInputs(spec, responses, options){
+  return [...inputs(spec, [], options), ...Object.keys(responses).sort().map((p) => `GET ${p} ${responses[p]}`)];
+}
