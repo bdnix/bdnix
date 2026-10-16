@@ -61,7 +61,7 @@ export function meta(p){
     `<meta property="og:image" content="${SITE}/assets/img/og.png">`,
     '<meta property="og:image:width" content="1200">',
     '<meta property="og:image:height" content="630">',
-    '<meta property="og:image:alt" content="bdnix: Time, well lost.">',
+    '<meta property="og:image:alt" content="bdnix(1) — games and tools that never leave your browser">',
     '<meta name="twitter:card" content="summary_large_image">',
     ...(ld ? [`<script type="application/ld+json">${json(ld)}</script>`] : []),
     '<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">',

@@ -27,12 +27,13 @@ const og = `<!doctype html><html><head>${fonts}<style>
   .mark{display:flex;align-items:center;gap:22px;font-weight:800;font-size:44px;letter-spacing:-.03em}
   .mark i{display:block;width:64px;height:64px;border-radius:12px;background:#0f172a;border:2px solid rgba(255,255,255,.12);
     font:700 36px/64px Inter,system-ui,sans-serif;font-style:normal;text-align:center}
-  h1{margin:0;font-size:92px;font-weight:800;line-height:1.02;letter-spacing:-.045em}
+  h1{margin:0;font-size:72px;font-weight:800;line-height:1.02;letter-spacing:-.045em}
   h1 em{font-style:normal;background:linear-gradient(100deg,#22d3ee 0%,#a855f7 55%,#f472b6 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  h1 .man{display:inline-block;margin-bottom:18px;font:400 34px 'JetBrains Mono',ui-monospace,monospace;letter-spacing:0;color:#22d3ee}
   p{margin:0;font:400 28px/1.45 'JetBrains Mono',ui-monospace,monospace;color:#8e97ab}
 </style></head><body>
   <div class="mark"><i>B</i>bdnix</div>
-  <h1>Time,<br><em>well lost.</em></h1>
+  <h1><code class="man">bdnix(1) —</code><br>games and tools that <em>never leave your browser</em></h1>
   <p>Falling Blocks · Maze Chase · PDF, audio and image tools<br>Free, in your browser. Nothing uploaded.</p>
 </body></html>`;
 

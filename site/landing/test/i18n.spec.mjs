@@ -12,10 +12,11 @@ test.describe('in Bangla', () => {
   // Whatever a test does, nothing is left in English.
   test.afterEach(({ page }) => expectTranslated(page));
 
-  test('the headline in Bangla, highlighting its second half', async ({ page }) => {
+  test('the headline in Bangla: the manual page line, its description translated', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1')).toHaveText('বেহিসেবিসময়।');
-    await expect(page.locator('h1 em')).toHaveText('সময়।');
+    await expect(page.locator('h1')).toHaveText('bdnix(1) —গেম আর টুল, সবই আপনার ব্রাউজারে');
+    await expect(page.locator('h1 .man')).toHaveText('bdnix(1) —');
+    await expect(page.locator('h1 em')).toHaveText('সবই আপনার ব্রাউজারে');
     await expect(page.locator('h1 br')).toHaveCount(1);
   });
 

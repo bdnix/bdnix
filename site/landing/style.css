@@ -10,9 +10,14 @@
 .kicker{margin:0 0 20px;font:400 13px var(--mono);color:var(--faint)}
 .hero h1{
   margin:0;
-  font-size:clamp(38px,7.6vw,80px);
+  font-size:clamp(34px,5.6vw,64px);
   text-wrap:balance;
   font-weight:800;line-height:1.02;letter-spacing:-.045em;
+}
+/* The headline is a manual page's NAME line: the command, then what it is. */
+.hero h1 .man{
+  display:inline-block;margin-bottom:.35em;
+  font:400 clamp(18px,2.6vw,28px) var(--mono);letter-spacing:0;color:var(--cyan);
 }
 .hero h1 em{
   font-style:normal;
