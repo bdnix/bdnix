@@ -12,12 +12,14 @@ test.describe('in Bangla', () => {
   // Whatever a test does, nothing is left in English.
   test.afterEach(({ page }) => expectTranslated(page));
 
-  test('the manual page headline in Bangla, the command\'s name as it is', async ({ page }) => {
+  test('the headline and the line above it in Bangla', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.man span')).toHaveText(['BDNIX(1)', 'সাধারণ কমান্ডের ম্যানুয়াল', 'BDNIX(1)']);
-    await expect(page.locator('.man-section')).toHaveText('নাম');
-    await expect(page.locator('h1')).toHaveText('bdnix - গেম আর টুল, সবই আপনার ব্রাউজারে');
-    await expect(page.locator('h1 b')).toHaveText('bdnix');
+    await expect(page.locator('h1')).toHaveText('গেম আর টুল,সবই আপনার ব্রাউজারে।');
+    await expect(page.locator('h1 em')).toHaveText('সবই আপনার ব্রাউজারে।');
+    // The line above it is in the text font: a monospace font's wide spaces
+    // would pull the Bangla words apart.
+    await expect(page.locator('.kicker')).toHaveText('// চিরকাল ফ্রি। সাইন আপ নেই, আপলোড নেই।');
+    expect(await page.locator('.kicker').evaluate((e) => getComputedStyle(e).fontFamily)).toMatch(/^Inter, Kalpurush/);
   });
 
   test('a card in Bangla for every game and tool', async ({ page }) => {

@@ -3,12 +3,9 @@ import { test, expect, expectNoSideScroll } from '../../../tests/ui/fixtures.mjs
 test('shows the games and tools, with no under-construction wording', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveTitle('bdnix — Free browser games and PDF, audio and image tools');
-  // The headline is a manual page: its top line, its NAME section, and the
-  // name and what it is.
-  await expect(page.locator('.man span')).toHaveText(['BDNIX(1)', 'General Commands Manual', 'BDNIX(1)']);
-  await expect(page.locator('.man-section')).toHaveText('NAME');
-  await expect(page.locator('h1')).toHaveText('bdnix - games and tools that never leave your browser');
-  await expect(page.locator('h1 b')).toHaveText('bdnix');
+  await expect(page.locator('h1')).toHaveText('Games and tools thatnever leave your browser.');
+  await expect(page.locator('h1 em')).toHaveText('never leave your browser.');
+  await expect(page.locator('.kicker')).toHaveText('// free forever. no sign-ups, no uploads.');
   await expect(page.locator('body')).not.toContainText(/under construction|check back soon|being built/i);
 
   // A card for every game and tool (written from every app's module.json), each a

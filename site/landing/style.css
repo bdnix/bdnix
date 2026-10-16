@@ -7,23 +7,19 @@
   width:100%;max-width:min(1600px,max(1120px,72vw));margin:0 auto;
   padding:40px clamp(16px,4vw,32px) 56px;
 }
-/* The headline is a manual page, as man shows it in a terminal: the page's
-   name at both ends of the top line, then its NAME section. */
-.man{
-  display:flex;justify-content:space-between;gap:12px;margin:0 0 28px;
-  font:400 13px var(--mono);color:var(--faint);
-}
-.man-section{margin:0;font:600 clamp(15px,1.8vw,18px) var(--mono);letter-spacing:.02em}
-.hero h1.man-name{
-  margin:10px 0 0;padding-left:clamp(20px,5vw,64px);max-width:30ch;
-  font:400 clamp(24px,3.8vw,44px)/1.3 var(--mono);letter-spacing:-.01em;text-wrap:pretty;
-}
-.man-name b{font-weight:600;color:var(--cyan)}
+.kicker{margin:0 0 20px;font:400 13px var(--mono);color:var(--faint)}
+/* A monospace font has no Bangla letters, only its wide spaces, which pull
+   Bangla words apart. */
+.kicker:lang(bn){font-family:var(--sans);font-size:14px}
 .hero h1{
   margin:0;
   font-size:clamp(38px,7.6vw,80px);
   text-wrap:balance;
   font-weight:800;line-height:1.02;letter-spacing:-.045em;
+}
+.hero h1 em{
+  font-style:normal;
+  background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;
 }
 .terminal{
   margin:28px 0 0;
