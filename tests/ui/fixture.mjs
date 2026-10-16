@@ -7,8 +7,9 @@ import { expect } from './fixtures.mjs';
 
 // Opens the page: css and js are the published URLs of stylesheets and
 // scripts, linked in that order (scripts at the end of the body, after the
-// markup).
-export async function openFixture(page, { css = [], js = [], body = '', bodyClass = '' } = {}){
+// markup). origin opens it elsewhere than the test server (www.bdnix.com, to
+// test what only runs on the live site).
+export async function openFixture(page, { css = [], js = [], body = '', bodyClass = '', origin = '' } = {}){
   const html = [
     '<!doctype html>',
     '<html lang="en">',
@@ -23,7 +24,7 @@ export async function openFixture(page, { css = [], js = [], body = '', bodyClas
     '</html>'
   ].join('\n');
   await page.route('**/fixture/', (route) => route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html }));
-  await page.goto('/fixture/');
+  await page.goto(origin + '/fixture/');
 }
 
 // A CSS property of the first element matching selector, as computed.

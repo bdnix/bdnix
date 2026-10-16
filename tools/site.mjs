@@ -1,11 +1,12 @@
 // `npm run build`: makes the published site in _site/, which the Pages
 // workflow (.github/workflows/pages.yml) deploys to www.bdnix.com.
 //
-// What's published is listed, not excluded: the landing page, every page in
-// scripts/site.mjs (its folder's index.html), what each module publishes
-// (its module.json's publish), assets/, the few files the site's root needs,
-// and the files only the build makes (sitemap.xml and the language packs). Anything else in the repository (tests, tooling, docs,
-// configs) stays out because it isn't on the list. Each file is written as
+// What's published is listed, not excluded: what each module publishes (its
+// module.json's publish: every page and its files), assets/ (the site's
+// images and each language's language.json), the few files the site's root
+// needs, and the files only the build makes (sitemap.xml and the language
+// packs). Anything else in the repository (tests, tooling, docs, configs)
+// stays out because it isn't on the list. Each file is written as
 // tools/page.mjs serves it: pages with their generated parts and ?v= stamps,
 // lang.js with its list of languages. Nothing generated is committed.
 import fs from 'node:fs';

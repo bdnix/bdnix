@@ -2,7 +2,10 @@
   "name": "pdftools",
   "kind": "shared",
   "publish": {
-    "pdftools.js": "/assets/js/pdftools.js"
+    "pdftools.js": "/assets/js/pdftools.js",
+    "vendor/pdf-lib.min.js": "/assets/vendor/pdf-lib.min.js",
+    "vendor/pdf-lib.LICENSE.md": "/assets/vendor/pdf-lib.LICENSE.md",
+    "vendor/pdfjs/": "/assets/vendor/pdfjs/"
   },
   "uses": ["files", "lang"]
 }

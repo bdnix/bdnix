@@ -10,6 +10,10 @@ on:
         description: Run every test, ignoring cached results
         type: boolean
         default: false
+  # Once a week, every test runs on master, ignoring cached results: a check
+  # that the cache hasn't kept a result it shouldn't have.
+  schedule:
+    - cron: '23 4 * * 1'
 
 permissions:
   contents: read
@@ -30,7 +34,8 @@ jobs:
   # test file (scripts/unit-cache.mjs, scripts/ui-cache.mjs). A test's inputs
   # are what it uses (scripts/test-deps.mjs), so a change reruns only the
   # tests that use what changed.
-  # Run the workflow by hand with "full" ticked to ignore the cache.
+  # Run the workflow by hand with "full" ticked to ignore the cache; the
+  # weekly scheduled run does too.
   unit:
     name: Unit tests
     runs-on: ubuntu-latest
@@ -46,7 +51,7 @@ jobs:
       # result, coverage and inputs of every unit test file that passed
       # recently (scripts/unit-cache.mjs).
       - name: Restore unit test results from cache
-        if: ${{ !inputs.full }}
+        if: ${{ !(inputs.full || github.event_name == 'schedule') }}
         uses: actions/cache/restore@v6
         with:
           path: .test-cache/unit
@@ -74,44 +79,41 @@ jobs:
   ui:
     name: UI tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # A full run (every spec, weekly or by hand) took 10 to 14 minutes on one
+    # machine before the suite reached 998 tests.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       # The newest cache from this branch, or else from master. It holds the
-      # result, coverage and inputs of every spec that passed recently.
+      # result, coverage and responses of every spec that passed recently.
       - name: Restore UI test results from cache
-        if: ${{ !inputs.full }}
+        if: ${{ !(inputs.full || github.event_name == 'schedule') }}
         uses: actions/cache/restore@v6
         with:
           path: .test-cache/ui
           key: ui-results-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: ui-results-
-      - id: plan
-        name: Find the specs to run
-        run: npm run coverage:ui:cached -- --plan
-      # Chromium is only needed if some spec has to run.
       - id: playwright
-        if: steps.plan.outputs.run != '0'
         name: Playwright version
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
       - id: browsers
-        if: steps.plan.outputs.run != '0'
         name: Restore Chromium from cache
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - name: Install Chromium
-        if: steps.plan.outputs.run != '0' && steps.browsers.outputs.cache-hit != 'true'
+        if: steps.browsers.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
       # The browser comes from the cache; the system libraries it needs are
       # apt packages, which can't be cached, so install just those.
       - name: Install Chromium's system libraries
-        if: steps.plan.outputs.run != '0' && steps.browsers.outputs.cache-hit == 'true'
+        if: steps.browsers.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
-      # Runs the specs the plan found, brings back the others' coverage,
-      # and adds every spec that passed to the cache.
+      # Runs the specs that need to, brings back the others' coverage, checks
+      # each module's specs used only what it declares, and adds every spec
+      # that passed to the cache.
       - name: UI tests with coverage
         run: npm run coverage:ui:cached
       # Saved even when a spec failed, so the ones that passed needn't run

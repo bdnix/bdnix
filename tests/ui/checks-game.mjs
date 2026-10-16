@@ -1,8 +1,8 @@
 // The checks every game gets, on top of checkPage(url, { game: true, ... })
 // from checks.mjs: the top bar's mute button and languages, pausing when the
 // page is left, played upright, a short wide window, the credit line and the
-// gamepad. Each game calls checkGame() from its own
-// tests/ui/<app>.site.spec.mjs.
+// gamepad. Each game calls checkGame() from its page target
+// (test/page.spec.mjs), and checkGameLanguages() from its i18n target.
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { openGame, press } from './games.mjs';
 import { inLanguage, expectTranslated } from './languages.mjs';

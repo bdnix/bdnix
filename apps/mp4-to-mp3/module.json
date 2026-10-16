@@ -1,0 +1,32 @@
+{
+  "name": "mp4-to-mp3",
+  "kind": "app",
+  "url": "/mp4-to-mp3/",
+  "publish": {
+    "index.html": "/mp4-to-mp3/index.html",
+    "audio.js": "/assets/js/audio.js",
+    "audio-core.js": "/assets/js/audio-core.js",
+    "audio.css": "/assets/css/audio.css",
+    "vendor/": "/assets/vendor/"
+  },
+  "uses": ["analytics", "avatar", "backdrop", "base", "features", "file", "files", "footer", "icon-btn", "lang", "page", "profile", "profile-chip", "seg", "settings", "tool", "tracks"],
+  "page": {
+    "title": "MP4 to MP3 — Convert video to audio free | bdnix",
+    "description": "Extract the sound from MP4, MOV, WebM and MKV videos, or convert M4A, WAV, FLAC and Ogg audio, to MP3 (64 to 320 kbps) or WAV, in stereo or mono. Convert several files at once. Runs in your browser; your files are never uploaded.",
+    "schema": "WebApplication",
+    "category": "MultimediaApplication"
+  },
+  "card": {
+    "kind": "tool",
+    "name": "MP4 to MP3",
+    "blurb": "Video or audio to MP3 or WAV",
+    "keywords": "tool audio video music sound convert extract wav",
+    "icon": [
+      "<rect x=\"3\" y=\"8\" width=\"22\" height=\"17\" rx=\"3\" fill=\"#22d3ee\" opacity=\".55\"/>",
+      "<path d=\"M11 12.5v8l6.5-4z\" fill=\"#eef1f8\" opacity=\".8\"/>",
+      "<path d=\"M27 31V16l9-2v14\" fill=\"none\" stroke=\"#a855f7\" stroke-width=\"2.4\" stroke-linejoin=\"round\"/>",
+      "<circle cx=\"24.5\" cy=\"31\" r=\"3.5\" fill=\"#a855f7\"/>",
+      "<circle cx=\"33.5\" cy=\"28\" r=\"3.5\" fill=\"#a855f7\"/>"
+    ]
+  }
+}

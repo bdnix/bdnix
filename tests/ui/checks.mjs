@@ -1,12 +1,12 @@
 // The checks every page gets: accessibility, its security policy, analytics,
-// search and share tags, layout. Each app calls them for its own page from its
-// own tests/ui/<app>.site.spec.mjs, so adding or changing an app runs that
-// app's tests and leaves every other app's (and their cached results) alone;
-// tests/unit/site.test.mjs checks that every page in scripts/site.mjs has its
-// checks. Games add checks-game.mjs, PDF tools checks-pdf.mjs, so a change to
-// one kind's checks only runs that kind's specs.
+// search and share tags, its fonts, layout. Each app and site page calls them
+// for its own page from its page target (test/page.spec.mjs), so adding or
+// changing an app runs that app's tests and leaves every other app's (and
+// their cached results) alone; tools/boundaries.mjs checks every page does.
+// Games add checks-game.mjs, PDF tools checks-pdf.mjs, so a change to one
+// kind's checks only runs that kind's specs.
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll, takeCspViolations } from './fixtures.mjs';
 import { expectTranslated } from './languages.mjs';
 
 export const LIVE = 'https://www.bdnix.com';
@@ -77,6 +77,34 @@ export function checkPage(url, opts = {}){
     expect(policy).toContain("object-src 'none'");
     expect(policy).not.toContain("'unsafe-inline'");
     expect(policy).not.toContain("'unsafe-eval'");
+    // And it stops what it's for: a script put into the page doesn't run, and
+    // one from elsewhere doesn't load. (The fixture fails any test in which
+    // the policy blocks something, so this takes what it blocked.)
+    const ran = await page.evaluate(() => new Promise((resolve) => {
+      const inline = document.createElement('script');
+      inline.textContent = 'window.injected = true';
+      document.head.appendChild(inline);
+      const remote = document.createElement('script');
+      remote.src = 'https://evil.example/steal.js';
+      remote.onerror = () => resolve({ inline: !!window.injected, remote: 'blocked' });
+      remote.onload = () => resolve({ inline: !!window.injected, remote: 'loaded' });
+      document.head.appendChild(remote);
+    }));
+    expect(ran).toEqual({ inline: false, remote: 'blocked' });
+    const blocked = takeCspViolations(page);
+    expect(blocked.some((m) => /inline script/i.test(m))).toBe(true);
+    expect(blocked.some((m) => m.includes('https://evil.example/steal.js'))).toBe(true);
+
+    // The fonts it preloads are the site's own, and ones base.css asks for.
+    const preloads = await page.locator('link[rel="preload"][as="font"]').evaluateAll((els) => els.map((l) => l.getAttribute('href')));
+    expect(preloads.length).toBeGreaterThan(0);
+    const css = await (await request.get('/assets/css/base.css')).text();
+    for (const href of preloads) {
+      expect(css, href).toContain(`url(${href})`);
+      const res = await request.get(href);
+      expect(res.status(), href).toBe(200);
+      expect(res.headers()['content-type'], href).toBe('font/woff2');
+    }
 
     // Google Analytics is linked, and stays off away from the live site.
     await expect(page.locator('head script[src^="/assets/js/analytics.js"]')).toHaveCount(1);

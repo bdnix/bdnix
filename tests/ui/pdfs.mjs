@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 import { inNewWindow } from './downloads.mjs';
 
 const require = createRequire(import.meta.url);
-export const L = require('../../assets/vendor/pdf-lib.min.js');
+export const L = require('../../shared/pdftools/vendor/pdf-lib.min.js');
 
 export const upload = (name, buffer, mimeType = 'application/pdf') => ({ name, mimeType, buffer: Buffer.from(buffer) });
 
@@ -130,7 +130,7 @@ export function imageCount(doc){
 
 // Encrypts a PDF with the standard security handler, the way PDF writers do,
 // so the unlock tool has something to open. Written independently of the
-// site's own code (assets/js/unlock-core.js), with node:crypto doing the
+// site's own code (apps/unlock-pdf/unlock-core.js), with node:crypto doing the
 // hashing and AES. cipher is 'rc4-40', 'rc4-128', 'aes-128' or 'aes-256'.
 // With objectStreams, every object but the streams goes in one compressed
 // object stream, found through a cross-reference stream.

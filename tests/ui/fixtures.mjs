@@ -1,16 +1,25 @@
 // Every UI test gets a page that fails the test on any uncaught JS error or
 // anything the content security policy blocks, and that doesn't fetch Google
 // Analytics (not needed, and keeps tests offline).
-// With COVERAGE set, it also records which parts of the site's scripts ran
-// (see tests/coverage/ui.mjs).
+// With UI_COVERAGE set to a folder, it also writes which parts of the site's
+// scripts ran there, raw as Chromium reports them: one file per test, in a
+// folder per spec (tests/coverage/ui.mjs merges them).
 // Every request to the test server says which spec made it, so the UI result
-// cache (scripts/ui-cache.mjs) knows which files each spec depends on.
+// cache (scripts/ui-cache.mjs) knows what each spec was served.
+// Every spec runs on this file, so a change to it reruns every spec: it
+// imports nothing of the repository's, and is kept small.
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test as base, expect } from '@playwright/test';
-import * as coverage from '../coverage/ui.mjs';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
+const COVERAGE = process.env.UI_COVERAGE;
+// The site's own scripts, as pages load them (not vendored libraries).
+const OWN = /\/assets\/js\/[\w-]+\.js(?:\?|$)/;
+
+// The folder a spec's raw coverage goes in: apps/snake/test/page.spec.mjs → apps~snake~test~page.spec.mjs
+export const coverageFolder = (spec) => spec.replace(/\//g, '~');
 
 // The spec file a test belongs to: the one Playwright ran, even for a test
 // declared in a helper it calls (such as checkPage in checks.mjs), whose
@@ -33,9 +42,16 @@ export const test = base.extend({
     violations.set(page, blocked);
     page.on('console', (m) => { if (m.type() === 'error' && /Content Security Policy/.test(m.text())) blocked.push(m.text()); });
     await page.route(/^https:\/\/([\w-]+\.)*(googletagmanager|google-analytics)\.com\//, (route) => route.abort());
-    if (coverage.enabled) await page.coverage.startJSCoverage({ resetOnNavigation: false });
+    if (COVERAGE) await page.coverage.startJSCoverage({ resetOnNavigation: false });
     await use(page);
-    if (coverage.enabled) await coverage.save(specFile(testInfo), await page.coverage.stopJSCoverage());
+    if (COVERAGE) {
+      const own = (await page.coverage.stopJSCoverage()).filter((e) => OWN.test(e.url));
+      if (own.length) {
+        const dir = path.join(COVERAGE, coverageFolder(path.relative(root, specFile(testInfo)).split(path.sep).join('/')));
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, `${testInfo.testId}-${testInfo.retry}.json`), JSON.stringify(own));
+      }
+    }
     expect(errors, 'uncaught errors on the page').toEqual([]);
     expect(blocked, 'blocked by the content security policy').toEqual([]);
   }

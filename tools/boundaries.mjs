@@ -10,10 +10,14 @@
 //   - no file belongs to two modules, or to a module and assets/ both;
 //   - every translation has one owner: no English is translated in two of
 //     the files that make a module's pack, or in two shared modules;
+//   - every page's title and description are its own and fit search results,
+//     and every app's card has what the landing page needs;
+//   - the landing page lists every app's card once;
 //   - every module has its test targets: an app the four in TARGETS (its
 //     page target running checkPage(), and checkGame() for a game, in
 //     English, its i18n target checkPageLanguages() and checkGameLanguages()),
-//     a shared module at least one test.
+//     a shared module at least one test. An app with one script (its page's)
+//     has no pure logic, so no logic target.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -65,7 +69,7 @@ export function boundaries(root){
     for (const file of filesOf(root, m.dir).filter((f) => !f.includes('/lang/') && /\.(js|mjs|css|html|json)$/.test(f))) {
       const text = read(root, file);
       for (const app of apps) {
-        const names = [app.url, `'${app.name}'`, `"${app.name}"`, ...app.files.map((f) => path.posix.basename(f.published)).filter((b) => b !== 'index.html')];
+        const names = [app.url, `'${app.name}'`, `"${app.name}"`, ...app.files.filter((f) => !/\/(vendor|fonts)\//.test(f.source)).map((f) => path.posix.basename(f.published)).filter((b) => b !== 'index.html')];
         if (app.card && app.card.best) names.push(app.card.best);
         for (const n of names) if (text.includes(n)) errors.push(`${file}: names the app ${app.name} (${n}); a shared module is about no app`);
       }
@@ -90,6 +94,46 @@ export function boundaries(root){
     }
   }
 
+  // Every page's title and description: its own, short enough for search
+  // results, and in the site's own names (other games' trademarks only ever
+  // appear in a credit line); every app's card: what the landing page needs.
+  const pages = list.filter((m) => m.kind !== 'shared' && m.page);
+  for (const m of pages) {
+    const { title = '', description = '' } = m.page;
+    const where = `${m.dir}/module.json`;
+    if (pages.some((o) => o !== m && o.url === m.url)) errors.push(`${where}: another page is at ${m.url}`);
+    if (pages.some((o) => o !== m && o.page.title === title)) errors.push(`${where}: another page has the title "${title}"`);
+    if (pages.some((o) => o !== m && o.page.description === description)) errors.push(`${where}: another page has the same description`);
+    if (title.length > 60) errors.push(`${where}: the title is longer than 60 characters`);
+    if (description.length > 230 || (!m.page.noindex && description.length < 70)) errors.push(`${where}: the description should be 70 to 230 characters`);
+    if (/Tetris|Pac-Man|Flappy|Crossy|Breakout|Blockade/.test(title + description)) errors.push(`${where}: another game's name in the title or description`);
+    if (m.kind !== 'app') continue;
+    const c = m.card;
+    if (m.page.schema !== 'WebApplication') errors.push(`${where}: an app's schema is WebApplication`);
+    if (!c.icon.length || !c.icon.every((l) => /^<(rect|circle|ellipse|path)\b[^>]*\/>$/.test(l))) errors.push(`${where}: the card's icon is rect, circle, ellipse and path elements`);
+    if (c.kind === 'game' && !/^bdnix_[a-z]+_best$/.test(c.best || '')) errors.push(`${where}: a game's card has its best-score key, bdnix_<game>_best`);
+    if (c.kind === 'tool' && c.best !== undefined) errors.push(`${where}: a tool has no best score`);
+  }
+
+  // The landing page lists every app once, games with the games and tools
+  // with the tools: that's the order of the site's pages and cards.
+  const home = list.filter((m) => m.cards);
+  if (home.length !== 1) errors.push(`one site page lists the apps' cards (module.json's cards), not ${home.length}`);
+  for (const h of home) {
+    for (const kind of ['games', 'tools']) {
+      for (const n of h.cards[kind]) {
+        const app = list.find((m) => m.name === n && m.kind === 'app');
+        if (!app) errors.push(`${h.dir}/module.json: cards list ${n}, which isn't an app`);
+        else if (`${app.card.kind}s` !== kind) errors.push(`${h.dir}/module.json: ${n} is a ${app.card.kind}, not one of the ${kind}`);
+      }
+    }
+    const listed = [...h.cards.games, ...h.cards.tools];
+    for (const app of list.filter((m) => m.kind === 'app')) {
+      const times = listed.filter((n) => n === app.name).length;
+      if (times !== 1) errors.push(`${h.dir}/module.json: cards list ${app.name} ${times} times, not once`);
+    }
+  }
+
   // Every module's tests.
   for (const m of list) {
     const tests = fs.existsSync(path.join(root, m.dir, 'test')) ? fs.readdirSync(path.join(root, m.dir, 'test')) : [];
@@ -97,7 +141,10 @@ export function boundaries(root){
       if (!tests.some((f) => /\.(test|spec)\.mjs$/.test(f))) errors.push(`${m.dir}: has no tests in test/`);
       continue;
     }
-    for (const t of TARGETS) if (!tests.includes(t)) errors.push(`${m.dir}: has no test/${t}`);
+    // An app's logic target tests its pure logic, which an app with a single
+    // script (its page's) doesn't have.
+    const scripts = m.files.filter((f) => /\.js$/.test(f.source) && !f.source.includes('/vendor/'));
+    for (const t of TARGETS) if (!tests.includes(t) && !(t === 'logic.test.mjs' && scripts.length < 2)) errors.push(`${m.dir}: has no test/${t}`);
     // A call of fn with the page's URL, not of a longer name ending in fn.
     const calls = (file, fn) => {
       if (!fs.existsSync(path.join(root, file))) return false;

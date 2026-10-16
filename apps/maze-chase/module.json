@@ -1,0 +1,30 @@
+{
+  "name": "maze-chase",
+  "kind": "app",
+  "url": "/maze-chase/",
+  "publish": {
+    "index.html": "/maze-chase/index.html",
+    "pacman.js": "/assets/js/pacman.js",
+    "pacman-core.js": "/assets/js/pacman-core.js",
+    "pacman.css": "/assets/css/pacman.css"
+  },
+  "uses": ["analytics", "backdrop", "base", "game-shell", "gamepad", "gamesave", "icon-btn", "lang", "sound", "upright"],
+  "page": {
+    "title": "Maze Chase — Play free in your browser | bdnix",
+    "description": "Play Maze Chase free in your browser, with the keyboard, or with swipes and touch buttons on a phone. Eat every dot, dodge the ghosts and beat your best score. Nothing to install.",
+    "schema": "WebApplication",
+    "category": "GameApplication"
+  },
+  "card": {
+    "kind": "game",
+    "name": "Maze Chase",
+    "blurb": "Eat dots, dodge ghosts",
+    "best": "bdnix_pacman_best",
+    "keywords": "game arcade maze ghosts dots",
+    "icon": [
+      "<path d=\"M14 20 L24.4 14 A12 12 0 1 0 24.4 26 Z\" fill=\"#facc15\"/>",
+      "<circle cx=\"29\" cy=\"20\" r=\"2\" fill=\"#eef1f8\" opacity=\".8\"/>",
+      "<circle cx=\"36\" cy=\"20\" r=\"2\" fill=\"#eef1f8\" opacity=\".8\"/>"
+    ]
+  }
+}

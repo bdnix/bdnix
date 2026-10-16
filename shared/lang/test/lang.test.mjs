@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { load, fakeStorage, plain } from '../../../tests/unit/load.mjs';
 
 // lang.js without a page: which language, and the words scripts
-// ask it for. (Translating a page is tested in tests/ui/languages.spec.mjs.)
+// ask it for. (Translating a page is tested in lang.spec.mjs.)
 const open = (saved, browser = ['en-US']) => load([], {
   localStorage: fakeStorage(saved ? { bdnix_lang: saved } : {}),
   navigator: { languages: browser }

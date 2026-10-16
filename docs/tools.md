@@ -104,7 +104,7 @@ Open a password-protected PDF, type its password, and download `<name>-unlocked.
 - It reads the standard PDF security handler in every revision: RC4 (40 to 128 bit), AES-128 and AES-256 (revisions 2 to 6), including object streams and crypt filters. Files encrypted for a certificate (public-key security) can't be unlocked and say so.
 - A file that isn't password-protected says so, as there's nothing to remove.
 
-pdf-lib can't decrypt, so the decryption is the tool's own: `unlock-core.js` holds the security handler and the MD5, SHA-256/384/512, RC4 and AES it needs, checked against Node's crypto in `tests/unit/unlock-core.test.mjs`. Neither the file nor the password leaves the browser.
+pdf-lib can't decrypt, so the decryption is the tool's own: `unlock-core.js` holds the security handler and the MD5, SHA-256/384/512, RC4 and AES it needs, checked against Node's crypto in `apps/unlock-pdf/test/logic.test.mjs`. Neither the file nor the password leaves the browser.
 
 ## MP4 to MP3
 
@@ -178,4 +178,4 @@ Makes an image fit a shape it doesn't have, such as a landscape photo for a squa
 - **Margin:** 0 to 25% of the frame's shorter side, added on every side of the image.
 - **Save as:** the same format as the original (any format other than JPEG, PNG or WebP becomes JPEG), or JPEG, WebP or PNG. JPEG and WebP are saved at 92% quality.
 
-The preview shows the chosen image with the current settings and the size in pixels of the result; with several images, the arrows or a click on a thumbnail pick which one. Each image gets its own download (`photo.png` becomes `photo-framed.png`). Changing a setting clears earlier results. As with Compress Images, the saved images don't carry the camera's hidden details, frames bigger than 16.7 megapixels are scaled down so iPhones and iPads can draw them, and an image the browser can't open or a format it can't save is marked in the list. The placement rules live in `assets/js/frame-core.js`.
+The preview shows the chosen image with the current settings and the size in pixels of the result; with several images, the arrows or a click on a thumbnail pick which one. Each image gets its own download (`photo.png` becomes `photo-framed.png`). Changing a setting clears earlier results. As with Compress Images, the saved images don't carry the camera's hidden details, frames bigger than 16.7 megapixels are scaled down so iPhones and iPads can draw them, and an image the browser can't open or a format it can't save is marked in the list. The placement rules live in `apps/fit-to-frame/frame-core.js`.

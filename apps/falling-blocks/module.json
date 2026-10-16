@@ -1,0 +1,34 @@
+{
+  "name": "falling-blocks",
+  "kind": "app",
+  "url": "/falling-blocks/",
+  "publish": {
+    "index.html": "/falling-blocks/index.html",
+    "tetris.js": "/assets/js/tetris.js",
+    "tetris-core.js": "/assets/js/tetris-core.js",
+    "tetris.css": "/assets/css/tetris.css"
+  },
+  "uses": ["analytics", "backdrop", "base", "game-shell", "gamepad", "gamesave", "icon-btn", "lang", "sound", "upright"],
+  "page": {
+    "title": "Falling Blocks — Play free in your browser | bdnix",
+    "description": "Play Falling Blocks free in your browser, with the keyboard or with touch buttons on a phone. Hold a piece, hard drop, clear lines and beat your best score. Nothing to install.",
+    "schema": "WebApplication",
+    "category": "GameApplication"
+  },
+  "card": {
+    "kind": "game",
+    "name": "Falling Blocks",
+    "blurb": "Stack blocks, clear lines",
+    "best": "bdnix_tetris_best",
+    "keywords": "game puzzle blocks stack lines arcade",
+    "icon": [
+      "<rect x=\"4\" y=\"18\" width=\"10\" height=\"10\" rx=\"2\" fill=\"#a855f7\"/>",
+      "<rect x=\"15\" y=\"18\" width=\"10\" height=\"10\" rx=\"2\" fill=\"#a855f7\"/>",
+      "<rect x=\"26\" y=\"18\" width=\"10\" height=\"10\" rx=\"2\" fill=\"#a855f7\"/>",
+      "<rect x=\"15\" y=\"7\" width=\"10\" height=\"10\" rx=\"2\" fill=\"#a855f7\"/>",
+      "<rect x=\"4\" y=\"29\" width=\"10\" height=\"10\" rx=\"2\" fill=\"#22d3ee\" opacity=\".55\"/>",
+      "<rect x=\"15\" y=\"29\" width=\"10\" height=\"10\" rx=\"2\" fill=\"#22d3ee\" opacity=\".55\"/>",
+      "<rect x=\"26\" y=\"29\" width=\"10\" height=\"10\" rx=\"2\" fill=\"#22d3ee\" opacity=\".55\"/>"
+    ]
+  }
+}

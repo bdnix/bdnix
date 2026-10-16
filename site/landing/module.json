@@ -1,0 +1,21 @@
+{
+  "name": "landing",
+  "kind": "site",
+  "url": "/",
+  "publish": {
+    "index.html": "/index.html",
+    "main.js": "/assets/js/main.js",
+    "style.css": "/assets/css/style.css"
+  },
+  "uses": ["analytics", "avatar", "backdrop", "base", "footer", "lang", "profile", "profile-chip", "search"],
+  "inputs": [".github/ISSUE_TEMPLATE/request.yml"],
+  "page": {
+    "title": "bdnix — Free browser games and PDF, audio and image tools",
+    "description": "Play Falling Blocks, Maze Chase, Flap, Road Hop, Snake, Brick Bounce and chess, merge, watermark, redact, sign and unlock PDFs, turn videos into MP3s, compress, frame or collage photos, all in your browser. Nothing uploaded.",
+    "schema": "WebSite"
+  },
+  "cards": {
+    "games": ["falling-blocks", "maze-chase", "flap", "road-hop", "snake", "brick-bounce", "chess"],
+    "tools": ["merge-pdf", "watermark-pdf", "redact-pdf", "sign-pdf", "unlock-pdf", "mp4-to-mp3", "compress-image", "photo-collage", "fit-to-frame"]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "<kbd>←</kbd> <kbd>→</kbd> move · <kbd>↑</kbd> rotate · <kbd>↓</kbd> soft drop<br><kbd>Space</kbd> hard drop · <kbd>C</kbd> hold · <kbd>P</kbd> pause": "<kbd>←</kbd> <kbd>→</kbd> সরান · <kbd>↑</kbd> ঘোরান · <kbd>↓</kbd> ধীরে নামান<br><kbd>Space</kbd> এক টানে নামান · <kbd>C</kbd> রেখে দিন · <kbd>P</kbd> বিরতি",
+  "Clear lines. Don't hit the top.": "লাইন মুছুন। ওপরে ঠেকাবেন না।",
+  "Falling Blocks": "ইটের খেলা",
+  "Falling Blocks board": "ইটের খেলার বোর্ড",
+  "Falling Blocks — Play free in your browser | bdnix": "ইটের খেলা — ফ্রিতে আপনার ব্রাউজারে খেলুন | bdnix",
+  "Hard drop": "এক টানে নামান",
+  "Held piece": "রাখা ব্লক",
+  "Hold": "রাখা",
+  "Inspired by Tetris, the classic puzzle game created by Alexey Pajitnov in 1984. Tetris is a trademark of its owner; bdnix isn’t affiliated with or endorsed by them.": "Tetris থেকে অনুপ্রাণিত, ১৯৮৪ সালে Alexey Pajitnov-এর তৈরি ক্লাসিক ধাঁধার খেলা। Tetris তার মালিকের ট্রেডমার্ক; bdnix তাদের সঙ্গে যুক্ত নয়, তাদের অনুমোদিতও নয়।",
+  "Lines": "লাইন",
+  "Move left": "বাঁয়ে সরান",
+  "Move right": "ডানে সরান",
+  "Next": "পরেরটি",
+  "Next pieces": "পরের ব্লকগুলো",
+  "Play Falling Blocks free in your browser, with the keyboard or with touch buttons on a phone. Hold a piece, hard drop, clear lines and beat your best score. Nothing to install.": "ইটের খেলা ফ্রিতে আপনার ব্রাউজারে খেলুন, কিবোর্ড দিয়ে বা ফোনে টাচ বোতাম দিয়ে। ব্লক রেখে দিন, এক টানে নামান, লাইন মুছুন আর নিজের সেরা স্কোর ছাড়িয়ে যান। কিছু ইনস্টল করতে হয় না।",
+  "Rotate": "ঘোরান",
+  "Soft drop": "ধীরে নামান",
+  "Stack blocks, clear lines": "ব্লক সাজান, লাইন মুছুন",
+  "Use the gamepad below. Tap the board to rotate.": "নিচের গেমপ্যাড ব্যবহার করুন। ঘোরাতে বোর্ডে চাপ দিন।",
+  "game puzzle blocks stack lines arcade": "গেম ধাঁধা ব্লক ইটের দেয়াল আর্কেড"
+}

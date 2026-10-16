@@ -1,49 +1,42 @@
 // UI test coverage: Chromium records which parts of each page's scripts
-// ran; tests/ui/fixtures.mjs hands it over after every test. Each spec's
-// data is kept apart, in coverage/ui/specs/<spec>/.cache, so the UI result
-// cache (scripts/ui-cache.mjs) can store it with the spec's result and bring
-// it back when the spec is skipped. Setup clears the previous run and
-// teardown merges every spec's data into coverage/ui.
+// ran, and tests/ui/fixtures.mjs writes it raw, one file per test, in a
+// folder per spec under UI_COVERAGE. The UI result cache (scripts/ui-cache.mjs)
+// keeps each spec's folder with its result and brings it back when the spec
+// is skipped. merge() turns any set of those folders into coverage/ui. With
+// `npm run coverage:ui`, setup clears the last run and teardown merges.
 import fs from 'node:fs';
 import path from 'node:path';
 import { CoverageReport } from 'monocart-coverage-reports';
 import { suite } from './shared.mjs';
-import { testName } from '../../scripts/test-deps.mjs';
 
-const OWN = /\/assets\/js\/[\w-]+\.js(?:\?|$)/;
 const OUT = 'coverage/ui';
-const SPECS = `${OUT}/specs`;
-
 // COVERAGE=record keeps each spec's data but leaves the merge to the caller.
 export const enabled = !!process.env.COVERAGE;
-export const options = suite('ui', { entryFilter: (entry) => OWN.test(entry.url) });
+export const options = suite('ui', { entryFilter: (entry) => /\/assets\/js\/[\w-]+\.js(?:\?|$)/.test(entry.url) });
 
-// Where a spec's raw data goes: tests/ui/merge.spec.mjs -> coverage/ui/specs/merge/.cache,
-// apps/snake/test/page.spec.mjs -> coverage/ui/specs/snake--page/.cache
-export const specDir = (file) => `${SPECS}/${testName(file)}/.cache`;
-
-export async function save(file, entries){
-  const own = entries.filter((e) => OWN.test(e.url));
-  if (own.length) await new CoverageReport({ ...options, outputDir: path.dirname(specDir(file)) }).add(own);
-}
-
-// Gathers every spec's data into coverage/ui/.cache (file names are unique)
-// and writes the reports from there, raw data included.
-export async function merge(){
+// Writes coverage/ui from every raw file in the given folders.
+export async function merge(folders){
   const report = new CoverageReport(options);
   report.cleanCache();
-  for (const name of fs.existsSync(SPECS) ? fs.readdirSync(SPECS) : []) {
-    const dir = `${SPECS}/${name}/.cache`;
-    if (fs.existsSync(dir)) fs.cpSync(dir, `${OUT}/.cache`, { recursive: true });
+  for (const dir of folders) {
+    if (!fs.existsSync(dir)) continue;
+    for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.json')).sort()) {
+      await report.add(JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')));
+    }
   }
-  fs.rmSync(SPECS, { recursive: true, force: true });
   await report.generate();
 }
 
+const raw = () => process.env.UI_COVERAGE;
+// The folders of every spec that wrote coverage in this run.
+const specFolders = () => (raw() && fs.existsSync(raw()) ? fs.readdirSync(raw()).map((d) => path.join(raw(), d)) : []);
+
 export async function setup(){
-  if (enabled) fs.rmSync(OUT, { recursive: true, force: true });
+  if (!enabled || process.env.COVERAGE === 'record') return;
+  fs.rmSync(OUT, { recursive: true, force: true });
+  if (raw()) fs.rmSync(raw(), { recursive: true, force: true });
 }
 
 export async function teardown(){
-  if (enabled && process.env.COVERAGE !== 'record') await merge();
+  if (enabled && process.env.COVERAGE !== 'record') await merge(specFolders());
 }

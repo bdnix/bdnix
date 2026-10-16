@@ -19,7 +19,6 @@ test('publish: every page, every asset and the root files', () => {
   for (const p of pages) assert.ok(files.includes(p.path.slice(1) + 'index.html'), p.path);
   for (const f of ROOT_FILES) assert.ok(files.includes(f), f);
   assert.ok(files.includes('sitemap.xml'));
-  assert.ok(files.includes('assets/lang/bn.js'));
   assert.ok(files.includes('assets/js/lang.js'));
   assert.ok(files.includes('assets/vendor/pdf-lib.min.js'));
   assert.deepEqual(files, [...files].sort());
@@ -41,28 +40,34 @@ test('publish: nothing but the site', () => {
   assert.ok(!files.some((f) => /^(tests|scripts|tools|docs|node_modules|\.github)\//.test(f) || f.split('/').some((part) => part.startsWith('.'))));
 });
 
-// A small repository of its own: one page beside the landing page.
+// A small repository of its own: one page beside the landing page, each a
+// site module.
 const PAGE = '<head>\n<!-- build:meta -->\n<!-- /build:meta -->\n<script src="/assets/js/a.js"></script>\n</head>\n';
+const site = (name, url, title) => JSON.stringify({ name, kind: 'site', url, publish: { 'index.html': `${url}index.html` }, page: { title, description: `${title}.` } });
 function repo(){
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bdnix-publish-'));
   const write = (f, s = f) => { fs.mkdirSync(path.dirname(path.join(dir, f)), { recursive: true }); fs.writeFileSync(path.join(dir, f), s); };
-  for (const f of [...ROOT_FILES, 'snake/notes.txt', 'assets/js/a.js', 'assets/js/lang.js', 'assets/css/.hidden', 'tests/x.mjs', 'README.md']) write(f);
-  for (const f of ['index.html', 'snake/index.html']) write(f, PAGE);
+  for (const f of [...ROOT_FILES, 'site/snake/notes.txt', 'assets/js/a.js', 'assets/js/lang.js', 'assets/css/.hidden', 'tests/x.mjs', 'README.md']) write(f);
+  write('site/home/module.json', site('home', '/', 'Home'));
+  write('site/home/index.html', PAGE);
+  write('site/snake/module.json', site('snake', '/snake/', 'Snake'));
+  write('site/snake/index.html', PAGE);
   return { dir, write };
 }
-const list = [{ path: '/', title: 'Home', description: 'Home.' }, { path: '/snake/', title: 'Snake', description: 'Snake.' }];
 
-test('publish: a page is its index.html; dotfiles and anything unlisted stay out', () => {
+test('publish: a page is what its module publishes; dotfiles and anything unlisted stay out', () => {
   const { dir } = repo();
-  assert.deepEqual(publishedFiles(dir, list), ['CNAME', 'LICENSE', 'assets/js/a.js', 'assets/js/lang.js', 'index.html', 'robots.txt', 'sitemap.xml', 'snake/index.html']);
+  assert.deepEqual(publishedFiles(dir), ['CNAME', 'LICENSE', 'assets/js/a.js', 'assets/js/lang.js', 'index.html', 'robots.txt', 'sitemap.xml', 'snake/index.html']);
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
 test('publish: a missing page or root file fails the build', () => {
-  const { dir } = repo();
-  assert.throws(() => publishedFiles(dir, [...list, { path: '/flap/' }]), /flap\/index\.html is published but doesn't exist/);
+  const { dir, write } = repo();
+  write('site/flap/module.json', site('flap', '/flap/', 'Flap'));
+  assert.throws(() => publishedFiles(dir), /flap\/index\.html is published but doesn't exist/);
+  fs.rmSync(path.join(dir, 'site/flap'), { recursive: true });
   fs.rmSync(path.join(dir, 'CNAME'));
-  assert.throws(() => publishedFiles(dir, list), /CNAME/);
+  assert.throws(() => publishedFiles(dir), /CNAME/);
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
@@ -70,7 +75,7 @@ test('publish: build copies exactly the published files, replacing the last buil
   const { dir, write } = repo();
   const out = path.join(dir, '_site');
   write('_site/stale.html');
-  const files = build(dir, out, list);
+  const files = build(dir, out);
   const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(d, e.name)) : [path.relative(out, path.join(d, e.name)).split(path.sep).join('/')]);
   assert.deepEqual(walk(out).sort(), files);
   assert.ok(!fs.existsSync(path.join(out, 'stale.html')));
@@ -87,9 +92,9 @@ test('publish: a broken page fails the build, naming every problem, and leaves t
   const { dir, write } = repo();
   const out = path.join(dir, '_site');
   write('_site/last.html');
-  write('snake/index.html', PAGE.replace('a.js', 'gone.js'));
-  write('flap/index.html', PAGE);
-  assert.throws(() => build(dir, out, list), (e) => /snake\/index\.html: \/assets\/js\/gone\.js doesn't exist/.test(e.message) && /flap\/index\.html: not in scripts\/site\.mjs/.test(e.message));
+  write('site/snake/index.html', PAGE.replace('a.js', 'gone.js'));
+  write('site/home/index.html', '<p>no markers</p>');
+  assert.throws(() => build(dir, out), (e) => /snake\/index\.html: \/assets\/js\/gone\.js doesn't exist/.test(e.message) && /site\/home\/index\.html: no <!-- build:meta --> markers/.test(e.message));
   assert.ok(fs.existsSync(path.join(out, 'last.html')));
   fs.rmSync(dir, { recursive: true, force: true });
 });

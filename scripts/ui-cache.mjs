@@ -2,20 +2,23 @@
 // spec whose result is already known. CI runs this; locally, `npm run
 // coverage:ui` still runs everything.
 //
-// A spec's result depends on the spec itself, the test helpers it imports
-// (and those they import), the npm packages those use, what every spec runs
-// on (see GLOBAL), and the site files it fetched from the test server
-// (scripts/test-deps.mjs). So changing a helper runs again only the specs that
-// use it, and nothing outside those inputs runs any spec again. When a spec
-// passes, the server's log (tests/server.mjs) says which files those were;
-// the cache keeps that list, a hash of all those files' contents, and the
-// spec's coverage. On the next run, a spec whose hash still matches isn't
-// run: its coverage is copied back instead, and coverage/ui ends up the same
-// as if every spec had run. A spec that fails, or any change to a file it
-// used, means it runs again.
+// A spec's result is kept against what it depends on (uiInputs() in
+// scripts/test-deps.mjs): its own code and the test helpers it imports, what
+// every spec runs on (GLOBAL), the npm packages those use, the Node version,
+// and every response the test server gave it, as a digest of its status,
+// type and body (the test server logs them, tests/server.mjs). Not the code
+// that made the responses: to see whether a cached spec still holds, this
+// answers each path it fetched again, with the same code the test server
+// answers with (respond() in tools/page.mjs), and compares. So a change to
+// the build or the server that serves the same bytes reruns nothing, and one
+// that changes a page reruns exactly the specs that fetched it. The cache
+// keeps each passing spec's responses, the source files they came from (for
+// the check that a module's specs use only what it declares,
+// tests/ui/inputs.mjs) and its coverage, and a spec whose key still matches
+// isn't run: its coverage is used instead. A spec that fails is never kept.
 //
-//   node scripts/ui-cache.mjs          run what's needed, update the cache
-//   node scripts/ui-cache.mjs --plan   only say which specs would run
+// It runs the specs that need to, then checks every spec has a passing result
+// and used only what its module declares, and merges their coverage.
 //
 // The cache lives in .test-cache/ui (UI_CACHE_DIR overrides it); CI saves
 // and restores that folder with actions/cache. UI_CACHE=off runs everything.
@@ -23,7 +26,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { inputs, keyOf, testName } from './test-deps.mjs';
+import { uiInputs, keyOf, testName, responseDigest } from './test-deps.mjs';
+import { respond } from '../tools/page.mjs';
+import { readLog, problems } from '../tests/ui/inputs.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
@@ -33,15 +38,16 @@ const OFF = process.env.UI_CACHE === 'off';
 const TMP = path.resolve('.test-cache/run');
 const SERVED = path.join(TMP, 'served.log');
 const RESULTS = path.join(TMP, 'results.json');
+const COVERAGE = path.join(TMP, 'coverage');
 // Entries no run has used for this long are dropped, so the cache stays small.
 const MAX_AGE = 14 * 24 * 3600 * 1000;
+// What every spec runs on, whatever it imports: Playwright's settings and the
+// fixture every spec's tests come from. Their imports and the packages they
+// use come along (scripts/test-deps.mjs). A change to any of it runs every
+// spec again. Nothing else is global: not the test server, the build, the
+// coverage merge or the checks run around the specs.
+export const GLOBAL = ['playwright.config.mjs', 'tests/ui/fixtures.mjs'];
 
-// What every spec runs on, whatever it imports: Playwright's settings, its
-// setup and teardown (coverage), and the test server. Their own imports and
-// the packages they use come along (scripts/test-deps.mjs). A change to any of
-// it runs every spec again. package.json, the rest of the lock file and this
-// runner aren't inputs: they don't change what a spec does.
-const GLOBAL = ['playwright.config.mjs', 'tests/server.mjs', 'tests/coverage/ui-setup.mjs', 'tests/coverage/ui-teardown.mjs', 'tests/ui/inputs-setup.mjs', 'tests/ui/inputs-teardown.mjs'];
 
 function list(dir){
   return fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.spec.mjs')).map((f) => `${dir}/${f}`).sort() : [];
@@ -51,12 +57,18 @@ function moduleTests(){
   return ['apps', 'shared', 'site'].filter((top) => fs.existsSync(top)).flatMap((top) =>
     fs.readdirSync(top).sort().map((m) => `${top}/${m}/test`));
 }
-
-// The cache key of a spec, given the site files it used.
-const key = (spec, deps) => keyOf(inputs(spec, deps, { global: GLOBAL }));
-
 const specs = [...list('tests/ui'), ...moduleTests().flatMap(list)];
+// The folder the fixture writes a spec's raw coverage in (tests/ui/fixtures.mjs).
+const coverageFolder = (spec) => spec.replace(/\//g, '~');
 const name = testName;
+
+// The digest of the answer to a path now, asked once per run.
+const now = new Map();
+function digestNow(p){
+  if (!now.has(p)) now.set(p, responseDigest(respond(root, p)));
+  return now.get(p);
+}
+const key = (spec, responses) => keyOf(uiInputs(spec, responses, { global: GLOBAL }));
 
 function entries(spec){
   const dir = path.join(CACHE, name(spec));
@@ -67,104 +79,102 @@ function entries(spec){
   });
 }
 
-// The cache entry that still matches a spec as it is now, if any.
+// The cache entry that still matches a spec as it is now, if any: its code is
+// the same, and every path it fetched answers as it did.
 function hit(spec){
   if (OFF) return null;
-  return entries(spec).find((e) => e.spec === spec && e.id === key(spec, e.deps)) || null;
+  return entries(spec).find((e) => e.spec === spec && e.responses && e.id === key(spec, Object.fromEntries(Object.keys(e.responses).map((p) => [p, digestNow(p)])))) || null;
 }
 
-const plan = specs.map((spec) => ({ spec, hit: hit(spec) }));
-const run = plan.filter((p) => !p.hit).map((p) => p.spec);
-for (const p of plan) console.log(`${p.hit ? 'cached' : 'run   '} ${p.spec}`);
+function plan(){
+  return specs.map((spec) => ({ spec, hit: hit(spec) }));
+}
+
+const current = plan();
+const run = current.filter((p) => !p.hit).map((p) => p.spec);
+for (const p of current) console.log(`${p.hit ? 'cached' : 'run   '} ${p.spec}`);
 console.log(`${run.length} of ${specs.length} specs to run.`);
 
-if (process.argv.includes('--plan')) {
-  if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `run=${run.length}\n`);
-  process.exit(0);
-}
-
-const { specDir, merge } = await import('../tests/coverage/ui.mjs');
 fs.rmSync(TMP, { recursive: true, force: true });
 fs.mkdirSync(TMP, { recursive: true });
-fs.rmSync('coverage/ui', { recursive: true, force: true });
 
 let status = 0;
 if (run.length) {
   const result = spawnSync('npx', ['playwright', 'test', ...run], {
     stdio: 'inherit',
-    env: { ...process.env, COVERAGE: 'record', SERVED_LOG: SERVED, UI_RESULTS: RESULTS }
+    env: { ...process.env, COVERAGE: 'record', UI_COVERAGE: COVERAGE, SERVED_LOG: SERVED, UI_RESULTS: RESULTS }
   });
   status = result.status === null ? 1 : result.status;
   store(run);
 }
-
-// Bring back the coverage of every spec that was skipped, then merge.
-for (const p of plan) {
-  if (!p.hit) continue;
-  fs.cpSync(path.join(p.hit.dir, 'coverage'), specDir(p.spec), { recursive: true });
-  touch(p.hit);
-}
-await merge();
-prune();
+status = (await merge()) || status;
 process.exit(status);
 
 // Stores a cache entry for every spec that passed in this run.
 function store(ran){
-  const passed = passedSpecs();
-  const served = readServed();
-  // A request that didn't say which spec made it could belong to any of them.
-  const anyone = served.get('') || new Set();
+  const passed = report();
+  const log = readLog(fs.existsSync(SERVED) ? fs.readFileSync(SERVED, 'utf8') : '');
+  // A response no spec asked for could belong to any of them.
+  const anyone = log.get('') || { files: new Set(), responses: {} };
+  let kept = 0;
   for (const spec of ran) {
     if (!passed.has(spec)) continue;
-    const deps = [...new Set([...(served.get(spec) || []), ...anyone])].sort();
-    const id = key(spec, deps);
+    const own = log.get(spec) || { files: new Set(), responses: {} };
+    const responses = { ...anyone.responses, ...own.responses };
+    const files = [...new Set([...own.files, ...anyone.files])].sort();
+    const id = key(spec, responses);
     const dir = path.join(CACHE, name(spec), id);
     fs.rmSync(dir, { recursive: true, force: true });
-    fs.mkdirSync(dir, { recursive: true });
-    if (fs.existsSync(specDir(spec))) fs.cpSync(specDir(spec), path.join(dir, 'coverage'), { recursive: true });
-    else fs.mkdirSync(path.join(dir, 'coverage'));
-    fs.writeFileSync(path.join(dir, 'entry.json'), JSON.stringify({ spec, used: Date.now(), deps }, null, 1));
+    fs.mkdirSync(path.join(dir, 'coverage'), { recursive: true });
+    const cov = path.join(COVERAGE, coverageFolder(spec));
+    if (fs.existsSync(cov)) fs.cpSync(cov, path.join(dir, 'coverage'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'entry.json'), JSON.stringify({ spec, used: Date.now(), responses, files }, null, 1));
+    kept++;
   }
-  console.log(`Cached the results of ${[...passed].filter((s) => ran.includes(s)).length} passing specs.`);
+  console.log(`Cached the results of ${kept} passing specs.`);
 }
 
-// Specs where every test, at every screen size, passed (Playwright's JSON report).
-function passedSpecs(){
+// Which specs passed every test at every screen size (Playwright's JSON
+// report).
+function report(){
   const passed = new Set();
-  let report;
-  try { report = JSON.parse(fs.readFileSync(RESULTS, 'utf8')); }
+  let data;
+  try { data = JSON.parse(fs.readFileSync(RESULTS, 'utf8')); }
   catch (e) { return passed; }
-  if (report.errors && report.errors.length) return passed;
+  // An error outside any test (the setup or teardown) means nothing passed.
+  if (data.errors && data.errors.length) return passed;
   // Each top-level suite is a spec file. A test's own `file` can be a helper
   // that declared it (checkPage in tests/ui/checks.mjs), so it counts for the
   // spec it's in.
-  const tests = new Map();
+  const ok = new Map();
   (function walk(suites, file){
     for (const suite of suites || []) {
       const spec = file || suite.file;
       for (const s of suite.specs || []) {
-        const ok = s.tests.length > 0 && s.tests.every((t) => t.status === 'expected');
-        tests.set(spec, (tests.get(spec) ?? true) && ok);
+        ok.set(spec, (ok.get(spec) ?? true) && s.tests.length > 0 && s.tests.every((t) => t.status === 'expected'));
       }
       walk(suite.suites, spec);
     }
-  })(report.suites);
-  for (const [file, ok] of tests) if (ok) passed.add(file);
+  })(data.suites);
+  for (const [spec, good] of ok) if (good) passed.add(spec);
   return passed;
 }
 
-// spec -> the repository files the test server served to it.
-function readServed(){
-  const served = new Map();
-  let text = '';
-  try { text = fs.readFileSync(SERVED, 'utf8'); } catch (e) {}
-  for (const line of text.split('\n')) {
-    if (!line) continue;
-    const [spec, file] = line.split('\t');
-    if (!served.has(spec)) served.set(spec, new Set());
-    served.get(spec).add(file);
-  }
-  return served;
+// After the specs have run: every spec must now have a matching cache entry, every spec's
+// served files must be declared by its module, and coverage/ui is made from
+// every spec's coverage. Returns the exit status.
+async function merge(){
+  const all = plan();
+  const missing = all.filter((p) => !p.hit).map((p) => p.spec);
+  if (missing.length) console.error(`No passing result for ${missing.length} specs:\n  ${missing.join('\n  ')}`);
+  const found = problems(new Map(all.filter((p) => p.hit).map((p) => [p.spec, p.hit.files])));
+  if (found.length) console.error('Undeclared inputs:\n  ' + found.join('\n  '));
+  const { merge: mergeCoverage } = await import('../tests/coverage/ui.mjs');
+  fs.rmSync('coverage/ui', { recursive: true, force: true });
+  await mergeCoverage(all.filter((p) => p.hit).map((p) => path.join(p.hit.dir, 'coverage')));
+  for (const p of all) if (p.hit) touch(p.hit);
+  prune();
+  return missing.length || found.length ? 1 : 0;
 }
 
 function touch(entry){

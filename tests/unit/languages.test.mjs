@@ -7,12 +7,10 @@ import { languages } from '../../tools/languages.mjs';
 import { modules } from '../../tools/modules.mjs';
 import { asked, misfits, lacking } from '../strings.mjs';
 
-// The translations of the pages that haven't moved into modules: those in
-// assets/lang/<code>/*.json and the shared modules' lang/<code>.json, which
-// tools/languages.mjs bundles into the pack served at assets/lang/<code>.js.
-// Adding a language is adding a folder; these check it's complete and that
-// each translation fits its English. (A moved app checks its own pack, in
-// its i18n target.)
+// The shared modules' translations (each module's lang/<code>.json), and
+// each language's assets/lang/<code>/language.json. Adding a language is
+// adding those; these check they're complete and that each translation fits
+// its English. (An app or site page checks its own pack, in its i18n target.)
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const LANG = path.join(root, 'assets', 'lang');
 const codes = fs.readdirSync(LANG).filter((f) => fs.statSync(path.join(LANG, f)).isDirectory());
@@ -24,10 +22,9 @@ const words = (code) => {
   return all;
 };
 
-// The scripts of those pages: the ones still in assets/js, and the shared
-// modules', but not lang.js itself.
+// The shared modules' scripts, but not lang.js itself.
 function scripts(){
-  const files = fs.readdirSync(path.join(root, 'assets/js')).filter((f) => f.endsWith('.js')).map((f) => `assets/js/${f}`);
+  const files = [];
   for (const m of fs.readdirSync(path.join(root, 'shared'))) {
     const dir = path.join(root, 'shared', m);
     if (!fs.statSync(dir).isDirectory()) continue;
@@ -55,6 +52,9 @@ test('every translation is there, with only the {values} its English has and the
 
 test('every language has the words every script asks for', () => {
   const wanted = asked(scripts());
-  assert.ok(wanted.size > 300, `found only ${wanted.size}`);
+  // (Each app checks its own, in its i18n target.) The scripts with words
+  // in them are all found:
+  const from = new Set([...wanted.values()].map((w) => w.file));
+  for (const f of ['analytics.js', 'files.js', 'pdftools.js', 'profile.js']) assert.ok(from.has(f), `no words found in ${f}`);
   for (const code of codes) assert.deepEqual(lacking(wanted, words(code)), [], `${code} has no translation for these`);
 });

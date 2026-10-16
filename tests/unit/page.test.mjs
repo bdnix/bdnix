@@ -5,11 +5,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { SITE } from '../../scripts/site.mjs';
-import { sitemap } from '../../scripts/parts.mjs';
+import { sitemap, SITE } from '../../scripts/parts.mjs';
 import { transformPage, serve, check, PARTS, sitePages } from '../../tools/page.mjs';
-import { languages, list, fillLanguages, stamp } from '../../tools/languages.mjs';
+import { languages, packs, list, fillLanguages, stamp } from '../../tools/languages.mjs';
 import { build } from '../../tools/site.mjs';
+import { modules } from '../../tools/modules.mjs';
 
 // tools/page.mjs makes what the site serves from the source tree, for the
 // build and the test server alike: pages with their generated parts and ?v=
@@ -18,8 +18,8 @@ import { build } from '../../tools/site.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const pages = sitePages(root);
 
-// A small repository of its own: a landing page, lang.js, a stylesheet and
-// one language, xx.
+// A small repository of its own: a landing page (a site module), lang.js, a
+// stylesheet and one language, xx.
 const LANG_JS = '(function(){\n  // build:languages\n  var LANGUAGES = [{"code":"en","name":"English"}];\n  // /build:languages\n  window.L = LANGUAGES;\n})();\n';
 const PAGE = [
   '<head>',
@@ -43,7 +43,8 @@ const LIST = [
 function repo(){
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bdnix-page-'));
   const write = (f, s) => { fs.mkdirSync(path.dirname(path.join(dir, f)), { recursive: true }); fs.writeFileSync(path.join(dir, f), s); };
-  write('index.html', PAGE);
+  write('site/home/module.json', JSON.stringify({ name: 'home', kind: 'site', url: '/', publish: { 'index.html': '/index.html' }, page: { title: 'Home', description: 'The home page.', schema: 'WebSite' } }));
+  write('site/home/index.html', PAGE);
   write('assets/js/lang.js', LANG_JS);
   write('assets/css/a.css', 'a {}');
   write('assets/css/xx.css', 'x {}');
@@ -68,23 +69,22 @@ test('a page: its blocks are filled, and the site\'s own scripts and styles stam
   // Vendored libraries keep the version they're linked with.
   assert.ok(html.includes('<script src="/assets/vendor/lib.js?v=1.2.3"></script>'));
   // Made from the page and what its parts come from.
-  assert.deepEqual(serve(dir, 'index.html', LIST).from, ['index.html', ...PARTS]);
+  assert.deepEqual(serve(dir, 'index.html', LIST).from, ['site/home/index.html', ...PARTS, 'site/home/module.json']);
   done();
 });
 
-test('a page: a missing file, or markers on a page the list lacks, are errors', () => {
+test('a page: a missing file, or markers on a page no module describes, are errors', () => {
   const stampOf = (rel) => (rel === 'assets/js/here.js' ? 'abc' : null);
   const page = '<script src="/assets/js/here.js"></script>\n<script src="/assets/js/gone.js"></script>\n';
   assert.deepEqual(transformPage('snake/index.html', page, stampOf, LIST), {
     html: '<script src="/assets/js/here.js?v=abc"></script>\n<script src="/assets/js/gone.js"></script>\n',
     errors: ['snake/index.html: /assets/js/gone.js doesn\'t exist']
   });
-  assert.deepEqual(transformPage('flap/index.html', '<!-- build:meta -->\n<!-- /build:meta -->\n', stampOf, LIST).errors, ['flap/index.html: not in scripts/site.mjs']);
+  assert.deepEqual(transformPage('flap/index.html', '<!-- build:meta -->\n<!-- /build:meta -->\n', stampOf, LIST).errors, ['flap/index.html: no module.json describes this page']);
   const { dir, write, done } = repo();
-  write('flap/index.html', PAGE);
-  assert.deepEqual(check(dir, LIST), ['flap/index.html: not in scripts/site.mjs', 'scripts/site.mjs: /snake/ has no index.html']);
-  write('snake/index.html', '<p>no markers</p>');
-  assert.ok(check(dir, LIST).includes('snake/index.html: no <!-- build:meta --> markers'));
+  assert.deepEqual(check(dir, LIST), ['/snake/ has no index.html']);
+  write('site/home/index.html', '<p>no markers</p>');
+  assert.ok(check(dir, LIST).includes('site/home/index.html: no <!-- build:meta --> markers'));
   done();
 });
 
@@ -97,7 +97,7 @@ test('languages: each folder\'s translations in one pack, and lang.js lists them
   assert.equal(xx.pack, '// Made by tools/languages.mjs from assets/lang/xx/*.json and the shared modules\' lang/xx.json. Don\'t edit it here.\nwindow.bdnixLang.pack({\n "Hello": "Helo",\n "Play": "Plai"\n});\n');
   assert.deepEqual(list(dir), [
     { code: 'en', name: 'English' },
-    { code: 'xx', name: 'Xx', digits: '0123456789', file: `/assets/lang/xx.js?v=${stamp(xx.pack)}`, style: `assets/css/xx.css?v=${stamp('x {}')}` }
+    { code: 'xx', name: 'Xx', digits: '0123456789', file: `/assets/lang/xx.js?v=${stamp(xx.pack)}`, packs: { home: `/assets/lang/home.xx.js?v=${stamp(packs(dir)[0].pack)}` }, style: `assets/css/xx.css?v=${stamp('x {}')}` }
   ]);
   // lang.js keeps every line where it is in the source (coverage reports against it).
   const js = text(serve(dir, 'assets/js/lang.js'));
@@ -118,7 +118,7 @@ test('languages: what each is made from, not counting the files behind its stamp
   const before = text(serve(dir, 'index.html', LIST));
   write('assets/lang/xx/two.json', JSON.stringify({ Hello: 'Halo' }));
   assert.notEqual(text(serve(dir, 'index.html', LIST)), before);
-  assert.deepEqual(serve(dir, 'index.html', LIST).from, ['index.html', ...PARTS]);
+  assert.deepEqual(serve(dir, 'index.html', LIST).from, ['site/home/index.html', ...PARTS, 'site/home/module.json']);
   // The same English translated two ways is an error.
   assert.deepEqual(languages(dir)[0].errors, ['assets/lang/xx/two.json: "Hello" is translated differently elsewhere']);
   assert.deepEqual(serve(dir, 'assets/lang/xx.js').errors, languages(dir)[0].errors);
@@ -131,7 +131,7 @@ test('other files are served as they are; a missing one or a folder is nothing',
   assert.deepEqual(serve(dir, 'assets/css/a.css'), { body: Buffer.from('a {}'), from: ['assets/css/a.css'], errors: [] });
   assert.equal(serve(dir, 'assets/css/gone.css'), null);
   assert.equal(serve(dir, 'assets'), null);
-  assert.deepEqual(serve(dir, 'sitemap.xml', LIST), { body: sitemap(LIST), from: PARTS, errors: [] });
+  assert.deepEqual(serve(dir, 'sitemap.xml', LIST), { body: sitemap(LIST), from: [...PARTS, 'site/home/module.json'], errors: [] });
   assert.equal(serve(dir, 'nowhere/index.html'), null);
   done();
 });
@@ -139,10 +139,11 @@ test('other files are served as they are; a missing one or a folder is nothing',
 // The source tree carries nothing generated: pages keep their markers with
 // nothing between them and link the site's own files without a stamp, and
 // lang.js has only English.
-test('site: the sources carry nothing generated, and fit scripts/site.mjs', () => {
+test('site: the sources carry nothing generated, and every page fits its module', () => {
   assert.deepEqual(check(root), []);
+  const { published } = modules(root);
   for (const p of pages) {
-    const html = fs.readFileSync(path.join(root, p.module ? `apps/${p.module}` : p.path, 'index.html'), 'utf8');
+    const html = fs.readFileSync(path.join(root, published.get(p.path.slice(1) + 'index.html').source), 'utf8');
     for (const m of html.matchAll(/^( *)<!-- build:(\w+)(?: \w+)? -->\n(.*)$/gm)) assert.equal(m[3], `${m[1]}<!-- /build:${m[2]} -->`, `${p.path}: ${m[2]}`);
     assert.doesNotMatch(html, /\/assets\/(js|css)\/[\w-]+\.(js|css)\?v=/, p.path);
   }
@@ -170,7 +171,7 @@ test('site: the test server serves exactly what _site/ has', async () => {
       assert.ok(Buffer.from(await res.arrayBuffer()).equals(fs.readFileSync(path.join(out, f))), f);
     }
     // Pages, at their own URL and with a stamp on it.
-    assert.ok(files.includes('snake/index.html') && files.includes('assets/lang/bn.js') && files.includes('sitemap.xml'));
+    assert.ok(files.includes('index.html') && files.includes('snake/index.html') && files.includes('assets/lang/snake.bn.js') && files.includes('sitemap.xml'));
     assert.equal(await (await fetch(`http://localhost:${port}/assets/css/base.css?v=whatever`)).text(), fs.readFileSync(path.join(out, 'assets/css/base.css'), 'utf8'));
     assert.equal((await fetch(`http://localhost:${port}/nowhere.js`)).status, 404);
   } finally {
