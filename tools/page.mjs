@@ -24,7 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pages as listed } from '../scripts/site.mjs';
 import { meta, footer, cards, scores, fill, sitemap } from '../scripts/parts.mjs';
-import { languages, packs, serveLanguage, stamp } from './languages.mjs';
+import { languages, packs, packPaths, about, serveLanguage, stamp } from './languages.mjs';
 import { modules, pages as merged, placement } from './modules.mjs';
 
 // What a page's generated parts are made from.
@@ -92,7 +92,8 @@ export function serve(root, rel, list = sitePages(root)){
 const appModules = (root) => modules(root).list.filter((m) => m.kind !== 'shared').map((m) => `${m.dir}/module.json`);
 
 // The files only the build makes, as paths they're served at.
-export const generated = (root) => ['sitemap.xml', ...languages(root).map((l) => `assets/lang/${l.code}.js`), ...packs(root).map((p) => p.path)];
+// Reads no translations, only which languages and modules there are.
+export const generated = (root) => ['sitemap.xml', ...about(root).map((l) => `assets/lang/${l.code}.js`), ...packPaths(root)];
 
 // What's wrong with how the pages, the modules and scripts/site.mjs fit
 // together: a page in the list without its file or its build:meta markers, a

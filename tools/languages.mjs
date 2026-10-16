@@ -76,6 +76,11 @@ export function packs(root){
   }));
 }
 
+// Where each module's own packs are served, without making them: reads only
+// the modules and each language.json.
+export const packPaths = (root) => modules(root).list.filter((m) => m.kind !== 'shared')
+  .flatMap((m) => about(root).map(({ code }) => `${LANG_DIR}/${m.name}.${code}.js`));
+
 // The list lang.js has, English first: each language's code, name and
 // digits, its pack and stylesheet with their ?v= stamps, and each module's
 // own pack (packs) by the module's name. With stamps off, nothing but
