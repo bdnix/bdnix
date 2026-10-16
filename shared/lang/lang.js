@@ -311,10 +311,11 @@
   if (current.style) document.write('<link rel="stylesheet" href="' + current.style + '">');
   // A module's page has a pack of its own, named on this script's tag with
   // {code} for the language (tools/languages.mjs); the others have the pack
-  // with every translation.
+  // with every translation. Only a path of the site's own, of the shape the
+  // build writes, is taken, and it's escaped before it's written.
   var own = document.currentScript && document.currentScript.getAttribute('data-pack');
-  var file = own ? own.replace('{code}', current.code) : current.file;
-  if (file) document.write('<script src="' + file + '"></script>');
+  var file = own && /^\/([a-z0-9-]+\/)*lang\/\{code\}\.js\?v=[0-9a-f]{10}$/.test(own) ? own.replace('{code}', current.code) : current.file;
+  if (file) document.write('<script src="' + file.replace(/[&<>"']/g, function(c){ return '&#' + c.charCodeAt(0) + ';'; }) + '"></script>');
   document.addEventListener('DOMContentLoaded', function(){
     loading = false;
     // No pack (it didn't load): the page stays in English.

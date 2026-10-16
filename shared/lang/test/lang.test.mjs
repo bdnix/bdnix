@@ -128,6 +128,12 @@ test('in a page, the pack lang.js lists, or the one the page names', () => {
   assert.match(listed.written[0], /^<link rel="stylesheet" href="\/assets\/css\/bangla\.css\?v=[0-9a-f]{10}">$/);
   assert.match(listed.written[1], /^<script src="\/assets\/lang\/bn\.js\?v=[0-9a-f]{10}"><\/script>$/);
   assert.equal(inPage({ getAttribute: () => null }).written[1], listed.written[1]);
-  const own = inPage({ getAttribute: (name) => (name === 'data-pack' ? '/snake/lang/{code}.js?v=abc' : null) });
-  assert.equal(own.written[1], '<script src="/snake/lang/bn.js?v=abc"></script>');
+  const named = (pack) => inPage({ getAttribute: (name) => (name === 'data-pack' ? pack : null) }).written[1];
+  assert.equal(named('/snake/lang/{code}.js?v=0123456789'), '<script src="/snake/lang/bn.js?v=0123456789"></script>');
+  assert.equal(named('/lang/{code}.js?v=abcdef0123'), '<script src="/lang/bn.js?v=abcdef0123"></script>');
+  // Anything else isn't a pack of the site's: the page gets the one lang.js lists.
+  for (const pack of ['"><script>alert(1)</script>', 'https://elsewhere.example/lang/{code}.js?v=0123456789', '//elsewhere.example/lang/{code}.js?v=0123456789',
+    '/snake/lang/{code}.js', '/snake/lang/{code}.js?v=0123456789"onload="x', '/snake/../lang/{code}.js?v=0123456789', '']) {
+    assert.equal(named(pack), listed.written[1], pack);
+  }
 });
