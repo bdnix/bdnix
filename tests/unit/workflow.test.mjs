@@ -32,7 +32,7 @@ test('the UI tests run on four machines, sharing out what the plan found; the un
   assert.match(jobs['ui-machine'], /SPECS: \$\{\{ fromJSON\(needs\.ui-plan\.outputs\.shards\)\[matrix\.share\] \}\}/);
   // GitHub's expressions have no arithmetic: a sum in one makes the whole
   // workflow invalid.
-  for (const [, e] of yml.matchAll(/\$\{\{(.*?)\}\}/g)) assert.doesNotMatch(e.replace(/'[^']*'/g, ''), /[\w\]\)] [-+*/] /, e);
+  for (const [, e] of yml.matchAll(/\$\{\{(.*?)\}\}/g)) assert.doesNotMatch(e.replace(/'[^']*'/g, ''), /[\w\])] [-+*/] /, e);
   assert.match(jobs['ui-machine'], /coverage:ui:cached -- --run \$SPECS/);
   // The last job, the check named "UI tests", fails unless every spec passed.
   assert.match(jobs.ui, /name: UI tests\n/);
