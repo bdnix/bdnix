@@ -7,6 +7,7 @@
   "Password": "পাসওয়ার্ড",
   "Password-protected · {how} · {size}": "পাসওয়ার্ড দিয়ে সুরক্ষিত · {how} · {size}",
   "Reading {name}…": "{name} পড়া হচ্ছে…",
+  "Remove a PDF’s password": "PDF-এর পাসওয়ার্ড সরান",
   "Remove the password from a PDF you can open, free: type its password once and download a copy that opens without one. Runs in your browser; your file and password are never uploaded.": "যে PDF আপনি খুলতে পারেন, ফ্রিতে তার পাসওয়ার্ড সরান: একবার পাসওয়ার্ড লিখুন, আর এমন একটি কপি ডাউনলোড করুন যা পাসওয়ার্ড ছাড়াই খোলে। আপনার ব্রাউজারেই চলে; আপনার ফাইল ও পাসওয়ার্ড কখনো আপলোড হয় না।",
   "Show": "দেখান",
   "Something went wrong while unlocking: {error}": "আনলক করার সময় একটা সমস্যা হয়েছে: {error}",
@@ -21,6 +22,7 @@
   "Unlocking…": "আনলক হচ্ছে…",
   "Works with the <b>user password</b> (the one that opens the file) or the <b>owner password</b>, which also lifts limits on printing, copying and editing.": "<b>ইউজার পাসওয়ার্ড</b> (যেটি দিয়ে ফাইল খোলে) বা <b>ওনার পাসওয়ার্ড</b>, দুটো দিয়েই চলে; ওনার পাসওয়ার্ড প্রিন্ট, কপি আর এডিট করার বাধাও তুলে দেয়।",
   "You need the password: this removes a password you know, it doesn’t guess one.": "পাসওয়ার্ডটি আপনাকে জানতে হবে: এই টুল আপনার জানা পাসওয়ার্ড সরায়, অনুমান করে বের করে না।",
+  "tool pdf password unlock decrypt remove protection encryption security documents": "টুল পিডিএফ পাসওয়ার্ড আনলক তালা খুলুন",
   "{name} could not be read as a PDF.": "{name} PDF হিসেবে পড়া যায়নি।",
   "{name} isn’t password-protected, so there’s no password to remove.": "{name} পাসওয়ার্ড দিয়ে সুরক্ষিত নয়, তাই সরানোর মতো কোনো পাসওয়ার্ড নেই।",
   "{name}: This PDF uses a kind of encryption this tool can’t remove.": "{name}: এই PDF এমন ধরনের এনক্রিপশন ব্যবহার করে যা এই টুল সরাতে পারে না।"

@@ -14,16 +14,20 @@
 //             (what tools/page.mjs makes its head tags from)
 //   card      an app's card on the landing page: kind ('game' or 'tool'),
 //             name, blurb, keywords, icon and, for a game, its best-score key
+//   cards     a site page that shows every app's card (the landing page): the
+//             apps in the order it shows them, { games: [...], tools: [...] },
+//             which is also the order of the site's pages
+//   scores    true for a site page that shows every game's best score
+//   inputs    files outside any module its tests use (rarely needed)
 // Its translations are lang/<code>.json beside module.json, and its tests are
-// in test/. Pages that haven't moved yet are still listed in scripts/site.mjs,
-// where a moved app keeps its place as { module: '<name>' }.
+// in test/.
 import fs from 'node:fs';
 import path from 'node:path';
 
 export const KINDS = { app: 'apps', shared: 'shared', site: 'site' };
 // The test targets every app has, in its test/ folder.
 export const TARGETS = ['logic.test.mjs', 'behaviour.spec.mjs', 'i18n.spec.mjs', 'page.spec.mjs'];
-const FIELDS = ['name', 'kind', 'url', 'publish', 'uses', 'page', 'card'];
+const FIELDS = ['name', 'kind', 'url', 'publish', 'uses', 'page', 'card', 'cards', 'scores', 'inputs'];
 const PAGE = ['title', 'description', 'schema', 'category', 'noindex'];
 const CARD = ['kind', 'name', 'fullName', 'blurb', 'keywords', 'icon', 'best', 'bestLabel'];
 
@@ -89,6 +93,10 @@ function read(root, dir, kind){
       if (!c.name || !c.blurb || !c.keywords || !Array.isArray(c.icon)) fail('card needs a name, blurb, keywords and icon');
     }
   } else if (m.card) fail('only an app has a card');
+  if (m.cards !== undefined && (kind !== 'site' || !m.cards || !Array.isArray(m.cards.games) || !Array.isArray(m.cards.tools))) fail('cards are a site page\'s { games: [...], tools: [...] }');
+  if (m.scores !== undefined && (kind !== 'site' || m.scores !== true)) fail('scores is true, on a site page');
+  const inputs = m.inputs === undefined ? [] : m.inputs;
+  if (!Array.isArray(inputs) || inputs.some((f) => typeof f !== 'string' || !fs.existsSync(path.join(root, f)))) fail('inputs should be a list of files that exist');
   const langs = {};
   const langDir = path.join(root, dir, 'lang');
   if (fs.existsSync(langDir)) {
@@ -98,7 +106,7 @@ function read(root, dir, kind){
       else fail(`lang/${f} should be lang/<code>.json`);
     }
   }
-  return { name, kind, dir, url: m.url, uses: Array.isArray(uses) ? uses : [], page: m.page, card: m.card, files, langs, errors };
+  return { name, kind, dir, url: m.url, uses: Array.isArray(uses) ? uses : [], page: m.page, card: m.card, cards: m.cards, scores: m.scores === true, inputs: Array.isArray(inputs) ? inputs : [], files, langs, errors };
 }
 
 // The folders that hold a module.json, as repository paths.
@@ -114,12 +122,16 @@ function folders(root){
   return found.sort();
 }
 
-// The modules, read once for as long as no module.json changes (the test
-// server asks on every request).
+// The modules, read once for as long as no module.json changes and no file
+// is added to or removed from a module's folder or the folders in it (its
+// lang/, a folder it publishes): the test server asks on every request.
 const memo = new Map();
 function signature(root){
+  const time = (f) => { try { return fs.statSync(path.join(root, f)).mtimeMs; } catch (e) { return 0; } };
   return folders(root).map(([dir]) => {
-    try { return dir + ':' + fs.statSync(path.join(root, dir, 'module.json')).mtimeMs; } catch (e) { return dir; }
+    let subs = [];
+    try { subs = fs.readdirSync(path.join(root, dir), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => `${dir}/${e.name}`); } catch (e) { /* gone */ }
+    return [dir, `${dir}/module.json`, ...subs].map((f) => `${f}:${time(f)}`).join(',');
   }).join('|');
 }
 
@@ -184,16 +196,25 @@ export function moduleOf(root, file){
 // What every page is made from, besides its own module: the parts every
 // page shares, the list of languages lang.js has (assets/lang/'s list of
 // names, and each language.json), and the site's images (assets/img/).
-export const SITE_INPUTS = ['scripts/site.mjs', 'scripts/parts.mjs', 'assets/lang/'];
+export const SITE_INPUTS = ['scripts/parts.mjs', 'assets/lang/'];
 
 // Whether a repository file is one a module's tests may use: the module's
-// own files, those of the modules it uses, what every page is made from
+// own files, those of the modules it uses, its inputs, every app's
+// module.json and translations for a page that shows their cards or scores,
+// what every page is made from
 // (SITE_INPUTS, each language's folder and its language.json), and the test
 // helpers and build tools (tests/, tools/).
 export function declared(root, mod, file){
   const { byName } = modules(root);
   const dirs = [mod.name, ...closure(byName, mod.name)].map((n) => byName.get(n).dir + '/');
   if (dirs.some((d) => file.startsWith(d) || file === d.slice(0, -1))) return true;
+  if (mod.inputs.includes(file)) return true;
+  // Every page's head tags, and the sitemap, are made from the list of the
+  // site's pages: every app and site module's module.json (pages()).
+  if (/^(apps|site)\/[\w-]+\/module\.json$/.test(file)) return true;
+  // A page that shows the apps' cards or scores has their words in its pack,
+  // as each app's own pack translates them (tools/languages.mjs).
+  if ((mod.cards || mod.scores) && /^(apps|shared)\/[\w-]+\/lang\/.*$/.test(file)) return true;
   if (/^(tests|tools)\//.test(file)) return true;
   if (/^assets\/lang(\/|\/[a-z]+(\/language\.json)?)?$/.test(file) || file.startsWith('assets/img/')) return true;
   return SITE_INPUTS.includes(file);
@@ -207,35 +228,16 @@ export function undeclared(root, test, files){
   return [...new Set(files)].filter((f) => f && !declared(root, mod, f.replace(/^\?/, ''))).sort();
 }
 
-// The site's pages: scripts/site.mjs's list, with each moved app or site
-// page in its place ({ module: name }) as its module.json describes it, in
-// the form scripts/parts.mjs takes ({ path, title, ..., app, module }).
-// A module the list doesn't place comes at the end.
-export function pages(root, list){
-  const { list: mods } = modules(root);
+// The site's pages, in the form scripts/parts.mjs takes ({ path, title, ...,
+// app, module }): the landing page (the site page at /), then the apps in the
+// order its cards list them, then any app it doesn't list, then the other
+// site pages by URL.
+export function pages(root){
+  const { list: mods, byName } = modules(root);
   const entry = (m) => ({ path: m.url, ...m.page, ...(m.card ? { app: m.card } : {}), module: m.name });
-  const placed = new Set();
-  const out = list.flatMap((p) => {
-    if (!p.module) return [p];
-    const m = mods.find((x) => x.name === p.module && x.kind !== 'shared');
-    if (!m) return [];
-    placed.add(m.name);
-    return [entry(m)];
-  });
-  for (const m of mods) if (m.kind !== 'shared' && !placed.has(m.name)) out.push(entry(m));
-  return out;
-}
-
-// What's wrong with how scripts/site.mjs places the modules: a module it
-// names that isn't an app or site page, and one it doesn't place.
-export function placement(root, list){
-  const { list: mods } = modules(root);
-  const errors = [];
-  for (const p of list) {
-    if (p.module && !mods.some((m) => m.name === p.module && m.kind !== 'shared')) errors.push(`scripts/site.mjs: ${p.module} isn't an app or site module`);
-  }
-  for (const m of mods) {
-    if (m.kind !== 'shared' && !list.some((p) => p.module === m.name)) errors.push(`scripts/site.mjs: ${m.dir} has no place in the list`);
-  }
-  return errors;
+  const home = mods.find((m) => m.kind === 'site' && m.url === '/');
+  const listed = home && home.cards ? [...home.cards.games, ...home.cards.tools] : [];
+  const apps = [...listed.map((n) => byName.get(n)).filter((m) => m && m.kind === 'app'), ...mods.filter((m) => m.kind === 'app' && !listed.includes(m.name))];
+  const others = mods.filter((m) => m.kind === 'site' && m !== home).sort((a, b) => a.url.localeCompare(b.url));
+  return [...(home ? [home] : []), ...new Set(apps), ...others].map(entry);
 }

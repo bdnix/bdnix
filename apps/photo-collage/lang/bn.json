@@ -2,6 +2,7 @@
   "0 photos": "০টি ছবি",
   "1080 px · social media": "১০৮০ px · সোশ্যাল মিডিয়া",
   "2048 px · sharp on any screen": "২০৪৮ px · যেকোনো স্ক্রিনে ঝকঝকে",
+  "3, 6 or 9 photos in one": "৩, ৬ বা ৯টি ছবি একসাথে",
   "4096 px · print": "৪০৯৬ px · প্রিন্ট",
   "7 to 10 layouts for 3, 6 or 9 photos.": "৩, ৬ বা ৯টি ছবির জন্য ৭ থেকে ১০টি বিন্যাস।",
   "<b>7 to 10 layouts for 3, 6 or 9 photos.</b> Grids, one or two big photos with smaller ones around them, steps, columns and mosaics.": "<b>৩, ৬ বা ৯টি ছবির জন্য ৭ থেকে ১০টি বিন্যাস।</b> গ্রিড, চারপাশে ছোট ছবিসহ এক বা দুটি বড় ছবি, সিঁড়ি, কলাম আর মোজাইক।",
@@ -69,6 +70,7 @@
   "Zoom photo {n}": "{n} নম্বর ছবি বড় করা",
   "choose photos": "ছবি বেছে নিন",
   "one of the photos couldn’t be opened.": "একটি ছবি খোলা যায়নি।",
+  "tool image photo picture grid combine": "টুল ছবি ফটো কোলাজ গ্রিড একসাথে",
   "your browser couldn’t save it. Try a smaller size.": "আপনার ব্রাউজার এটি সেভ করতে পারেনি। ছোট মাপ দিয়ে চেষ্টা করুন।",
   "{n} photo": "{n}টি ছবি",
   "{n} photos": "{n}টি ছবি"

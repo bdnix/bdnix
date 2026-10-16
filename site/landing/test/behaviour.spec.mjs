@@ -1,4 +1,4 @@
-import { test, expect, expectNoSideScroll } from './fixtures.mjs';
+import { test, expect, expectNoSideScroll } from '../../../tests/ui/fixtures.mjs';
 
 test('shows the games and tools, with no under-construction wording', async ({ page }) => {
   await page.goto('/');
@@ -6,7 +6,7 @@ test('shows the games and tools, with no under-construction wording', async ({ p
   await expect(page.locator('h1')).toHaveText('Play a little.Get things done.');
   await expect(page.locator('body')).not.toContainText(/under construction|check back soon|being built/i);
 
-  // A card for every game and tool (written from scripts/site.mjs), each a
+  // A card for every game and tool (written from every app's module.json), each a
   // link to its page with an icon, a name and a line about it.
   for (const section of ['Games', 'Tools']) {
     const cards = page.getByRole('region', { name: section }).locator('.card');
@@ -45,6 +45,8 @@ test('profile chip says "User" until a name is set, and links to the profile', a
   await page.evaluate(() => localStorage.setItem('bdnix_name', 'Musa'));
   await page.reload();
   await expect(chip).toHaveText('MMusa');
+  // The profile page is its own module's: here it's enough that the chip goes there.
+  await page.route('**/profile/', (route) => route.fulfill({ contentType: 'text/html', body: '<title>Profile</title>' }));
   await chip.click();
   await expect(page).toHaveURL(/\/profile\/$/);
 });
@@ -84,7 +86,7 @@ test('asks for tool and game requests by email or GitHub issue, and says the sit
 });
 
 test('a page\'s footer link to the request section goes there', async ({ page }) => {
-  await page.goto('/merge-pdf/');
+  await page.goto('/');
   await page.getByRole('link', { name: 'Suggest a tool or game' }).click();
   await expect(page).toHaveURL(/\/#suggest$/);
   await expect(page.locator('#suggest')).toBeInViewport();

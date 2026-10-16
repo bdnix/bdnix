@@ -1,5 +1,6 @@
 {
   "Add your files, put them in order, pick the pages you want, check the preview, and merge them into one PDF. Everything happens in your browser. Your files are never uploaded.": "ফাইলগুলো যোগ করুন, সাজিয়ে নিন, যে পৃষ্ঠাগুলো চান বেছে নিন, প্রিভিউ দেখে নিন, তারপর জোড়া লাগিয়ে একটি PDF বানান। সবকিছু আপনার ব্রাউজারেই হয়। আপনার ফাইল কখনো আপলোড হয় না।",
+  "Combine PDFs into one": "কয়েকটি PDF এক করুন",
   "Combine several PDF files into one, free: put them in order and pick the pages you want from each. Runs in your browser; your files are never uploaded.": "কয়েকটি PDF ফাইল ফ্রিতে একটিতে জোড়া লাগান: ক্রম সাজিয়ে নিন আর প্রতিটি থেকে যে পৃষ্ঠাগুলো চান বেছে নিন। আপনার ব্রাউজারেই চলে; আপনার ফাইল কখনো আপলোড হয় না।",
   "Fix the page ranges marked in red first": "আগে লাল দাগ দেওয়া পৃষ্ঠার পরিসরগুলো ঠিক করুন",
   "Fix the page ranges marked in red to see the preview.": "প্রিভিউ দেখতে লাল দাগ দেওয়া পৃষ্ঠার পরিসরগুলো ঠিক করুন।",
@@ -25,6 +26,7 @@
   "Updating the preview…": "প্রিভিউ হালনাগাদ হচ্ছে…",
   "all": "সব",
   "all, or e.g. {example}": "সব, বা যেমন {example}",
+  "tool pdf combine join documents": "টুল পিডিএফ জোড়া একত্র মার্জ ডকুমেন্ট",
   "{files} · {pages} selected": "{files} · {pages} বাছাই করা হয়েছে",
   "{name} could not be read": "{name} পড়া যায়নি",
   "{name} is not a PDF": "{name} PDF নয়",

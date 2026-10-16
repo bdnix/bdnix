@@ -1,8 +1,11 @@
-// The parts of the pages that tools/page.mjs makes from scripts/site.mjs:
+// The parts of the pages that tools/page.mjs makes from the site's pages
+// (each app and site module's module.json, tools/modules.mjs):
 // each page's head tags, the footer, the landing page's cards, the profile
 // page's scores and the sitemap. Pure functions of the site's data, so they
 // can be unit tested.
-import { SITE } from './site.mjs';
+
+// Where the site is published.
+export const SITE = 'https://www.bdnix.com';
 
 export const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // JSON on one line, spaced like the rest of the page's markup.

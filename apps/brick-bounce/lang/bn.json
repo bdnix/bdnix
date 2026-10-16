@@ -2,6 +2,7 @@
   "<kbd>←</kbd> <kbd>→</kbd> or the mouse to move · <kbd>Space</kbd> or click to launch · <kbd>P</kbd> pause": "<kbd>←</kbd> <kbd>→</kbd> বা মাউস দিয়ে সরান · <kbd>Space</kbd> বা ক্লিক করে বল ছাড়ুন · <kbd>P</kbd> বিরতি",
   "Balls": "বল",
   "Bounce the ball off your paddle to break every brick. Don’t let it past you. Glowing bricks drop powers: catch them for more balls, a fireball, a laser, a wider paddle or an extra ball.": "প্যাডেলে বল ফিরিয়ে সব ইট ভাঙুন। বলকে পাশ কাটিয়ে যেতে দেবেন না। জ্বলজ্বলে ইট থেকে শক্তি পড়ে: ধরলে পাবেন আরও বল, আগুনের গোলা, লেজার, চওড়া প্যাডেল বা একটি বাড়তি বল।",
+  "Bounce the ball, smash the bricks": "বল দিয়ে দেয়াল ভাঙুন",
   "Brick Bounce": "ইট ভাঙা",
   "Brick Bounce board": "ইট ভাঙার বোর্ড",
   "Brick Bounce — Play free in your browser | bdnix": "ইট ভাঙা — ফ্রিতে আপনার ব্রাউজারে খেলুন | bdnix",
@@ -21,5 +22,6 @@
   "Wall": "দেয়াল",
   "Wall {n}": "দেয়াল {n}",
   "Wall {n} cleared!": "দেয়াল {n} সাফ!",
+  "game arcade ball paddle bricks": "গেম আর্কেড বল প্যাডেল ইট",
   "{n} balls left": "আর {n}টি বল"
 }

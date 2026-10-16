@@ -1,5 +1,6 @@
-import { test, expect, expectNoSideScroll } from './fixtures.mjs';
-import { LIVE, TAG, watchGoogle, serveLive } from './checks.mjs';
+import { test, expect, expectNoSideScroll } from '../../../tests/ui/fixtures.mjs';
+import { LIVE, TAG, watchGoogle, serveLive } from '../../../tests/ui/checks.mjs';
+import { openFixture } from '../../../tests/ui/fixture.mjs';
 
 const scores = (page) => page.locator('.score').evaluateAll((els) => els.map((e) => ({
   game: e.querySelector('span').textContent,
@@ -74,7 +75,11 @@ test('editing the name saves it and updates the chip elsewhere', async ({ page }
 
   await page.reload();
   await expect(page.locator('h1')).toHaveText('Musa Rahman');
-  await page.goto('/merge-pdf/');
+  // Elsewhere: any page with the chip and profile.js.
+  await openFixture(page, {
+    js: ['/assets/js/lang.js', '/assets/js/profile.js'],
+    body: '<a class="profile-chip" href="/profile/"><span class="avatar" data-profile-initial>U</span><span data-profile-name>User</span></a>'
+  });
   await expect(page.locator('.profile-chip')).toHaveText('MMusa Rahman');
 });
 

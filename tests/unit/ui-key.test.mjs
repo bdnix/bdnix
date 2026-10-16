@@ -12,32 +12,36 @@ import { responseDigest, uiInputs, keyOf } from '../../scripts/test-deps.mjs';
 // and that a spec's key changes exactly when something it fetched does.
 
 const PAGE = '<head>\n<!-- build:meta -->\n<!-- /build:meta -->\n<link rel="stylesheet" href="/assets/css/a.css">\n</head>\n<p>Home</p>\n';
-const LIST = [{ path: '/', title: 'Home', description: 'The home page.' }, { path: '/b/', title: 'B', description: 'Page B.' }];
+const site = (name, url) => JSON.stringify({ name, kind: 'site', url, publish: { 'index.html': `${url}index.html` }, uses: ['look'], page: { title: name, description: `The ${name} page.` } });
+// A site of two pages, / and /b/, each a site module, sharing a stylesheet.
 function repo(){
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bdnix-ui-key-'));
   const write = (f, s) => { fs.mkdirSync(path.dirname(path.join(dir, f)), { recursive: true }); fs.writeFileSync(path.join(dir, f), s); };
-  write('index.html', PAGE);
-  write('b/index.html', PAGE.replace('Home', 'B'));
-  write('assets/css/a.css', 'a {}');
-  write('assets/js/lang.js', '(function(){\n  // build:languages\n  var LANGUAGES = [{"code":"en","name":"English"}];\n  // /build:languages\n})();\n');
+  write('site/home/module.json', site('home', '/'));
+  write('site/home/index.html', PAGE);
+  write('site/bee/module.json', site('bee', '/b/'));
+  write('site/bee/index.html', PAGE.replace('Home', 'B'));
+  write('shared/look/module.json', JSON.stringify({ name: 'look', kind: 'shared', publish: { 'a.css': '/assets/css/a.css', 'lang.js': '/assets/js/lang.js' } }));
+  write('shared/look/a.css', 'a {}');
+  write('shared/look/lang.js', '(function(){\n  // build:languages\n  var LANGUAGES = [{"code":"en","name":"English"}];\n  // /build:languages\n})();\n');
   return { dir, write, done: () => fs.rmSync(dir, { recursive: true, force: true }) };
 }
 // What a spec would be keyed on now, having fetched these paths.
-const keyNow = (dir, spec, paths) => keyOf(uiInputs(spec, Object.fromEntries(paths.map((p) => [p, responseDigest(respond(dir, p, LIST))])), { read: () => '', node: '22' }));
+const keyNow = (dir, spec, paths) => keyOf(uiInputs(spec, Object.fromEntries(paths.map((p) => [p, responseDigest(respond(dir, p))])), { read: () => '', node: '22' }));
 
 test('respond: a page, a file, a folder\'s index, a missing file and a path outside the site', () => {
   const { dir, done } = repo();
-  const home = respond(dir, '/', LIST);
+  const home = respond(dir, '/');
   assert.equal(home.status, 200);
   assert.equal(home.type, 'text/html; charset=utf-8');
-  assert.match(String(home.body), /<title>Home<\/title>/);
+  assert.match(String(home.body), /<title>home<\/title>/);
   assert.match(String(home.body), /a\.css\?v=[0-9a-f]{10}/);
-  assert.deepEqual(respond(dir, '/b', LIST).body, respond(dir, '/b/', LIST).body);
-  const css = respond(dir, '/assets/css/a.css?v=anything', LIST);
-  assert.deepEqual([css.status, css.type, String(css.body), css.from], [200, 'text/css; charset=utf-8', 'a {}', ['assets/css/a.css']]);
-  assert.deepEqual([respond(dir, '/gone.js', LIST).status, respond(dir, '/gone.js', LIST).from], [404, ['gone.js']]);
-  assert.equal(respond(dir, '/../etc/passwd', LIST).status, 403);
-  assert.equal(respond(dir, '/%2e%2e/%2e%2e/etc/passwd', LIST).status, 403);
+  assert.deepEqual(respond(dir, '/b').body, respond(dir, '/b/').body);
+  const css = respond(dir, '/assets/css/a.css?v=anything');
+  assert.deepEqual([css.status, css.type, String(css.body), css.from], [200, 'text/css; charset=utf-8', 'a {}', ['shared/look/a.css', 'shared/look/module.json']]);
+  assert.deepEqual([respond(dir, '/gone.js').status, respond(dir, '/gone.js').from], [404, ['gone.js']]);
+  assert.equal(respond(dir, '/../etc/passwd').status, 403);
+  assert.equal(respond(dir, '/%2e%2e/%2e%2e/etc/passwd').status, 403);
   done();
 });
 
@@ -66,12 +70,12 @@ test('a spec\'s key changes exactly when something it fetched answers differentl
   // A change to the stylesheet: the spec that fetched it, not the one that
   // only fetched a page linking it (that page's stamp changes, but the stamp
   // isn't part of the digest).
-  write('assets/css/a.css', 'a { color: red }');
+  write('shared/look/a.css', 'a { color: red }');
   assert.notEqual(keyNow(dir, 'tests/ui/home.spec.mjs', home), before.home);
   assert.equal(keyNow(dir, 'tests/ui/b.spec.mjs', b), before.b);
   // A change to page B: only the spec that fetched it.
-  write('assets/css/a.css', 'a {}');
-  write('b/index.html', PAGE.replace('Home', 'Bee'));
+  write('shared/look/a.css', 'a {}');
+  write('site/bee/index.html', PAGE.replace('Home', 'Bee'));
   assert.equal(keyNow(dir, 'tests/ui/home.spec.mjs', home), before.home);
   assert.notEqual(keyNow(dir, 'tests/ui/b.spec.mjs', b), before.b);
   // A file that a spec found missing appears, and one it found goes.

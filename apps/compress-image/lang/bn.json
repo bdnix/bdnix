@@ -20,6 +20,7 @@
   "Longest side": "লম্বা দিক",
   "Make photos and images smaller, to email, upload or free up space. Everything happens in your browser. Your images are never uploaded.": "ইমেইলে পাঠাতে, আপলোড করতে বা জায়গা খালি করতে ছবির সাইজ কমান। সবকিছু আপনার ব্রাউজারেই হয়। আপনার ছবি কখনো আপলোড হয় না।",
   "Make photos and images smaller: save JPEG, PNG and WebP at the quality you choose, shrink big photos to a size you pick, and strip location data. Runs in your browser; your images are never uploaded.": "ছবির সাইজ কমান: আপনার বেছে নেওয়া মানে JPEG, PNG আর WebP সেভ করুন, বড় ছবি পছন্দের মাপে ছোট করুন, আর লোকেশনের তথ্য মুছে দিন। আপনার ব্রাউজারেই চলে; আপনার ছবি কখনো আপলোড হয় না।",
+  "Make photos smaller": "ছবির সাইজ কমান",
   "Never bigger.": "কখনো বড় হয় না।",
   "PNG keeps every pixel, so quality doesn’t apply to it. To make a PNG much smaller, choose a smaller size, or save it as JPEG or WebP.": "PNG প্রতিটি পিক্সেল রেখে দেয়, তাই এতে মান খাটে না। PNG অনেক ছোট করতে ছোট মাপ বেছে নিন, অথবা JPEG বা WebP হিসেবে সেভ করুন।",
   "PNG · lossless, keeps transparency": "PNG · মান না হারিয়ে, স্বচ্ছতা রেখে",
@@ -27,6 +28,7 @@
   "Shrink big photos.": "বড় ছবি ছোট করুন।",
   "already as small as these settings allow, so it’s unchanged": "এই সেটিংসে এর চেয়ে ছোট করা যায় না, তাই যেমন ছিল তেমনই আছে",
   "no smaller": "ছোট হয়নি",
+  "tool image photo picture jpg jpeg png webp shrink smaller resize": "টুল ছবি ফটো ছোট সাইজ কমান কমপ্রেস",
   "under 1% smaller": "১%-এর কম ছোট",
   "{images} couldn’t be compressed.": "{images} ছোট করা যায়নি।",
   "{percent}% smaller": "{percent}% ছোট"

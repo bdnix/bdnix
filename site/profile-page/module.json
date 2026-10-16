@@ -1,0 +1,17 @@
+{
+  "name": "profile-page",
+  "kind": "site",
+  "url": "/profile/",
+  "publish": {
+    "index.html": "/profile/index.html",
+    "profile-page.js": "/assets/js/profile-page.js",
+    "profile.css": "/assets/css/profile.css"
+  },
+  "uses": ["analytics", "avatar", "backdrop", "base", "footer", "lang", "page", "profile"],
+  "page": {
+    "title": "Your profile — bdnix",
+    "description": "Your bdnix name and best game scores, kept in this browser.",
+    "noindex": true
+  },
+  "scores": true
+}

@@ -64,15 +64,51 @@ export function languages(root){
   });
 }
 
+// The words of the apps' cards that a site page shows: every app's card
+// (name, blurb, search keywords) on a page with cards, and every game's name
+// and best-score label on a page with scores, each as the app's own pack
+// translates it. { words, files (where the words were found) }.
+function catalogue(root, m, code){
+  const { list } = modules(root);
+  const shown = [];
+  if (m.cards) for (const a of list.filter((x) => x.kind === 'app')) shown.push([a, ['name', 'blurb', 'keywords']]);
+  if (m.scores) for (const a of list.filter((x) => x.kind === 'app' && x.card && x.card.kind === 'game')) shown.push([a, ['name', 'bestLabel']]);
+  const words = {}, files = new Set();
+  for (const [a, fields] of shown) {
+    const own = packFiles(root, a, code);
+    const { words: all } = bundle(root, own);
+    for (const f of fields) {
+      const en = a.card && a.card[f];
+      if (en && all[en] !== undefined) { words[en] = all[en]; own.forEach((x) => files.add(x)); }
+    }
+  }
+  return { words, files: [...files].sort() };
+}
+
+// The translation files of a module's own pack: its own and those of the
+// shared modules it uses.
+function packFiles(root, m, code){
+  const { byName } = modules(root);
+  return [m, ...closure(byName, m.name).map((n) => byName.get(n))].filter((x) => x.langs[code]).map((x) => x.langs[code]);
+}
+
 // Each app and site module's own pack in each language: { module, code,
-// path (where it's served), files, pack, errors }.
+// path (where it's served), files (its translations), catalogue (the files
+// the words of the cards it shows come from), pack, errors }. A site page that shows
+// the apps' cards or scores also gets those words (catalogue()).
 export function packs(root){
-  const { list, byName } = modules(root);
+  const { list } = modules(root);
   const codes = about(root).map((l) => l.code);
   return list.filter((m) => m.kind !== 'shared').flatMap((m) => codes.map((code) => {
-    const files = [m, ...closure(byName, m.name).map((n) => byName.get(n))].filter((x) => x.langs[code]).map((x) => x.langs[code]);
+    const files = packFiles(root, m, code);
     const { words, errors } = bundle(root, files);
-    return { module: m.name, code, path: `${LANG_DIR}/${m.name}.${code}.js`, files, pack: script(`${m.dir}/lang/${code}.json and its shared modules'`, words), errors };
+    const shown = catalogue(root, m, code);
+    for (const [en, to] of Object.entries(shown.words)) {
+      if (en in words && JSON.stringify(words[en]) !== JSON.stringify(to)) errors.push(`${m.dir}: "${en}" is translated differently on a card`);
+      else words[en] = to;
+    }
+    const sorted = Object.fromEntries(Object.keys(words).sort().map((k) => [k, words[k]]));
+    return { module: m.name, code, path: `${LANG_DIR}/${m.name}.${code}.js`, files, catalogue: shown.files, pack: script(`${m.dir}/lang/${code}.json and its shared modules'`, sorted), errors };
   }));
 }
 
@@ -140,7 +176,7 @@ export function serveLanguage(root, rel, source = rel){
     if (!own) return null;
     const { byName } = modules(root);
     const mods = [own.module, ...closure(byName, own.module)].flatMap((n) => [`${byName.get(n).dir}/module.json`, `${byName.get(n).dir}/lang/`]);
-    return { body: own.pack, from: [...mods, `${LANG_DIR}/${own.code}/language.json`, ...own.files], errors: own.errors };
+    return { body: own.pack, from: [...new Set([...mods, `${LANG_DIR}/${own.code}/language.json`, ...own.files, ...own.catalogue])], errors: own.errors };
   }
   return null;
 }

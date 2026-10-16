@@ -4,13 +4,13 @@
 // what visitors get.
 //
 // A file is served from the module that publishes it there (module.json's
-// publish, tools/modules.mjs), or else from the same path in the repository,
-// where the pages that haven't moved into modules still are.
+// publish, tools/modules.mjs), or else from the same path in the repository
+// (the site's images, its root files).
 //
 // Source files carry nothing generated. A page keeps its markers with
 // nothing between them, and links the site's own scripts and styles as
-// /assets/js/x.js and /assets/css/x.css. Here, from the site's pages
-// (scripts/site.mjs and the modules) and scripts/parts.mjs, a page gets:
+// /assets/js/x.js and /assets/css/x.css. Here, from the site's pages (each
+// app and site module's module.json) and scripts/parts.mjs, a page gets:
 //   - its head tags (<!-- build:meta -->), the footer (<!-- build:footer -->),
 //     the landing page's cards (<!-- build:cards games|tools -->) and the
 //     profile page's scores (<!-- build:scores -->);
@@ -22,22 +22,14 @@
 // tools/languages.mjs.
 import fs from 'node:fs';
 import path from 'node:path';
-import { pages as listed } from '../scripts/site.mjs';
 import { meta, footer, cards, scores, fill, sitemap } from '../scripts/parts.mjs';
 import { languages, packs, packPaths, about, serveLanguage, stamp } from './languages.mjs';
-import { modules, pages as merged, placement } from './modules.mjs';
+import { modules, pages as sitePagesOf } from './modules.mjs';
 
 // What a page's generated parts are made from.
-export const PARTS = ['scripts/site.mjs', 'scripts/parts.mjs'];
-// Folders that hold no pages: tooling, the site's assets and the modules
-// (whose pages are served where they're published).
-const NOT_PAGES = new Set(['node_modules', 'tests', 'scripts', 'tools', 'assets', 'coverage', 'docs', '_site', 'apps', 'shared', 'site']);
-
-// Is this repository path a page (an .html file outside NOT_PAGES)?
-export const isPage = (rel) => rel.endsWith('.html') && !NOT_PAGES.has(rel.split('/')[0]) && !rel.split('/').some((p) => p.startsWith('.'));
-
-// The site's pages: scripts/site.mjs's list with the modules' pages in it.
-export const sitePages = (root) => merged(root, listed);
+export const PARTS = ['scripts/parts.mjs'];
+// The site's pages, from the modules (tools/modules.mjs).
+export const sitePages = (root) => sitePagesOf(root);
 
 // A page with its generated parts filled in and its links stamped.
 // { html, errors }; stampOf(rel) is the ?v= stamp of what's served at rel.
@@ -47,7 +39,7 @@ export function transformPage(rel, html, stampOf, list){
   const entry = list.find((p) => p.path === route.replace('//', '/'));
   let next = html;
   if (entry) next = fill(next, 'meta', () => meta(entry));
-  else if (next.includes('<!-- build:meta')) errors.push(`${rel}: not in scripts/site.mjs`);
+  else if (next.includes('<!-- build:meta')) errors.push(`${rel}: no module.json describes this page`);
   next = fill(next, 'footer', footer);
   next = fill(next, 'cards', (kind) => cards(list, kind));
   next = fill(next, 'scores', () => scores(list));
@@ -75,7 +67,7 @@ export function serve(root, rel, list = sitePages(root)){
   if (lang) return { ...lang, from: [...new Set([...lang.from, ...owner])] };
   const file = path.join(root, source);
   if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) return null;
-  if (mod ? rel.endsWith('.html') : isPage(rel)) {
+  if (mod && rel.endsWith('.html')) {
     const html = fs.readFileSync(file, 'utf8');
     const { html: body, errors } = transformPage(rel, html, (dep) => {
       const served = dep === rel ? null : serve(root, dep, list);
@@ -95,26 +87,18 @@ const appModules = (root) => modules(root).list.filter((m) => m.kind !== 'shared
 // Reads no translations, only which languages and modules there are.
 export const generated = (root) => ['sitemap.xml', ...about(root).map((l) => `assets/lang/${l.code}.js`), ...packPaths(root)];
 
-// What's wrong with how the pages, the modules and scripts/site.mjs fit
-// together: a page in the list without its file or its build:meta markers, a
-// page with markers that isn't in the list, a module that's wrong or out of
-// place, or a language with a string translated two ways.
-// With no list given, the site's own, whose places for modules are checked too.
+// What's wrong with the pages and the modules: a module that's wrong, a page
+// without its file or its build:meta markers, or a pack with a string
+// translated two ways.
 export function check(root, given){
   const list = given || sitePages(root);
-  const errors = [...modules(root).errors, ...(given ? [] : placement(root, listed))];
-  const folders = fs.readdirSync(root, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
-  for (const rel of ['index.html', ...folders.map((d) => `${d}/index.html`)]) {
-    if (!isPage(rel) || !fs.existsSync(path.join(root, rel))) continue;
-    const route = rel === 'index.html' ? '/' : `/${path.posix.dirname(rel)}/`;
-    if (!list.some((p) => p.path === route) && fs.readFileSync(path.join(root, rel), 'utf8').includes('<!-- build:meta')) errors.push(`${rel}: not in scripts/site.mjs`);
-  }
+  const errors = [...modules(root).errors];
   const published = modules(root).published;
   for (const p of list) {
     const rel = path.posix.join(p.path.slice(1), 'index.html');
     const from = published.get(rel);
     const file = path.join(root, from ? from.source : rel);
-    if (!fs.existsSync(file)) errors.push(`scripts/site.mjs: ${p.path} has no index.html`);
+    if (!fs.existsSync(file)) errors.push(`${p.path} has no index.html`);
     else if (!fs.readFileSync(file, 'utf8').includes('<!-- build:meta -->')) errors.push(`${from ? from.source : rel}: no <!-- build:meta --> markers`);
   }
   for (const l of languages(root)) errors.push(...l.errors);

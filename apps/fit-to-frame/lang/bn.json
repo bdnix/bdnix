@@ -3,6 +3,7 @@
   "<b>Full quality or an exact size.</b> Keep every pixel of the original, or get exactly the size in pixels a site asks for.": "<b>পুরো মান বা ঠিক মাপ।</b> আসলটির প্রতিটি পিক্সেল রাখুন, অথবা কোনো সাইট যে মাপ চায় ঠিক সেই মাপ পান।",
   "<b>Nothing cropped.</b> The whole image stays in view, in the middle, with space added to its sides or to its top and bottom.": "<b>কিছুই কাটা হয় না।</b> পুরো ছবিটি মাঝখানে দেখা যায়, আর দুই পাশে বা ওপরে-নিচে জায়গা যোগ হয়।",
   "<b>Social media shapes.</b> Square, portrait 4:5, story 9:16, landscape, widescreen and more, or type your own width and height.": "<b>সোশ্যাল মিডিয়ার মাপ।</b> বর্গ, লম্বালম্বি ৪:৫, স্টোরি ৯:১৬, আড়াআড়ি, ওয়াইডস্ক্রিন সহ আরও অনেক, অথবা নিজের চওড়া আর উচ্চতা লিখুন।",
+  "Add space to fit any shape": "ফাঁকা জায়গা যোগ করে যেকোনো মাপে মেলান",
   "Any colour": "যেকোনো রং",
   "Any colour.": "যেকোনো রং।",
   "Black": "কালো",
@@ -44,6 +45,7 @@
   "Widescreen 16:9 · YouTube, X": "ওয়াইডস্ক্রিন ১৬:৯ · YouTube, X",
   "Width": "চওড়া",
   "Width and height are whole numbers of pixels, from 1 to {max}.": "চওড়া আর উচ্চতা পিক্সেলে পূর্ণ সংখ্যা, ১ থেকে {max} পর্যন্ত।",
+  "tool image photo picture resize crop pad border frame square social": "টুল ছবি ফটো মাপ ফ্রেম বর্গ বর্ডার সোশ্যাল",
   "{images} couldn’t be resized.": "{images}র মাপ বদলানো যায়নি।",
   "{images} ready to download.": "{images} ডাউনলোডের জন্য তৈরি।"
 }
