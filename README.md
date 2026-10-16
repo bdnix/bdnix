@@ -41,6 +41,10 @@ Every game plays with keyboard, mouse or touch, has sound effects (mute them wit
 
 Your display name and best scores are shown on your [profile](https://www.bdnix.com/profile/), which is stored only in your browser.
 
+## About
+
+**bd** is for Bangladesh, where bdnix's creator is from, and **nix** is for their love of Linux, Unix and the *nix family. The games are for passing a few spare minutes, on a bus or in a queue. The tools are ones the creator wanted: instead of uploading a PDF to some website to add a watermark, say, everything happens in your own browser. There are no subscriptions, sign-ups or accounts, and there never will be. The [about page](https://www.bdnix.com/about/) says the same, in English and Bangla.
+
 ## Privacy
 
 - **No uploads.** Files are read and processed by your browser. There is no server-side processing, and libraries and fonts are served from this site rather than third-party CDNs.

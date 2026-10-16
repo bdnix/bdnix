@@ -69,6 +69,7 @@ test('fill: replaces what is between the markers, indented like them, and nothin
 
 test('the footer and sitemap', () => {
   assert.equal(footer()[0], '<footer class="foot">');
+  assert.match(footer().join('\n'), /<a href="\/about\/">About<\/a>/);
   const xml = sitemap(pages);
   assert.ok(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>\n<urlset'));
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);

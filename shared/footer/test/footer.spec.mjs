@@ -3,7 +3,7 @@ import { openFixture, style, fitsScreen } from '../../../tests/ui/fixture.mjs';
 
 // footer.css: the footer of the landing, tool and profile pages, on a page
 // of its own. (What it says comes from the build, scripts/parts.mjs.)
-const BODY = '<footer class="foot"><span>© 2026 bdnix · <a href="https://github.com/bdnix/bdnix">Open source on GitHub</a></span><span class="foot-links"><a href="/#suggest">Suggest a tool or game</a><a href="mailto:root@bdnix.com">root@bdnix.com</a></span></footer>';
+const BODY = '<footer class="foot"><span>© 2026 bdnix · <a href="https://github.com/bdnix/bdnix">Open source on GitHub</a></span><span class="foot-links"><a href="/about/">About</a><a href="/#suggest">Suggest a tool or game</a><a href="mailto:root@bdnix.com">root@bdnix.com</a></span></footer>';
 
 test('the footer spreads its two halves apart, and wraps on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 800 });
