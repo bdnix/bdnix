@@ -180,10 +180,10 @@ npm run serve          # the site at http://localhost:4173
 
 ## CI
 
-`.github/workflows/tests.yml` runs on every pull request and push to `master`, and once a week on its own:
+`.github/workflows/tests.yml` runs on every pull request and push to `master`, and once a week on its own. Every job runs on one machine:
 
 - **Unit tests:** lint (ESLint, Stylelint and `tools/boundaries.mjs`), then the unit tests with coverage, on one machine.
-- **UI tests:** Playwright in Chromium with coverage, on four machines at once, however many specs a run has. The *plan* job finds the specs that have to run and shares them out by how long each last took (`scripts/share.mjs`); each machine runs its share; the **UI tests** job puts their results together, fails unless every spec has passed and each module's specs used only what it declares, and merges the coverage. On failure the machine uploads its HTML report and a trace of each failed test (**playwright-report-<n>** artifact).
+- **UI tests:** Playwright in Chromium with coverage, on one machine: it runs the specs whose inputs changed, then fails unless every spec has a passing result and each module's specs used only what it declares, and merges the coverage. On failure it uploads the HTML report and a trace of each failed test (**playwright-report** artifact).
 - **Coverage:** once both pass, uploads their coverage to Codecov together. A failed upload fails the job, after one more try with Codecov's CLI from PyPI instead of `cli.codecov.io`, so the Codecov checks never go missing unnoticed. A red **Coverage** job with an upload error is usually Codecov being down: re-run the job.
 
 Codecov then posts **codecov/project** and **codecov/patch** (see [Coverage must not drop](#coverage-must-not-drop)). `node_modules` and Playwright's Chromium are cached; see `.github/actions/setup`. `tests/unit/workflow.test.mjs` holds the workflow to what this section says.

@@ -50,7 +50,7 @@ npm run lint                      # ESLint, Stylelint and tools/boundaries.mjs
 
 The test MP4s carry FLAC audio because the Chromium build Playwright runs can't decode AAC; Chrome, Edge, Firefox and Safari can.
 
-If a UI test fails in CI, the failing machine's **playwright-report-<n>** artifact has the HTML report and a trace of each failed test (`npx playwright show-trace trace.zip`).
+If a UI test fails in CI, the run's **playwright-report** artifact has the HTML report and a trace of each failed test (`npx playwright show-trace trace.zip`).
 
 ## Coverage
 
@@ -65,17 +65,17 @@ npm run coverage     # both suites, combined into coverage/report/index.html
 
 ## Continuous integration
 
-[.github/workflows/tests.yml](../.github/workflows/tests.yml) runs on every pull request and push to `master`, and once a week on its own: lint and the unit tests on one machine; the UI tests on four at once; then a combined coverage upload. The upload fetches Codecov's CLI from `cli.codecov.io`; if that fails it tries once more with the CLI from PyPI, and if that fails too the **Coverage** job fails, rather than passing with nothing uploaded and no Codecov checks. `node_modules` (keyed on `package-lock.json` and the Node version) and Playwright's Chromium (keyed on the Playwright version) are cached; see [.github/actions/setup](../.github/actions/setup/action.yml).
+[.github/workflows/tests.yml](../.github/workflows/tests.yml) runs on every pull request and push to `master`, and once a week on its own: lint and the unit tests, and the UI tests, each on one machine, then a combined coverage upload. The upload fetches Codecov's CLI from `cli.codecov.io`; if that fails it tries once more with the CLI from PyPI, and if that fails too the **Coverage** job fails, rather than passing with nothing uploaded and no Codecov checks. `node_modules` (keyed on `package-lock.json` and the Node version) and Playwright's Chromium (keyed on the Playwright version) are cached; see [.github/actions/setup](../.github/actions/setup/action.yml).
 
 Tests that can't have changed aren't run again; CI uses their cached result and coverage, so Codecov still gets the full picture.
 
 - **Unit tests** are cached file by file by [scripts/unit-cache.mjs](../scripts/unit-cache.mjs). A test file's inputs are what it uses ([scripts/test-deps.mjs](../scripts/test-deps.mjs)): its own file, the test helpers it imports (and theirs), every repository file it read, imported, listed or checked for while it ran (each test file runs in its own process with [tests/unit/track.mjs](../tests/unit/track.mjs) recording them), the npm packages those import at the versions the lock file pins, and the Node version.
 - **UI tests** are cached spec by spec by [scripts/ui-cache.mjs](../scripts/ui-cache.mjs), on what each spec was *served*. A spec's inputs are its own code and the test helpers it imports, what every spec runs on (`playwright.config.mjs` and `tests/ui/fixtures.mjs`, and what they import), the npm packages and the Node version, and every response the test server gave it: the path, its status, type and a digest of its body, with the site's own `?v=` stamps left out (the test server logs them, [tests/server.mjs](../tests/server.mjs)). To see whether a cached spec still holds, the cache answers each path it fetched again with the same code the test server answers with (`respond()` in [tools/page.mjs](../tools/page.mjs)) and compares. So a change to the build or the server that serves the same bytes reruns nothing, a change to a page reruns exactly the specs that fetched it, and a change to a module's file reruns exactly the specs that were served it. A spec that fails is never cached.
-- **Sharing out the UI tests.** The *plan* job restores the cache, finds the specs that have to run and shares them between four machines by how long each last took ([scripts/share.mjs](../scripts/share.mjs)); each machine runs its share (`ui-cache.mjs --run`) and keeps what passed; the **UI tests** job puts those together with the plan's cache, fails unless every spec now has a passing result and each module's specs used only what it declares, merges the coverage and saves the cache. When nothing has to run, the machines install nothing and finish at once.
+- **One machine.** The **UI tests** job restores the cache, runs the specs that have to run, fails unless every spec now has a passing result and each module's specs used only what it declares, merges the coverage and saves the cache. It sets up Chromium every time, whether or not a spec has to run.
 - **Every week**, the scheduled run ignores both caches and runs everything, so a cached result can't hide a problem for long. Run the workflow by hand with **full** ticked to do the same. `tests/unit/workflow.test.mjs` holds the workflow to all this.
 - For the cache to be right, a UI test gets every repository file it depends on through the test server (`page.goto`, `request.get('/path')`), never with `fs`, and a helper that only some tests need goes in its own file, so changing it reruns only those.
 
-Locally, `npm test` and `npm run coverage` always run everything; `npm run coverage:unit:cached` and `npm run coverage:ui:cached` run what CI runs, keeping their cache in `.test-cache/` (`--plan` says what would run).
+Locally, `npm test` and `npm run coverage` always run everything; `npm run coverage:unit:cached` and `npm run coverage:ui:cached` run what CI runs, keeping their cache in `.test-cache/` (`npm run coverage:unit:cached -- --plan` says which unit test files would run).
 
 ## Deploying
 

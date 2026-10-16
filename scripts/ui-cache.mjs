@@ -17,21 +17,8 @@
 // tests/ui/inputs.mjs) and its coverage, and a spec whose key still matches
 // isn't run: its coverage is used instead. A spec that fails is never kept.
 //
-//   node scripts/ui-cache.mjs            run what's needed, then check and merge
-//   node scripts/ui-cache.mjs --plan     only say which specs would run
-//   node scripts/ui-cache.mjs --plan --shards=4
-//                                        and share them out between four
-//                                        machines (in CI, as the step outputs
-//                                        run and shards, a JSON list of each
-//                                        machine's specs)
-//   node scripts/ui-cache.mjs --run a.spec.mjs b.spec.mjs
-//                                        run just these specs, and keep the
-//                                        results of those that pass; nothing
-//                                        else (one machine's share)
-//   node scripts/ui-cache.mjs --merge    after the shares have run (their
-//                                        caches put together): check every
-//                                        spec has a result, check the declared
-//                                        inputs, and merge the coverage
+// It runs the specs that need to, then checks every spec has a passing result
+// and used only what its module declares, and merges their coverage.
 //
 // The cache lives in .test-cache/ui (UI_CACHE_DIR overrides it); CI saves
 // and restores that folder with actions/cache. UI_CACHE=off runs everything.
@@ -40,7 +27,6 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { uiInputs, keyOf, testName, responseDigest } from './test-deps.mjs';
-import { share } from './share.mjs';
 import { respond } from '../tools/page.mjs';
 import { readLog, problems } from '../tests/ui/inputs.mjs';
 
@@ -62,9 +48,6 @@ const MAX_AGE = 14 * 24 * 3600 * 1000;
 // coverage merge or the checks run around the specs.
 export const GLOBAL = ['playwright.config.mjs', 'tests/ui/fixtures.mjs'];
 
-const args = process.argv.slice(2);
-const shards = Number((/^--shards=(\d+)$/.exec(args.find((a) => a.startsWith('--shards=')) || '') || [])[1] || 1);
-const only = args.includes('--run') ? args.filter((a) => !a.startsWith('--')) : null;
 
 function list(dir){
   return fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.spec.mjs')).map((f) => `${dir}/${f}`).sort() : [];
@@ -107,53 +90,29 @@ function plan(){
   return specs.map((spec) => ({ spec, hit: hit(spec) }));
 }
 
-// How long each spec last took, from any entry it has.
-function durations(){
-  return Object.fromEntries(specs.map((spec) => [spec, Math.max(0, ...entries(spec).map((e) => e.ms || 0))]));
-}
-
-if (args.includes('--merge')) process.exit(await merge());
-
-let mine;
-if (only) {
-  const unknown = only.filter((s) => !specs.includes(s));
-  if (unknown.length) { console.error(`Not specs: ${unknown.join(', ')}`); process.exit(1); }
-  mine = only;
-  console.log(`${mine.length} specs to run.`);
-} else {
-  const current = plan();
-  mine = current.filter((p) => !p.hit).map((p) => p.spec);
-  for (const p of current) console.log(`${p.hit ? 'cached' : 'run   '} ${p.spec}`);
-  console.log(`${mine.length} of ${specs.length} specs to run.`);
-  if (args.includes('--plan')) {
-    const shares = share(mine, durations(), shards);
-    if (shards > 1) shares.forEach((list, i) => console.log(`Machine ${i + 1} of ${shards}: ${list.length} specs.`));
-    if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `run=${mine.length}\nshards=${JSON.stringify(shares.map((l) => l.join(' ')))}\n`);
-    process.exit(0);
-  }
-}
+const current = plan();
+const run = current.filter((p) => !p.hit).map((p) => p.spec);
+for (const p of current) console.log(`${p.hit ? 'cached' : 'run   '} ${p.spec}`);
+console.log(`${run.length} of ${specs.length} specs to run.`);
 
 fs.rmSync(TMP, { recursive: true, force: true });
 fs.mkdirSync(TMP, { recursive: true });
 
 let status = 0;
-if (mine.length) {
-  const result = spawnSync('npx', ['playwright', 'test', ...mine], {
+if (run.length) {
+  const result = spawnSync('npx', ['playwright', 'test', ...run], {
     stdio: 'inherit',
     env: { ...process.env, COVERAGE: 'record', UI_COVERAGE: COVERAGE, SERVED_LOG: SERVED, UI_RESULTS: RESULTS }
   });
   status = result.status === null ? 1 : result.status;
-  store(mine);
+  store(run);
 }
-if (!only) {
-  const merged = await merge();
-  status = status || merged;
-}
+status = (await merge()) || status;
 process.exit(status);
 
 // Stores a cache entry for every spec that passed in this run.
 function store(ran){
-  const { passed, ms } = report();
+  const passed = report();
   const log = readLog(fs.existsSync(SERVED) ? fs.readFileSync(SERVED, 'utf8') : '');
   // A response no spec asked for could belong to any of them.
   const anyone = log.get('') || { files: new Set(), responses: {} };
@@ -169,21 +128,21 @@ function store(ran){
     fs.mkdirSync(path.join(dir, 'coverage'), { recursive: true });
     const cov = path.join(COVERAGE, coverageFolder(spec));
     if (fs.existsSync(cov)) fs.cpSync(cov, path.join(dir, 'coverage'), { recursive: true });
-    fs.writeFileSync(path.join(dir, 'entry.json'), JSON.stringify({ spec, used: Date.now(), ms: ms.get(spec) || 0, responses, files }, null, 1));
+    fs.writeFileSync(path.join(dir, 'entry.json'), JSON.stringify({ spec, used: Date.now(), responses, files }, null, 1));
     kept++;
   }
   console.log(`Cached the results of ${kept} passing specs.`);
 }
 
-// Which specs passed every test at every screen size, and how long each
-// took (Playwright's JSON report).
+// Which specs passed every test at every screen size (Playwright's JSON
+// report).
 function report(){
-  const passed = new Set(), ms = new Map();
+  const passed = new Set();
   let data;
   try { data = JSON.parse(fs.readFileSync(RESULTS, 'utf8')); }
-  catch (e) { return { passed, ms }; }
+  catch (e) { return passed; }
   // An error outside any test (the setup or teardown) means nothing passed.
-  if (data.errors && data.errors.length) return { passed, ms };
+  if (data.errors && data.errors.length) return passed;
   // Each top-level suite is a spec file. A test's own `file` can be a helper
   // that declared it (checkPage in tests/ui/checks.mjs), so it counts for the
   // spec it's in.
@@ -193,17 +152,15 @@ function report(){
       const spec = file || suite.file;
       for (const s of suite.specs || []) {
         ok.set(spec, (ok.get(spec) ?? true) && s.tests.length > 0 && s.tests.every((t) => t.status === 'expected'));
-        for (const t of s.tests) for (const r of t.results || []) ms.set(spec, (ms.get(spec) || 0) + (r.duration || 0));
       }
       walk(suite.suites, spec);
     }
   })(data.suites);
   for (const [spec, good] of ok) if (good) passed.add(spec);
-  return { passed, ms };
+  return passed;
 }
 
-// After the specs have run (here, or in shards whose caches were put
-// together): every spec must now have a matching cache entry, every spec's
+// After the specs have run: every spec must now have a matching cache entry, every spec's
 // served files must be declared by its module, and coverage/ui is made from
 // every spec's coverage. Returns the exit status.
 async function merge(){

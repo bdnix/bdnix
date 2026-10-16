@@ -5,8 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // What .github/workflows/tests.yml promises about which tests run where:
-// the UI tests always on several machines, the unit tests on one, and once a
-// week everything, ignoring cached results.
+// the unit tests and the UI tests each on one machine, and once a week
+// everything, ignoring cached results.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const yml = fs.readFileSync(path.join(root, '.github/workflows/tests.yml'), 'utf8');
 // Each job's text, by its id.
@@ -25,19 +25,15 @@ test('once a week, the workflow runs on its own, with every test', () => {
   assert.deepEqual(restores.map((r) => [r[1], r[2]]), [['unit', FULL], ['UI', FULL]]);
 });
 
-test('the UI tests run on four machines, sharing out what the plan found; the unit tests on one', () => {
-  assert.match(jobs['ui-plan'], /--plan --shards=4\n/);
-  const machines = [...jobs['ui-machine'].matchAll(/- \{ machine: (\d+), share: (\d+) \}/g)].map((m) => [+m[1], +m[2]]);
-  assert.deepEqual(machines, [[1, 0], [2, 1], [3, 2], [4, 3]]);
-  assert.match(jobs['ui-machine'], /SPECS: \$\{\{ fromJSON\(needs\.ui-plan\.outputs\.shards\)\[matrix\.share\] \}\}/);
+test('the unit tests and the UI tests each run on one machine, the same steps every time', () => {
+  assert.deepEqual(Object.keys(jobs), ['unit', 'ui', 'coverage']);
+  for (const id of ['unit', 'ui']) assert.doesNotMatch(jobs[id], /matrix|shard/);
+  assert.match(jobs.ui, /name: UI tests\n/);
+  assert.doesNotMatch(jobs.ui, /--plan|steps\.plan/);
+  assert.match(jobs.ui, /timeout-minutes: 30\n/);
+  assert.match(jobs.ui, /run: npm run coverage:ui:cached\n/);
+  assert.match(jobs.coverage, /needs: \[unit, ui\]/);
   // GitHub's expressions have no arithmetic: a sum in one makes the whole
   // workflow invalid.
   for (const [, e] of yml.matchAll(/\$\{\{(.*?)\}\}/g)) assert.doesNotMatch(e.replace(/'[^']*'/g, ''), /[\w\])] [-+*/] /, e);
-  assert.match(jobs['ui-machine'], /coverage:ui:cached -- --run \$SPECS/);
-  // The last job, the check named "UI tests", fails unless every spec passed.
-  assert.match(jobs.ui, /name: UI tests\n/);
-  assert.match(jobs.ui, /needs: \[ui-plan, ui-machine\]/);
-  assert.match(jobs.ui, /coverage:ui:cached -- --merge/);
-  assert.doesNotMatch(jobs.unit, /matrix|shard/);
-  assert.match(jobs.coverage, /needs: \[unit, ui\]/);
 });
