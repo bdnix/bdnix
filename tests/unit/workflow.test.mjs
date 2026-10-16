@@ -27,8 +27,12 @@ test('once a week, the workflow runs on its own, with every test', () => {
 
 test('the UI tests run on four machines, sharing out what the plan found; the unit tests on one', () => {
   assert.match(jobs['ui-plan'], /--plan --shards=4\n/);
-  assert.match(jobs['ui-machine'], /machine: \[1, 2, 3, 4\]/);
-  assert.match(jobs['ui-machine'], /SPECS: \$\{\{ fromJSON\(needs\.ui-plan\.outputs\.shards\)\[matrix\.machine - 1\] \}\}/);
+  const machines = [...jobs['ui-machine'].matchAll(/- \{ machine: (\d+), share: (\d+) \}/g)].map((m) => [+m[1], +m[2]]);
+  assert.deepEqual(machines, [[1, 0], [2, 1], [3, 2], [4, 3]]);
+  assert.match(jobs['ui-machine'], /SPECS: \$\{\{ fromJSON\(needs\.ui-plan\.outputs\.shards\)\[matrix\.share\] \}\}/);
+  // GitHub's expressions have no arithmetic: a sum in one makes the whole
+  // workflow invalid.
+  for (const [, e] of yml.matchAll(/\$\{\{(.*?)\}\}/g)) assert.doesNotMatch(e.replace(/'[^']*'/g, ''), /[\w\]\)] [-+*/] /, e);
   assert.match(jobs['ui-machine'], /coverage:ui:cached -- --run \$SPECS/);
   // The last job, the check named "UI tests", fails unless every spec passed.
   assert.match(jobs.ui, /name: UI tests\n/);

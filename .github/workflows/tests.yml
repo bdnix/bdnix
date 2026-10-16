@@ -117,9 +117,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        machine: [1, 2, 3, 4]
+        # share is the machine's place in the plan's list (from 0).
+        include:
+          - { machine: 1, share: 0 }
+          - { machine: 2, share: 1 }
+          - { machine: 3, share: 2 }
+          - { machine: 4, share: 3 }
     env:
-      SPECS: ${{ fromJSON(needs.ui-plan.outputs.shards)[matrix.machine - 1] }}
+      SPECS: ${{ fromJSON(needs.ui-plan.outputs.shards)[matrix.share] }}
     steps:
       - uses: actions/checkout@v7
         if: env.SPECS != ''
