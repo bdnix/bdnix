@@ -9,7 +9,7 @@ There's nothing to install and no account to create. Files you open in a tool ar
 
 The search box on the home page narrows the list as you type: try "pdf", "photo" or a game's name. Press `/` to jump to it and Esc to clear it.
 
-The whole site, games included, is also in Bangla: the switch in the top bar picks the language, and the site remembers it. A browser set to Bangla gets it to start with. Adding a language is adding its translations to `assets/lang/` and each module's `lang/` (see [docs/development.md](docs/development.md#languages)).
+The whole site, games included, is also in Bangla: the switch in the top bar picks the language, and the site remembers it. A browser set to Bangla gets it to start with. Adding a language is adding its `assets/lang/<code>/language.json` and each module's translations in its `lang/` (see [docs/development.md](docs/development.md#languages)).
 
 ## Tools
 
@@ -74,4 +74,4 @@ Want a tool or game that isn't here, or a feature for one that is? [Open a reque
 
 The code is released under the [MIT License](LICENSE), © bdnix. The licence covers the code only, not the bdnix name or logo.
 
-The games are original takes on classic genres and aren't affiliated with or endorsed by the owners of any similar games. Third-party libraries in [assets/vendor/](assets/vendor/) keep their own licences (MIT, Apache 2.0, LGPL and, for the Stockfish chess engine, GPL 3), listed in [Development](docs/development.md#third-party-libraries).
+The games are original takes on classic genres and aren't affiliated with or endorsed by the owners of any similar games. Third-party libraries, each in the `vendor/` folder of the module that uses it, keep their own licences (MIT, Apache 2.0, LGPL and, for the Stockfish chess engine, GPL 3), listed in [Development](docs/development.md#third-party-libraries).
