@@ -19,14 +19,19 @@
 //
 //   node scripts/ui-cache.mjs            run what's needed, then check and merge
 //   node scripts/ui-cache.mjs --plan     only say which specs would run
-//   node scripts/ui-cache.mjs --shard=2/4
-//                                        run the second of four shares of the
-//                                        specs that need to run, and keep their
-//                                        results; nothing else
-//   node scripts/ui-cache.mjs --merge    after the shards (their caches put
-//                                        together): check every spec has a
-//                                        result, check the declared inputs,
-//                                        and merge the coverage
+//   node scripts/ui-cache.mjs --plan --shards=4
+//                                        and share them out between four
+//                                        machines (in CI, as the step outputs
+//                                        run and shards, a JSON list of each
+//                                        machine's specs)
+//   node scripts/ui-cache.mjs --run a.spec.mjs b.spec.mjs
+//                                        run just these specs, and keep the
+//                                        results of those that pass; nothing
+//                                        else (one machine's share)
+//   node scripts/ui-cache.mjs --merge    after the shares have run (their
+//                                        caches put together): check every
+//                                        spec has a result, check the declared
+//                                        inputs, and merge the coverage
 //
 // The cache lives in .test-cache/ui (UI_CACHE_DIR overrides it); CI saves
 // and restores that folder with actions/cache. UI_CACHE=off runs everything.
@@ -35,6 +40,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { uiInputs, keyOf, testName, responseDigest } from './test-deps.mjs';
+import { share } from './share.mjs';
 import { respond } from '../tools/page.mjs';
 import { readLog, problems } from '../tests/ui/inputs.mjs';
 
@@ -57,7 +63,8 @@ const MAX_AGE = 14 * 24 * 3600 * 1000;
 export const GLOBAL = ['playwright.config.mjs', 'tests/ui/fixtures.mjs'];
 
 const args = process.argv.slice(2);
-const shardArg = /^--shard=(\d+)\/(\d+)$/.exec(args.find((a) => a.startsWith('--shard=')) || '');
+const shards = Number((/^--shards=(\d+)$/.exec(args.find((a) => a.startsWith('--shards=')) || '') || [])[1] || 1);
+const only = args.includes('--run') ? args.filter((a) => !a.startsWith('--')) : null;
 
 function list(dir){
   return fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.spec.mjs')).map((f) => `${dir}/${f}`).sort() : [];
@@ -100,20 +107,6 @@ function plan(){
   return specs.map((spec) => ({ spec, hit: hit(spec) }));
 }
 
-// The specs a shard runs: those that need to run, shared out by how long each
-// last took (longest first, each to the least loaded shard), so the shards
-// take about as long as each other. The same on every machine.
-export function share(run, durations, count){
-  const bins = Array.from({ length: count }, () => ({ ms: 0, specs: [] }));
-  const order = [...run].sort((a, b) => (durations[b] || 0) - (durations[a] || 0) || a.localeCompare(b));
-  for (const spec of order) {
-    const bin = bins.reduce((min, b) => (b.ms < min.ms ? b : min));
-    bin.specs.push(spec);
-    bin.ms += durations[spec] || 30000;
-  }
-  return bins.map((b) => b.specs.sort());
-}
-
 // How long each spec last took, from any entry it has.
 function durations(){
   return Object.fromEntries(specs.map((spec) => [spec, Math.max(0, ...entries(spec).map((e) => e.ms || 0))]));
@@ -121,22 +114,23 @@ function durations(){
 
 if (args.includes('--merge')) process.exit(await merge());
 
-const current = plan();
-const run = current.filter((p) => !p.hit).map((p) => p.spec);
-for (const p of current) console.log(`${p.hit ? 'cached' : 'run   '} ${p.spec}`);
-console.log(`${run.length} of ${specs.length} specs to run.`);
-
-if (args.includes('--plan')) {
-  if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `run=${run.length}\n`);
-  process.exit(0);
-}
-
-let mine = run;
-if (shardArg) {
-  const [, i, n] = shardArg.map(Number);
-  mine = share(run, durations(), n)[i - 1] || [];
-  console.log(`Shard ${i} of ${n}: ${mine.length} specs.`);
-  for (const spec of mine) console.log(`  ${spec}`);
+let mine;
+if (only) {
+  const unknown = only.filter((s) => !specs.includes(s));
+  if (unknown.length) { console.error(`Not specs: ${unknown.join(', ')}`); process.exit(1); }
+  mine = only;
+  console.log(`${mine.length} specs to run.`);
+} else {
+  const current = plan();
+  mine = current.filter((p) => !p.hit).map((p) => p.spec);
+  for (const p of current) console.log(`${p.hit ? 'cached' : 'run   '} ${p.spec}`);
+  console.log(`${mine.length} of ${specs.length} specs to run.`);
+  if (args.includes('--plan')) {
+    const shares = share(mine, durations(), shards);
+    if (shards > 1) shares.forEach((list, i) => console.log(`Machine ${i + 1} of ${shards}: ${list.length} specs.`));
+    if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `run=${mine.length}\nshards=${JSON.stringify(shares.map((l) => l.join(' ')))}\n`);
+    process.exit(0);
+  }
 }
 
 fs.rmSync(TMP, { recursive: true, force: true });
@@ -151,7 +145,7 @@ if (mine.length) {
   status = result.status === null ? 1 : result.status;
   store(mine);
 }
-if (!shardArg) {
+if (!only) {
   const merged = await merge();
   status = status || merged;
 }

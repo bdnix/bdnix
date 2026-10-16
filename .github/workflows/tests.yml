@@ -10,6 +10,10 @@ on:
         description: Run every test, ignoring cached results
         type: boolean
         default: false
+  # Once a week, every test runs on master, ignoring cached results: a check
+  # that the cache hasn't kept a result it shouldn't have.
+  schedule:
+    - cron: '23 4 * * 1'
 
 permissions:
   contents: read
@@ -30,7 +34,8 @@ jobs:
   # test file (scripts/unit-cache.mjs, scripts/ui-cache.mjs). A test's inputs
   # are what it uses (scripts/test-deps.mjs), so a change reruns only the
   # tests that use what changed.
-  # Run the workflow by hand with "full" ticked to ignore the cache.
+  # Run the workflow by hand with "full" ticked to ignore the cache; the
+  # weekly scheduled run does too.
   unit:
     name: Unit tests
     runs-on: ubuntu-latest
@@ -46,7 +51,7 @@ jobs:
       # result, coverage and inputs of every unit test file that passed
       # recently (scripts/unit-cache.mjs).
       - name: Restore unit test results from cache
-        if: ${{ !inputs.full }}
+        if: ${{ !(inputs.full || github.event_name == 'schedule') }}
         uses: actions/cache/restore@v6
         with:
           path: .test-cache/unit
@@ -71,51 +76,129 @@ jobs:
           path: coverage/unit/lcov.info
           retention-days: 1
 
-  ui:
-    name: UI tests
+  # The UI tests run on four machines at once, however many specs a run
+  # has to run. The plan restores the cache, finds the specs whose inputs
+  # changed and shares them out by how long each last took
+  # (scripts/ui-cache.mjs --plan); each machine runs its share and keeps the
+  # results of the specs that passed; the last job puts those together with
+  # the restored cache, checks every spec now has a passing result and that
+  # each module's specs used only what it declares, merges the coverage and
+  # saves the cache.
+  ui-plan:
+    name: UI tests, plan
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.plan.outputs.run }}
+      shards: ${{ steps.plan.outputs.shards }}
+      cache: ${{ steps.restore.outputs.cache-matched-key }}
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       # The newest cache from this branch, or else from master. It holds the
-      # result, coverage and inputs of every spec that passed recently.
-      - name: Restore UI test results from cache
-        if: ${{ !inputs.full }}
+      # result, coverage and responses of every spec that passed recently.
+      - id: restore
+        name: Restore UI test results from cache
+        if: ${{ !(inputs.full || github.event_name == 'schedule') }}
         uses: actions/cache/restore@v6
         with:
           path: .test-cache/ui
           key: ui-results-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: ui-results-
       - id: plan
-        name: Find the specs to run
-        run: npm run coverage:ui:cached -- --plan
-      # Chromium is only needed if some spec has to run.
+        name: Find the specs to run, and share them out
+        run: npm run coverage:ui:cached -- --plan --shards=4
+
+  ui-machine:
+    name: UI tests, machine ${{ matrix.machine }} of 4
+    needs: ui-plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        machine: [1, 2, 3, 4]
+    env:
+      SPECS: ${{ fromJSON(needs.ui-plan.outputs.shards)[matrix.machine - 1] }}
+    steps:
+      - uses: actions/checkout@v7
+        if: env.SPECS != ''
+      - uses: ./.github/actions/setup
+        if: env.SPECS != ''
       - id: playwright
-        if: steps.plan.outputs.run != '0'
+        if: env.SPECS != ''
         name: Playwright version
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
       - id: browsers
-        if: steps.plan.outputs.run != '0'
+        if: env.SPECS != ''
         name: Restore Chromium from cache
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - name: Install Chromium
-        if: steps.plan.outputs.run != '0' && steps.browsers.outputs.cache-hit != 'true'
+        if: env.SPECS != '' && steps.browsers.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
       # The browser comes from the cache; the system libraries it needs are
       # apt packages, which can't be cached, so install just those.
       - name: Install Chromium's system libraries
-        if: steps.plan.outputs.run != '0' && steps.browsers.outputs.cache-hit == 'true'
+        if: env.SPECS != '' && steps.browsers.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
-      # Runs the specs the plan found, brings back the others' coverage,
-      # and adds every spec that passed to the cache.
+      # Runs this machine's share and keeps the result, coverage and
+      # responses of every spec that passed, in .test-cache/ui.
       - name: UI tests with coverage
-        run: npm run coverage:ui:cached
-      # Saved even when a spec failed, so the ones that passed needn't run
+        if: env.SPECS != ''
+        run: npm run coverage:ui:cached -- --run $SPECS
+      # Kept even when a spec failed, so the ones that passed needn't run
       # again after the fix.
+      - name: Keep the results
+        if: ${{ !cancelled() && env.SPECS != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-results-${{ matrix.machine }}
+          path: .test-cache/ui/
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 1
+      - name: Upload test report and traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-${{ matrix.machine }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  ui:
+    name: UI tests
+    needs: [ui-plan, ui-machine]
+    if: ${{ !cancelled() && needs.ui-plan.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      # Exactly the cache the plan restored, so the specs it found cached
+      # are still cached here.
+      - name: Restore the plan's UI test results
+        if: needs.ui-plan.outputs.cache != ''
+        uses: actions/cache/restore@v6
+        with:
+          path: .test-cache/ui
+          key: ${{ needs.ui-plan.outputs.cache }}
+          fail-on-cache-miss: true
+      - name: Add the machines' results
+        if: needs.ui-plan.outputs.run != '0'
+        uses: actions/download-artifact@v8
+        with:
+          pattern: ui-results-*
+          path: .test-cache/ui/
+          merge-multiple: true
+      # Fails unless every spec has a passing result now; merges their
+      # coverage into coverage/ui.
+      - name: Check the results and merge the coverage
+        run: npm run coverage:ui:cached -- --merge
       - name: Save UI test results to cache
         if: ${{ !cancelled() }}
         uses: actions/cache/save@v6
@@ -128,15 +211,6 @@ jobs:
           name: coverage-ui
           path: coverage/ui/lcov.info
           retention-days: 1
-      - name: Upload test report and traces
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-report
-          path: |
-            playwright-report/
-            test-results/
-          retention-days: 14
 
   coverage:
     name: Coverage
