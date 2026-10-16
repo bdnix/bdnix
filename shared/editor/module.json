@@ -1,0 +1,8 @@
+{
+  "name": "editor",
+  "kind": "shared",
+  "publish": {
+    "editor.css": "/assets/css/editor.css"
+  },
+  "uses": ["base", "icon-btn"]
+}

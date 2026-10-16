@@ -1,0 +1,8 @@
+{
+  "name": "settings",
+  "kind": "shared",
+  "publish": {
+    "settings.css": "/assets/css/settings.css"
+  },
+  "uses": ["base"]
+}

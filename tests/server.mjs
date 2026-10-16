@@ -28,11 +28,16 @@ const types = {
 };
 
 http.createServer((req, res) => {
-  let file = path.join(root, decodeURIComponent(new URL(req.url, 'http://x').pathname));
+  const url = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+  const file = path.join(root, url);
   if (!file.startsWith(root)) { res.writeHead(403).end(); return; }
-  if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
-  const rel = path.relative(root, file).split(path.sep).join('/');
-  const served = serve(root, rel);
+  let rel = path.relative(root, file).split(path.sep).join('/');
+  // A folder serves its index.html, whether it's in the repository or a
+  // module publishes it.
+  if (url.endsWith('/') || (fs.existsSync(file) && fs.statSync(file).isDirectory())) rel = path.posix.join(rel, 'index.html');
+  let served = serve(root, rel);
+  const page = !served && !rel.endsWith('.html') && serve(root, rel + '/index.html');
+  if (page) { served = page; rel += '/index.html'; }
   if (log) fs.appendFileSync(log, (served ? served.from : [rel]).map((f) => `${req.headers['x-bdnix-spec'] || ''}\t${f}\n`).join(''));
   if (!served) { res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found'); return; }
   if (served.errors.length) {
@@ -40,5 +45,5 @@ http.createServer((req, res) => {
     res.writeHead(500, { 'Content-Type': 'text/plain' }).end(served.errors.join('\n'));
     return;
   }
-  res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream' }).end(served.body);
+  res.writeHead(200, { 'Content-Type': types[path.extname(rel)] || 'application/octet-stream' }).end(served.body);
 }).listen(port, () => console.log(`Serving ${root} at http://localhost:${port}`));

@@ -1,0 +1,8 @@
+{
+  "name": "page",
+  "kind": "shared",
+  "publish": {
+    "page.css": "/assets/css/page.css"
+  },
+  "uses": ["base"]
+}

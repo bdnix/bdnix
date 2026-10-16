@@ -13,6 +13,8 @@ const touch = (page) => page.evaluate(() => matchMedia('(pointer:coarse)').match
 //   credit    [the classic that inspired it, who created it], for its credit line
 //   gamepad   { dpad: { up, left, right, down }, face: { a, b } }: the names of
 //             its on-screen buttons, for a game played with buttons on a phone
+//   languages false for a module's game, whose own i18n target calls
+//             checkGameLanguages(url) instead
 export function checkGame(url, opts = {}){
   // The top bar has the mute button and the language switch, and no pause
   // button: P or Esc pauses, and so does leaving the page, which then shows
@@ -59,15 +61,6 @@ export function checkGame(url, opts = {}){
     await expect(title).toHaveText('Paused');   // still waiting for Resume
     await resume.click();
     await expect(page.locator('#overlay')).toBeHidden();
-  });
-
-  // The switch in the top bar shows the game in another language.
-  test(`${url}: the language switch in the top bar shows the game in Bangla`, async ({ page }) => {
-    await openGame(page, url);
-    await page.locator('.bar').getByRole('button', { name: 'বাংলা' }).click();
-    await expect(page.locator('html')).toHaveAttribute('lang', 'bn');
-    await expect(page.locator('.bar').getByRole('navigation', { name: 'ভাষা' }).getByRole('button', { name: 'English' })).toBeVisible();
-    await expectTranslated(page, 'bn');
   });
 
   // Turned sideways, a phone gets a note asking for it to be turned back, and
@@ -117,6 +110,36 @@ export function checkGame(url, opts = {}){
     }
   });
 
+  if (opts.languages !== false) checkGameLanguages(url);
+
+  if (opts.credit) {
+    const [name, creator] = opts.credit;
+    test(`${url}: credits the classic that inspired it, without claiming any link to it`, async ({ page }) => {
+      await page.goto(url);
+      const credit = page.locator('#overlay .credit');
+      await expect(credit).toBeVisible();
+      await expect(credit).toContainText('Inspired by ' + name);
+      await expect(credit).toContainText(creator);
+      await expect(credit).toContainText(name + ' is a trademark of its owner; bdnix isn’t affiliated with or endorsed by them.');
+    });
+  }
+
+  if (opts.gamepad) checkGamepad(url, opts.gamepad);
+}
+
+// The game in the site's other languages: the switch in the top bar, and
+// playing it in each. Part of checkGame(), unless a module's game tests its
+// languages on their own.
+export function checkGameLanguages(url){
+  // The switch in the top bar shows the game in another language.
+  test(`${url}: the language switch in the top bar shows the game in Bangla`, async ({ page }) => {
+    await openGame(page, url);
+    await page.locator('.bar').getByRole('button', { name: 'বাংলা' }).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'bn');
+    await expect(page.locator('.bar').getByRole('navigation', { name: 'ভাষা' }).getByRole('button', { name: 'English' })).toBeVisible();
+    await expectTranslated(page, 'bn');
+  });
+
   // In every language the site has: the game, left to itself for a while
   // (some end on their own), its pause screen and the note asking for a
   // phone upright, with nothing left in English.
@@ -143,20 +166,6 @@ export function checkGame(url, opts = {}){
       }
     }
   });
-
-  if (opts.credit) {
-    const [name, creator] = opts.credit;
-    test(`${url}: credits the classic that inspired it, without claiming any link to it`, async ({ page }) => {
-      await page.goto(url);
-      const credit = page.locator('#overlay .credit');
-      await expect(credit).toBeVisible();
-      await expect(credit).toContainText('Inspired by ' + name);
-      await expect(credit).toContainText(creator);
-      await expect(credit).toContainText(name + ' is a trademark of its owner; bdnix isn’t affiliated with or endorsed by them.');
-    });
-  }
-
-  if (opts.gamepad) checkGamepad(url, opts.gamepad);
 }
 
 // On a phone, a game's buttons are laid out like a gamepad (gamepad.css): a

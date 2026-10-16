@@ -1,0 +1,7 @@
+{
+  "name": "gamesave",
+  "kind": "shared",
+  "publish": {
+    "gamesave.js": "/assets/js/gamesave.js"
+  }
+}

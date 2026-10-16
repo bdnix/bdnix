@@ -1,0 +1,8 @@
+{
+  "name": "files",
+  "kind": "shared",
+  "publish": {
+    "files.js": "/assets/js/files.js"
+  },
+  "uses": ["lang"]
+}

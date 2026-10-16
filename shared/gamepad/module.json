@@ -1,0 +1,8 @@
+{
+  "name": "gamepad",
+  "kind": "shared",
+  "publish": {
+    "gamepad.css": "/assets/css/gamepad.css"
+  },
+  "uses": ["base"]
+}

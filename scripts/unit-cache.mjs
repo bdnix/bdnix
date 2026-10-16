@@ -23,7 +23,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { inputs, keyOf } from './test-deps.mjs';
+import { inputs, keyOf, testName } from './test-deps.mjs';
+import { undeclared } from '../tools/modules.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
@@ -35,12 +36,15 @@ const TRACK = pathToFileURL(path.resolve('tests/unit/track.mjs')).href;
 // Entries no run has used for this long are dropped, so the cache stays small.
 const MAX_AGE = 14 * 24 * 3600 * 1000;
 // Coverage counts only the site's own scripts (tests/coverage/shared.mjs).
-const OWN = /assets\/js\/[\w-]+\.js$/;
+const OWN = /(assets\/js|(apps|shared|site)\/[\w-]+)\/[\w-]+\.js$/;
 // Where the repository is, in stored coverage, so it can come back elsewhere.
 const ROOT_MARK = '<repository>';
 
-const tests = fs.readdirSync('tests/unit').filter((f) => f.endsWith('.test.mjs')).map((f) => `tests/unit/${f}`).sort();
-const name = (test) => path.basename(test, '.test.mjs');
+// The unit tests in tests/unit/, and each module's in its test/ folder.
+const testsIn = (dir) => (fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.test.mjs')).map((f) => `${dir}/${f}`).sort() : []);
+const modules = ['apps', 'shared', 'site'].filter((top) => fs.existsSync(top)).flatMap((top) => fs.readdirSync(top).sort().map((m) => `${top}/${m}/test`));
+const tests = [...testsIn('tests/unit'), ...modules.flatMap(testsIn)];
+const name = testName;
 const key = (test, deps) => keyOf(inputs(test, deps));
 
 function entries(test){
@@ -86,7 +90,10 @@ function runOne(test){
     child.stdout.on('data', (d) => { out += d; });
     child.stderr.on('data', (d) => { out += d; });
     child.on('close', (code) => {
-      const passed = code === 0;
+      // A module's test may use only what its module declares (tools/modules.mjs).
+      const extra = undeclared(root, test, readDeps(test));
+      if (extra.length) out += `\n${test} used files its module doesn't declare (its own files, or a module in its uses):\n  ${extra.join('\n  ')}\n`;
+      const passed = code === 0 && !extra.length;
       const count = /^# pass (\d+)/m.exec(out);
       console.log(`${passed ? 'ok  ' : 'FAIL'} ${test}${count ? ` (${count[1]} tests)` : ''}`);
       if (!passed) console.log(out);
@@ -161,10 +168,10 @@ function touch(entry){
 // Drops entries of test files that no longer exist and entries unused for a while.
 function prune(){
   if (!fs.existsSync(CACHE)) return;
-  const names = new Set(tests.map(name));
+  const byName = new Map(tests.map((t) => [name(t), t]));
   for (const dir of fs.readdirSync(CACHE)) {
-    if (!names.has(dir)) { fs.rmSync(path.join(CACHE, dir), { recursive: true, force: true }); continue; }
-    for (const e of entries(`tests/unit/${dir}.test.mjs`)) {
+    if (!byName.has(dir)) { fs.rmSync(path.join(CACHE, dir), { recursive: true, force: true }); continue; }
+    for (const e of entries(byName.get(dir))) {
       if (!(Date.now() - e.used < MAX_AGE)) fs.rmSync(e.dir, { recursive: true, force: true });
     }
   }

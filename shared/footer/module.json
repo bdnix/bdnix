@@ -1,0 +1,8 @@
+{
+  "name": "footer",
+  "kind": "shared",
+  "publish": {
+    "footer.css": "/assets/css/footer.css"
+  },
+  "uses": ["base"]
+}

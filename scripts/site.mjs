@@ -98,24 +98,8 @@ export const pages = [
       ]
     }
   },
-  {
-    path: '/snake/',
-    title: 'Snake — Play free in your browser | bdnix',
-    description: 'Play Snake free in your browser: steer the snake to the food, grow longer with every bite and don’t hit the walls or your own tail. Beat your best, nothing to install.',
-    schema: 'WebApplication', category: 'GameApplication',
-    app: {
-      kind: 'game', name: 'Snake', blurb: 'Eat, grow, don’t bite your tail',
-      best: 'bdnix_snake_best',   // the key the game keeps its best score under
-      keywords: 'game arcade classic grow',
-      icon: [
-        '<path d="M6 32h14V20h12V9" fill="none" stroke="#a855f7" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>',
-        '<path d="M20 20h12V9" fill="none" stroke="#22d3ee" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>',
-        '<circle cx="30.5" cy="8" r="1.3" fill="#080a12"/>',
-        '<circle cx="33.5" cy="8" r="1.3" fill="#080a12"/>',
-        '<circle cx="10" cy="11" r="4" fill="#f472b6"/>'
-      ]
-    }
-  },
+  // Snake has moved into its module, apps/snake/ (its module.json).
+  { module: 'snake' },
   {
     path: '/brick-bounce/',
     title: 'Brick Bounce — Play free in your browser | bdnix',

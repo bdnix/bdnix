@@ -1,0 +1,8 @@
+{
+  "name": "file",
+  "kind": "shared",
+  "publish": {
+    "file.css": "/assets/css/file.css"
+  },
+  "uses": ["base"]
+}

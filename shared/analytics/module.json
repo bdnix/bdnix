@@ -1,0 +1,8 @@
+{
+  "name": "analytics",
+  "kind": "shared",
+  "publish": {
+    "analytics.js": "/assets/js/analytics.js"
+  },
+  "uses": ["base", "lang"]
+}

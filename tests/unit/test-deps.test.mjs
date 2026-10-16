@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { importsOf, helpersOf, packagesOf, locked, inputs, keyOf, readFile } from '../../scripts/test-deps.mjs';
+import { importsOf, helpersOf, packagesOf, locked, inputs, keyOf, readFile, testName } from '../../scripts/test-deps.mjs';
 
 // A pretend repository: path -> source (missing paths can't be read).
 const repo = (files) => (file) => (file in files ? files[file] : null);
@@ -200,4 +200,13 @@ test('readFile: a file, a folder\'s names, whether a path exists, or null', () =
   assert.equal(readFile('?tests/unit/test-deps'), 'folder');
   assert.equal(readFile('?tests/unit/test-deps/nowhere.mjs'), null);
   assert.equal(readFile('tests/unit/test-deps/nowhere.mjs'), null);
+});
+
+test('testName: a short name for each test file, unique among them', () => {
+  assert.equal(testName('tests/ui/merge.spec.mjs'), 'merge');
+  assert.equal(testName('tests/ui/merge.site.spec.mjs'), 'merge.site');
+  assert.equal(testName('tests/unit/files.test.mjs'), 'files');
+  assert.equal(testName('apps/snake/test/page.spec.mjs'), 'snake--page');
+  assert.equal(testName('/abs/repo/shared/files/test/files.test.mjs'), 'files--files');
+  assert.equal(testName('site\\landing\\test\\i18n.spec.mjs'), 'landing--i18n');
 });

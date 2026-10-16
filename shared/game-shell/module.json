@@ -1,0 +1,8 @@
+{
+  "name": "game-shell",
+  "kind": "shared",
+  "publish": {
+    "game.css": "/assets/css/game.css"
+  },
+  "uses": ["base"]
+}

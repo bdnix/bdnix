@@ -1,7 +1,7 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { inLanguage, expectTranslated } from './languages.mjs';
 
-// The site's languages (assets/js/lang.js), through the landing page and a
+// The site's languages (shared/lang/lang.js), through the landing page and a
 // game: the visitor's choice is kept in this browser, and every page follows it.
 
 test('the top bar switches language, and every page follows the choice', async ({ page }) => {

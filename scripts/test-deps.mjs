@@ -130,3 +130,13 @@ export function inputs(test, deps, { global = [], read = readFile, node = proces
 
 // A test's cache key: a hash of its inputs.
 export const keyOf = (lines) => crypto.createHash('sha256').update(lines.join('\n')).digest('hex').slice(0, 32);
+
+// A test file's short name, unique among the tests, for the folders its
+// cached result and coverage are kept in: tests/ui/snake.spec.mjs → snake,
+// tests/unit/files.test.mjs → files, a module's
+// apps/snake/test/page.spec.mjs → snake--page.
+export function testName(file){
+  const rel = file.replace(/\\/g, '/');
+  const m = /(?:^|\/)(?:apps|shared|site)\/([\w-]+)\/test\/([\w.-]+?)\.(?:spec|test)\.mjs$/.exec(rel);
+  return m ? `${m[1]}--${m[2]}` : path.posix.basename(rel).replace(/\.(spec|test)\.mjs$/, '');
+}

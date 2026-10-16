@@ -23,7 +23,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { inputs, keyOf } from './test-deps.mjs';
+import { inputs, keyOf, testName } from './test-deps.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
@@ -41,17 +41,22 @@ const MAX_AGE = 14 * 24 * 3600 * 1000;
 // the packages they use come along (scripts/test-deps.mjs). A change to any of
 // it runs every spec again. package.json, the rest of the lock file and this
 // runner aren't inputs: they don't change what a spec does.
-const GLOBAL = ['playwright.config.mjs', 'tests/server.mjs', 'tests/coverage/ui-setup.mjs', 'tests/coverage/ui-teardown.mjs'];
+const GLOBAL = ['playwright.config.mjs', 'tests/server.mjs', 'tests/coverage/ui-setup.mjs', 'tests/coverage/ui-teardown.mjs', 'tests/ui/inputs-setup.mjs', 'tests/ui/inputs-teardown.mjs'];
 
 function list(dir){
-  return fs.readdirSync(dir).filter((f) => f.endsWith('.mjs')).map((f) => `${dir}/${f}`).sort();
+  return fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.spec.mjs')).map((f) => `${dir}/${f}`).sort() : [];
+}
+// The modules' test folders: apps/snake/test, shared/files/test, ...
+function moduleTests(){
+  return ['apps', 'shared', 'site'].filter((top) => fs.existsSync(top)).flatMap((top) =>
+    fs.readdirSync(top).sort().map((m) => `${top}/${m}/test`));
 }
 
 // The cache key of a spec, given the site files it used.
 const key = (spec, deps) => keyOf(inputs(spec, deps, { global: GLOBAL }));
 
-const specs = list('tests/ui').filter((f) => f.endsWith('.spec.mjs'));
-const name = (spec) => path.basename(spec, '.spec.mjs');
+const specs = [...list('tests/ui'), ...moduleTests().flatMap(list)];
+const name = testName;
 
 function entries(spec){
   const dir = path.join(CACHE, name(spec));
@@ -136,7 +141,7 @@ function passedSpecs(){
   const tests = new Map();
   (function walk(suites, file){
     for (const suite of suites || []) {
-      const spec = file || `tests/ui/${suite.file}`;
+      const spec = file || suite.file;
       for (const s of suite.specs || []) {
         const ok = s.tests.length > 0 && s.tests.every((t) => t.status === 'expected');
         tests.set(spec, (tests.get(spec) ?? true) && ok);
@@ -170,10 +175,10 @@ function touch(entry){
 // Drops entries of specs that no longer exist and entries unused for a while.
 function prune(){
   if (!fs.existsSync(CACHE)) return;
-  const names = new Set(specs.map(name));
+  const byName = new Map(specs.map((s) => [name(s), s]));
   for (const dir of fs.readdirSync(CACHE)) {
-    if (!names.has(dir)) { fs.rmSync(path.join(CACHE, dir), { recursive: true, force: true }); continue; }
-    for (const e of entries(`tests/ui/${dir}.spec.mjs`)) {
+    if (!byName.has(dir)) { fs.rmSync(path.join(CACHE, dir), { recursive: true, force: true }); continue; }
+    for (const e of entries(byName.get(dir))) {
       if (!(Date.now() - e.used < MAX_AGE)) fs.rmSync(e.dir, { recursive: true, force: true });
     }
   }

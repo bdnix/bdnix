@@ -1,0 +1,7 @@
+{
+  "name": "sound",
+  "kind": "shared",
+  "publish": {
+    "sound.js": "/assets/js/sound.js"
+  }
+}
