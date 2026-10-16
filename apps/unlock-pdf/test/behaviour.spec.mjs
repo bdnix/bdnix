@@ -1,5 +1,6 @@
 import { test, expect, expectNoSideScroll } from '../../../tests/ui/fixtures.mjs';
 import { L, upload, samplePdf, lockedPdf, download, contentStreams } from '../../../tests/ui/pdfs.mjs';
+import { inNewWindow } from '../../../tests/ui/downloads.mjs';
 
 const sample = await samplePdf();
 const original = await L.PDFDocument.load(sample);
@@ -139,4 +140,31 @@ test('an error while unlocking is shown, and the form stays', async ({ page }) =
   await expect(page.locator('#unlockForm')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Unlock PDF' })).toBeEnabled();
   await expect(page.locator('#done')).toBeHidden();
+});
+
+test('the download link opens a new window, which names the file and downloads it, and leaves the tool as it was', async ({ page }) => {
+  await page.goto('/unlock-pdf/');
+  await page.locator('#picker').setInputFiles([upload('report.pdf', await lockedPdf(await samplePdf(), { user: 'pw' }))]);
+  await page.getByLabel('Password', { exact: true }).fill('pw');
+  await page.getByRole('button', { name: 'Unlock PDF' }).click();
+  const link = page.locator('#downloadBtn');
+  await expect(link).toHaveAttribute('download', 'report-unlocked.pdf');
+  await expect(link).toHaveAttribute('target', '_blank');
+
+  const { download: dl, popup } = await inNewWindow(page, () => link.click());
+  expect(dl.suggestedFilename()).toBe('report-unlocked.pdf');
+  await expect(popup).toHaveTitle('report-unlocked.pdf · bdnix');
+  await expect(popup.locator('.lede')).toHaveText('Your download has started. If it didn’t, use the button below. You can close this tab once the file is saved.');
+  // The page there links the site's styles (checked in use below), and its
+  // button downloads the file again.
+  const sheets = (p) => p.locator('link[rel="stylesheet"]').evaluateAll((ls) => ls.map((l) => l.href));
+  expect(await sheets(popup)).toEqual(await sheets(page));
+  const [again] = await Promise.all([popup.waitForEvent('download'), popup.getByRole('link', { name: 'Download report-unlocked.pdf' }).click()]);
+  expect(again.suggestedFilename()).toBe('report-unlocked.pdf');
+  // The tool is still there, with its result.
+  await expect(page.locator('#msg')).toHaveText('Done. The new copy opens without a password.');
+
+  // A second click opens another window.
+  const second = await download(page, () => link.click());
+  expect(second.name).toBe('report-unlocked.pdf');
 });

@@ -212,3 +212,24 @@ test('clearing four rows at once and reaching the next level have their own soun
 test('its sounds are well formed and loud enough', async ({ page }) => {
   expect(await soundProblems(page)).toEqual([]);
 });
+
+// Played upright (upright.js): a game opened on a phone already held sideways.
+test('opened on a phone already held sideways, the note shows, and a saved game still comes back paused', async ({ page }) => {
+  const note = page.locator('.upright');
+  await page.keyboard.press('KeyP');                  // pausing saves the game
+  await expect(page.locator('#ovTitle')).toHaveText('Paused');
+  const upright = page.viewportSize();
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.reload();
+  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
+  if (await page.evaluate(() => matchMedia('(pointer:coarse)').matches)) {
+    await expect(note).toBeVisible();
+    await page.setViewportSize(upright);
+    await expect(note).toBeHidden();
+  } else {
+    await expect(note).toBeHidden();
+  }
+  await page.locator('#startBtn').click();   // Resume
+  await expect(page.locator('#overlay')).toBeHidden();
+});

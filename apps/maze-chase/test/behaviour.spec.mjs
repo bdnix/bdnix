@@ -1,5 +1,6 @@
 import { test, expect } from '../../../tests/ui/fixtures.mjs';
 import { openGame, press, tap, listen, heard, soundProblems } from '../../../tests/ui/games.mjs';
+import { likeSafari, audioStates } from '../../../tests/ui/safari.mjs';
 
 // The player starts low in the maze, heading left. Each dot is 10 points and a
 // power pellet 50. The game waits 2.2 seconds on "Ready" before it moves.
@@ -177,4 +178,24 @@ test('eating a ghost or fruit, an extra life and clearing the maze each have a s
 
 test('its sounds are well formed and loud enough', async ({ page }) => {
   expect(await soundProblems(page)).toEqual([]);
+});
+
+test('on Safari, resuming a saved game still has sound, even when every sound comes from the game loop', async ({ page }) => {
+  await page.clock.runFor(500);                        // eats a few dots
+  await press(page, 'KeyP');
+  await likeSafari(page);
+  await listen(page);
+  await page.reload();                                 // comes back paused, with no sound yet
+  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
+  await heard(page);
+
+  await press(page, 'Enter');                          // Resume: makes no sound of its own
+  await page.clock.runFor(1000);
+  expect(await heard(page)).toContain('chomp');
+  expect(await audioStates(page)).toEqual(['running']);
+
+  // Locking the phone puts the audio to sleep; the next steer wakes it.
+  await page.evaluate(() => window.audio.forEach((c) => { c.awake = false; }));
+  await press(page, 'ArrowUp');
+  expect(await audioStates(page)).toEqual(['running']);
 });

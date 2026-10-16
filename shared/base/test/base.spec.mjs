@@ -36,3 +36,15 @@ test('the site\'s own fonts load from /assets/fonts, in every weight', async ({ 
   expect(fonts.length).toBeGreaterThan(0);
   expect(fonts.every((s) => s === 200)).toBe(true);
 });
+
+// Inter and JetBrains Mono come from assets/fonts, not a font service.
+test('the site\'s own fonts load, in every weight the pages use', async ({ page }) => {
+  await openFixture(page, { css: ['/assets/css/base.css'], body: BODY });
+  const loaded = await page.evaluate(async () => {
+    const faces = ['400 16px Inter', '600 16px Inter', '800 16px Inter', '400 16px "JetBrains Mono"', '600 16px "JetBrains Mono"'];
+    await Promise.all(faces.map((f) => document.fonts.load(f, 'bdnix Ąž')));
+    return faces.map((f) => [f, document.fonts.check(f, 'bdnix Ąž')]);
+  });
+  expect(loaded).toEqual(loaded.map(([f]) => [f, true]));
+  expect(await page.evaluate(() => [...document.fonts].some((f) => f.family.replace(/"/g, '') === 'Inter' && f.weight === '800' && f.status === 'loaded'))).toBe(true);
+});

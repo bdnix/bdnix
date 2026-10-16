@@ -1,41 +1,39 @@
-import { test, expect } from './fixtures.mjs';
-import { inNewWindow } from './downloads.mjs';
-import { upload, samplePdf, lockedPdf, download } from './pdfs.mjs';
+import { test, expect } from '../../../tests/ui/fixtures.mjs';
+import { openFixture } from '../../../tests/ui/fixture.mjs';
+import { inNewWindow } from '../../../tests/ui/downloads.mjs';
 
-// What every tool's downloads share (bdnixFiles in files.js), tried on the
-// unlock tool and directly: each file downloads in a new window.
+// files.js's downloads, on a page of their own: each file downloads in a new
+// window, which says what's happening, and falls back to saving from the page
+// when there's no window. (Each tool tries its own download links.)
 
 // A small file to offer, made in the page.
 const makeFile = (page) => page.evaluate(() => URL.createObjectURL(new Blob(['hello'], { type: 'text/plain' })));
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/unlock-pdf/');
+  await openFixture(page, { css: ['/assets/css/base.css'], js: ['/assets/js/lang.js', '/assets/js/files.js'], body: '<main><h1>A tool</h1></main>' });
 });
 
 test('a download link opens a new window, which names the file and downloads it', async ({ page }) => {
-  await page.locator('#picker').setInputFiles([upload('report.pdf', await lockedPdf(await samplePdf(), { user: 'pw' }))]);
-  await page.getByLabel('Password', { exact: true }).fill('pw');
-  await page.getByRole('button', { name: 'Unlock PDF' }).click();
-  const link = page.locator('#downloadBtn');
-  await expect(link).toHaveAttribute('download', 'report-unlocked.pdf');
+  const url = await makeFile(page);
+  await page.evaluate((url) => {
+    const a = window.bdnixFiles.offer(document.createElement('a'), url, 'notes.txt');
+    a.id = 'link';
+    a.textContent = 'Download';
+    document.body.appendChild(a);
+  }, url);
+  const link = page.locator('#link');
+  await expect(link).toHaveAttribute('download', 'notes.txt');
   await expect(link).toHaveAttribute('target', '_blank');
-
   const { download: dl, popup } = await inNewWindow(page, () => link.click());
-  expect(dl.suggestedFilename()).toBe('report-unlocked.pdf');
-  await expect(popup).toHaveTitle('report-unlocked.pdf · bdnix');
+  expect(dl.suggestedFilename()).toBe('notes.txt');
+  await expect(popup).toHaveTitle('notes.txt · bdnix');
   await expect(popup.locator('.lede')).toHaveText('Your download has started. If it didn’t, use the button below. You can close this tab once the file is saved.');
-  // The page there links the site's styles (checked in use below), and its
-  // button downloads the file again.
+  // The page there links the same styles, and its button downloads the file again.
   const sheets = (p) => p.locator('link[rel="stylesheet"]').evaluateAll((ls) => ls.map((l) => l.href));
   expect(await sheets(popup)).toEqual(await sheets(page));
-  const [again] = await Promise.all([popup.waitForEvent('download'), popup.getByRole('link', { name: 'Download report-unlocked.pdf' }).click()]);
-  expect(again.suggestedFilename()).toBe('report-unlocked.pdf');
-  // The tool is still there, with its result.
-  await expect(page.locator('#msg')).toHaveText('Done. The new copy opens without a password.');
-
-  // A second click opens another window.
-  const second = await download(page, () => link.click());
-  expect(second.name).toBe('report-unlocked.pdf');
+  const [again] = await Promise.all([popup.waitForEvent('download'), popup.getByRole('link', { name: 'Download notes.txt' }).click()]);
+  expect(again.suggestedFilename()).toBe('notes.txt');
+  await expect(page.locator('h1')).toHaveText('A tool');
 });
 
 test('the new window is styled like the site', async ({ page }) => {

@@ -1,5 +1,6 @@
 import { test, expect, expectNoSideScroll } from '../../../tests/ui/fixtures.mjs';
 import { upload, numberedPdf, download, widths } from '../../../tests/ui/pdfs.mjs';
+import { axeProblems } from '../../../tests/ui/checks.mjs';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/merge-pdf/');
@@ -156,4 +157,14 @@ test('a merge that fails closes the window it opened, and says why', async ({ pa
   const [popup] = await Promise.all([page.waitForEvent('popup'), page.getByRole('button', { name: 'Merge PDFs' }).click()]);
   await expect(page.locator('#msg')).toHaveText('Something went wrong while merging: out of memory');
   await expect.poll(() => popup.isClosed()).toBe(true);
+});
+
+// checkPage checks the page with axe as it opens; this checks it in use.
+test('with files in it and the preview showing, the page passes axe', async ({ page }) => {
+  await page.goto('/merge-pdf/');
+  await page.locator('#picker').setInputFiles([upload('A.pdf', await numberedPdf(100, 3)), upload('B.pdf', await numberedPdf(200, 2))]);
+  await expect(page.locator('.file')).toHaveCount(2);
+  await expect(page.locator('#pageLabel')).toHaveText('Page 1 of 5');
+  await expect(page.locator('#pageCanvas')).toBeVisible();
+  expect(await axeProblems(page)).toEqual([]);
 });

@@ -2,9 +2,8 @@ import { test, expect } from './fixtures.mjs';
 import { LIVE } from './checks.mjs';
 
 // checkPage (checks.mjs) checks each page's own title, description, share
-// tags and structured data; tests/unit/site.test.mjs checks they're unique
-// and that sitemap.xml lists exactly the public pages. This checks what the
-// pages share and what search engines are pointed to.
+// tags and structured data, and tools/boundaries.mjs that they're unique.
+// This checks what the pages share and what search engines are pointed to.
 test('the share images exist, at the sizes the tags say', async ({ request }) => {
   for (const [file, width, height] of [['/assets/img/og.png', 1200, 630], ['/assets/img/apple-touch-icon.png', 180, 180]]) {
     const res = await request.get(file);

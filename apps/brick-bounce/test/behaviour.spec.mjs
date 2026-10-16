@@ -1,5 +1,6 @@
 import { test, expect } from '../../../tests/ui/fixtures.mjs';
 import { openGame, press, tap, inkOn, listen, heard, soundProblems } from '../../../tests/ui/games.mjs';
+import { likeSafari, audioStates } from '../../../tests/ui/safari.mjs';
 
 // The board is 360 × 480 units. A new ball waits on the middle of the paddle
 // at (180, 435); with Math.random fixed at 0 it's launched up and to the
@@ -636,4 +637,40 @@ test('an extra ball draining away just pops, and costs nothing', async ({ page }
   expect(await heard(page)).not.toContain('lose');
   await expect(page.locator('#lives')).toHaveText('2');
   await expect(page.locator('#lives').locator('..')).not.toHaveClass(/hit/);
+});
+
+// On a phone the buttons are laid out like a gamepad (gamepad.css).
+test('a D-pad arm lights up while it is held', async ({ page }) => {
+  await openGame(page, '/brick-bounce/');
+  if (!(await page.evaluate(() => matchMedia('(pointer:coarse)').matches))) return;
+  await page.getByRole('button', { name: 'Start game' }).click();
+  const left = page.locator('.touch .dpad .left');
+  const b = await left.boundingBox();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+  await page.mouse.down();
+  await expect(left).toHaveClass(/\bon\b/);
+  await page.mouse.up();
+  await expect(left).not.toHaveClass(/\bon\b/);
+});
+
+test('on Safari, a resumed game still has its bounce sounds', async ({ page }) => {
+  await likeSafari(page);
+  await listen(page);
+  await openGame(page, '/brick-bounce/');
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await press(page, 'Space');                          // launch the ball
+  await page.clock.runFor(200);
+  await press(page, 'KeyP');
+  await page.reload();                                 // comes back paused, with no sound yet
+  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
+  await heard(page);
+
+  await press(page, 'Enter');                          // Resume: makes no sound of its own
+  let sounds = [];
+  for (let t = 0; t < 10000 && !sounds.length; t += 50) {
+    await page.clock.runFor(50);
+    sounds = await heard(page);
+  }
+  expect(['brick', 'paddle', 'wall']).toContain(sounds[0]);
+  expect(await audioStates(page)).toEqual(['running']);
 });

@@ -1,5 +1,5 @@
 // The checks every PDF tool gets: pdf-lib fetched on demand. Each PDF tool
-// calls checkPdfLib() from its own tests/ui/<app>.site.spec.mjs, beside
+// calls checkPdfLib() from its page target (test/page.spec.mjs), beside
 // checkPage() from checks.mjs.
 import { test, expect } from './fixtures.mjs';
 import { upload, numberedPdf } from './pdfs.mjs';
