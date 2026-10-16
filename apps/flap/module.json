@@ -1,0 +1,33 @@
+{
+  "name": "flap",
+  "kind": "app",
+  "url": "/flap/",
+  "publish": {
+    "index.html": "/flap/index.html",
+    "flappy.js": "/assets/js/flappy.js",
+    "flappy-core.js": "/assets/js/flappy-core.js",
+    "flappy.css": "/assets/css/flappy.css"
+  },
+  "uses": ["analytics", "backdrop", "base", "game-shell", "gamesave", "icon-btn", "lang", "sound", "upright"],
+  "page": {
+    "title": "Flap — Play free in your browser | bdnix",
+    "description": "Play Flap free in your browser: tap, click or press Space to flap through the gaps between the pipes. Earn medals and beat your best score. Nothing to install.",
+    "schema": "WebApplication",
+    "category": "GameApplication"
+  },
+  "card": {
+    "kind": "game",
+    "name": "Flap",
+    "blurb": "Flap through the pipes",
+    "best": "bdnix_flappy_best",
+    "keywords": "game arcade bird pipes fly tap",
+    "icon": [
+      "<rect x=\"27\" y=\"2\" width=\"9\" height=\"11\" rx=\"1.5\" fill=\"#22d3ee\" opacity=\".55\"/>",
+      "<rect x=\"27\" y=\"27\" width=\"9\" height=\"11\" rx=\"1.5\" fill=\"#22d3ee\" opacity=\".55\"/>",
+      "<circle cx=\"14\" cy=\"20\" r=\"9\" fill=\"#facc15\"/>",
+      "<ellipse cx=\"11\" cy=\"22\" rx=\"4.5\" ry=\"2.6\" fill=\"#f59e0b\"/>",
+      "<circle cx=\"17.5\" cy=\"17\" r=\"2.6\" fill=\"#fff\"/>",
+      "<path d=\"M21 20l6 2-6 2z\" fill=\"#fb923c\"/>"
+    ]
+  }
+}

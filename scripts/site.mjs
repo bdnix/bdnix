@@ -23,122 +23,14 @@ export const pages = [
     description: 'Play Falling Blocks, Maze Chase, Flap, Road Hop, Snake, Brick Bounce and chess, merge, watermark, redact, sign and unlock PDFs, turn videos into MP3s, compress, frame or collage photos, all in your browser. Nothing uploaded.',
     schema: 'WebSite',
   },
-  {
-    path: '/falling-blocks/',
-    title: 'Falling Blocks — Play free in your browser | bdnix',
-    description: 'Play Falling Blocks free in your browser, with the keyboard or with touch buttons on a phone. Hold a piece, hard drop, clear lines and beat your best score. Nothing to install.',
-    schema: 'WebApplication', category: 'GameApplication',
-    app: {
-      kind: 'game', name: 'Falling Blocks', blurb: 'Stack blocks, clear lines',
-      best: 'bdnix_tetris_best',   // the key the game keeps its best score under
-      keywords: 'game puzzle blocks stack lines arcade',
-      icon: [
-        '<rect x="4" y="18" width="10" height="10" rx="2" fill="#a855f7"/>',
-        '<rect x="15" y="18" width="10" height="10" rx="2" fill="#a855f7"/>',
-        '<rect x="26" y="18" width="10" height="10" rx="2" fill="#a855f7"/>',
-        '<rect x="15" y="7" width="10" height="10" rx="2" fill="#a855f7"/>',
-        '<rect x="4" y="29" width="10" height="10" rx="2" fill="#22d3ee" opacity=".55"/>',
-        '<rect x="15" y="29" width="10" height="10" rx="2" fill="#22d3ee" opacity=".55"/>',
-        '<rect x="26" y="29" width="10" height="10" rx="2" fill="#22d3ee" opacity=".55"/>'
-      ]
-    }
-  },
-  {
-    path: '/maze-chase/',
-    title: 'Maze Chase — Play free in your browser | bdnix',
-    description: 'Play Maze Chase free in your browser, with the keyboard, or with swipes and touch buttons on a phone. Eat every dot, dodge the ghosts and beat your best score. Nothing to install.',
-    schema: 'WebApplication', category: 'GameApplication',
-    app: {
-      kind: 'game', name: 'Maze Chase', blurb: 'Eat dots, dodge ghosts',
-      best: 'bdnix_pacman_best',   // the key the game keeps its best score under
-      keywords: 'game arcade maze ghosts dots',
-      icon: [
-        '<path d="M14 20 L24.4 14 A12 12 0 1 0 24.4 26 Z" fill="#facc15"/>',
-        '<circle cx="29" cy="20" r="2" fill="#eef1f8" opacity=".8"/>',
-        '<circle cx="36" cy="20" r="2" fill="#eef1f8" opacity=".8"/>'
-      ]
-    }
-  },
-  {
-    path: '/flap/',
-    title: 'Flap — Play free in your browser | bdnix',
-    description: 'Play Flap free in your browser: tap, click or press Space to flap through the gaps between the pipes. Earn medals and beat your best score. Nothing to install.',
-    schema: 'WebApplication', category: 'GameApplication',
-    app: {
-      kind: 'game', name: 'Flap', blurb: 'Flap through the pipes',
-      best: 'bdnix_flappy_best',   // the key the game keeps its best score under
-      keywords: 'game arcade bird pipes fly tap',
-      icon: [
-        '<rect x="27" y="2" width="9" height="11" rx="1.5" fill="#22d3ee" opacity=".55"/>',
-        '<rect x="27" y="27" width="9" height="11" rx="1.5" fill="#22d3ee" opacity=".55"/>',
-        '<circle cx="14" cy="20" r="9" fill="#facc15"/>',
-        '<ellipse cx="11" cy="22" rx="4.5" ry="2.6" fill="#f59e0b"/>',
-        '<circle cx="17.5" cy="17" r="2.6" fill="#fff"/>',
-        '<path d="M21 20l6 2-6 2z" fill="#fb923c"/>'
-      ]
-    }
-  },
-  {
-    path: '/road-hop/',
-    title: 'Road Hop — Play free in your browser | bdnix',
-    description: 'Play Road Hop free in your browser: help a chicken hop across busy roads and ride logs over rivers. Keep moving, go as far as you can and beat your best. Nothing to install.',
-    schema: 'WebApplication', category: 'GameApplication',
-    app: {
-      kind: 'game', name: 'Road Hop', blurb: 'Help a chicken cross the road',
-      best: 'bdnix_hop_best',   // the key the game keeps its best score under
-      keywords: 'game arcade chicken cross road cars traffic',
-      icon: [
-        '<rect x="0" y="4" width="40" height="10" rx="2" fill="#22d3ee" opacity=".3"/>',
-        '<rect x="24" y="5.5" width="12" height="7" rx="2.5" fill="#f472b6"/>',
-        '<rect x="0" y="26" width="40" height="10" rx="2" fill="#22d3ee" opacity=".3"/>',
-        '<rect x="3" y="27.5" width="12" height="7" rx="2.5" fill="#a855f7"/>',
-        '<ellipse cx="20" cy="21" rx="7" ry="7.5" fill="#f8fafc"/>',
-        '<ellipse cx="20" cy="15" rx="2" ry="2.6" fill="#ef4444"/>',
-        '<path d="M18 14l2-3.5 2 3.5z" fill="#fb923c"/>'
-      ]
-    }
-  },
+  { module: 'falling-blocks' },
+  { module: 'maze-chase' },
+  { module: 'flap' },
+  { module: 'road-hop' },
   // Snake has moved into its module, apps/snake/ (its module.json).
   { module: 'snake' },
-  {
-    path: '/brick-bounce/',
-    title: 'Brick Bounce — Play free in your browser | bdnix',
-    description: 'Play Brick Bounce free in your browser: bounce the ball off your paddle to smash a wall of bricks, row by row, before your three balls run out. Nothing to install.',
-    schema: 'WebApplication', category: 'GameApplication',
-    app: {
-      kind: 'game', name: 'Brick Bounce', blurb: 'Bounce the ball, smash the bricks',
-      best: 'bdnix_bricks_best',   // the key the game keeps its best score under
-      keywords: 'game arcade ball paddle bricks',
-      icon: [
-        '<rect x="3" y="5" width="10" height="6" rx="1.5" fill="#f472b6"/>',
-        '<rect x="15" y="5" width="10" height="6" rx="1.5" fill="#f472b6"/>',
-        '<rect x="27" y="5" width="10" height="6" rx="1.5" fill="#f472b6"/>',
-        '<rect x="3" y="13" width="10" height="6" rx="1.5" fill="#a855f7"/>',
-        '<rect x="27" y="13" width="10" height="6" rx="1.5" fill="#a855f7"/>',
-        '<circle cx="20" cy="26" r="3" fill="#eef1f8"/>',
-        '<rect x="11" y="32" width="18" height="4" rx="2" fill="#22d3ee"/>'
-      ]
-    }
-  },
-  {
-    path: '/chess/',
-    title: 'Chess — Play Stockfish free in your browser | bdnix',
-    description: 'Play chess free in your browser against Stockfish, at ten levels, as White or Black, then review every move with the engine. Open a PGN file to analyse any game. Nothing to install.',
-    schema: 'WebApplication', category: 'GameApplication',
-    app: {
-      kind: 'game', name: 'Chess', blurb: 'Take on Stockfish, ten levels',
-      best: 'bdnix_chess_best',   // the key the game keeps the highest level beaten under
-      bestLabel: 'Level',         // shown before it on the profile page
-      keywords: 'game board chess stockfish engine strategy checkmate pgn analysis review',
-      icon: [
-        '<rect x="4" y="4" width="32" height="32" rx="3" fill="#22d3ee" opacity=".3"/>',
-        '<rect x="4" y="4" width="16" height="16" rx="3" fill="#a855f7" opacity=".55"/>',
-        '<rect x="20" y="20" width="16" height="16" rx="3" fill="#a855f7" opacity=".55"/>',
-        '<path d="M13 34h16c.4-6.5-.4-12-2.8-16.5C24.2 14 21.4 11.5 18 10.8L17.2 8l-2 3.2c-3.2 1.2-5.2 3.6-6 6.4l-1.2 4.4c-.3 1.3.7 2.4 2 2.2l3.2-1c1.3-.4 2.6-.8 3.8-.7C14.6 26.8 13 30 13 34z" fill="#eef1f8"/>',
-        '<circle cx="13.6" cy="15.6" r="1.2" fill="#080a12"/>'
-      ]
-    }
-  },
+  { module: 'brick-bounce' },
+  { module: 'chess' },
   {
     path: '/merge-pdf/',
     title: 'Merge PDFs — Combine PDF files free and private | bdnix',
