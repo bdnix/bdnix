@@ -9,7 +9,7 @@ There's nothing to install and no account to create. Files you open in a tool ar
 
 The search box on the home page narrows the list as you type: try "pdf", "photo" or a game's name. Press `/` to jump to it and Esc to clear it.
 
-The whole site, games included, is also in Bangla: the switch in the top bar picks the language, and the site remembers it. A browser set to Bangla gets it to start with. Adding a language is adding its translations to `assets/lang/` (see [docs/development.md](docs/development.md#languages)).
+The whole site, games included, is also in Bangla: the switch in the top bar picks the language, and the site remembers it. A browser set to Bangla gets it to start with. Adding a language is adding its translations to `assets/lang/` and each module's `lang/` (see [docs/development.md](docs/development.md#languages)).
 
 ## Tools
 

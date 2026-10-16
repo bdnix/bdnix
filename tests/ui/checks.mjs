@@ -55,6 +55,9 @@ const TRADEMARKS = /tetris|pac-?man|flappy|crossy|blockade|breakout/i;
 //   noindex   kept out of search engines (no minimum description length)
 //   footer    has the site's footer
 //   game      a game: asks for the phone upright (see checks-game.mjs)
+//   languages false for a module's page, whose own i18n target calls
+//             checkPageLanguages(url) instead, so its English and its
+//             translations are tested apart
 export function checkPage(url, opts = {}){
   const words = WORDS;
   test(`${url}: its head has the security policy first, analytics, and search and share tags`, async ({ page, request }) => {
@@ -181,23 +184,7 @@ export function checkPage(url, opts = {}){
     }
   });
 
-  // Every language the site has (assets/lang), picked by the visitor: the
-  // page is all in it, with its numbers in its digits, and still fits a phone.
-  test(`${url}: in every language, nothing is left in English`, async ({ page }) => {
-    await page.goto(url);
-    const languages = await page.evaluate(() => window.bdnixLang.languages.map((l) => l.code).filter((c) => c !== 'en'));
-    expect(languages.length).toBeGreaterThan(0);
-    const english = await page.title();
-    for (const code of languages) {
-      await page.evaluate((c) => localStorage.setItem('bdnix_lang', c), code);
-      await page.goto(url);
-      await expectTranslated(page, code);
-      expect(await page.title()).not.toBe(english);
-      expect(length(await meta(page, 'name', 'description').getAttribute('content')), 'description length').toBeLessThanOrEqual(230);
-      expect(await axeProblems(page)).toEqual([]);
-      await expectNoSideScroll(page);
-    }
-  });
+  if (opts.languages !== false) checkPageLanguages(url);
 
   test(`${url}: on the live site it asks before analytics, and contacts nothing but bdnix.com`, async ({ page }) => {
     await serveLive(page);
@@ -214,6 +201,27 @@ export function checkPage(url, opts = {}){
     await expectNoSideScroll(page);
     expect(await page.evaluate(() => typeof window.gtag)).toBe('undefined');
     expect(elsewhere).toEqual([]);
+  });
+}
+
+// The page in every language the site has, picked by the visitor: all in
+// it, with its numbers in its digits, and still fitting a phone. Part of
+// checkPage(), unless a module's page tests its languages on their own.
+export function checkPageLanguages(url){
+  test(`${url}: in every language, nothing is left in English`, async ({ page }) => {
+    await page.goto(url);
+    const languages = await page.evaluate(() => window.bdnixLang.languages.map((l) => l.code).filter((c) => c !== 'en'));
+    expect(languages.length).toBeGreaterThan(0);
+    const english = await page.title();
+    for (const code of languages) {
+      await page.evaluate((c) => localStorage.setItem('bdnix_lang', c), code);
+      await page.goto(url);
+      await expectTranslated(page, code);
+      expect(await page.title()).not.toBe(english);
+      expect(length(await meta(page, 'name', 'description').getAttribute('content')), 'description length').toBeLessThanOrEqual(230);
+      expect(await axeProblems(page)).toEqual([]);
+      await expectNoSideScroll(page);
+    }
   });
 }
 

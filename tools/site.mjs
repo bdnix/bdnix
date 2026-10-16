@@ -2,17 +2,17 @@
 // workflow (.github/workflows/pages.yml) deploys to www.bdnix.com.
 //
 // What's published is listed, not excluded: the landing page, every page in
-// scripts/site.mjs (its folder's index.html), assets/, the few files the
-// site's root needs, and the files only the build makes (sitemap.xml and the
-// language packs). Anything else in the repository (tests, tooling, docs,
+// scripts/site.mjs (its folder's index.html), what each module publishes
+// (its module.json's publish), assets/, the few files the site's root needs,
+// and the files only the build makes (sitemap.xml and the language packs). Anything else in the repository (tests, tooling, docs,
 // configs) stays out because it isn't on the list. Each file is written as
 // tools/page.mjs serves it: pages with their generated parts and ?v= stamps,
 // lang.js with its list of languages. Nothing generated is committed.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pages } from '../scripts/site.mjs';
-import { serve, generated, check } from './page.mjs';
+import { serve, generated, check, sitePages } from './page.mjs';
+import { modules } from './modules.mjs';
 
 export const ROOT_FILES = ['CNAME', 'LICENSE', 'robots.txt'];
 
@@ -28,22 +28,24 @@ function walk(root, dir){
 
 // The paths of the published site, sorted. Fails if a page or a root file
 // is missing.
-export function publishedFiles(root, list = pages){
+export function publishedFiles(root, list = sitePages(root)){
   const files = [...ROOT_FILES];
+  const fromModules = modules(root).published;
   for (const p of list) files.push(p.path.slice(1) + 'index.html');
   files.push(...walk(root, 'assets'));
-  for (const f of files) if (!fs.existsSync(path.join(root, f))) throw new Error(`${f} is published but doesn't exist`);
+  for (const f of files) if (!fromModules.has(f) && !fs.existsSync(path.join(root, f))) throw new Error(`${f} is published but doesn't exist`);
+  files.push(...fromModules.keys());
   files.push(...generated(root));
   return [...new Set(files)].sort();
 }
 
 // Writes the published site to out, replacing what was there. Fails, naming
 // every problem, if a page or translation is broken.
-export function build(root, out, list = pages){
-  const files = publishedFiles(root, list);
+export function build(root, out, list){
+  const files = publishedFiles(root, list || sitePages(root));
   const errors = check(root, list);
   const made = files.map((f) => {
-    const served = serve(root, f, list);
+    const served = serve(root, f, list || sitePages(root));
     errors.push(...served.errors);
     return [f, served.body];
   });

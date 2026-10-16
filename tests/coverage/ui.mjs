@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { CoverageReport } from 'monocart-coverage-reports';
 import { suite } from './shared.mjs';
+import { testName } from '../../scripts/test-deps.mjs';
 
 const OWN = /\/assets\/js\/[\w-]+\.js(?:\?|$)/;
 const OUT = 'coverage/ui';
@@ -17,8 +18,9 @@ const SPECS = `${OUT}/specs`;
 export const enabled = !!process.env.COVERAGE;
 export const options = suite('ui', { entryFilter: (entry) => OWN.test(entry.url) });
 
-// Where a spec's raw data goes: tests/ui/snake.spec.mjs -> coverage/ui/specs/snake/.cache
-export const specDir = (file) => `${SPECS}/${path.basename(file).replace(/\.spec\.mjs$/, '')}/.cache`;
+// Where a spec's raw data goes: tests/ui/merge.spec.mjs -> coverage/ui/specs/merge/.cache,
+// apps/snake/test/page.spec.mjs -> coverage/ui/specs/snake--page/.cache
+export const specDir = (file) => `${SPECS}/${testName(file)}/.cache`;
 
 export async function save(file, entries){
   const own = entries.filter((e) => OWN.test(e.url));

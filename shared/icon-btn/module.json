@@ -1,0 +1,8 @@
+{
+  "name": "icon-btn",
+  "kind": "shared",
+  "publish": {
+    "icon-btn.css": "/assets/css/icon-btn.css"
+  },
+  "uses": ["base"]
+}

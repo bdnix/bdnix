@@ -1,0 +1,7 @@
+{
+  "name": "search",
+  "kind": "shared",
+  "publish": {
+    "search-core.js": "/assets/js/search-core.js"
+  }
+}

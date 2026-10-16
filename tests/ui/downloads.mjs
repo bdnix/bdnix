@@ -1,5 +1,5 @@
 // Every file the site makes downloads in a new window (bdnixFiles in
-// assets/js/files.js), so a browser that shows the file rather than saving
+// shared/files/files.js), so a browser that shows the file rather than saving
 // it leaves the tool where it was. inNewWindow() runs trigger(), which should
 // open that window, and waits for the file to download there. It checks the
 // window names the file and links to it, and that the tool's own page stayed

@@ -1,5 +1,6 @@
 # Codecov settings: https://docs.codecov.com/docs/codecov-yaml
-# CI uploads the unit and UI tests' coverage of assets/js/*.js together (see
+# CI uploads the unit and UI tests' coverage of the site's own scripts (the
+# modules' and assets/js/*.js, each at its place in the repository) together (see
 # .github/workflows/tests.yml), and Codecov combines them: a line counts as
 # covered if either suite runs it. The two checks below are what AGENTS.md
 # asks of every pull request.

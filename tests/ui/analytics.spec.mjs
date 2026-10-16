@@ -14,7 +14,7 @@ test('declining hides the banner for good and never loads Google\'s script', asy
   await expect(page.locator('.consent')).toHaveCount(0);
   expect(await page.evaluate(() => localStorage.getItem('bdnix_analytics'))).toBe('denied');
 
-  await page.goto(LIVE + '/snake/');
+  await page.goto(LIVE + '/road-hop/');
   await expect(page.locator('#ovTitle')).toBeVisible();
   await expect(page.locator('.consent')).toHaveCount(0);
   expect(await page.evaluate(() => typeof window.gtag)).toBe('undefined');
@@ -31,7 +31,7 @@ test('accepting loads Google Analytics straight away, and on every page after', 
   const config = await page.evaluate(() => Array.prototype.slice.call(window.dataLayer[1]));
   expect(config).toEqual(['config', GA]);
 
-  await page.goto(LIVE + '/snake/');
+  await page.goto(LIVE + '/road-hop/');
   await expect(page.locator('.consent')).toHaveCount(0);
   await expect.poll(() => google).toEqual([TAG, TAG]);
 });

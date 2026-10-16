@@ -1,0 +1,7 @@
+{
+  "name": "images",
+  "kind": "shared",
+  "publish": {
+    "images.js": "/assets/js/images.js"
+  }
+}

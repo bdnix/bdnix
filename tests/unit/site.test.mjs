@@ -3,13 +3,16 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SITE, pages } from '../../scripts/site.mjs';
+import { SITE } from '../../scripts/site.mjs';
 import { schema, meta, footer, cards, scores, fill, sitemap, esc, CSP } from '../../scripts/parts.mjs';
+import { sitePages } from '../../tools/page.mjs';
 
-// scripts/site.mjs lists every page; scripts/parts.mjs turns it into the
-// parts of the pages that tools/page.mjs fills in.
-const apps = pages.filter((p) => p.app);
+// scripts/site.mjs lists every page, with the ones that have moved into
+// modules in their places (their module.json); scripts/parts.mjs turns them
+// into the parts of the pages that tools/page.mjs fills in.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const pages = sitePages(root);
+const apps = pages.filter((p) => p.app);
 
 test('site: every page once, each with a title and description', () => {
   const paths = pages.map((p) => p.path);
@@ -128,12 +131,17 @@ test('site: titles and descriptions are unique, and short enough for search resu
 
 // Every page runs the checks every page gets (checkPage in tests/ui/checks.mjs),
 // and every game the checks every game gets (checkGame), from its own
-// tests/ui/<app>.site.spec.mjs. There are no lists of pages to keep up to
-// date in the shared specs, so adding an app only runs its own tests.
+// tests/ui/<app>.site.spec.mjs, or a module's from its test/page.spec.mjs.
+// There are no lists of pages to keep up to date in the shared specs, so
+// adding an app only runs its own tests.
 test('site: every page has its own site spec, which runs the shared checks for it', () => {
   const dir = path.join(root, 'tests/ui');
   const specs = fs.readdirSync(dir).filter((f) => f.endsWith('.site.spec.mjs'))
     .map((f) => ({ file: f, text: fs.readFileSync(path.join(dir, f), 'utf8') }));
+  for (const p of pages.filter((x) => x.module)) {
+    const file = path.join(root, 'apps', p.module, 'test', 'page.spec.mjs');
+    specs.push({ file: path.relative(root, file), text: fs.readFileSync(file, 'utf8') });
+  }
   const calls = (fn) => specs.flatMap((s) => [...s.text.matchAll(new RegExp(`\\b${fn}\\('([^']*)'`, 'g'))].map((m) => [m[1], s.file]));
   const pageChecks = calls('checkPage'), gameChecks = calls('checkGame');
   for (const p of pages) {

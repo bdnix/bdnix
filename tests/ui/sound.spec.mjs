@@ -5,7 +5,7 @@ import { openGame, press, listen, heard } from './games.mjs';
 // checks each). This checks the choice is shared: muting one game mutes the
 // others, and M turns it back on. Two games are enough to show it.
 const btn = (page) => page.locator('#soundBtn');
-const games = ['/snake/', '/brick-bounce/'];
+const games = ['/road-hop/', '/brick-bounce/'];
 
 test('muting one game mutes them all', async ({ page }) => {
   await listen(page);
@@ -39,7 +39,7 @@ test('the games play without storage, with sound on', async ({ page }) => {
     Object.defineProperty(window, 'localStorage', { get(){ throw new Error('blocked'); } });
   });
   await listen(page);
-  await openGame(page, '/snake/');
+  await openGame(page, '/road-hop/');
   await expect(btn(page)).toHaveAttribute('aria-label', 'Mute sound');
   await page.getByRole('button', { name: 'Start game' }).click();
   expect(await heard(page)).toEqual(['start']);

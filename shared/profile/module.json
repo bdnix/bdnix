@@ -1,0 +1,8 @@
+{
+  "name": "profile",
+  "kind": "shared",
+  "publish": {
+    "profile.js": "/assets/js/profile.js"
+  },
+  "uses": ["lang"]
+}

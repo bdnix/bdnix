@@ -1,0 +1,8 @@
+{
+  "name": "seg",
+  "kind": "shared",
+  "publish": {
+    "seg.css": "/assets/css/seg.css"
+  },
+  "uses": ["base"]
+}

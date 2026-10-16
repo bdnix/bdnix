@@ -5,9 +5,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { pages, SITE } from '../../scripts/site.mjs';
+import { SITE } from '../../scripts/site.mjs';
 import { sitemap } from '../../scripts/parts.mjs';
-import { transformPage, serve, check, PARTS } from '../../tools/page.mjs';
+import { transformPage, serve, check, PARTS, sitePages } from '../../tools/page.mjs';
 import { languages, list, fillLanguages, stamp } from '../../tools/languages.mjs';
 import { build } from '../../tools/site.mjs';
 
@@ -16,6 +16,7 @@ import { build } from '../../tools/site.mjs';
 // stamps, lang.js with its list of languages, the language packs and the
 // sitemap. tools/languages.mjs makes the languages.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const pages = sitePages(root);
 
 // A small repository of its own: a landing page, lang.js, a stylesheet and
 // one language, xx.
@@ -93,7 +94,7 @@ test('languages: each folder\'s translations in one pack, and lang.js lists them
   assert.equal(xx.code, 'xx');
   assert.deepEqual(xx.files, ['assets/lang/xx/one.json', 'assets/lang/xx/two.json']);
   assert.deepEqual(xx.errors, []);
-  assert.equal(xx.pack, '// Made by tools/languages.mjs from assets/lang/xx/*.json. Don\'t edit it here.\nwindow.bdnixLang.pack({\n "Hello": "Helo",\n "Play": "Plai"\n});\n');
+  assert.equal(xx.pack, '// Made by tools/languages.mjs from assets/lang/xx/*.json and the shared modules\' lang/xx.json. Don\'t edit it here.\nwindow.bdnixLang.pack({\n "Hello": "Helo",\n "Play": "Plai"\n});\n');
   assert.deepEqual(list(dir), [
     { code: 'en', name: 'English' },
     { code: 'xx', name: 'Xx', digits: '0123456789', file: `/assets/lang/xx.js?v=${stamp(xx.pack)}`, style: `assets/css/xx.css?v=${stamp('x {}')}` }
@@ -110,7 +111,7 @@ test('languages: each folder\'s translations in one pack, and lang.js lists them
 test('languages: what each is made from, not counting the files behind its stamps', () => {
   const { dir, write, done } = repo();
   assert.deepEqual(serve(dir, 'assets/js/lang.js').from, ['assets/js/lang.js', 'assets/lang/', 'assets/lang/xx/language.json']);
-  assert.deepEqual(serve(dir, 'assets/lang/xx.js').from, ['assets/lang/xx/', 'assets/lang/xx/language.json', 'assets/lang/xx/one.json', 'assets/lang/xx/two.json']);
+  assert.deepEqual(serve(dir, 'assets/lang/xx.js').from, ['assets/lang/xx/', 'assets/lang/xx/language.json', 'shared/', 'assets/lang/xx/one.json', 'assets/lang/xx/two.json']);
   assert.equal(serve(dir, 'assets/lang/yy.js'), null);
   // A changed translation changes the pack's stamp, so lang.js and every
   // page's stamp of it, but not what either is made from.
@@ -131,6 +132,7 @@ test('other files are served as they are; a missing one or a folder is nothing',
   assert.equal(serve(dir, 'assets/css/gone.css'), null);
   assert.equal(serve(dir, 'assets'), null);
   assert.deepEqual(serve(dir, 'sitemap.xml', LIST), { body: sitemap(LIST), from: PARTS, errors: [] });
+  assert.equal(serve(dir, 'nowhere/index.html'), null);
   done();
 });
 
@@ -140,11 +142,11 @@ test('other files are served as they are; a missing one or a folder is nothing',
 test('site: the sources carry nothing generated, and fit scripts/site.mjs', () => {
   assert.deepEqual(check(root), []);
   for (const p of pages) {
-    const html = fs.readFileSync(path.join(root, p.path, 'index.html'), 'utf8');
+    const html = fs.readFileSync(path.join(root, p.module ? `apps/${p.module}` : p.path, 'index.html'), 'utf8');
     for (const m of html.matchAll(/^( *)<!-- build:(\w+)(?: \w+)? -->\n(.*)$/gm)) assert.equal(m[3], `${m[1]}<!-- /build:${m[2]} -->`, `${p.path}: ${m[2]}`);
     assert.doesNotMatch(html, /\/assets\/(js|css)\/[\w-]+\.(js|css)\?v=/, p.path);
   }
-  const js = fs.readFileSync(path.join(root, 'assets/js/lang.js'), 'utf8');
+  const js = fs.readFileSync(path.join(root, 'shared/lang/lang.js'), 'utf8');
   assert.match(js, /\n {2}\/\/ build:languages\n {2}var LANGUAGES = \[\{"code":"en","name":"English"\}\];\n {2}\/\/ \/build:languages\n/);
   assert.deepEqual(text(serve(root, 'sitemap.xml')).match(/<loc>[^<]+<\/loc>/g), pages.filter((p) => !p.noindex).map((p) => `<loc>${SITE}${p.path}</loc>`));
 });

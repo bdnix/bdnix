@@ -1,0 +1,8 @@
+{
+  "name": "tracks",
+  "kind": "shared",
+  "publish": {
+    "tracks.css": "/assets/css/tracks.css"
+  },
+  "uses": ["base", "file", "icon-btn"]
+}

@@ -4,14 +4,15 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pages } from '../../scripts/site.mjs';
 import { publishedFiles, build, ROOT_FILES } from '../../tools/site.mjs';
-import { generated } from '../../tools/page.mjs';
+import { generated, sitePages } from '../../tools/page.mjs';
+import { modules } from '../../tools/modules.mjs';
 
 // tools/site.mjs lists what's published to www.bdnix.com: the pages, assets/,
 // a few root files and the files only the build makes, and nothing else in
 // the repository.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const pages = sitePages(root);
 
 test('publish: every page, every asset and the root files', () => {
   const files = publishedFiles(root);
@@ -32,6 +33,11 @@ test('publish: nothing but the site', () => {
     assert.ok(site.has(f) || top === 'assets' || pages.some((p) => f === p.path.slice(1) + 'index.html'), f);
   }
   for (const f of ['package.json', 'eslint.config.mjs', 'AGENTS.md', 'README.md', 'codecov.yml']) assert.ok(!files.includes(f), f);
+  // A module's files are published where its module.json says, never at
+  // their place in the repository: not its tests, translations or module.json.
+  assert.ok(!files.some((f) => /^(apps|shared|site)\//.test(f)));
+  assert.ok(files.includes('assets/js/sound.js') && files.includes('assets/fonts/inter-latin-400-normal.woff2') && files.includes('snake/index.html'));
+  assert.deepEqual([...modules(root).published.keys()].filter((f) => !files.includes(f)), []);
   assert.ok(!files.some((f) => /^(tests|scripts|tools|docs|node_modules|\.github)\//.test(f) || f.split('/').some((part) => part.startsWith('.'))));
 });
 

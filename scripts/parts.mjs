@@ -64,8 +64,9 @@ export function meta(p){
     '<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">',
     '<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">',
     '<meta name="theme-color" content="#080a12">',
-    // The visitor's language, before anything else on the page runs.
-    '<script src="/assets/js/lang.js"></script>'
+    // The visitor's language, before anything else on the page runs. A
+    // module's page names its own translations (tools/languages.mjs).
+    `<script src="/assets/js/lang.js"${p.module ? ` data-pack="${esc(p.module)}"` : ''}></script>`
   ];
 }
 

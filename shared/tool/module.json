@@ -1,0 +1,8 @@
+{
+  "name": "tool",
+  "kind": "shared",
+  "publish": {
+    "tool.css": "/assets/css/tool.css"
+  },
+  "uses": ["base"]
+}

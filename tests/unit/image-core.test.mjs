@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load, plain } from './load.mjs';
 
-const { bdnixImages, bdnixImage: I } = load(['assets/js/images.js', 'assets/js/image-core.js']);
+const { bdnixImages, bdnixImage: I } = load(['shared/images/images.js', 'assets/js/image-core.js']);
 
 test('fit: limits the longest side, keeping the shape', () => {
   assert.deepEqual(plain(I.fit(4000, 3000, 1920)), { width: 1920, height: 1440, scaled: true });

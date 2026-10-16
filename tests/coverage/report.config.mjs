@@ -4,14 +4,14 @@
 // each suite to Codecov instead, which combines them the same way.
 // A line counts as covered if either suite runs it. Scripts no test loads
 // still appear, at 0%, so they count against the total.
-import { sourcePath, sourceFilter } from './shared.mjs';
+import { sourcePath, sourceFilter, all } from './shared.mjs';
 
 export default {
   name: 'bdnix test coverage',
   inputDir: ['coverage/unit/raw', 'coverage/ui/raw'],
   outputDir: 'coverage/report',
   reports: ['v8', 'console-details'],
-  all: { dir: ['assets/js'], filter: '**/*.js' },
+  all,
   sourcePath,
   sourceFilter
 };

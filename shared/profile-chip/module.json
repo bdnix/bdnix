@@ -1,0 +1,8 @@
+{
+  "name": "profile-chip",
+  "kind": "shared",
+  "publish": {
+    "profile-chip.css": "/assets/css/profile-chip.css"
+  },
+  "uses": ["base", "avatar"]
+}

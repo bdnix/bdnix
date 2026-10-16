@@ -1,4 +1,4 @@
-// For the tests of the site in another language (assets/js/lang.js): the
+// For the tests of the site in another language (shared/lang/lang.js): the
 // visitor's choice, kept in this browser, and what's left in English.
 import { expect } from './fixtures.mjs';
 

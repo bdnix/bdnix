@@ -1,0 +1,7 @@
+{
+  "Couldn’t load the PDF tools. Check your connection and try again.": "PDF-এর টুলগুলো লোড করা যায়নি। আপনার ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।",
+  "No page {page} (this file has {pages})": "{page} নম্বর পৃষ্ঠা নেই (এই ফাইলে {pages} আছে)",
+  "{n} page": "{n} পৃষ্ঠা",
+  "{n} pages": "{n} পৃষ্ঠা",
+  "“{part}” isn’t a page or range": "“{part}” কোনো পৃষ্ঠা বা পৃষ্ঠার পরিসর নয়"
+}

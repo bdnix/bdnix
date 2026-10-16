@@ -1,0 +1,8 @@
+{
+  "name": "pdftools",
+  "kind": "shared",
+  "publish": {
+    "pdftools.js": "/assets/js/pdftools.js"
+  },
+  "uses": ["files", "lang"]
+}

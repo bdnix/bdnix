@@ -1,0 +1,11 @@
+{
+  "name": "lang",
+  "kind": "shared",
+  "publish": {
+    "lang.js": "/assets/js/lang.js",
+    "lang.css": "/assets/css/lang.css",
+    "bangla.css": "/assets/css/bangla.css",
+    "fonts/": "/assets/fonts/"
+  },
+  "uses": ["base"]
+}

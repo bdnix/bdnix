@@ -1,0 +1,8 @@
+{
+  "name": "upright",
+  "kind": "shared",
+  "publish": {
+    "upright.js": "/assets/js/upright.js"
+  },
+  "uses": ["game-shell"]
+}

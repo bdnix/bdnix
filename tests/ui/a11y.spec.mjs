@@ -8,9 +8,10 @@ import { axeProblems } from './checks.mjs';
 // they're in once a page is in use: a game's pause screen and a tool's file
 // list and preview.
 test('a paused game, and a tool with files in it, pass axe too', async ({ page }) => {
-  // Not openGame(): axe needs a running clock, and the snake waits for the
-  // first turn before it moves, so nothing happens while axe looks.
-  await page.goto('/snake/');
+  // Not openGame(): axe needs a running clock. The chicken waits on the
+  // grass for its first hop, and the game is paused straight away, so
+  // nothing happens while axe looks.
+  await page.goto('/road-hop/');
   await page.getByRole('button', { name: 'Start game' }).click();
   await press(page, 'KeyP');
   await expect(page.locator('#ovTitle')).toHaveText('Paused');

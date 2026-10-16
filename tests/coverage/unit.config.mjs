@@ -4,5 +4,5 @@ import { suite } from './shared.mjs';
 
 export default {
   ...suite('unit'),
-  entryFilter: (entry) => /\/assets\/js\/[\w-]+\.js$/.test(entry.url)
+  entryFilter: (entry) => /\/((apps|shared|site)\/[\w-]+|assets\/js)\/[\w-]+\.js$/.test(entry.url)
 };

@@ -1,0 +1,8 @@
+{
+  "name": "features",
+  "kind": "shared",
+  "publish": {
+    "features.css": "/assets/css/features.css"
+  },
+  "uses": ["base"]
+}

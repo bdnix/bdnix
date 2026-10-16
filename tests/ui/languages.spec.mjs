@@ -1,7 +1,7 @@
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { inLanguage, expectTranslated } from './languages.mjs';
 
-// The site's languages (assets/js/lang.js), through the landing page and a
+// The site's languages (shared/lang/lang.js), through the landing page and a
 // game: the visitor's choice is kept in this browser, and every page follows it.
 
 test('the top bar switches language, and every page follows the choice', async ({ page }) => {
@@ -17,8 +17,8 @@ test('the top bar switches language, and every page follows the choice', async (
   await expectNoSideScroll(page);
 
   // A game follows it too, and has the switch in its own top bar.
-  await page.goto('/snake/');
-  await expect(page.locator('#ovTitle')).toHaveText('সাপ');
+  await page.goto('/falling-blocks/');
+  await expect(page.locator('#ovTitle')).toHaveText('ইটের খেলা');
   await expect(page.getByRole('navigation', { name: 'ভাষা' }).getByRole('button', { name: 'English' })).toBeVisible();
   await expectTranslated(page);
 
@@ -27,8 +27,8 @@ test('the top bar switches language, and every page follows the choice', async (
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('h1')).toHaveText('Merge PDFs');
   expect(await page.evaluate(() => localStorage.getItem('bdnix_lang'))).toBe('en');
-  await page.goto('/snake/');
-  await expect(page.locator('#ovTitle')).toHaveText('Snake');
+  await page.goto('/falling-blocks/');
+  await expect(page.locator('#ovTitle')).toHaveText('Falling Blocks');
 });
 
 test.describe('a browser set to Bangla', () => {

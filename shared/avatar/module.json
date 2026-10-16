@@ -1,0 +1,8 @@
+{
+  "name": "avatar",
+  "kind": "shared",
+  "publish": {
+    "avatar.css": "/assets/css/avatar.css"
+  },
+  "uses": ["base"]
+}
