@@ -1,0 +1,14 @@
+{
+  "name": "about",
+  "kind": "site",
+  "url": "/about/",
+  "publish": {
+    "index.html": "/about/index.html",
+    "about.css": "/assets/css/about.css"
+  },
+  "uses": ["analytics", "backdrop", "base", "footer", "lang", "page"],
+  "page": {
+    "title": "About bdnix — free games and private tools",
+    "description": "Why bdnix exists: quick games for spare minutes, and free tools that work on your files in your own browser. Nothing is uploaded, and there are no subscriptions or accounts."
+  }
+}

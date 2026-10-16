@@ -43,7 +43,7 @@ const meta = (page, attr, name) => page.locator(`head meta[${attr}="${name}"]`);
 const length = (s) => [...new Intl.Segmenter('bn').segment(s)].length;
 // What the footer and the cookie banner say.
 const WORDS = {
-  openSource: 'Open source on GitHub', suggest: 'Suggest a tool or game', home: '/',
+  openSource: 'Open source on GitHub', about: 'About', suggest: 'Suggest a tool or game', home: '/',
   consent: 'Cookie consent', banner: 'Google Analytics cookies', accept: 'Accept', decline: 'Decline', profile: 'your profile'
 };
 // Other games' names, which only a credit line may use.
@@ -200,6 +200,7 @@ export function checkPage(url, opts = {}){
     if (opts.footer) {
       const foot = page.locator('footer.foot');
       await expect(foot.getByRole('link', { name: words.openSource })).toHaveAttribute('href', 'https://github.com/bdnix/bdnix');
+      await expect(foot.getByRole('link', { name: words.about, exact: true })).toHaveAttribute('href', words.home + 'about/');
       await expect(foot.getByRole('link', { name: words.suggest })).toHaveAttribute('href', words.home + '#suggest');
       await expect(foot.getByRole('link', { name: 'root@bdnix.com' })).toHaveAttribute('href', 'mailto:root@bdnix.com');
     }

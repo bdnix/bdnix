@@ -61,7 +61,9 @@ export function meta(p){
     `<meta property="og:image" content="${SITE}/assets/img/og.png">`,
     '<meta property="og:image:width" content="1200">',
     '<meta property="og:image:height" content="630">',
-    '<meta property="og:image:alt" content="bdnix: Play a little. Get things done.">',
+    // Says what the image is, not what its headline says: it's on every page,
+    // so wording that followed the headline would change every page with it.
+    '<meta property="og:image:alt" content="The bdnix logo and headline">',
     '<meta name="twitter:card" content="summary_large_image">',
     ...(ld ? [`<script type="application/ld+json">${json(ld)}</script>`] : []),
     '<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">',
@@ -76,7 +78,7 @@ export function meta(p){
 export const footer = () => [
   '<footer class="foot">',
   '  <span>© <span id="year">2026</span> bdnix · <a href="https://github.com/bdnix/bdnix">Open source on GitHub</a></span>',
-  '  <span class="foot-links"><a href="/#suggest">Suggest a tool or game</a><a href="mailto:root@bdnix.com">root@bdnix.com</a></span>',
+  '  <span class="foot-links"><a href="/about/">About</a><a href="/#suggest">Suggest a tool or game</a><a href="mailto:root@bdnix.com">root@bdnix.com</a></span>',
   '</footer>'
 ];
 

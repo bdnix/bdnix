@@ -1,0 +1,22 @@
+/* About page. Page layout lives in page.css. */
+.lede{margin:16px 0 0;max-width:60ch;font-size:18px;line-height:1.6;color:var(--muted)}
+
+.about{margin-top:20px;padding:22px}
+.about h2{margin:0 0 10px;font-size:20px;font-weight:800;letter-spacing:-.02em}
+.about p{margin:0 0 12px;line-height:1.65;color:var(--muted)}
+.about p:last-child{margin-bottom:0}
+.about b{color:var(--fg)}
+.about .btn{margin-top:4px}
+
+.name-parts{display:flex;align-items:center;gap:12px;font:600 26px var(--mono)}
+.name-parts .part{padding:6px 14px;border:1px solid var(--line);border-radius:10px}
+.name-parts .plus{color:var(--faint)}
+
+.promises{margin:0 0 12px;padding-left:20px;line-height:1.65;color:var(--muted)}
+.promises li + li{margin-top:6px}
+.about .note{font-size:14px;color:var(--faint)}
+
+@media (max-width:560px){
+  .about{padding:18px}
+  .lede{font-size:16px}
+}

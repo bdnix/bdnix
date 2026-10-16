@@ -14,6 +14,7 @@ A module is a folder with everything it is and a `module.json` (where its files 
 |---|---|
 | Landing `/` | `site/landing/` (`index.html`, `main.js`, `style.css`), with `shared/search/` |
 | Profile `/profile/` | `site/profile-page/` (`index.html`, `profile-page.js`, `profile.css`) |
+| About `/about/` | `site/about/` (`index.html`, `about.css`) |
 | Falling Blocks `/falling-blocks/` | `apps/falling-blocks/` (`tetris.js`, `tetris-core.js`, `tetris.css`) |
 | Maze Chase `/maze-chase/` | `apps/maze-chase/` (`pacman.js`, `pacman-core.js`, `pacman.css`) |
 | Flap `/flap/` | `apps/flap/` (`flappy.js`, `flappy-core.js`, `flappy.css`) |

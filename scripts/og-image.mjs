@@ -2,7 +2,7 @@
 //   assets/img/og.png               1200×630, shown when a page is shared
 //   assets/img/apple-touch-icon.png 180×180, the icon for a home-screen bookmark
 // Run `npm run og-image` after changing the design below, and commit the PNGs.
-// Uses the site's own fonts from assets/fonts.
+// Uses the site's own fonts, from the base module (shared/base/fonts).
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,11 +10,12 @@ import { chromium } from '@playwright/test';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const face = (family, weight, file) => `@font-face{font-family:'${family}';font-weight:${weight};src:url(data:font/woff2;base64,${
-  fs.readFileSync(path.join(root, 'assets/fonts', file)).toString('base64')}) format('woff2')}`;
+  fs.readFileSync(path.join(root, 'shared/base/fonts', file)).toString('base64')}) format('woff2')}`;
 const fonts = '<style>' + [
   face('Inter', 600, 'inter-latin-600-normal.woff2'),
   face('Inter', 800, 'inter-latin-800-normal.woff2'),
-  face('JetBrains Mono', 400, 'jetbrains-mono-latin-400-normal.woff2')
+  face('JetBrains Mono', 400, 'jetbrains-mono-latin-400-normal.woff2'),
+  face('JetBrains Mono', 600, 'jetbrains-mono-latin-600-normal.woff2')
 ].join('') + '</style>';
 
 const og = `<!doctype html><html><head>${fonts}<style>
@@ -27,12 +28,12 @@ const og = `<!doctype html><html><head>${fonts}<style>
   .mark{display:flex;align-items:center;gap:22px;font-weight:800;font-size:44px;letter-spacing:-.03em}
   .mark i{display:block;width:64px;height:64px;border-radius:12px;background:#0f172a;border:2px solid rgba(255,255,255,.12);
     font:700 36px/64px Inter,system-ui,sans-serif;font-style:normal;text-align:center}
-  h1{margin:0;font-size:92px;font-weight:800;line-height:1.02;letter-spacing:-.045em}
+  h1{margin:0;font-size:80px;font-weight:800;line-height:1.02;letter-spacing:-.045em}
   h1 em{font-style:normal;background:linear-gradient(100deg,#22d3ee 0%,#a855f7 55%,#f472b6 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
   p{margin:0;font:400 28px/1.45 'JetBrains Mono',ui-monospace,monospace;color:#8e97ab}
 </style></head><body>
   <div class="mark"><i>B</i>bdnix</div>
-  <h1>Play a little.<br><em>Get things done.</em></h1>
+  <h1>Games and tools that<br><em>never leave your browser.</em></h1>
   <p>Falling Blocks · Maze Chase · PDF, audio and image tools<br>Free, in your browser. Nothing uploaded.</p>
 </body></html>`;
 

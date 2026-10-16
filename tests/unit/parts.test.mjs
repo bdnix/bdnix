@@ -46,6 +46,12 @@ test('meta: a noindex page has no structured data; the landing page is a WebSite
   assert.equal(schema(pages.find((p) => p.path === '/snake/')).name, 'Snake');
 });
 
+test('meta: the share image\'s alt text is the same on every page and says what the image is', () => {
+  const alts = pages.map((p) => meta(p).find((l) => l.includes('og:image:alt')));
+  assert.equal(new Set(alts).size, 1);
+  assert.equal(alts[0], '<meta property="og:image:alt" content="The bdnix logo and headline">');
+});
+
 test('cards and scores follow the order of the list', () => {
   const html = cards(pages, 'games').join('\n');
   const hrefs = [...html.matchAll(/<a class="card panel" href="([^"]+)"/g)].map((m) => m[1]);
@@ -69,6 +75,7 @@ test('fill: replaces what is between the markers, indented like them, and nothin
 
 test('the footer and sitemap', () => {
   assert.equal(footer()[0], '<footer class="foot">');
+  assert.match(footer().join('\n'), /<a href="\/about\/">About<\/a>/);
   const xml = sitemap(pages);
   assert.ok(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>\n<urlset'));
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);

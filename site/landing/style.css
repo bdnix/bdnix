@@ -8,6 +8,9 @@
   padding:40px clamp(16px,4vw,32px) 56px;
 }
 .kicker{margin:0 0 20px;font:400 13px var(--mono);color:var(--faint)}
+/* A monospace font has no Bangla letters, only its wide spaces, which pull
+   Bangla words apart. */
+.kicker:lang(bn){font-family:var(--sans);font-size:14px}
 .hero h1{
   margin:0;
   font-size:clamp(38px,7.6vw,80px);

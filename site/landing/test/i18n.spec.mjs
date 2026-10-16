@@ -12,6 +12,16 @@ test.describe('in Bangla', () => {
   // Whatever a test does, nothing is left in English.
   test.afterEach(({ page }) => expectTranslated(page));
 
+  test('the headline and the line above it in Bangla', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('h1')).toHaveText('গেম আর টুল,সবই আপনার ব্রাউজারে।');
+    await expect(page.locator('h1 em')).toHaveText('সবই আপনার ব্রাউজারে।');
+    // The line above it is in the text font: a monospace font's wide spaces
+    // would pull the Bangla words apart.
+    await expect(page.locator('.kicker')).toHaveText('// চিরকাল ফ্রি। সাইন আপ নেই, আপলোড নেই।');
+    expect(await page.locator('.kicker').evaluate((e) => getComputedStyle(e).fontFamily)).toMatch(/^Inter, Kalpurush/);
+  });
+
   test('a card in Bangla for every game and tool', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle('bdnix — ফ্রি ব্রাউজার গেম আর PDF, অডিও ও ছবির টুল');
