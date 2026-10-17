@@ -53,6 +53,28 @@ test('profile chip says "User" until a name is set, and links to the profile', a
   await expect(page).toHaveURL(/\/profile\/$/);
 });
 
+test('the top bar links to the About page, and still fits a phone beside a long name', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.setItem('bdnix_name', 'Abdullah Al Mamun Chowdhury'));
+  await page.reload();
+  const about = page.getByRole('banner').getByRole('link', { name: 'About', exact: true });
+  await expect(about).toBeVisible();
+  await expect(about).toHaveAttribute('href', '/about/');
+  // It comes before the language switch and the profile chip.
+  expect(await page.locator('.bar-end > *').evaluateAll((els) => els.map((e) => e.className))).toEqual(['about-link', 'langs', 'profile-chip']);
+  // Nothing in the bar runs off the side of the screen.
+  const width = page.viewportSize().width;
+  for (const el of await page.locator('.bar a, .bar nav').all()) {
+    const box = await el.boundingBox();
+    expect(box.x + box.width, await el.getAttribute('class')).toBeLessThanOrEqual(width);
+  }
+  await expectNoSideScroll(page);
+  // The About page is its own module's: here it's enough that the link goes there.
+  await page.route('**/about/', (route) => route.fulfill({ contentType: 'text/html', body: '<title>About</title>' }));
+  await about.click();
+  await expect(page).toHaveURL(/\/about\/$/);
+});
+
 test('welcome line greets first-time and returning visitors', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#visit')).toHaveText('Welcome! Pick a game or a tool to get started.');

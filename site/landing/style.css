@@ -7,6 +7,14 @@
   width:100%;max-width:min(1600px,max(1120px,72vw));margin:0 auto;
   padding:40px clamp(16px,4vw,32px) 56px;
 }
+/* The link to the About page, quietly in the top bar beside the language switch. */
+.about-link{
+  display:inline-flex;align-items:center;min-height:32px;padding:0 6px;
+  font:600 13px/1 var(--sans);color:var(--muted);text-decoration:none;white-space:nowrap;
+  transition:color .2s ease;
+}
+.about-link:hover{color:var(--fg)}
+.about-link:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:6px}
 .kicker{margin:0 0 20px;font:400 13px var(--mono);color:var(--faint)}
 /* A monospace font has no Bangla letters, only its wide spaces, which pull
    Bangla words apart. */
