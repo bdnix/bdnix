@@ -87,6 +87,21 @@ test.describe('in Bangla', () => {
     await expect(page.locator('#year')).toHaveText(/^[০-৯]{4}$/);
   });
 
+  test('the About link in the top bar is in Bangla, and the bar still fits beside a long name', async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('bdnix_name', 'আব্দুল্লাহ আল মামুন চৌধুরী'));
+    await page.reload();
+    const about = page.getByRole('banner').getByRole('link', { name: 'পরিচিতি', exact: true });
+    await expect(about).toBeVisible();
+    await expect(about).toHaveAttribute('href', '/about/');
+    const width = page.viewportSize().width;
+    for (const el of await page.locator('.bar a, .bar nav').all()) {
+      const box = await el.boundingBox();
+      expect(box.x + box.width, await el.getAttribute('class')).toBeLessThanOrEqual(width);
+    }
+    await expectNoSideScroll(page);
+  });
+
   test('the typewriter types in Bangla, and screen readers hear one steady Bangla line', async ({ page }) => {
     await page.clock.install();
     await page.goto('/');
