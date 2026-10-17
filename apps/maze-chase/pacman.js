@@ -530,18 +530,15 @@
     if (document.hidden && state !== 'paused' && state !== 'idle' && state !== 'over') togglePause();
   });
 
-  document.querySelectorAll('.touch button').forEach(function(b){
-    var d = b.getAttribute('data-dir');
-    b.addEventListener('pointerdown', function(e){ e.preventDefault(); steer(d); b.classList.add('on'); });
-    ['pointerup','pointercancel','pointerleave'].forEach(function(ev){
-      b.addEventListener(ev, function(){ b.classList.remove('on'); });
-    });
-    b.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  // Tap the score to pause: a phone has no P key.
+  document.querySelector('.stats').addEventListener('click', function(){
+    if (state !== 'paused' && state !== 'idle' && state !== 'over') togglePause();
   });
 
   // Swipe anywhere on the game area to steer.
   var swipe = null;
   gameEl.addEventListener('pointerdown', function(e){
+    if (e.target.closest('.stats')) return;
     if (e.pointerType === 'mouse') return;
     swipe = { x: e.clientX, y: e.clientY };
   });

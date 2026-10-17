@@ -2,11 +2,11 @@
 
 All seven games work with a keyboard, mouse or touch screen, and at phone size.
 
-There's no pause button: **P** or **Esc** pauses, and so does leaving the page (another tab, window or app, or the phone's home screen). Coming back shows the pause screen, with its big **Resume** button. The language switch sits in the top bar, beside the mute button.
+There's no pause button: **P** or **Esc** pauses, on a phone so does tapping the score (every game but Chess), and so does leaving the page (another tab, window or app, or the phone's home screen). Coming back shows the pause screen, with its big **Resume** button. The language switch sits in the top bar, beside the mute button.
 
 On a phone, the games are played upright. Turning the phone sideways pauses the game and shows a note asking for it to be turned back; the game then waits, paused, for Resume. On a computer, a short, wide window still shows the game, with the scores and buttons beside the board.
 
-On a phone, the buttons under the board are laid out like a gamepad: a D-pad on the left and round action buttons, each with its name, on the right (Rotate and Hold in Falling Blocks, Launch in Brick Bounce). Games that only need directions have the D-pad alone, in the middle. On a computer, the start screen shows the keys to press as keycaps.
+On a phone, there are no buttons under the board: the games are played by touching the screen anywhere (dragging, swiping or tapping), so the board gets the room and a thumb can play from beside it. Their start and pause screens show how, in one row: what each gesture does, with an arrow for its direction (or a ring for a tap), and that tapping the score pauses. On a computer, the start screen shows the keys to press as keycaps.
 
 - [Falling Blocks](#falling-blocks)
 - [Maze Chase](#maze-chase)
@@ -25,12 +25,14 @@ On a phone, the buttons under the board are laid out like a gamepad: a D-pad on 
 
 | Action | Keyboard | Touch |
 |---|---|---|
-| Move | ← → (or A / D) | D-pad ◀ ▶ |
-| Rotate | ↑ / X (Z for counter-clockwise) | Rotate button, or tap the board |
-| Soft drop | ↓ | D-pad ▼ |
-| Hard drop | Space | D-pad ▲ |
-| Hold | C / Shift | Hold button |
-| Pause | P / Esc | Leave the page |
+| Move | ← → (or A / D) | Drag sideways, a column for each cell's width |
+| Rotate | ↑ / X (Z for counter-clockwise) | Tap |
+| Soft drop | ↓ | Drag down slowly, a row for each cell's height |
+| Hard drop | Space | Flick down |
+| Hold | C / Shift | Flick up |
+| Pause | P / Esc | Tap the score, or leave the page |
+
+On a phone, a finger anywhere on the game area plays, so it needn't cover the board. A stroke goes one way: once it has gone a little, it either moves the piece sideways or drops it, never both. A flick is a quick stroke at least 30 pixels long; a tap is a touch that stays put and lets go within a third of a second.
 
 The level goes up every 10 lines, and pieces fall faster at each level.
 
@@ -40,8 +42,8 @@ The level goes up every 10 lines, and pieces fall faster at each level.
 
 | Action | Keyboard | Touch |
 |---|---|---|
-| Move | Arrow keys or WASD | Swipe anywhere, or the D-pad |
-| Pause | P / Esc | Leave the page |
+| Move | Arrow keys or WASD | Swipe anywhere |
+| Pause | P / Esc | Tap the score, or leave the page |
 
 The maze is the site's own design. A game saved on an earlier maze doesn't fit it, so it's discarded and a new game starts.
 
@@ -52,7 +54,7 @@ The maze is the site's own design. A game saved on an earlier maze doesn't fit i
 | Action | Keyboard | Touch |
 |---|---|---|
 | Flap | Space, ↑ or W (or click) | Tap anywhere |
-| Pause | P / Esc | Leave the page |
+| Pause | P / Esc | Tap the score, or leave the page |
 
 Each pipe passed scores a point. 10, 20, 30 and 40 points earn bronze, silver, gold and platinum medals.
 
@@ -64,8 +66,8 @@ Hitting a pipe (its wider end caps count too) ends the round with a jolt: the bo
 
 | Action | Keyboard | Touch |
 |---|---|---|
-| Hop | Arrow keys or WASD (Space or a click hops forward) | Tap to hop forward, swipe to hop any way, or the D-pad |
-| Pause | P / Esc | Leave the page |
+| Hop | Arrow keys or WASD (Space or a click hops forward) | Tap to hop forward, swipe to hop any way |
+| Pause | P / Esc | Tap the score, or leave the page |
 
 Each new row the chicken reaches scores a point. Lanes of grass, roads and rivers are laid out at random for every round, and the traffic and the rivers speed up the further the chicken goes. A car ends the round, and so does landing in the water, riding a log off the edge of the board, or standing still so long that the screen moves on without the chicken. Trees are in the way but harmless.
 
@@ -77,8 +79,8 @@ A car hit ends the round with a thump: the car stops dead, the board shakes, a r
 
 | Action | Keyboard | Touch |
 |---|---|---|
-| Turn | Arrow keys or WASD | Swipe anywhere, or the D-pad |
-| Pause | P / Esc | Leave the page |
+| Turn | Arrow keys or WASD | Swipe anywhere |
+| Pause | P / Esc | Tap the score, or leave the page |
 
 The snake waits until the first direction is pressed, then glides from cell to cell at about four and a half cells a second. Each piece of food scores a point and makes the snake one longer and a little faster, up to ten cells a second. Hitting a wall or the snake's own body ends the round; filling the whole board wins it. Two quick presses make two turns on the next two steps, so a U-turn is easy.
 
@@ -88,9 +90,9 @@ The snake waits until the first direction is pressed, then glides from cell to c
 
 | Action | Keyboard | Mouse | Touch |
 |---|---|---|---|
-| Move the paddle | ← → (or A / D) | Point across the board | Drag anywhere, or ◀ ▶ |
-| Launch the ball | Space, ↑ or W | Click | Tap, or the Launch button |
-| Pause | P / Esc | Leave the page | Leave the page |
+| Move the paddle | ← → (or A / D) | Point across the board | Drag anywhere |
+| Launch the ball | Space, ↑ or W | Click | Tap |
+| Pause | P / Esc | Leave the page | Tap the score, or leave the page |
 
 Each wall of bricks has its own shape: a house, a space invader, a heart, waves, a castle and a chessboard, then round again. The first, the house, is the gentlest: its bottom row is whole, so the first shots always find a brick. Bricks score by row: 1 point in the bottom two rows, then 3, 5 and 7 for the top two. The ball waits on the paddle until it's launched and bounces back off the paddle at an angle set by where it lands, straight up off the middle and steeper towards the ends. It starts slow and speeds up after the 10th and 25th bricks of a wall and the first time it breaks into the upper and top rows. Once it reaches the top of the board the paddle shrinks for the rest of that wall.
 

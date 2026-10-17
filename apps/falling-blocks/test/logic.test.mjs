@@ -166,3 +166,56 @@ test('a save is checked field by field before it is used', () => {
   assert.equal(T.validSave(null, SHAPES), false);
   assert.equal(T.validSave('save', SHAPES), false);
 });
+
+// A finger on the screen, through T.gesture(step) with 20px steps: each
+// stroke is [x, y, ms] points, down at the first and up at the last, and
+// gives the moves the whole stroke made.
+function stroke(...points){
+  const g = T.gesture(20);
+  const [first, ...rest] = points;
+  const last = rest.pop() || first;
+  return plain([...g.down(...first), ...rest.flatMap((p) => g.move(...p)), ...g.up(...last)]);
+}
+
+test('a tap rotates, if it stays put and is quick', () => {
+  assert.deepEqual(stroke([100, 100, 0]), ['rotate']);
+  assert.deepEqual(stroke([100, 100, 0], [106, 104, 80], [104, 106, 150]), ['rotate']);
+  assert.deepEqual(stroke([100, 100, 0], [100, 100, 301]), [], 'held too long');
+});
+
+test('dragging sideways moves the piece a column a step, either way, and never down', () => {
+  assert.deepEqual(stroke([100, 100, 0], [125, 104, 100], [165, 112, 200], [165, 112, 400]), ['right', 'right', 'right']);
+  assert.deepEqual(stroke([100, 100, 0], [79, 100, 100], [59, 100, 200], [59, 100, 300]), ['left', 'left']);
+  // Back the other way in the same stroke, from where it got to.
+  assert.deepEqual(stroke([100, 100, 0], [141, 100, 100], [119, 100, 200], [99, 100, 300]), ['right', 'right', 'left', 'left']);
+  // A sideways stroke that drifts down a long way, even quickly, doesn't drop.
+  assert.deepEqual(stroke([100, 100, 0], [130, 110, 100], [140, 160, 150]), ['right', 'right']);
+});
+
+test('dragging down slowly soft drops a row a step, and never moves sideways', () => {
+  assert.deepEqual(stroke([100, 100, 0], [104, 125, 200], [130, 165, 400], [130, 165, 600]), ['down', 'down', 'down']);
+  // Up again, then down: from where it turned.
+  assert.deepEqual(stroke([100, 100, 0], [100, 121, 200], [100, 90, 400], [100, 111, 600], [100, 111, 800]), ['down', 'down']);
+});
+
+test('a quick flick down drops the piece, and one up holds it', () => {
+  assert.deepEqual(stroke([100, 100, 0], [102, 140, 40], [102, 160, 60]), ['down', 'down', 'down', 'drop']);
+  assert.deepEqual(stroke([100, 100, 0], [98, 60, 40], [98, 50, 60]), ['hold']);
+  // Too short to be a flick.
+  assert.deepEqual(stroke([100, 100, 0], [100, 125, 30]), ['down']);
+  assert.deepEqual(stroke([100, 100, 0], [100, 75, 30]), []);
+  // A slow drag that ends without speeding up is no flick, however far.
+  assert.deepEqual(stroke([100, 100, 0], [100, 60, 300], [100, 20, 600], [100, 0, 800]), []);
+  assert.deepEqual(stroke([100, 100, 0], [100, 140, 300], [100, 180, 600], [100, 200, 800]).includes('drop'), false);
+  // What counts is how fast it was going at the end.
+  assert.deepEqual(stroke([100, 100, 0], [100, 110, 500], [100, 112, 900], [100, 160, 960]), ['down', 'down', 'down', 'drop']);
+});
+
+test('a finger that never went down makes no moves', () => {
+  const g = T.gesture(20);
+  assert.deepEqual(plain(g.move(150, 100, 10)), []);
+  assert.deepEqual(plain(g.up(150, 100, 20)), []);
+  g.down(0, 0, 0);
+  assert.deepEqual(plain(g.up(0, 0, 50)), ['rotate']);
+  assert.deepEqual(plain(g.up(0, 0, 60)), [], 'only once');
+});

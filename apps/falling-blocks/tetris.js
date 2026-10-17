@@ -407,19 +407,34 @@
     if (document.hidden && state === 'playing') togglePause();
   });
 
-  document.querySelectorAll('.touch button').forEach(function(b){
-    var a = b.getAttribute('data-act');
-    b.addEventListener('pointerdown', function(e){ e.preventDefault(); press(a); });
-    ['pointerup','pointercancel','pointerleave'].forEach(function(ev){
-      b.addEventListener(ev, function(){ release(a); });
-    });
-    b.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  // Tap the score to pause: a phone has no P key.
+  document.querySelector('.stats').addEventListener('click', function(){
+    if (state === 'playing') togglePause();
   });
 
-  // Tap the board to rotate on touch devices.
-  board.addEventListener('pointerdown', function(e){
-    if (e.pointerType === 'touch') act('rotate');
+  // A finger anywhere on the game area plays: drag to move, tap to rotate,
+  // flick down to drop and up to hold (T.gesture), a step a cell wide. The
+  // score is for pausing.
+  var finger = null;
+  gameEl.addEventListener('pointerdown', function(e){
+    if (e.pointerType === 'mouse' || state !== 'playing' || finger) return;
+    if (e.target.closest('.stats')) return;
+    e.preventDefault();
+    finger = { id: e.pointerId, moves: T.gesture(Math.max(CELL, 16)) };
+    finger.moves.down(e.clientX, e.clientY, performance.now());
   });
+  gameEl.addEventListener('pointermove', function(e){
+    if (finger && e.pointerId === finger.id) finger.moves.move(e.clientX, e.clientY, performance.now()).forEach(act);
+  });
+  gameEl.addEventListener('pointerup', function(e){
+    if (!finger || e.pointerId !== finger.id) return;
+    var moves = finger.moves.up(e.clientX, e.clientY, performance.now());
+    finger = null;
+    moves.forEach(act);
+  });
+  gameEl.addEventListener('pointercancel', function(){ finger = null; });
+  gameEl.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  gameEl.style.touchAction = 'none';
 
   function startOrResume(){
     if (state === 'paused') togglePause();

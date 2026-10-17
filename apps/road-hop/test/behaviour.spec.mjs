@@ -115,7 +115,7 @@ test('riding a log off the edge of the board sweeps the chicken away', async ({ 
   await expect(page.locator('#ovKicker')).toHaveText('Gone with the current.');
 });
 
-test('keys, taps, swipes and the buttons all hop', async ({ page }) => {
+test('keys, taps and swipes hop', async ({ page }) => {
   await page.getByRole('button', { name: 'Start game' }).click();
   const game = page.locator('#game');
   await tap(game);                                      // a tap hops forward
@@ -138,13 +138,13 @@ test('keys, taps, swipes and the buttons all hop', async ({ page }) => {
   s = await peek(page);
   expect([s.chicken.row, s.chicken.x, s.chicken.face]).toEqual([1, 4, 'left']);
 
-  await tap(page.locator('.touch [data-dir=left]'));
-  await tap(page.locator('.touch [data-dir=down]'));
-  await tap(page.locator('.touch [data-dir=right]'));
-  await tap(page.locator('.touch [data-dir=right]'));
+  await swipe(-40, 0);
+  await swipe(0, 40);
+  await swipe(40, 0);
+  await swipe(40, 0);
   s = await peek(page);
   expect([s.chicken.row, s.chicken.x]).toEqual([0, 5]);
-  await tap(page.locator('.touch [data-dir=up]'));
+  await swipe(0, 5);
   await press(page, 'KeyA');
   await press(page, 'KeyD');
   await press(page, 'KeyD');

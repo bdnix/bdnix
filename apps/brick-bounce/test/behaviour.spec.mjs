@@ -143,7 +143,7 @@ test('keys, the mouse, dragging and the buttons all move the paddle', async ({ p
   const box = await page.locator('#board').boundingBox();
   const scale = box.width / W;
   const game = page.locator('#game');
-  if (!(await page.locator('.touch').isVisible())) {
+  if (!(await page.evaluate(() => matchMedia('(pointer:coarse)').matches))) {
     await page.mouse.move(box.x + 250 * scale, box.y + 300 * scale);
     expect((await peek(page)).paddle).toBeCloseTo(250, 0);
   }
@@ -158,23 +158,12 @@ test('keys, the mouse, dragging and the buttons all move the paddle', async ({ p
   expect(s.paddle).toBeCloseTo(160, 0);
   expect(s.stuck).toBe(true);                         // a drag isn't a tap
 
-  const hold = async (dir, ms) => {
-    const b = page.locator(`.touch [data-dir=${dir}]`);
-    await b.dispatchEvent('pointerdown', { pointerType: 'touch', isPrimary: true });
-    await page.clock.runFor(ms);
-    await b.dispatchEvent('pointerup', { pointerType: 'touch', isPrimary: true });
-  };
-  await hold('right', 2000);
-  expect((await peek(page)).paddle).toBe(W - 40);
-  await hold('left', 100);
-  expect((await peek(page)).paddle).toBeLessThan(W - 50);
-
   // A right click does nothing.
   await game.dispatchEvent('pointerdown', { pointerType: 'mouse', button: 2, clientX: box.x + 50, clientY: 300 });
   expect((await peek(page)).stuck).toBe(true);
 });
 
-test('Space, ↑, a click, a tap and the launch button each launch the ball', async ({ page }) => {
+test('Space, ↑, a click and a tap each launch the ball', async ({ page }) => {
   const launched = async (how) => {
     await openSaved(page, saved());
     await page.locator('#startBtn').click();
@@ -187,7 +176,6 @@ test('Space, ↑, a click, a tap and the launch button each launch the ball', as
   await launched(() => press(page, 'Space'));
   await launched(() => press(page, 'ArrowUp'));
   await launched(() => press(page, 'KeyW'));
-  await launched(() => tap(page.locator('.touch [data-dir=launch]')));
   await launched(() => tap(page.locator('#game')));
   await launched(async () => {
     const box = await page.locator('#board').boundingBox();
@@ -637,20 +625,6 @@ test('an extra ball draining away just pops, and costs nothing', async ({ page }
   expect(await heard(page)).not.toContain('lose');
   await expect(page.locator('#lives')).toHaveText('2');
   await expect(page.locator('#lives').locator('..')).not.toHaveClass(/hit/);
-});
-
-// On a phone the buttons are laid out like a gamepad (gamepad.css).
-test('a D-pad arm lights up while it is held', async ({ page }) => {
-  await openGame(page, '/brick-bounce/');
-  if (!(await page.evaluate(() => matchMedia('(pointer:coarse)').matches))) return;
-  await page.getByRole('button', { name: 'Start game' }).click();
-  const left = page.locator('.touch .dpad .left');
-  const b = await left.boundingBox();
-  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
-  await page.mouse.down();
-  await expect(left).toHaveClass(/\bon\b/);
-  await page.mouse.up();
-  await expect(left).not.toHaveClass(/\bon\b/);
 });
 
 test('on Safari, a resumed game still has its bounce sounds', async ({ page }) => {

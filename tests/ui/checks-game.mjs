@@ -1,7 +1,7 @@
 // The checks every game gets, on top of checkPage(url, { game: true, ... })
 // from checks.mjs: the top bar's mute button and languages, pausing when the
 // page is left, played upright, a short wide window, the credit line and the
-// gamepad. Each game calls checkGame() from its page target
+// touch gestures. Each game calls checkGame() from its page target
 // (test/page.spec.mjs), and checkGameLanguages() from its i18n target.
 import { test, expect, expectNoSideScroll } from './fixtures.mjs';
 import { openGame, press } from './games.mjs';
@@ -11,8 +11,8 @@ const touch = (page) => page.evaluate(() => matchMedia('(pointer:coarse)').match
 
 // opts:
 //   credit    [the classic that inspired it, who created it], for its credit line
-//   gamepad   { dpad: { up, left, right, down }, face: { a, b } }: the names of
-//             its on-screen buttons, for a game played with buttons on a phone
+//   gestures  [[what, how], ...]: the touch gestures an arcade game is played
+//             with on a phone ([['Move', 'drag'], ['Rotate', 'tap']]), in order
 //   languages false for a module's game, whose own i18n target calls
 //             checkGameLanguages(url) instead
 export function checkGame(url, opts = {}){
@@ -124,7 +124,7 @@ export function checkGame(url, opts = {}){
     });
   }
 
-  if (opts.gamepad) checkGamepad(url, opts.gamepad);
+  if (opts.gestures) checkGestures(url, opts.gestures);
 }
 
 // The game in the site's other languages: the switch in the top bar, and
@@ -168,68 +168,40 @@ export function checkGameLanguages(url){
   });
 }
 
-// On a phone, a game's buttons are laid out like a gamepad (gamepad.css): a
-// D-pad cross on the left and round, named action buttons on the right, or
-// the D-pad alone in the middle. On a computer the keys are shown as keycaps.
-function checkGamepad(url, g){
-  const box = (page, sel) => page.locator(sel).boundingBox();
-  const mid = (b) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
-  test(`${url}: the buttons are laid out like a gamepad`, async ({ page }) => {
+// On a phone, a game has no buttons under its board: it's played by touching
+// the screen, and its start and pause screens show how, in one row
+// (gestures.css), with a tap on the score to pause, since a phone has no P
+// key. On a computer the keys are shown as keycaps.
+function checkGestures(url, gestures){
+  test(`${url}: on a phone it's played by touch, shown on its start and pause screens, and tapping the score pauses it`, async ({ page }) => {
     await openGame(page, url);
+    const list = page.locator('#overlay').getByRole('list', { name: 'Touch controls' });
+    await expect(page.locator('.touch')).toHaveCount(0);
     if (!(await touch(page))) {
-      await expect(page.locator('.touch')).toBeHidden();
+      await expect(list).toBeHidden();
       await expect(page.locator('.overlay .only-keys kbd').first()).toBeVisible();
       await expect(page.locator('.overlay .only-keys kbd').getByText('P', { exact: true })).toBeVisible();
       return;
     }
     await expect(page.locator('.overlay .only-keys')).toBeHidden();
-    const view = page.viewportSize();
-    const board = await box(page, '#board');
-    const b = {};
-    for (const [pos, name] of Object.entries(g.dpad)) {
-      const btn = page.locator(`.touch .dpad .${pos}`);
-      await expect(btn).toHaveAttribute('aria-label', name);
-      b[pos] = await btn.boundingBox();
-      expect(b[pos].width, `${pos} is big enough to press`).toBeGreaterThanOrEqual(44);
-      expect(b[pos].height).toBeGreaterThanOrEqual(44);
-      expect(b[pos].y, `${pos} is below the board`).toBeGreaterThanOrEqual(board.y + board.height);
-      expect(b[pos].y + b[pos].height, `${pos} is on screen`).toBeLessThanOrEqual(view.height);
+    const items = list.getByRole('listitem');
+    await expect(items).toHaveCount(gestures.length);
+    for (const [i, [what, how]] of gestures.entries()) {
+      await expect(items.nth(i).locator('b')).toHaveText(what);
+      await expect(items.nth(i).locator('span')).toHaveText(how);
     }
-    // The arms of one cross: left and right level, either side of up and down.
-    const l = mid(b.left), r = mid(b.right);
-    expect(Math.abs(l.y - r.y)).toBeLessThan(1);
-    expect(r.x - l.x).toBeGreaterThan(b.left.width * 1.5);
-    if (b.up) {
-      const u = mid(b.up), d = mid(b.down);
-      expect(Math.abs(u.x - d.x)).toBeLessThan(1);
-      expect(Math.abs(u.x - (l.x + r.x) / 2)).toBeLessThan(1);
-      expect(u.y).toBeLessThan(l.y);
-      expect(d.y).toBeGreaterThan(l.y);
-    }
-
-    const pad = await box(page, '.touch .dpad');
-    if (g.face) {
-      // Round, named action buttons to the right of the D-pad.
-      for (const [pos, name] of Object.entries(g.face)) {
-        const btn = page.locator(`.touch .face .${pos}`);
-        await expect(btn).toHaveAttribute('aria-label', name);
-        await expect(btn).toContainText(name);
-        const f = await btn.boundingBox();
-        expect(f.x).toBeGreaterThan(pad.x + pad.width);
-        expect(f.x + f.width).toBeLessThanOrEqual(view.width);
-        expect(f.width).toBeGreaterThanOrEqual(56);
-        expect(await btn.evaluate((e) => getComputedStyle(e).borderRadius)).toBe('50%');
-        b[pos] = f;
-      }
-      // A sits up and to the right of B, as on a gamepad.
-      if (b.b) {
-        expect(b.a.x).toBeGreaterThan(b.b.x);
-        expect(b.a.y).toBeLessThan(b.b.y);
-      }
-    } else {
-      // A D-pad on its own sits in the middle.
-      expect(Math.abs(pad.x + pad.width / 2 - view.width / 2)).toBeLessThan(2);
-    }
+    const hint = page.locator('#overlay').getByText('Tap the score to pause.');
+    await expect(hint).toBeVisible();
     await expectNoSideScroll(page);
+
+    await page.getByRole('button', { name: 'Start game' }).click();
+    await expect(page.locator('#overlay')).toBeHidden();
+    await page.clock.runFor(300);
+    await page.locator('.stats').tap();
+    await expect(page.locator('#ovTitle')).toHaveText('Paused');
+    await expect(list).toBeVisible();
+    await expect(hint).toBeVisible();
+    await page.locator('#startBtn').click();   // Resume
+    await expect(page.locator('#overlay')).toBeHidden();
   });
 }

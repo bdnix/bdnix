@@ -1,0 +1,8 @@
+{
+  "name": "gestures",
+  "kind": "shared",
+  "publish": {
+    "gestures.css": "/assets/css/gestures.css"
+  },
+  "uses": ["base"]
+}

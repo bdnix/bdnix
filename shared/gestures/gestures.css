@@ -1,0 +1,26 @@
+/* The touch gestures a game is played with, in one row on its start and
+   pause screens, shown only on phones. Each is an arrow (or a ring for a
+   tap), what it does and how:
+     <ul class="gestures" aria-label="Touch controls">
+       <li><svg/><b>Move</b><span>drag</span></li>
+       <li><i class="tap"></i><b>Rotate</b><span>tap</span></li>
+     </ul> */
+.gestures{display:none}
+@media (max-width:700px),(pointer:coarse){
+  .gestures{
+    display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,72px);
+    justify-content:center;gap:4px;
+    list-style:none;margin:8px 0 2px;padding:0;
+  }
+}
+.gestures li{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center}
+.gestures svg{
+  width:22px;height:22px;margin-bottom:4px;
+  fill:none;stroke:var(--cyan);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;
+}
+.gestures .tap{
+  display:block;width:18px;height:18px;margin:2px 0 6px;border-radius:50%;
+  border:2px solid var(--pink);box-shadow:0 0 0 4px rgba(244,114,182,.18);
+}
+.gestures b{font:600 11px/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--fg)}
+.gestures span{font:400 9px/1.2 var(--mono);letter-spacing:.02em;color:var(--muted)}

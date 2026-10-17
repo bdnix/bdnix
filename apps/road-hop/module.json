@@ -8,7 +8,7 @@
     "hop-core.js": "/assets/js/hop-core.js",
     "hop.css": "/assets/css/hop.css"
   },
-  "uses": ["analytics", "backdrop", "base", "game-shell", "gamepad", "gamesave", "icon-btn", "lang", "sound", "upright"],
+  "uses": ["analytics", "backdrop", "base", "game-shell", "gestures", "gamesave", "icon-btn", "lang", "sound", "upright"],
   "page": {
     "title": "Road Hop — Play free in your browser | bdnix",
     "description": "Play Road Hop free in your browser: help a chicken hop across busy roads and ride logs over rivers. Keep moving, go as far as you can and beat your best. Nothing to install.",

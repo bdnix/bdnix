@@ -8,7 +8,7 @@
     "snake-core.js": "/assets/js/snake-core.js",
     "snake.css": "/assets/css/snake.css"
   },
-  "uses": ["base", "lang", "analytics", "backdrop", "game-shell", "icon-btn", "gamepad", "sound", "gamesave", "upright"],
+  "uses": ["base", "lang", "analytics", "backdrop", "game-shell", "icon-btn", "gestures", "sound", "gamesave", "upright"],
   "page": {
     "title": "Snake — Play free in your browser | bdnix",
     "description": "Play Snake free in your browser: steer the snake to the food, grow longer with every bite and don’t hit the walls or your own tail. Beat your best, nothing to install.",

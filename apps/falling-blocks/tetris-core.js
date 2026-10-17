@@ -140,11 +140,60 @@
       [s.score, s.lines, s.level, s.dropAcc, s.lockAcc, s.lockResets].every(num);
   }
 
+  // Touch. A finger that goes sideways moves the piece a column for every
+  // `step` pixels, one that goes down soft drops it a row for every `step`;
+  // which way a stroke goes is settled once it has gone TAP_PX. A tap
+  // rotates, and a quick flick down drops the piece, or up holds it. Give it
+  // where the finger is and when (ms) as it goes down, moves and comes up;
+  // each returns the moves that makes, in order: 'left', 'right', 'down',
+  // 'rotate', 'drop' or 'hold'.
+  var TAP_PX = 10, TAP_MS = 300;
+  var FLICK_PX = 30, FLICK_SPEED = 0.5, FLICK_MS = 100;   // px, px per ms, and over about the last how many ms
+  function gesture(step){
+    var start, at, axis, trail;
+    function track(x, y, t){
+      var out = [];
+      trail.push({ x: x, y: y, t: t });
+      while (trail.length > 2 && t - trail[0].t > FLICK_MS) trail.shift();
+      if (!axis) {
+        var dx = Math.abs(x - start.x), dy = Math.abs(y - start.y);
+        if (Math.max(dx, dy) <= TAP_PX) return out;
+        axis = dx > dy ? 'x' : 'y';
+      }
+      if (axis === 'x') {
+        while (x - at.x >= step) { out.push('right'); at.x += step; }
+        while (at.x - x >= step) { out.push('left'); at.x -= step; }
+      } else {
+        while (y - at.y >= step) { out.push('down'); at.y += step; }
+        if (y < at.y) at.y = y;   // back up and down again soft drops from there
+      }
+      return out;
+    }
+    return {
+      down: function(x, y, t){
+        start = { x: x, y: y, t: t }; at = { x: x, y: y }; axis = null; trail = [start];
+        return [];
+      },
+      move: function(x, y, t){ return start ? track(x, y, t) : []; },
+      up: function(x, y, t){
+        if (!start) return [];
+        var out = track(x, y, t);
+        var first = trail[0], dy = y - first.y, speed = dy / Math.max(1, t - first.t);
+        if (!axis && t - start.t <= TAP_MS) out.push('rotate');
+        else if (axis === 'y' && dy >= FLICK_PX && speed >= FLICK_SPEED) out.push('drop');
+        else if (axis === 'y' && -dy >= FLICK_PX && -speed >= FLICK_SPEED) out.push('hold');
+        start = null;
+        return out;
+      }
+    };
+  }
+
   window.bdnixTetris = {
     COLS: COLS, ROWS: ROWS, LINE_SCORES: LINE_SCORES, KICKS: KICKS,
     emptyGrid: emptyGrid, bag: bag, makePiece: makePiece, rotateMatrix: rotateMatrix,
     collides: collides, onGround: onGround, rotated: rotated, dropDistance: dropDistance,
     place: place, fullRows: fullRows, clearRows: clearRows,
-    lineScore: lineScore, levelFor: levelFor, dropInterval: dropInterval, validSave: validSave
+    lineScore: lineScore, levelFor: levelFor, dropInterval: dropInterval, validSave: validSave,
+    gesture: gesture
   };
 })();
