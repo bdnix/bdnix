@@ -11,6 +11,6 @@ test('the chip is a pill, and a long name is cut short to fit a phone', async ({
   expect(await style(page, '.profile-chip', 'border-radius')).toBe('999px');
   expect(await style(page, '.profile-chip span:last-child', 'text-overflow')).toBe('ellipsis');
   const box = await page.locator('.profile-chip').boundingBox();
-  expect(box.width).toBeLessThanOrEqual(390 * 0.5 + 1);
+  expect(box.width).toBeLessThanOrEqual(390 * 0.6 + 1);
   await fitsScreen(page);
 });

@@ -26,3 +26,17 @@ test('the page drawn in the preview never overflows it', async ({ page }) => {
   const canvas = await page.locator('.preview-stage canvas').boundingBox();
   expect(canvas.width).toBeLessThanOrEqual(stage.width);
 });
+
+// A control that's wide by nature (a select with a long option) mustn't
+// push the editor, or the page, past the narrowest phones: it shrinks to
+// fit instead.
+test('a wide control still fits the narrowest phone', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  const body = BODY.replace('<div class="preview-nav">', '<select aria-label="Font"><option>Helvetica (sans-serif), the font every PDF reader has</option></select><div class="preview-nav">');
+  await openFixture(page, { css: ['/assets/css/base.css', '/assets/css/icon-btn.css', '/assets/css/editor.css'], body });
+  for (const sel of ['#preview', '#settings', '#preview select']) {
+    const box = await page.locator(sel).boundingBox();
+    expect(box.x + box.width, sel).toBeLessThanOrEqual(320);
+  }
+  await fitsScreen(page);
+});

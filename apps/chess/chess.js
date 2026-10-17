@@ -1437,6 +1437,8 @@
     if (review && !compactMQ.matches) reviewEl.style.setProperty('--review-h', (sq * 8 + 2 + strips - barEl.offsetHeight - gap) + 'px');
     else reviewEl.style.removeProperty('--review-h');
     boardEl.parentNode.style.setProperty('--cell', Math.max(16, sq * 0.6) + 'px');
+    // On a phone the card between games covers everything under the top bar.
+    document.documentElement.style.setProperty('--bar-h', document.querySelector('header.bar').getBoundingClientRect().bottom + 'px');
     if (review && review.summary) drawGraph();
   }
 

@@ -110,6 +110,25 @@ export function checkGame(url, opts = {}){
     }
   });
 
+  // On a phone with the browser's bars showing (360 × 640), the start card
+  // fits whole: nothing on it is cut off, off screen or left for scrolling.
+  test(`${url}: on a small phone the start card fits whole`, async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 640 });
+    await openGame(page, url);
+    if (!(await touch(page))) return;
+    const overlay = page.locator('#overlay');
+    await expect(overlay).toBeVisible();
+    const fits = await overlay.evaluate((o) => {
+      const card = o.getBoundingClientRect();
+      const out = [...o.querySelectorAll('*')].filter((e) => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden')
+        .filter((e) => { const r = e.getBoundingClientRect(); return r.top < card.top - 1 || r.bottom > card.bottom + 1 || r.left < 0 || r.right > innerWidth; })
+        .map((e) => e.id || e.className || e.tagName);
+      return { scrolls: o.scrollHeight > o.clientHeight + 1, out, bottom: card.bottom <= innerHeight + 1 };
+    });
+    expect(fits).toEqual({ scrolls: false, out: [], bottom: true });
+    await expectNoSideScroll(page);
+  });
+
   if (opts.languages !== false) checkGameLanguages(url);
 
   if (opts.credit) {
