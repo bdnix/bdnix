@@ -8,10 +8,10 @@
     "pacman-core.js": "/assets/js/pacman-core.js",
     "pacman.css": "/assets/css/pacman.css"
   },
-  "uses": ["analytics", "backdrop", "base", "game-shell", "gamepad", "gamesave", "icon-btn", "lang", "sound", "upright"],
+  "uses": ["analytics", "backdrop", "base", "game-shell", "gestures", "gamesave", "icon-btn", "lang", "sound", "upright"],
   "page": {
     "title": "Maze Chase — Play free in your browser | bdnix",
-    "description": "Play Maze Chase free in your browser, with the keyboard, or with swipes and touch buttons on a phone. Eat every dot, dodge the ghosts and beat your best score. Nothing to install.",
+    "description": "Play Maze Chase free in your browser, with the keyboard, or with swipes on a phone. Eat every dot, dodge the ghosts and beat your best score. Nothing to install.",
     "schema": "WebApplication",
     "category": "GameApplication"
   },

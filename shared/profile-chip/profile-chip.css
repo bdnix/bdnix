@@ -10,4 +10,4 @@
 .profile-chip:hover{border-color:rgba(168,85,247,.45);color:var(--fg)}
 .profile-chip:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
 .profile-chip span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media (max-width:480px){ .profile-chip{max-width:50vw} }
+@media (max-width:480px){ .profile-chip{max-width:60vw} }

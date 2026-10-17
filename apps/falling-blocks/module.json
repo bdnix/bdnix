@@ -8,10 +8,10 @@
     "tetris-core.js": "/assets/js/tetris-core.js",
     "tetris.css": "/assets/css/tetris.css"
   },
-  "uses": ["analytics", "backdrop", "base", "game-shell", "gamepad", "gamesave", "icon-btn", "lang", "sound", "upright"],
+  "uses": ["analytics", "backdrop", "base", "game-shell", "gestures", "gamesave", "icon-btn", "lang", "sound", "upright"],
   "page": {
     "title": "Falling Blocks — Play free in your browser | bdnix",
-    "description": "Play Falling Blocks free in your browser, with the keyboard or with touch buttons on a phone. Hold a piece, hard drop, clear lines and beat your best score. Nothing to install.",
+    "description": "Play Falling Blocks free in your browser, with the keyboard or by touch on a phone. Hold a piece, hard drop, clear lines and beat your best score. Nothing to install.",
     "schema": "WebApplication",
     "category": "GameApplication"
   },

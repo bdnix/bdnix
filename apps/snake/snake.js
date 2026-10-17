@@ -254,7 +254,7 @@
     drawSnake();
 
     if (state === 'ready' || (state === 'paused' && pausedFrom === 'ready')) {
-      var hint = Lang.t(compactMQ.matches ? 'Swipe or tap an arrow to go' : 'Press an arrow key to go');
+      var hint = Lang.t(compactMQ.matches ? 'Swipe to go' : 'Press an arrow key to go');
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = '800 30px Inter, system-ui, sans-serif';
       ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(8,10,18,.8)';
@@ -365,19 +365,16 @@
     if (document.hidden && (state === 'ready' || state === 'playing')) togglePause();
   });
 
-  document.querySelectorAll('.touch button').forEach(function(b){
-    var d = b.getAttribute('data-dir');
-    b.addEventListener('pointerdown', function(e){ e.preventDefault(); go(d); b.classList.add('on'); });
-    ['pointerup','pointercancel','pointerleave'].forEach(function(ev){
-      b.addEventListener(ev, function(){ b.classList.remove('on'); });
-    });
-    b.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  // Tap the score to pause: a phone has no P key.
+  document.querySelector('.stats').addEventListener('click', function(){
+    if (state === 'ready' || state === 'playing') togglePause();
   });
 
   // Swipe anywhere on the game area to turn. One long stroke can make
   // several turns: each 18px in a new direction counts as a swipe.
   var press = null;
   gameEl.addEventListener('pointerdown', function(e){
+    if (e.target.closest('.stats')) return;
     if (state !== 'ready' && state !== 'playing') return;
     if (e.button > 0) return;
     e.preventDefault();

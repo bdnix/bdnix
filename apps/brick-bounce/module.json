@@ -8,7 +8,7 @@
     "bricks-core.js": "/assets/js/bricks-core.js",
     "bricks.css": "/assets/css/bricks.css"
   },
-  "uses": ["analytics", "backdrop", "base", "game-shell", "gamepad", "gamesave", "icon-btn", "lang", "sound", "upright"],
+  "uses": ["analytics", "backdrop", "base", "game-shell", "gestures", "gamesave", "icon-btn", "lang", "sound", "upright"],
   "page": {
     "title": "Brick Bounce — Play free in your browser | bdnix",
     "description": "Play Brick Bounce free in your browser: bounce the ball off your paddle to smash a wall of bricks, row by row, before your three balls run out. Nothing to install.",

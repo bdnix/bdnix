@@ -66,11 +66,18 @@ button{font:inherit;color:inherit;cursor:pointer}
 }
 .wordmark{
   display:inline-flex;align-items:baseline;gap:8px;
+  min-width:3em;flex-shrink:1000;   /* gives way before the buttons beside it, down to the logo */
   text-decoration:none;
   font:800 20px/1 var(--sans);letter-spacing:-.03em;
 }
-.wordmark b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-.wordmark span{font:400 14px var(--mono);letter-spacing:0;color:var(--faint)}
+.wordmark b{flex-shrink:0;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+/* The page's name after the logo stays on one line, shortened when the bar
+   is tight, and makes way on the narrowest screens. */
+.wordmark span{
+  min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  font:400 14px var(--mono);letter-spacing:0;color:var(--faint);
+}
+@media (max-width:359px){ .wordmark span{display:none} }
 
 /* Buttons */
 .btn{

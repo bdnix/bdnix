@@ -360,6 +360,48 @@ test('being checkmated, and a draw', async ({ page }) => {
   await expect(page.locator('#evalNow')).toHaveText('0.00');
 });
 
+// The narrowest phones (320 px, with the browser's bars leaving 568 px):
+// the card before a game covers everything under the top bar, with all of
+// it on screen and over nothing it would muddle; the level and the buttons
+// fit beside the board once the game starts; and a review never scrolls
+// sideways, even with long names.
+test('on the narrowest phone the card, the controls and a review all fit the screen', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await fakeEngine(page);
+  await openGame(page, '/chess/');
+  const inView = async (sel) => {
+    const box = await page.locator(sel).boundingBox();
+    expect(box.x, sel).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width, sel).toBeLessThanOrEqual(320);
+    return box;
+  };
+  const overlay = page.locator('#overlay');
+  const card = await overlay.boundingBox();
+  const bar = await page.locator('header.bar').boundingBox();
+  expect(Math.abs(card.y - (bar.y + bar.height)), 'under the top bar').toBeLessThan(1);
+  expect(card.width).toBe(320);
+  expect(Math.abs(card.y + card.height - 568)).toBeLessThan(1);
+  const stats = await page.locator('.stats').boundingBox();
+  expect(card.y, 'over the status panel').toBeLessThanOrEqual(stats.y);
+  for (const sel of ['#ovTitle', '#ovText', '#sideSeg', '#startBtn', '#importBtn', '#pasteBtn']) await inView(sel);
+  await overlay.evaluate((o) => { o.scrollTop = o.scrollHeight; });
+  const credit = await inView('#overlay .credit');
+  expect(credit.y + credit.height).toBeLessThanOrEqual(568);
+  await expectNoSideScroll(page);
+
+  await page.locator('#startBtn').click();
+  await expect(overlay).toBeHidden();
+  for (const sel of ['#levelText', '#restartBtn', '#undoBtn', '#hintBtn', '#drawBtn', '#resignBtn', '#board']) await inView(sel);
+  await expectNoSideScroll(page);
+
+  await page.locator('#restartBtn').click();
+  await page.locator('#pgnFile').setInputFiles(file('a long tournament game.pgn', FOOLS.replace('"Ann"', '"Alexandra Konstantinopolous"').replace('"Bob"', '"Bartholomew Featherstonehaugh"')));
+  await expect(page.locator('#reviewTitle')).toHaveText('Alexandra Konstantinopolous vs Bartholomew Featherstonehaugh');
+  await reviewed(page);
+  for (const sel of ['#reviewTitle', '#reviewText', '#againBtn', '#anotherBtn', '#board']) await inView(sel);
+  await expectNoSideScroll(page);
+});
+
 test('opens a PGN file and reviews it', async ({ page }) => {
   await fakeEngine(page);
   await openGame(page, '/chess/');

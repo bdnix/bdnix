@@ -3,6 +3,7 @@
   display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;
   align-items:start;margin-top:4px;
 }
+.editor > *{min-width:0}   /* a wide page or control never pushes it past the screen */
 
 /* Preview */
 .preview{position:sticky;top:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
@@ -30,6 +31,6 @@
 .preview-nav .icon-btn:disabled{opacity:.3;cursor:default}
 
 @media (max-width:860px){
-  .editor{grid-template-columns:1fr}
+  .editor{grid-template-columns:minmax(0,1fr)}
   .preview{position:static}
 }

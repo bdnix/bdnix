@@ -1,6 +1,6 @@
 /* Shared by every game page: top-bar buttons, board frame, overlay and stat
-   panels. The on-screen gamepad is gamepad.css; page layout lives in each
-   game's own stylesheet. */
+   panels. The touch gestures shown on the overlay are gestures.css; page
+   layout lives in each game's own stylesheet. */
 body.play{
   height:var(--vh);
   overflow:hidden;
@@ -27,8 +27,12 @@ body.play{
 
 .overlay{
   position:absolute;inset:0;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;justify-content:safe center;gap:12px;
   padding:20px;text-align:center;line-height:1.45;
+  /* A card taller than the board scrolls inside it rather than spilling
+     over the page; a finger can scroll it though the game area takes
+     every other touch. */
+  overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
   border-radius:var(--radius);
   background:rgba(8,10,18,.84);
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
@@ -55,6 +59,15 @@ body.play{
 
 
 @media (max-width:700px),(pointer:coarse){
+  /* The card before, between and after games covers the whole game area
+     under the top bar (.game), which has room for it, not just the board. */
+  .game{position:relative}
+  .board-wrap{position:static}
+  .board-wrap .overlay{z-index:3;border-radius:0}
+  .overlay{gap:8px;padding:16px 14px}
+  .overlay .btn{margin-top:4px;padding:10px 16px}
+  .overlay .keys{margin-top:2px}
+  .overlay .credit{font-size:10px}
   .bar{padding:10px 16px}
   .box{padding:8px;gap:6px;border-radius:10px}
   .stats b{font-size:14px}

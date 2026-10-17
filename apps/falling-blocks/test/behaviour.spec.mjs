@@ -1,5 +1,5 @@
 import { test, expect } from '../../../tests/ui/fixtures.mjs';
-import { openGame, press, inkOn, tap, listen, heard, soundProblems } from '../../../tests/ui/games.mjs';
+import { openGame, press, inkOn, listen, heard, soundProblems } from '../../../tests/ui/games.mjs';
 
 // Pieces always come O, T, J, L, S, Z, I (see games.mjs). They spawn in the
 // middle of the top row and, on an empty board, a hard drop moves the flat
@@ -75,17 +75,62 @@ test('pausing stops the game, and it resumes where it was', async ({ page }) => 
   await expect(page.locator('#score')).toHaveText('36');
 });
 
-test('the touch buttons play the game', async ({ page }) => {
-  const button = (act) => page.locator(`.touch button[data-act="${act}"]`);
-  await tap(button('down'));
-  await tap(button('left'));
-  await tap(button('right'));
-  await tap(button('hold'));                        // O held, T in play
-  await tap(button('rotate'));
-  await page.locator('#board').dispatchEvent('pointerdown', { pointerType: 'touch' }); // tapping the board rotates too
-  await tap(button('drop'));
-  // 1 for the soft drop, then the T (upside down after two turns) drops 17 rows.
-  await expect(page.locator('#score')).toHaveText(String(1 + 17 * 2));
+// A finger on the game area: down at the first point, through the others
+// and up at the last. Each point is [x, y, ms]: how many steps (a cell, as
+// the game counts them) from where it went down, and how long after the
+// point before.
+async function finger(page, ...points){
+  const game = page.locator('#game');
+  const cell = await page.locator('.board-wrap').evaluate((e) => parseFloat(getComputedStyle(e).getPropertyValue('--cell')));
+  const step = Math.max(cell, 16);
+  const box = await page.locator('#board').boundingBox();
+  const at = ([x, y]) => ({ pointerType: 'touch', pointerId: 7, isPrimary: true, clientX: box.x + box.width / 2 + x * step, clientY: box.y + box.height / 2 + y * step });
+  for (const [i, p] of points.entries()) {
+    if (p[2]) await page.clock.runFor(p[2]);
+    const type = i === 0 ? 'pointerdown' : i === points.length - 1 ? 'pointerup' : 'pointermove';
+    await game.dispatchEvent(type, at(p));
+  }
+}
+const saved = async (page) => {
+  await press(page, 'KeyP');                        // pausing saves the game
+  const s = await page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_tetris_save')).data);
+  await press(page, 'KeyP');
+  return s;
+};
+
+test('a finger plays it: drag to move, tap to rotate, flick down to drop and up to hold', async ({ page }) => {
+  const start = (await saved(page)).piece;          // the O
+  await finger(page, [0, 0], [1.2, 0, 100], [2.1, 0, 100], [2.1, 0, 200]);
+  expect((await saved(page)).piece.x).toBe(start.x + 2);
+  // A flick down: three rows on the way, then the rest of the 18 at once.
+  await finger(page, [0, 0], [0, 3, 40], [0, 3, 0]);
+  await expect(page.locator('#score')).toHaveText(String(3 + 15 * 2));
+  let s = await saved(page);
+  expect(s.grid[19].map((c) => c || '.').join('')).toBe('.'.repeat(start.x + 2) + 'OO' + '.'.repeat(6 - start.x));
+  expect(s.piece.type).toBe('T');
+
+  await finger(page, [0, 0], [0, -2, 40], [0, -2, 0]);   // a flick up holds the T
+  s = await saved(page);
+  expect([s.held, s.piece.type]).toEqual(['T', 'J']);
+  const j = s.piece;
+
+  await finger(page, [0, 0], [0, 0, 50]);               // a tap turns the J
+  await finger(page, [0, 0], [0, 1.1, 200], [0, 2.1, 200], [0, 2.1, 200]); // a slow drag down soft drops 2 rows
+  await finger(page, [0, 0], [-1.2, 0, 100], [-3.1, 0, 200], [-3.1, 0, 200]);
+  s = await saved(page);
+  expect(s.piece.m).not.toEqual(j.m);
+  expect([s.piece.x, s.piece.y]).toEqual([j.x - 3, j.y + 2]);
+  await expect(page.locator('#score')).toHaveText(String(33 + 2));
+
+  // Holding still too long is no tap, and a touch on the score pauses
+  // instead of playing.
+  await finger(page, [0, 0], [0, 0, 400]);
+  await page.locator('.stats').dispatchEvent('pointerdown', { pointerType: 'touch', pointerId: 8, isPrimary: true });
+  await page.locator('.stats').dispatchEvent('pointerup', { pointerType: 'touch', pointerId: 8, isPrimary: true });
+  await page.locator('.stats').dispatchEvent('click');
+  await expect(page.locator('#ovTitle')).toHaveText('Paused');
+  const paused = await page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_tetris_save')).data.piece);
+  expect(paused.m).toEqual(s.piece.m);
 });
 
 test('stacking to the top ends the game and saves the best score', async ({ page }) => {

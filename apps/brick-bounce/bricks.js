@@ -4,7 +4,7 @@
   // The rules live in bricks-core.js; this file draws them and handles input.
   var F = window.bdnixBricks;
   var W = F.W, H = F.H;
-  var PADDLE_SPEED = 420;       // units a second while a move key or button is held
+  var PADDLE_SPEED = 420;       // units a second while a move key is held
   var DEATH_TIME = 0.8;         // how long the last ball falls before the score shows
   var FADE = 0.25;              // how long a broken brick takes to fade away
   var SPARKS = 0.9;             // how long the sparks of a ball falling off the bottom last
@@ -56,7 +56,7 @@
   var shaken = -1;              // when the board last shook (clock time)
   var missed = null;            // the last ball lost: { t, x, left } (when, where it fell, balls left)
   var cleared = null;           // the last wall cleared: { t, level } (when, which wall)
-  var held = { left: 0, right: 0 }; // move keys and buttons held down
+  var held = { left: 0, right: 0 }; // move keys held down
   var best = 0;
   var sound = window.bdnixSound;
   // This game's sounds, beside the ones every game shares (sound.js).
@@ -679,19 +679,9 @@
     if (document.hidden && (state === 'ready' || state === 'playing')) togglePause();
   });
 
-  // Held buttons move the paddle; the middle one launches the ball.
-  document.querySelectorAll('.touch button').forEach(function(b){
-    var d = b.getAttribute('data-dir');
-    b.addEventListener('pointerdown', function(e){
-      e.preventDefault(); e.stopPropagation();
-      b.classList.add('on');
-      if (d === 'launch') launch();
-      else if (state === 'ready' || state === 'playing') held[d] = 1;
-    });
-    ['pointerup','pointercancel','pointerleave'].forEach(function(ev){
-      b.addEventListener(ev, function(){ b.classList.remove('on'); if (d !== 'launch') held[d] = 0; });
-    });
-    b.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  // Tap the score to pause: a phone has no P key.
+  document.querySelector('.stats').addEventListener('click', function(){
+    if (state === 'ready' || state === 'playing') togglePause();
   });
 
   // The mouse steers the paddle wherever it points across the board, and a
@@ -708,6 +698,7 @@
     drag.x = e.clientX;
   });
   gameEl.addEventListener('pointerdown', function(e){
+    if (e.target.closest('.stats')) return;
     if (state !== 'ready' && state !== 'playing') return;
     if (e.button > 0) return;
     e.preventDefault();

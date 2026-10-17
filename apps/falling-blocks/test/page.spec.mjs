@@ -6,5 +6,5 @@ import { checkGame } from '../../../tests/ui/checks-game.mjs';
 checkPage('/falling-blocks/', { languages: false, schema: 'WebApplication', category: 'GameApplication', game: true });
 checkGame('/falling-blocks/', { languages: false,
   credit: ['Tetris', 'Alexey Pajitnov'],
-  gamepad: { dpad: { up: 'Hard drop', left: 'Move left', right: 'Move right', down: 'Soft drop' }, face: { a: 'Rotate', b: 'Hold' } }
+  gestures: [['Move', 'drag'], ['Rotate', 'tap'], ['Drop', 'flick'], ['Hold', 'flick']]
 });

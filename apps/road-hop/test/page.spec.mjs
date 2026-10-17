@@ -6,7 +6,7 @@ import { press } from '../../../tests/ui/games.mjs';
 // The checks every page and every game gets (see checks.mjs and checks-game.mjs),
 // in English. Its other languages are its i18n target's (i18n.spec.mjs).
 checkPage('/road-hop/', { languages: false, schema: 'WebApplication', category: 'GameApplication', game: true });
-checkGame('/road-hop/', { languages: false, credit: ['Crossy Road', 'Hipster Whale'], gamepad: { dpad: { up: 'Up', left: 'Left', right: 'Right', down: 'Down' } } });
+checkGame('/road-hop/', { languages: false, credit: ['Crossy Road', 'Hipster Whale'], gestures: [['Forward', 'tap'], ['Left', 'swipe'], ['Right', 'swipe'], ['Back', 'swipe']] });
 
 // checkPage checks the page with axe as it opens; this checks the pause screen.
 test('the pause screen passes axe', async ({ page }) => {

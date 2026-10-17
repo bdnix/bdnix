@@ -1,5 +1,5 @@
 import { test, expect } from '../../../tests/ui/fixtures.mjs';
-import { openGame, press, tap, listen, heard, soundProblems } from '../../../tests/ui/games.mjs';
+import { openGame, press, listen, heard, soundProblems } from '../../../tests/ui/games.mjs';
 import { likeSafari, audioStates } from '../../../tests/ui/safari.mjs';
 
 // The player starts low in the maze, heading left. Each dot is 10 points and a
@@ -64,16 +64,18 @@ test('pausing stops the game, and it resumes where it was', async ({ page }) => 
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
 });
 
-test('the touch buttons and swipes steer', async ({ page }) => {
+test('swipes steer', async ({ page }) => {
   const score = page.locator('#score');
   await page.clock.runFor(2000);                    // stopped in the corner, 160 points
   await expect(score).toHaveText('160');
-  await tap(page.locator('.touch button[data-dir="up"]'));
+  const game = page.locator('#game');
+  await game.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: 100, clientY: 140 });
+  await game.dispatchEvent('pointermove', { pointerType: 'touch', clientX: 102, clientY: 100 });
+  await game.dispatchEvent('pointerup', { pointerType: 'touch' });
   await page.clock.runFor(800);                     // up the side corridor
   await expect(score).toHaveText('190');
 
   // A swipe right steers right at the next junction.
-  const game = page.locator('#game');
   await game.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: 100, clientY: 100 });
   await game.dispatchEvent('pointermove', { pointerType: 'touch', clientX: 140, clientY: 102 });
   await game.dispatchEvent('pointerup', { pointerType: 'touch' });

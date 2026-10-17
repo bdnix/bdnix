@@ -1,5 +1,5 @@
 import { test, expect } from '../../../tests/ui/fixtures.mjs';
-import { openGame, press, tap, listen, heard, soundProblems } from '../../../tests/ui/games.mjs';
+import { openGame, press, listen, heard, soundProblems } from '../../../tests/ui/games.mjs';
 
 // The snake starts three long with its head at (6, 8), heading right, and the
 // first food is straight ahead at (12, 8). With Math.random fixed at 0 each
@@ -159,7 +159,7 @@ test('filling the whole board wins', async ({ page }) => {
   await expect(page.locator('#ovText')).toHaveText('Score 286 — new best!');
 });
 
-test('keys, swipes and the buttons all turn', async ({ page }) => {
+test('keys and swipes turn', async ({ page }) => {
   await page.getByRole('button', { name: 'Start game' }).click();
   await press(page, 'ArrowLeft');                      // straight back doesn't start it
   expect(await peek(page)).toBeNull();
@@ -195,14 +195,6 @@ test('keys, swipes and the buttons all turn', async ({ page }) => {
   expect((await peek(page)).queue).toEqual(['left', 'down']);
   await page.clock.runFor(500);
 
-  await tap(page.locator('.touch [data-dir=right]'));
-  await tap(page.locator('.touch [data-dir=up]'));
-  expect((await peek(page)).queue).toEqual(['right', 'up']);
-  await page.clock.runFor(500);
-  await tap(page.locator('.touch [data-dir=left]'));
-  await tap(page.locator('.touch [data-dir=down]'));
-  expect((await peek(page)).queue).toEqual(['left', 'down']);
-  await page.clock.runFor(500);
   await press(page, 'ArrowRight');
   await press(page, 'KeyW');
   expect((await peek(page)).queue).toEqual(['right', 'up']);

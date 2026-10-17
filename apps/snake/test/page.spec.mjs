@@ -5,4 +5,4 @@ import { checkGame } from '../../../tests/ui/checks-game.mjs';
 // checks.mjs and checks-game.mjs), in English. Its other languages are its
 // i18n target's (i18n.spec.mjs).
 checkPage('/snake/', { schema: 'WebApplication', category: 'GameApplication', game: true, languages: false });
-checkGame('/snake/', { credit: ['Blockade', 'Gremlin'], gamepad: { dpad: { up: 'Up', left: 'Left', right: 'Right', down: 'Down' } }, languages: false });
+checkGame('/snake/', { credit: ['Blockade', 'Gremlin'], gestures: [['Up', 'swipe'], ['Down', 'swipe'], ['Left', 'swipe'], ['Right', 'swipe']], languages: false });

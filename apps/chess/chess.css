@@ -121,7 +121,7 @@
 /* ---- Phones & tablets ---- */
 @media (max-width:700px),(pointer:coarse){
   .game{
-    grid-template-columns:1fr;
+    grid-template-columns:minmax(0,1fr);
     grid-template-rows:auto auto auto;
     grid-template-areas:"stats" "board" "side";
     justify-content:stretch;justify-items:center;
@@ -141,11 +141,21 @@
   .strip{font-size:12px;min-height:20px}
   .caps{min-height:16px}
   .caps svg{width:16px;height:16px}
-  .level{flex-direction:row;align-items:center;gap:12px}
-  .level input{flex:1 1 auto;width:auto}
-  .level output{font-size:12px}
-  .controls{grid-template-columns:repeat(3,1fr)}
-  .controls .btn{padding:10px 4px;font-size:13px}
+  /* The level's name and its words on one line, the slider under them. */
+  .level{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:6px 12px}
+  .level input{grid-column:1/-1;grid-row:2;width:100%}
+  .level output{font-size:12px;text-align:right;white-space:normal}
+  .controls{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .controls .btn{padding:10px 4px;font-size:13px;line-height:1.2;white-space:normal;min-width:0}
+  /* The card before, between and after games has more on it than a
+     phone's board can hold: it covers the whole game area under the top
+     bar instead (--bar-h is set by chess.js). */
+  .board-wrap{position:relative}   /* its eval bar, arrows and promotion stay on the board */
+  .board-wrap .overlay{
+    position:fixed;inset:var(--bar-h,62px) 0 0;z-index:5;border-radius:0;
+    padding-bottom:calc(16px + env(safe-area-inset-bottom));
+  }
+  .overlay .seg,#sideSeg{min-width:0;width:100%;max-width:300px}
   .opening-row{grid-column:1/-1}
   .opening-row b{font-size:12px}
 }
@@ -291,7 +301,8 @@ body.reviewing .game{
 
 @media (max-width:700px),(pointer:coarse){
   body.play.reviewing{height:auto;min-height:var(--vh);overflow:visible}
-  body.reviewing .game{grid-template-columns:1fr;grid-template-rows:none;grid-template-areas:"bar" "board" "stats" "side"}
+  body.reviewing .game{grid-template-columns:minmax(0,1fr);grid-template-rows:none;grid-template-areas:"bar" "board" "stats" "side"}
+  body.reviewing .game > *{min-width:0}
   .review-bar{justify-self:stretch;padding:8px}
   .review-nav{justify-content:space-between}
   .review-nav .icon-btn{width:42px;height:42px}
