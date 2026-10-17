@@ -200,3 +200,5 @@ Tests whose inputs haven't changed since they last passed don't run again; CI re
 ## Commit messages
 
 Never write GitHub's skip keywords literally in a commit message, even when describing them: `[skip ci]`, `[ci skip]`, `[no ci]`, `[skip actions]`, `[actions skip]`, or a `skip-checks: true` trailer. GitHub honours them anywhere in the message, so the tests silently won't run for that push, and after a squash-merge not on `master` either.
+
+Don't add `Claude-Session:` lines or claude.ai session links to commit messages or pull request descriptions.
