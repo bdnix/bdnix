@@ -84,6 +84,10 @@ A car hit ends the round with a thump: the car stops dead, the board shakes, a r
 
 The snake waits until the first direction is pressed, then glides from cell to cell at about four and a half cells a second. Each piece of food scores a point and makes the snake one longer and a little faster, up to ten cells a second. Hitting a wall or the snake's own body ends the round; filling the whole board wins it. Two quick presses make two turns on the next two steps, so a U-turn is easy.
 
+The board is 17 cells across. On a wide screen it's square, 17 rows tall; on a tall, narrow one (a phone held upright) it takes as many rows as fill the screen (up to 32), so the board isn't a small square with empty space around it. A round keeps its rows until it ends, even if the window changes shape, and a saved round comes back with the rows it had.
+
+One swipe makes one turn, and one stroke can make several, each 18 px in a new direction. While the finger keeps going the way it last turned, the 18 px count starts again from where it is, so a thumb that curves at the end of a swipe doesn't turn the snake a second time. Only the first finger on the screen steers; a second finger or a palm is ignored.
+
 ## Brick Bounce
 
 `/brick-bounce/`
