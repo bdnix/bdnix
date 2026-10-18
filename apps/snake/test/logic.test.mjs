@@ -33,6 +33,23 @@ test('a new round: three long, heading right, with the food straight ahead', () 
   assert.ok(r >= 0 && r < 1, 'Math.random by default');
 });
 
+test('a taller board: the snake and the food start half way down, and the bottom wall is lower', () => {
+  const w = F.create(() => 0, 30);
+  assert.equal(w.rows, 30);
+  assert.equal(F.create().rows, F.ROWS, 'square if not told');
+  assert.ok(F.MAX_ROWS > F.ROWS);
+  assert.deepEqual(plain(w.body), [{ x: 6, y: 15 }, { x: 5, y: 15 }, { x: 4, y: 15 }]);
+  assert.deepEqual(plain(w.food), { x: F.FIRST_FOOD.x, y: 15 });
+  F.turn(w, 'down');
+  assert.equal(run(w, 14), null, 'past where the square board ends');
+  assert.deepEqual(plain(w.body[0]), { x: 6, y: 29 });
+  assert.equal(F.step(w), 'wall');
+  // Food goes anywhere on it, down to the last row.
+  const v = F.create(() => 0.9999, 30);
+  run(v, 6);
+  assert.deepEqual(plain(v.food), { x: F.COLS - 1, y: 29 });
+});
+
 test('each step moves the head on and the tail along', () => {
   const w = F.create(() => 0);
   assert.equal(F.step(w), null);

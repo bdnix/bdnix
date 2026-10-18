@@ -2,10 +2,20 @@ import { test, expect } from '../../../tests/ui/fixtures.mjs';
 import { openGame, press, listen, heard, soundProblems } from '../../../tests/ui/games.mjs';
 
 // The snake starts three long with its head at (6, 8), heading right, and the
-// first food is straight ahead at (12, 8). With Math.random fixed at 0 each
-// food after that goes on the first free cell, (0, 0) at the top left. Each
-// ending shows the first of its lines.
+// first food is straight ahead at (12, 8), on the square board. A phone held
+// upright gets a taller board, with the snake half way down it. With
+// Math.random fixed at 0 each food after that goes on the first free cell,
+// (0, 0) at the top left. Each ending shows the first of its lines.
 const COLS = 17, ROWS = 17;
+
+// How many rows the board has, from its shape.
+function rowsOnBoard(page){
+  return page.locator('#board').evaluate((c, cols) => Math.round(c.height / c.width * cols), COLS);
+}
+// The row the snake starts on.
+async function middle(page){
+  return Math.floor(await rowsOnBoard(page) / 2);
+}
 
 // The round as saved: pausing saves it, and resuming carries on at the same
 // moment, since time only moves when a test runs the clock.
@@ -32,7 +42,7 @@ const saved = (body, extra = {}) => ({ carry: 0, body, dir: 'right', queue: [], 
 const row = (x, y, n) => Array.from({ length: n }, (_, i) => ({ x: x - i, y }));
 
 // Where the head is drawn, in cells: the middle of the pixels in its exact colour.
-function headOnBoard(page){
+function headOnBoard(page, rows = ROWS){
   return page.locator('#board').evaluate((c, [cols, rows]) => {
     const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
     let n = 0, sx = 0, sy = 0;
@@ -42,7 +52,7 @@ function headOnBoard(page){
       }
     }
     return n ? { x: sx / n / c.width * cols, y: sy / n / c.height * rows } : null;
-  }, [COLS, ROWS]);
+  }, [COLS, rows]);
 }
 // How many pixels of the snake are drawn (bright cyan to purple, not the berry or the grid).
 function snakeOnBoard(page){
@@ -61,6 +71,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('eats, grows and runs into the wall', async ({ page }) => {
+  const mid = await middle(page);
   await page.getByRole('button', { name: 'Start game' }).click();
   await expect(page.locator('#overlay')).toBeHidden();
   await page.clock.runFor(2000);
@@ -70,7 +81,7 @@ test('eats, grows and runs into the wall', async ({ page }) => {
   await expect(page.locator('#score')).toHaveText('1');
   await expect(page.locator('#best')).toHaveText('1');
   const s = await peek(page);
-  expect(s.body).toEqual([{ x: 12, y: 8 }, { x: 11, y: 8 }, { x: 10, y: 8 }, { x: 9, y: 8 }]);
+  expect(s.body).toEqual([{ x: 12, y: mid }, { x: 11, y: mid }, { x: 10, y: mid }, { x: 9, y: mid }]);
   expect(s.food).toEqual({ x: 0, y: 0 });
 
   await waitForGameOver(page);
@@ -95,19 +106,20 @@ test('eats, grows and runs into the wall', async ({ page }) => {
 });
 
 test('the snake glides a little every frame instead of jumping a cell at a time', async ({ page }) => {
+  const rows = await rowsOnBoard(page), mid = Math.floor(rows / 2);
   await page.getByRole('button', { name: 'Start game' }).click();
-  const still = await headOnBoard(page);
+  const still = await headOnBoard(page, rows);
   expect(still.x).toBeCloseTo(6.5, 1);                  // on "Get ready", in the middle of its cell
   await press(page, 'ArrowRight');
-  let prev = await headOnBoard(page);
+  let prev = await headOnBoard(page, rows);
   expect(prev.x).toBeCloseTo(6.5, 1);                  // starting off doesn't jump it forward
   for (let i = 0; i < 12; i++) {
     await page.clock.runFor(40);
-    const now = await headOnBoard(page);
+    const now = await headOnBoard(page, rows);
     const moved = now.x - prev.x;
     expect(moved, `frame ${i}`).toBeGreaterThan(0.05);  // always moving...
     expect(moved, `frame ${i}`).toBeLessThan(0.4);      // ...a fraction of a cell at a time
-    expect(now.y).toBeCloseTo(8.5, 1);
+    expect(now.y).toBeCloseTo(mid + 0.5, 1);
     prev = now;
   }
 });
@@ -160,12 +172,13 @@ test('filling the whole board wins', async ({ page }) => {
 });
 
 test('keys and swipes turn', async ({ page }) => {
+  const mid = await middle(page);
   await page.getByRole('button', { name: 'Start game' }).click();
   await press(page, 'ArrowLeft');                      // straight back doesn't start it
   expect(await peek(page)).toBeNull();
   await press(page, 'KeyW');                           // the first press turns and starts it at once
   let s = await peek(page);
-  expect([s.dir, s.queue, s.body[0]]).toEqual(['up', [], { x: 6, y: 7 }]);
+  expect([s.dir, s.queue, s.body[0]]).toEqual(['up', [], { x: 6, y: mid - 1 }]);
   await press(page, 'KeyA');
   await press(page, 'KeyS');
   expect((await peek(page)).queue).toEqual(['left', 'down']);
@@ -207,6 +220,88 @@ test('keys and swipes turn', async ({ page }) => {
   await game.dispatchEvent('pointermove', { pointerType: 'mouse', button: 2, clientX: 260, clientY: 300 });
   await game.dispatchEvent('pointercancel', { pointerType: 'mouse' });
   expect((await peek(page)).queue).toEqual(['left']);
+});
+
+test('a swipe that curves at the end turns once, and only the first finger steers', async ({ page }) => {
+  await page.getByRole('button', { name: 'Start game' }).click();
+  const game = page.locator('#game');
+  const touch = (type, id, x, y) => game.dispatchEvent(type, { pointerType: 'touch', pointerId: id, isPrimary: id === 1, clientX: x, clientY: y });
+  // A thumb swipes up, curving to the left as it goes: that's one turn.
+  await touch('pointerdown', 1, 200, 400);
+  for (const [x, y] of [[200, 380], [197, 368], [192, 358], [185, 350], [177, 344], [170, 341]]) await touch('pointermove', 1, x, y);
+  let s = await peek(page);
+  expect([s.dir, s.queue]).toEqual(['up', []]);
+  // Carrying on to the left, it turns.
+  await touch('pointermove', 1, 150, 341);
+  expect((await peek(page)).queue).toEqual(['left']);
+
+  // A second finger on the screen doesn't steer, and lifting it doesn't
+  // stop the first one.
+  await touch('pointerdown', 2, 300, 600);
+  await touch('pointermove', 2, 300, 660);
+  await touch('pointermove', 2, 360, 660);
+  expect((await peek(page)).queue).toEqual(['left']);
+  await touch('pointerup', 2, 360, 660);
+  await touch('pointermove', 1, 150, 371);
+  expect((await peek(page)).queue).toEqual(['left', 'down']);
+  await touch('pointerup', 1, 150, 371);
+  await page.clock.runFor(500);
+
+  // Once it's lifted, a new finger steers.
+  await touch('pointerdown', 3, 200, 300);
+  await touch('pointermove', 3, 230, 300);
+  expect((await peek(page)).queue).toEqual(['right']);
+  await touch('pointercancel', 3, 230, 300);
+  await page.clock.runFor(500);
+
+  // A finger lifted over the top bar is lifted too: the next one steers.
+  await touch('pointerdown', 4, 200, 300);
+  await page.locator('.bar').dispatchEvent('pointerup', { pointerType: 'touch', pointerId: 4 });
+  await touch('pointerdown', 5, 200, 300);
+  await touch('pointermove', 5, 200, 270);
+  expect((await peek(page)).queue).toEqual(['up']);
+  // And a new first touch steers even if the last one's lift was missed.
+  await touch('pointerdown', 1, 200, 300);
+  await touch('pointermove', 1, 170, 300);
+  expect((await peek(page)).queue).toEqual(['up', 'left']);
+});
+
+test('on a phone held upright the board takes more rows, to fill the screen', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  const rows = await rowsOnBoard(page);
+  expect(rows).toBeGreaterThan(ROWS);
+  const box = await page.locator('#board').boundingBox();
+  expect(box.width).toBeGreaterThan(340);
+  expect(box.height).toBeGreaterThan(600);
+
+  // A round keeps its rows, even if the screen changes shape.
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await press(page, 'ArrowRight');
+  let s = await peek(page);
+  expect(s.rows).toBe(rows);
+  expect(s.body[0]).toEqual({ x: 7, y: Math.floor(rows / 2) });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  expect(await rowsOnBoard(page)).toBe(rows);
+  // Runs off the bottom of the tall board.
+  await press(page, 'ArrowDown');
+  await waitForGameOver(page);
+  expect(await rowsOnBoard(page)).toBe(rows);
+  // The next round fits the screen as it is now: square.
+  await page.getByRole('button', { name: 'Play again' }).click();
+  expect(await rowsOnBoard(page)).toBe(ROWS);
+  await press(page, 'ArrowUp');
+  expect((await peek(page)).rows).toBe(ROWS);
+
+  // A tall round carries on as it was on a wide screen.
+  await openSaved(page, saved(row(6, 20, 4), { rows: 25 }));
+  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
+  expect(await rowsOnBoard(page)).toBe(25);
+  // And a round saved before boards could be taller is square on a phone.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openSaved(page, saved(row(6, 8, 4)));
+  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
+  expect(await rowsOnBoard(page)).toBe(ROWS);
 });
 
 test('pausing stops the snake, and it resumes where it was', async ({ page }) => {
@@ -309,7 +404,11 @@ test('saves that do not make sense are thrown away', async ({ page }) => {
     { ...good, body: [{ x: 6, y: 8 }, { x: 5, y: 8 }, { x: 5, y: 9 }, { x: 5, y: 8 }] }, // folded back on itself
     { ...good, food: { x: 4, y: 8 } },                                           // food under the snake
     { ...good, food: { x: COLS, y: 0 } },                                        // food off the board
-    { ...good, queue: ['up', 'left', 'down'] }                                   // too many turns waiting
+    { ...good, queue: ['up', 'left', 'down'] },                                  // too many turns waiting
+    { ...good, rows: 16 },                                                       // fewer rows than the square board
+    { ...good, rows: 40 },                                                       // more than ever fit
+    { ...good, rows: '20' },
+    { ...saved(row(6, 20, 4)), rows: 20 }                                        // the snake below the bottom
   ]) {
     await openSaved(page, bad);
     await expect(page.locator('#ovTitle'), JSON.stringify(bad)).toHaveText('Snake');

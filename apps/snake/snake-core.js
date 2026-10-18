@@ -1,12 +1,13 @@
 // Snake rules: the snake's moves and turns, the food, and what ends a round.
 // No DOM, so it can be unit tested; snake.js draws the board and handles
-// input. Positions are in cells (the board is COLS wide, ROWS tall), with
-// x counting right from 0 and y counting down from 0 at the top; times are
-// in seconds.
+// input. Positions are in cells (the board is COLS wide and a round's
+// `rows` tall), with x counting right from 0 and y counting down from 0 at
+// the top; times are in seconds.
 (function(){
-  var COLS = 17, ROWS = 17;
+  var COLS = 17;
+  var ROWS = 17, MAX_ROWS = 32;         // a round's rows: square, or taller to fill a phone
   var START_LEN = 3;
-  var START = { x: 6, y: 8 };           // the head; the tail trails off to the left
+  var START = { x: 6, y: 8 };           // the head on a square board, half way down; the tail trails off to the left
   var FIRST_FOOD = { x: 12, y: 8 };     // straight ahead, so the first bite is easy
   var SLOW = 0.22, FAST = 0.1;          // seconds per step, at the start and at top speed
   var SPEEDUP = 0.003;                  // seconds taken off per piece of food eaten
@@ -29,7 +30,7 @@
   // there's no room left.
   function placeFood(w){
     var free = [];
-    for (var y = 0; y < ROWS; y++) {
+    for (var y = 0; y < w.rows; y++) {
       for (var x = 0; x < COLS; x++) if (!onBody(w.body, x, y)) free.push({ x: x, y: y });
     }
     if (!free.length) { w.food = null; return false; }
@@ -37,17 +38,21 @@
     return true;
   }
 
-  // A new round. `rand` places the food after the first (Math.random if omitted).
-  function create(rand){
+  // A new round, `rows` tall (ROWS if omitted), with the snake half way down.
+  // `rand` places the food after the first (Math.random if omitted).
+  function create(rand, rows){
     var body = [];
-    for (var i = 0; i < START_LEN; i++) body.push({ x: START.x - i, y: START.y });
+    rows = rows || ROWS;
+    var mid = Math.floor(rows / 2);
+    for (var i = 0; i < START_LEN; i++) body.push({ x: START.x - i, y: mid });
     return {
       rand: rand || Math.random,
+      rows: rows,
       body: body,               // head first
       trail: { x: body[START_LEN - 1].x, y: body[START_LEN - 1].y }, // where the tail was before the last step
       dir: 'right',             // the way the snake last moved
       queue: [],                // turns pressed but not made yet
-      food: { x: FIRST_FOOD.x, y: FIRST_FOOD.y },
+      food: { x: FIRST_FOOD.x, y: mid },
       score: 0,
       dead: null                // how the round ended: 'wall', 'self' or 'full'
     };
@@ -70,7 +75,7 @@
     if (w.queue.length) w.dir = w.queue.shift();
     var d = DIRS[w.dir], head = w.body[0], tail = w.body[w.body.length - 1];
     var x = head.x + d.x, y = head.y + d.y;
-    if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return (w.dead = 'wall');
+    if (x < 0 || y < 0 || x >= COLS || y >= w.rows) return (w.dead = 'wall');
     var eats = !!w.food && x === w.food.x && y === w.food.y;
     // The tail moves out of the way on this step unless the snake is growing.
     var rest = eats ? w.body : w.body.slice(0, -1);
@@ -97,7 +102,7 @@
   }
 
   window.bdnixSnake = {
-    COLS: COLS, ROWS: ROWS, START_LEN: START_LEN, START: START, FIRST_FOOD: FIRST_FOOD,
+    COLS: COLS, ROWS: ROWS, MAX_ROWS: MAX_ROWS, START_LEN: START_LEN, START: START, FIRST_FOOD: FIRST_FOOD,
     SLOW: SLOW, FAST: FAST, SPEEDUP: SPEEDUP, DIRS: DIRS, OPPOSITE: OPPOSITE,
     create: create, turn: turn, step: step, advance: advance,
     interval: interval, placeFood: placeFood, onBody: onBody
