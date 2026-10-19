@@ -151,7 +151,10 @@
     var meta = f.meta;
     meta.classList.toggle('error', f.state === 'error');
     if (f.state === 'error') meta.textContent = f.error;
-    else if (f.state === 'working') meta.textContent = t('Converting… {percent}%', { percent: Math.floor(f.progress * 100) });
+    else if (f.state === 'working') {
+      var left = A.timeLeft(Date.now() - f.started, f.progress);
+      meta.textContent = t('Converting… {percent}%', { percent: Math.floor(f.progress * 100) }) + (left ? ' · ' + left : '');
+    }
     else if (f.state === 'done') meta.textContent = A.fmtTime(f.seconds) + ' · ' + f.out + ' · ' + fmtSize(f.outSize);
     else meta.textContent = fmtSize(f.file.size);
     f.bar.style.setProperty('--p', f.progress);
@@ -444,6 +447,7 @@
   function convert(f, opts){
     f.state = 'working';
     f.progress = 0;
+    f.started = Date.now();
     render();
     var unreadable = {}, read = reader(f.file), out = null, input = 0, lame;
     // input is how much of the sound has been decoded, and the sink says

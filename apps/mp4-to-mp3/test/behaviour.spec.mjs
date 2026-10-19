@@ -305,6 +305,40 @@ for (const [decoded, upload] of [
   });
 }
 
+test('while converting, it says about how long is left', async ({ page }) => {
+  // The page's clock moves only when the test says.
+  await page.addInitScript(() => {
+    let now = Date.now();
+    Date.now = () => now;
+    window.later = (ms) => { now += ms; };
+  });
+  // One worker, answered by the test.
+  await cores(page, 2);
+  await page.reload();
+  await fakeWorkers(page, 'hang');
+  await smallPieces(page);
+  await page.locator('#picker').setInputFiles([long()]);
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  const meta = page.locator('.file-meta');
+  await page.waitForFunction(() => window.held.length === 1);
+  // Nothing encoded yet: too early to tell.
+  await expect(meta).toHaveText(/^Converting… \d+%$/);
+  // A minute and a half later, the first piece is done.
+  await page.evaluate(() => {
+    window.later(90000);
+    const { worker, index } = window.held[0];
+    worker.onmessage({ data: { index, bytes: new Uint8Array(0) } });
+  });
+  await expect(meta).toHaveText(/^Converting… (\d+)% · about \d+ minutes left$/);
+  // At the same pace, what's left takes as long as what's done did, for
+  // the share still to do.
+  const [percent, minutes] = (await meta.textContent()).match(/\d+/g).map(Number);
+  expect(Math.abs(minutes - 1.5 * (100 - percent) / percent)).toBeLessThan(1);
+  await expectNoSideScroll(page);
+  await page.getByRole('button', { name: 'Stop' }).click();
+  await expect(meta).toHaveText(/^\d+ KB$/);
+});
+
 test('stereo at a low bitrate, which lamejs resamples, goes through one encoder', async ({ page }) => {
   await cores(page, 4);
   await page.reload();

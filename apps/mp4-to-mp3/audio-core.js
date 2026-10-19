@@ -17,6 +17,18 @@
     return (dot > 0 ? name.slice(0, dot) : name) + '.' + ext;
   }
 
+  // About how long a conversion has left, in words, from how long it has
+  // taken so far (ms) and how far it has got (0 to 1), as if it carries on
+  // at the same pace. Null until it's far enough along to tell.
+  function timeLeft(elapsed, progress){
+    if (!(progress >= 0.02 && progress < 1) || elapsed < 2000) return null;
+    var Lang = window.bdnixLang, seconds = elapsed / 1000 * (1 - progress) / progress;
+    if (seconds < 60) return Lang.t('less than a minute left');
+    var minutes = Math.round(seconds / 60);
+    if (minutes < 60) return Lang.count(minutes, 'about {n} minute left', 'about {n} minutes left');
+    return Lang.t('about {h} h {m} min left', { h: Math.floor(minutes / 60), m: minutes % 60 });
+  }
+
   // 65 -> "1:05", 3725 -> "1:02:05". Partial seconds round to the nearest.
   function fmtTime(seconds){
     var s = Math.round(seconds), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60;
@@ -554,7 +566,7 @@
   // PIECE is the longest a piece is; tests make it shorter, to have several
   // pieces in a short recording.
   var api = window.bdnixAudio = {
-    isMedia: isMedia, outName: outName, fmtTime: fmtTime,
+    isMedia: isMedia, outName: outName, fmtTime: fmtTime, timeLeft: timeLeft,
     mix: mix, toPcm16: toPcm16, stream: stream, mp3Rate: mp3Rate, pieceSize: pieceSize, splitter: splitter, pieceEncoder: pieceEncoder, keepFrames: keepFrames,
     mp4: mp4, audioOnly: audioOnly, PIECE: PIECE
   };

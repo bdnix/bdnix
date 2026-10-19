@@ -45,6 +45,24 @@ test('outName: swaps the extension', () => {
   assert.equal(A.outName('.hidden', 'mp3'), '.hidden.mp3');
 });
 
+test('timeLeft: about how long is left, once it can tell', () => {
+  // Too early to tell: under 2 seconds in, under 2% done, or done.
+  assert.equal(A.timeLeft(1999, 0.5), null);
+  assert.equal(A.timeLeft(60000, 0.019), null);
+  assert.equal(A.timeLeft(60000, 1), null);
+  assert.equal(A.timeLeft(60000, NaN), null);
+  // At the same pace: 10 s for 25% leaves 30 s.
+  assert.equal(A.timeLeft(10000, 0.25), 'less than a minute left');
+  assert.equal(A.timeLeft(20000, 0.25), 'about 1 minute left');
+  assert.equal(A.timeLeft(60000, 0.25), 'about 3 minutes left');
+  assert.equal(A.timeLeft(89000, 0.5), 'about 1 minute left');
+  assert.equal(A.timeLeft(91000, 0.5), 'about 2 minutes left');
+  assert.equal(A.timeLeft(59 * 60000, 0.5), 'about 59 minutes left');
+  assert.equal(A.timeLeft(60 * 60000, 0.5), 'about 1 h 0 min left');
+  // 12 minutes for 10% leaves 108 minutes.
+  assert.equal(A.timeLeft(12 * 60000, 0.1), 'about 1 h 48 min left');
+});
+
 test('fmtTime', () => {
   assert.equal(A.fmtTime(0), '0:00');
   assert.equal(A.fmtTime(1.04), '0:01');

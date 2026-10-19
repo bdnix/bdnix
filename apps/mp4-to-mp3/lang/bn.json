@@ -45,6 +45,10 @@
   "Video or audio to MP3 or WAV": "ভিডিও বা অডিও থেকে MP3 বা WAV",
   "Voice · 64 kbps": "কণ্ঠস্বর · ৬৪ kbps",
   "What it does": "যা করে",
+  "about {h} h {m} min left": "প্রায় {h} ঘণ্টা {m} মিনিট বাকি",
+  "about {n} minute left": "প্রায় {n} মিনিট বাকি",
+  "about {n} minutes left": "প্রায় {n} মিনিট বাকি",
+  "less than a minute left": "এক মিনিটেরও কম বাকি",
   "the MP3 encoder didn’t load. Check your connection and try again": "MP3 এনকোডার লোড হয়নি। আপনার ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন",
   "tool audio video music sound convert extract wav": "টুল অডিও ভিডিও গান শব্দ রূপান্তর এমপিথ্রি"
 }
