@@ -15,24 +15,40 @@ test('/mp4-to-mp3/: lamejs is only fetched to make an MP3', async ({ page }) => 
   await page.goto('/mp4-to-mp3/');
   await page.locator('#picker').setInputFiles([clip()]);
   await page.getByText('WAV', { exact: true }).click();
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await expect(page.locator('.track .dl')).toHaveCount(1);
   expect(seen).toEqual([]);
 
   await page.getByText('MP3', { exact: true }).click();
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await expect(page.locator('.track .dl')).toHaveCount(1);
-  expect(seen).toEqual([expect.stringContaining('/assets/vendor/lame.min.js?v=1.2.1')]);
+  // By the page, and by the workers that encode.
+  expect(seen.length).toBeGreaterThan(0);
+  expect(seen.every((url) => url.endsWith('/assets/vendor/lame.min.js?v=1.2.1'))).toBe(true);
+});
+
+test('/mp4-to-mp3/: says so when the encoding workers can\'t load lamejs, and tries again', async ({ page }) => {
+  await page.goto('/mp4-to-mp3/');
+  // The page has lamejs, but the workers can't fetch it.
+  await page.evaluate(() => window.bdnixFiles.loadScript('/assets/vendor/lame.min.js?v=1.2.1', 'lamejs'));
+  await page.route(LAME, (route) => route.abort());
+  await page.locator('#picker').setInputFiles([clip()]);
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('.file-meta')).toHaveText('Couldn’t convert: the MP3 encoder didn’t load. Check your connection and try again');
+  await page.unroute(LAME);
+  await page.locator('#picker').setInputFiles([clip()]);
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('.track .dl')).toHaveCount(1);
 });
 
 test('/mp4-to-mp3/: says so when lamejs can\'t be fetched, and tries again', async ({ page }) => {
   await page.route(LAME, (route) => route.abort());
   await page.goto('/mp4-to-mp3/');
   await page.locator('#picker').setInputFiles([clip()]);
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await expect(page.locator('.file-meta')).toHaveText('Couldn’t convert: the MP3 encoder didn’t load. Check your connection and try again');
   await page.unroute(LAME);
   await page.locator('#picker').setInputFiles([clip()]);
-  await page.getByRole('button', { name: /Convert/ }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await expect(page.locator('.track .dl')).toHaveCount(1);
 });

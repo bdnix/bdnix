@@ -110,19 +110,25 @@ pdf-lib can't decrypt, so the decryption is the tool's own: `unlock-core.js` hol
 
 `/mp4-to-mp3/`
 
-Drop in videos or audio files (MP4, MOV, WebM, M4A, MKV, WAV, FLAC, Ogg, MP3 and similar), choose the output, and convert:
+Drop in a video or audio file (MP4, MOV, WebM, M4A, MKV, WAV, FLAC, Ogg, MP3 and similar), choose the output, and convert:
 
 - **Convert to** MP3 or WAV (16-bit, uncompressed).
 - **Quality** for MP3: 320, 256, 192 (default), 128, 96 or 64 kbps. At 96 kbps and below the encoder lowers a stereo file's sample rate, as LAME always does, to keep the sound clean.
 - **Channels:** stereo keeps the left and right channels (the front pair of a surround file); mono mixes every channel into one. A mono file stays mono.
 
-Several files can be converted at once, and each gets its own download named after the original (`clip.mp4` becomes `clip.mp3`). Changing a setting clears earlier results so they can be converted again.
+It converts one file at a time, and the download is named after the original (`clip.mp4` becomes `clip.mp3`). Once a file is open, the drop zone shrinks to an **Open another file** row, dimmed while converting; opening another file replaces the one open, and its result. Of several files dropped at once, the first video or audio file is opened, and a message says so. While converting, the file shows how far it has got and, once it's at least 2 seconds and 2% in, about how long is left, reckoned from the pace so far ("less than a minute left", "about 3 minutes left", "about 1 h 48 min left"). **Stop** ends the conversion at once, and the file stays open to be converted again. Changing a setting clears the result so the file can be converted again.
 
-The browser decodes the audio itself and [lamejs](https://github.com/zhuker/lamejs) encodes the MP3, so the formats supported depend on the browser. A file whose audio the browser can't decode is marked in the list with a message.
+The browser decodes the audio itself and [lamejs](https://github.com/zhuker/lamejs) encodes the MP3, so the formats supported depend on the browser. A file whose audio the browser can't decode is marked with a message.
+
+### Speed
+
+lamejs runs in Web Workers (`audio-worker.js`), off the page, one per processor core but one (at most six). An MP3 is cut into pieces of up to 512 frames (about 13 seconds at 44.1 kHz), and the workers encode several at once. The number of workers comes from the cores the browser reports (`navigator.hardwareConcurrency`), so a browser that reports fewer for privacy gets fewer. A recording too short to keep every worker busy with full pieces is shared out evenly between them instead, in pieces of at least 128 frames (about 3 seconds), since the sound around each piece is encoded too: 30 seconds on 6 workers is 6 pieces of 5 seconds. The length comes from the file's index for MP4, MOV and M4A, and from the decoded sound otherwise. On a 4-core computer a 12-second clip took about 0.9 s instead of 1.4 s. lamejs keeps no bit reservoir, so each MP3 frame stands alone; each piece is encoded with 8 frames of the sound before and after it, and only its own frames are kept, so the pieces join without a seam. The result has the same frames as one encoder's, with a few in a hundred, anywhere in the file, quantized slightly differently (in the tests, at most 0.001 of full scale apart when decoded). On a 4-core computer a one-hour stereo recording at 192 kbps took about 2 minutes instead of about 3.
+
+Stereo at 64 and 96 kbps is the exception: lamejs lowers its sample rate (to 24 and 32 kHz), its frames then don't line up with the pieces, and its resampling drifts from one encoder to another, so those pieces all go through one worker in order. lamejs is also given at most 576 samples at a time, since where it resamples, more at once makes near silence.
 
 ### Memory use and long recordings
 
-MP4, MOV and M4A files (what phones record) are converted a piece at a time, so memory use doesn't grow with the length of the recording. Only the file's index and its audio are read, never the video; the audio is decoded with WebCodecs and encoded as it arrives, keeping its own sample rate and following the file's edit list (which trims AAC's encoder warm-up). Only the finished file is held in memory: about 1.4 MB per minute as a 192 kbps MP3, or 10.6 MB per minute as a stereo WAV.
+MP4, MOV and M4A files (what phones record) are decoded a piece at a time, so memory use doesn't grow with the length of the recording. Only the file's index and its audio are read, never the video; the audio is decoded with WebCodecs and encoded as it arrives, keeping its own sample rate and following the file's edit list (which trims AAC's encoder warm-up). Decoding waits while every worker is busy, so only a few pieces of sound wait in memory. Otherwise only the finished file is held in memory: about 1.4 MB per minute as a 192 kbps MP3, or 10.6 MB per minute as a stereo WAV.
 
 Other formats (WebM, MKV, MP3, WAV, FLAC, Ogg), codecs the browser can't decode through WebCodecs, and browsers without WebCodecs' `AudioDecoder` (Safari before 26) are decoded whole instead and resampled to 44.1 kHz. That needs about 21 MB of memory per minute of stereo sound, so very long recordings may be too large for a phone. A browser that can't decode AAC this way shows a warning that videos over about 15 minutes may make the page reload, with how to update (iOS 26 or later on iPhone and iPad, the latest Chrome on Android). The check is based on what the browser can do, not on which device it is.
 

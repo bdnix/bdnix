@@ -166,7 +166,7 @@ The site is written in English and shown in the visitor's language by [lang.js](
 | [pdf-lib](https://pdf-lib.js.org/) | 1.17.1 | MIT | Editing PDFs in all four PDF tools (loaded with the first PDF or image) |
 | [@pdf-lib/fontkit](https://github.com/Hopding/fontkit) | 1.1.1 | MIT | Embedding uploaded fonts in watermarks (loaded only when needed) |
 | [PDF.js](https://mozilla.github.io/pdf.js/) (legacy build) | 6.3.289 | Apache 2.0 | Previews, text search and page rendering (loaded once a file is opened) |
-| [lamejs](https://github.com/zhuker/lamejs) | 1.2.1 | LGPL | MP3 encoding, included unmodified as its own file (loaded with the first MP3) |
+| [lamejs](https://github.com/zhuker/lamejs) | 1.2.1 | LGPL | MP3 encoding, included unmodified as its own file (loaded with the first MP3, by the page and by the web workers that encode) |
 | [Stockfish.js](https://github.com/nmrugg/stockfish.js) (lite, single-threaded WebAssembly build) | 19.0.0 | GPL 3 | The chess opponent, included unmodified and run as its own web worker (started with the first game) |
 | [Inter](https://rsms.me/inter/) (from [Fontsource](https://fontsource.org/)) | 5.3.0 | OFL 1.1 | The site's text, weights 400, 600 and 800 |
 | [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (from Fontsource) | 5.3.0 | OFL 1.1 | Labels and code-style text, weights 400 and 600 |
