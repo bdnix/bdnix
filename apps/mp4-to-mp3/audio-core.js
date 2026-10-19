@@ -154,6 +154,19 @@
   // one another through one encoder instead.
   var PIECE = 1152 * 512, LEAD = 1152 * 8;
 
+  // A shorter recording is cut into one piece per worker, so all of them
+  // work at once, but no shorter than this: the sound around each piece is
+  // encoded too, so short pieces waste work.
+  var SHORTEST = 1152 * 128;
+
+  // The length of a piece's own sound for a recording of this many
+  // samples, shared between this many workers: whole frames, from SHORTEST
+  // to PIECE. A length that isn't known gets PIECE.
+  function pieceSize(samples, workers){
+    if (!(samples > 0)) return api.PIECE;
+    return Math.min(api.PIECE, Math.max(SHORTEST, Math.ceil(samples / workers / 1152) * 1152));
+  }
+
   // Samples in an MP3 frame: MPEG-1 (32 kHz and up) has 1152, the lower
   // rates 576.
   function frameSize(rate){ return rate >= 32000 ? 1152 : 576; }
@@ -341,6 +354,7 @@
   //     file; each chunk holds samples (encoded frames) of these sizes,
   //     starting at these times (microseconds),
   //   samples: how many there are in all,
+  //   seconds: how long they last,
   //   cut: the edit list's { skip, keep } in seconds, or null,
   //   audioOnly(): resolves to a Uint8Array holding an MP4 with only this
   //     track
@@ -423,6 +437,7 @@
       config: config(m, find(m, stbl, ['stsd']), scale),
       chunks: chunks,
       samples: sample,
+      seconds: time / scale,
       cut: edit(m, trak, timescale(m, mvhd), scale),
       audioOnly: function(){ return rebuild(m, ftyp, mvhd, trak, stco, wide, chunks, total, read); }
     };
@@ -536,11 +551,11 @@
     }, Promise.resolve()).then(function(){ return out; });
   }
 
-  // PIECE is the pieces' length unless splitter() is told otherwise; tests
-  // make it shorter, to have several pieces in a short recording.
+  // PIECE is the longest a piece is; tests make it shorter, to have several
+  // pieces in a short recording.
   var api = window.bdnixAudio = {
     isMedia: isMedia, outName: outName, fmtTime: fmtTime,
-    mix: mix, toPcm16: toPcm16, stream: stream, mp3Rate: mp3Rate, splitter: splitter, pieceEncoder: pieceEncoder, keepFrames: keepFrames,
+    mix: mix, toPcm16: toPcm16, stream: stream, mp3Rate: mp3Rate, pieceSize: pieceSize, splitter: splitter, pieceEncoder: pieceEncoder, keepFrames: keepFrames,
     mp4: mp4, audioOnly: audioOnly, PIECE: PIECE
   };
 })();

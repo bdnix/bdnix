@@ -209,6 +209,30 @@ test('splitter: pieces are 512 frames long unless asked otherwise', () => {
   assert.deepEqual(shape(pieces), [[0, 512, 1152 * 512, 1152 * 520, false], [8, 512, 1152 * 512, 1152 * 528, false], [8, -1, 1152 * 76, 1152 * 84, false]]);
 });
 
+test('pieceSize: a shorter recording is shared out between the workers', () => {
+  const PIECE = 1152 * 512, SHORTEST = 1152 * 128;
+  // Long enough for full pieces.
+  assert.equal(A.pieceSize(44100 * 3600, 6), PIECE);
+  assert.equal(A.pieceSize(PIECE * 6, 6), PIECE);
+  // 30 seconds on 6 workers: 5 seconds each, rounded up to whole frames.
+  assert.equal(A.pieceSize(44100 * 30, 6), 1152 * 192);
+  assert.equal(A.pieceSize(1152 * 300 + 1, 2), 1152 * 151);
+  // No shorter than SHORTEST, so 12 seconds makes 4 pieces, not 6.
+  assert.equal(A.pieceSize(44100 * 12, 6), SHORTEST);
+  assert.equal(Math.ceil(44100 * 12 / SHORTEST), 4);
+  // One worker: full pieces.
+  assert.equal(A.pieceSize(44100 * 60, 1), PIECE);
+  // A length that isn't known.
+  for (const n of [0, NaN, undefined, -5]) assert.equal(A.pieceSize(n, 6), PIECE);
+  // PIECE is the longest, even below SHORTEST (as tests set it).
+  A.PIECE = 1152 * 16;
+  try {
+    assert.equal(A.pieceSize(44100 * 30, 6), 1152 * 16);
+  } finally {
+    A.PIECE = PIECE;
+  }
+});
+
 test('splitter: frames are counted in 576 samples below 32 kHz', () => {
   const pieces = piecesOf([sine(LEAD * 2 + 10, 440, 16000)], 16000, 64);
   assert.deepEqual(pieces.map((p) => [p.skip, p.keep]), [[0, 16], [16, -1]]);
@@ -617,6 +641,8 @@ test('mp4: a FLAC track, with the pieces and times to feed the decoder', async (
   // Every frame is 4096 samples long, the last one shorter.
   const times = plain(t.chunks.flatMap((c) => c.times));
   assert.deepEqual(times, Array.from({ length: 11 }, (_, i) => Math.round(i * 4096 * 1e6 / 44100)));
+  // All of them last a second.
+  assert.equal(t.seconds, 1);
   // The pieces are where the samples are.
   const pieces = [...t.chunks].flatMap((c) => { let at = c.from; return [...c.sizes].map((n) => file.subarray(at, (at += n))); });
   assert.deepEqual(pieces, audioSamples(file).samples);

@@ -199,7 +199,8 @@
   // bdnixAudio.stream()'s, and end() resolves to { parts, frames, rate }.
   // While full() is true, wait for room: the sink calls onRoom when it has
   // some. share() is how much of what's been written is encoded, 0 to 1.
-  // broken rejects if encoding fails before the end. stop() drops the
+  // broken rejects if encoding fails before the end. expect(samples) says,
+  // before the first write, how long the sound will be. stop() drops the
   // work, and stopped() says whether it has been.
   function wavSink(cut){
     var out = A.stream({ format: 'wav' }, null, cut), dead = false;
@@ -209,6 +210,7 @@
       full: function(){ return false; },
       share: function(){ return 1; },
       broken: new Promise(function(){}),
+      expect: function(){},
       stop: function(){ dead = true; },
       stopped: function(){ return dead; }
     };
@@ -216,30 +218,36 @@
 
   // MP3 is cut into pieces (bdnixAudio.splitter), encoded in up to WORKERS
   // workers at once and put back together in order; pieces that carry on
-  // into the next all go through one worker. lame is the lamejs library.
-  // onEncoded is called as each piece is done.
+  // into the next all go through one worker. A recording too short to
+  // keep every worker busy with full-length pieces is shared out evenly
+  // (bdnixAudio.pieceSize). lame is the lamejs library. onEncoded is
+  // called as each piece is done.
   function mp3Sink(opts, lame, cut, onEncoded){
-    var workers = [], idle = [], queue = [], blobs = [], own = [], most = WORKERS;
+    var workers = [], idle = [], queue = [], blobs = [], own = [], most = WORKERS, length = 0, split = null;
     var sent = 0, done = 0, written = 0, encoded = 0, rate = 0, dead = false, failure = null, settle = null, breaks;
-    var split = A.splitter(opts.kbps, lame, cut, function(piece){
-      if (piece.more) most = 1;
-      piece.index = sent++;
-      own[piece.index] = piece.samples;
-      written += piece.samples;
-      rate = piece.rate;
-      queue.push(piece);
-      run();
-    });
+    // Made with the first sound, once the length is known.
+    function splitter(){
+      return split || (split = A.splitter(opts.kbps, lame, cut, function(piece){
+        if (piece.more) most = 1;
+        piece.index = sent++;
+        own[piece.index] = piece.samples;
+        written += piece.samples;
+        rate = piece.rate;
+        queue.push(piece);
+        run();
+      }, A.pieceSize(length, WORKERS)));
+    }
     var sink = {
-      write: function(channels, sampleRate){ if (!dead) split.write(channels, sampleRate); },
+      write: function(channels, sampleRate){ if (!dead) splitter().write(channels, sampleRate); },
       end: function(){
         return new Promise(function(resolve, reject){
           if (failure) return reject(failure);
           settle = { resolve: resolve, reject: reject };
-          split.end();
+          splitter().end();
           finish();
         });
       },
+      expect: function(samples){ length = samples; },
       full: function(){ return sent - done > most; },
       share: function(){ return written ? encoded / written : 0; },
       // A failure can come while the decoding waits for room that never
@@ -331,6 +339,7 @@
       }
       // Stopping closes the decoder.
       stoppers.push(function(){ fail(STOPPED); });
+      out.expect(track.seconds * track.config.sampleRate);
       var decoder = new AudioDecoder({
         output: function(data){
           try {
@@ -422,6 +431,7 @@
       .then(decode).catch(function(){ throw unreadable; }).then(function(audio){
         var channels = [];
         for (var c = 0; c < audio.numberOfChannels; c++) channels.push(audio.getChannelData(c));
+        out.expect(audio.length);
         return pump(A.mix(channels, opts.mono), audio.sampleRate, out, onProgress);
       });
   }

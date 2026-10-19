@@ -286,6 +286,25 @@ test('a long recording is encoded in pieces on several cores at once, and joined
   expect(diff).toBeLessThan(0.001);
 });
 
+// A short recording is shared out between the workers: 4 seconds is two
+// pieces of the shortest, 128 frames (3.3 s), rather than one of 512.
+for (const [decoded, upload] of [
+  ['a piece at a time', () => file('short.mp4', flacMp4(tone(4, 1)), 'video/mp4')],
+  ['whole', () => file('short.wav', wav(tone(4, 1)), 'audio/wav')]
+]) {
+  test(`a short recording is shared out between the workers, decoded ${decoded}`, async ({ page }) => {
+    await cores(page, 8);
+    await page.reload();
+    await fakeWorkers(page, 'hang', 99);
+    const out = await convertOne(page, upload());
+    expect(await page.evaluate(() => window.workers)).toEqual({ made: 2, ended: 2 });
+    const sound = await analyse(page, out.bytes);
+    expect(sound.seconds).toBeGreaterThanOrEqual(4);
+    expect(sound.seconds).toBeLessThan(4.1);
+    expect(sound.hz).toEqual([440]);
+  });
+}
+
 test('stereo at a low bitrate, which lamejs resamples, goes through one encoder', async ({ page }) => {
   await cores(page, 4);
   await page.reload();
