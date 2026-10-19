@@ -424,6 +424,7 @@ function worker(importScripts){
   };
 }
 const CORE = '/assets/js/audio-core.js?v=1';
+const LOAD = { load: true, core: '1' };
 // Loads the real audio-core.js into the worker's sandbox.
 const realCore = (w) => (url) => {
   assert.equal(url, CORE);
@@ -432,7 +433,7 @@ const realCore = (w) => (url) => {
 
 test('worker: loads what it is sent, then encodes pieces in turn, carrying on where they do', async () => {
   const w = worker((url) => realCore(w)(url));
-  w.send({ load: CORE, lame: new WebAssembly.Module(LAME) });
+  w.send({ ...LOAD, lame: new WebAssembly.Module(LAME) });
   assert.equal(typeof w.sandbox.bdnixAudio.pieceEncoder, 'function');
   const sound = busy(LEAD * 3, 44100), pieces = [...piecesOf(sound, 44100, 128), ...piecesOf(sound, 44100, 96)];
   pieces.forEach((p, index) => w.send({ ...p, index }));
@@ -448,24 +449,33 @@ test('worker: an encoder failure is sent back', async () => {
     realCore(w)(url);
     w.sandbox.bdnixAudio.lame = () => Promise.resolve({ start(){ throw new Error('out of memory'); } });
   });
-  w.send({ load: CORE, lame: LAME });
+  w.send({ ...LOAD, lame: LAME });
   w.send({ ...piecesOf([sine(100, 440)], 44100, 128)[0], index: 0 });
   assert.deepEqual(await w.answers(1), [{ index: 0, error: 'out of memory' }]);
   // Something thrown that isn't an Error.
   const odd = worker(() => { odd.sandbox.bdnixAudio = { lame: () => Promise.resolve({}), pieceEncoder: () => () => { throw 'odd'; } }; });
-  odd.send({ load: CORE });
+  odd.send(LOAD);
   odd.send({ index: 1 });
   assert.deepEqual(await odd.answers(1), [{ index: 1, error: 'odd' }]);
 });
 
+test('worker: loads audio-core.js from its own place, whatever version it is told', async () => {
+  const urls = [];
+  for (const core of ['1', '', 'a b&x=//elsewhere.example/']) {
+    const w = worker((url) => { urls.push(url); throw new Error('stop'); });
+    w.send({ load: true, core });
+  }
+  assert.deepEqual(urls, ['/assets/js/audio-core.js?v=1', '/assets/js/audio-core.js', '/assets/js/audio-core.js?v=a%20b%26x%3D%2F%2Felsewhere.example%2F']);
+});
+
 test('worker: when its script or LAME doesn’t load, each piece says so', async () => {
   const w = worker(() => { throw new Error('NetworkError'); });
-  w.send({ load: CORE });
+  w.send(LOAD);
   w.send({ index: 2 });
   w.send({ index: 3 });
   assert.deepEqual(await w.answers(2), [{ index: 2, unloaded: true }, { index: 3, unloaded: true }]);
   const broken = worker((url) => realCore(broken)(url));
-  broken.send({ load: CORE, lame: new Uint8Array([0, 97, 115, 109]) });
+  broken.send({ ...LOAD, lame: new Uint8Array([0, 97, 115, 109]) });
   broken.send({ index: 4 });
   assert.deepEqual(await broken.answers(1), [{ index: 4, unloaded: true }]);
 });

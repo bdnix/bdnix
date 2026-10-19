@@ -1,7 +1,8 @@
 // Encodes pieces of a recording to MP3 for the audio converter, away from
 // the page, so that several workers can each take a piece at the same time.
-// audio.js first sends what to load: audio-core.js, to load as a script,
-// and LAME's compiled WebAssembly module. Each message after that is a
+// audio.js first sends what to load: the version of audio-core.js (the
+// build's stamp), which the worker loads from its own place, and LAME's
+// compiled WebAssembly module. Each message after that is a
 // piece from bdnixAudio.splitter(), answered in turn with { index, bytes },
 // { index, error } or, if LAME didn't load, { index, unloaded: true }.
 /* global importScripts */
@@ -14,7 +15,7 @@
       ready = new Promise(function(resolve){
         // audio-core.js sets window.bdnixAudio.
         self.window = self;
-        importScripts(d.load);
+        importScripts('/assets/js/audio-core.js' + (d.core ? '?v=' + encodeURIComponent(d.core) : ''));
         resolve(self.bdnixAudio.lame(d.lame));
       }).then(function(enc){ return self.bdnixAudio.pieceEncoder(enc); }, function(){ return null; });
       return;

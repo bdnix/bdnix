@@ -14,7 +14,10 @@
   // The page names the worker and the core it loads, so the build stamps
   // them like its other links and they always match this script.
   var me = document.currentScript;
-  var WORKER = me.getAttribute('data-worker'), CORE = me.getAttribute('data-core');
+  var WORKER = me.getAttribute('data-worker');
+  // The workers load audio-core.js from its own place; they're only told
+  // its version, the build's stamp.
+  var CORE = (/[?&]v=([^&]*)/.exec(me.getAttribute('data-core')) || [])[1] || '';
   // LAME, built to WebAssembly (lame/README.md); its version, and a build
   // number for changes to how it's built.
   var LAME = '/assets/vendor/lame.wasm?v=3.100-1';
@@ -326,7 +329,7 @@
         e.preventDefault();
         unloaded();
       };
-      w.postMessage({ load: CORE, lame: lame });
+      w.postMessage({ load: true, core: CORE, lame: lame });
       workers.push(w);
       return w;
     }
