@@ -6,6 +6,7 @@
   "scripts": {
     "serve": "node tests/server.mjs",
     "build": "node tools/site.mjs",
+    "build:lame": "node apps/mp4-to-mp3/lame/build.mjs",
     "lint": "eslint . && stylelint \"apps/**/*.css\" \"shared/**/*.css\" \"site/**/*.css\" && node tools/boundaries.mjs",
     "test": "npm run test:unit && npm run test:ui",
     "test:unit": "node --test \"tests/unit/*.test.mjs\" \"apps/*/test/*.test.mjs\" \"shared/*/test/*.test.mjs\" \"site/*/test/*.test.mjs\"",

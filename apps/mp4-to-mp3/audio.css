@@ -10,3 +10,15 @@
 .drop.compact > b:not(.more),.drop.compact > span{display:none}
 .drop.compact .more{display:inline;font-size:15px}
 .drop.busy{opacity:.4;cursor:default;pointer-events:none}
+
+/* While converting, whether the screen stays on; after, how it went. */
+.awake-note{margin:12px 0 0;font-size:14px;color:var(--muted)}
+.report{margin-top:16px;padding:16px 18px}
+.report h2{margin:0 0 10px}
+.report dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0;font-size:14px;line-height:1.45}
+.report dt{color:var(--muted)}
+.report dd{margin:0;overflow-wrap:anywhere}
+@media (max-width:480px){
+  .report dl{grid-template-columns:1fr;gap:0}
+  .report dd{margin-bottom:8px}
+}

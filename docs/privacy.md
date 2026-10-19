@@ -4,7 +4,7 @@ bdnix has no server-side application and no accounts. Everything the site keeps 
 
 ## Files opened in the tools
 
-Files are read and processed by the browser (this includes chess game files). They are never uploaded or sent anywhere, and neither is anything typed into a tool. Third-party libraries (pdf-lib, PDF.js, fontkit, lamejs and the Stockfish chess engine) and the fonts (Inter, JetBrains Mono, Kalpurush for Bangla and the signing tool's handwriting fonts) are served from this site, not from a CDN or a font service, so until a visitor accepts analytics a page contacts nothing but bdnix.com (checked on every page by `checkPage()` in `tests/ui/checks.mjs`, and what answering does by the `analytics` module's tests).
+Files are read and processed by the browser (this includes chess game files). They are never uploaded or sent anywhere, and neither is anything typed into a tool. Third-party libraries (pdf-lib, PDF.js, fontkit, LAME and the Stockfish chess engine) and the fonts (Inter, JetBrains Mono, Kalpurush for Bangla and the signing tool's handwriting fonts) are served from this site, not from a CDN or a font service, so until a visitor accepts analytics a page contacts nothing but bdnix.com (checked on every page by `checkPage()` in `tests/ui/checks.mjs`, and what answering does by the `analytics` module's tests).
 
 ## Content security policy
 
