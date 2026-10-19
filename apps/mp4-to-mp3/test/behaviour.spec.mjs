@@ -19,7 +19,7 @@ test.beforeEach(async ({ page }) => {
 test('keeps its title, and describes what it does', async ({ page }) => {
   await expect(page).toHaveTitle('MP4 to MP3 — Convert video to audio free | bdnix');
   await expect(page.locator('h1')).toHaveText('MP4 to MP3');
-  await expect(page.locator('.features li b')).toHaveText(['Any video or audio in.', 'MP3 or WAV out.', 'Stereo or mono.', 'Several files at once.', 'Long phone videos.']);
+  await expect(page.locator('.features li b')).toHaveText(['Any video or audio in.', 'MP3 or WAV out.', 'Stereo or mono.', 'Named after the original.', 'Long phone videos.']);
   await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /MP3 \(64 to 320 kbps\) or WAV, in stereo or mono/);
   await expectNoSideScroll(page);
 });
@@ -27,11 +27,10 @@ test('keeps its title, and describes what it does', async ({ page }) => {
 test('converts an MP4 to a stereo MP3 of the same sound', async ({ page }) => {
   await expect(page.locator('#filesWrap')).toBeHidden();
   await page.locator('#picker').setInputFiles([clip()]);
-  await expect(page.locator('#summary')).toHaveText('1 file');
   await expect(page.locator('.track .file-meta')).toHaveText(/^\d+ KB$/);
 
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
-  await expect(page.locator('#msg')).toHaveText('Done. Converted 1 file.');
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('#msg')).toHaveText('Done.');
   await expect(page.locator('.track .file-meta')).toHaveText(/^0:01 · holiday clip\.mp3 · \d+ KB$/);
   await expect(page.getByRole('link', { name: 'Download holiday clip.mp3' })).toBeFocused();
   await expect(page.getByRole('button', { name: 'Convert' })).toBeDisabled();
@@ -62,8 +61,8 @@ async function spy(page){
 async function convertOne(page, upload, format = 'mp3'){
   await page.locator('#picker').setInputFiles([upload]);
   if (format === 'wav') await page.getByText('WAV', { exact: true }).click();
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
-  await expect(page.locator('#msg')).toHaveText('Done. Converted 1 file.');
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('#msg')).toHaveText('Done.');
   return fetchDownload(page, page.locator('.track'));
 }
 
@@ -143,7 +142,7 @@ test('a 48 kHz video stays 48 kHz', async ({ page }) => {
 test('a video with no sound track says so', async ({ page }) => {
   const silent = Buffer.from(flacMp4(tone(1, 2)).toString('latin1').replace('soun', 'vide'), 'latin1');
   await page.locator('#picker').setInputFiles([file('silent.mp4', silent, 'video/mp4')]);
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await expect(page.locator('.file-meta')).toHaveText('No audio your browser can read in this file');
 });
 
@@ -155,7 +154,7 @@ test('a file that can’t be read part way through says so', async ({ page }) =>
     Blob.prototype.arrayBuffer = function(){ return this.size > 10000 ? Promise.reject(new DOMException('gone', 'NotReadableError')) : read.call(this); };
   });
   await page.locator('#picker').setInputFiles([clip()]);
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await expect(page.locator('.file-meta')).toHaveText('No audio your browser can read in this file');
 });
 
@@ -163,7 +162,7 @@ test('a decoder that fails at the end says the audio can’t be read', async ({ 
   await page.addInitScript(() => { AudioDecoder.prototype.flush = () => Promise.reject(new DOMException('bad data', 'EncodingError')); });
   await page.reload();
   await page.locator('#picker').setInputFiles([clip()]);
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await expect(page.locator('.file-meta')).toHaveText('No audio your browser can read in this file');
 });
 
@@ -206,7 +205,7 @@ async function fakeWorkers(page, mode, real = 0){
 test('an encoder failure in a worker is reported on the file', async ({ page }) => {
   await fakeWorkers(page, 'fail');
   await page.locator('#picker').setInputFiles([clip()]);
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await expect(page.locator('.file-meta')).toHaveText('Couldn’t convert: out of memory');
   expect(await page.evaluate(() => window.workers)).toEqual({ made: 1, ended: 1 });
 });
@@ -215,7 +214,7 @@ for (const mode of ['unloaded', 'error']) {
   test(`a worker whose scripts don’t load says so (${mode})`, async ({ page }) => {
     await fakeWorkers(page, mode);
     await page.locator('#picker').setInputFiles([clip()]);
-    await page.getByRole('button', { name: 'Convert 1 file' }).click();
+    await page.getByRole('button', { name: 'Convert', exact: true }).click();
     await expect(page.locator('.file-meta')).toHaveText('Couldn’t convert: the MP3 encoder didn’t load. Check your connection and try again');
   });
 }
@@ -239,7 +238,7 @@ test('a worker failing while the decoding waits for it is reported on the file',
   await page.reload();
   await fakeWorkers(page, 'hang');
   await page.locator('#picker').setInputFiles([long()]);
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await page.waitForFunction(() => window.held.length === 1 && window.decoded >= 1152 * (2 * 512 + 8));
   await page.evaluate(() => {
     const { worker, index } = window.held[0];
@@ -287,8 +286,8 @@ test('stereo at a low bitrate, which lamejs resamples, goes through one encoder'
   await fakeWorkers(page, 'hang', 99);
   await page.locator('#picker').setInputFiles([long()]);
   await page.getByLabel('Quality').selectOption('96');
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
-  await expect(page.locator('#msg')).toHaveText('Done. Converted 1 file.');
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('#msg')).toHaveText('Done.');
   expect(await page.evaluate(() => window.workers)).toEqual({ made: 1, ended: 1 });
   const out = await fetchDownload(page, page.locator('.track'));
   expect(mp3Header(out.bytes)).toEqual({ kbps: 96, rate: 32000, mono: false });
@@ -302,7 +301,7 @@ test('Stop stops converting at once; the file can be converted again', async ({ 
   await fakeWorkers(page, 'hang');
   await page.locator('#picker').setInputFiles([clip()]);
   await expect(page.getByRole('button', { name: 'Stop' })).toBeHidden();
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await expect(page.locator('.file-meta')).toHaveText(/^Converting… \d+%$/);
   await page.waitForFunction(() => window.workers.made === 1);
   await page.getByRole('button', { name: 'Stop' }).click();
@@ -310,13 +309,13 @@ test('Stop stops converting at once; the file can be converted again', async ({ 
   await expect(page.locator('#msg')).not.toHaveClass(/error/);
   await expect(page.locator('.file-meta')).toHaveText(/^\d+ KB$/);
   await expect(page.getByRole('button', { name: 'Stop' })).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Convert 1 file' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Convert', exact: true })).toBeFocused();
   // Its workers were stopped too.
   expect(await page.evaluate(() => window.workers)).toEqual({ made: 1, ended: 1 });
 
   await page.evaluate(() => { window.Worker = window.RealWorker; });
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
-  await expect(page.locator('#msg')).toHaveText('Done. Converted 1 file.');
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('#msg')).toHaveText('Done.');
 });
 
 test('Stop before converting gets going starts nothing', async ({ page }) => {
@@ -326,32 +325,16 @@ test('Stop before converting gets going starts nothing', async ({ page }) => {
   await page.route(/\/assets\/vendor\/lame\.min\.js/, async (route) => { await held; await route.continue(); });
   await fakeWorkers(page, 'hang', 99);
   await page.locator('#picker').setInputFiles([clip()]);
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await page.getByRole('button', { name: 'Stop' }).click();
   await expect(page.locator('#msg')).toHaveText('Stopped.');
   arrive();
   await page.unroute(/\/assets\/vendor\/lame\.min\.js/);
   // Converting again takes the same steps, after the stopped conversion's
   // own; only this one hires a worker.
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
-  await expect(page.locator('#msg')).toHaveText('Done. Converted 1 file.');
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('#msg')).toHaveText('Done.');
   expect(await page.evaluate(() => window.workers)).toEqual({ made: 1, ended: 1 });
-});
-
-test('Stop keeps the files already converted and leaves the rest to convert', async ({ page }) => {
-  // The first file's worker is real; the second's never answers.
-  await fakeWorkers(page, 'hang', 1);
-  await page.locator('#picker').setInputFiles([clip(), file('second.wav', wav(tone(1, 2)), 'audio/wav'), file('third.wav', wav(tone(1, 2)), 'audio/wav')]);
-  await page.getByRole('button', { name: 'Convert 3 files' }).click();
-  await expect(page.locator('#convertLabel')).toHaveText('Converting 2 of 3…');
-  await page.waitForFunction(() => window.workers.made === 2);
-  await page.getByRole('button', { name: 'Stop' }).click();
-  await expect(page.locator('#msg')).toHaveText('Stopped. Converted 1 file.');
-  await expect(page.locator('.track .dl')).toHaveCount(1);
-  await expect(page.getByRole('link', { name: 'Download holiday clip.mp3' })).toBeFocused();
-  await expect(page.locator('.track').nth(1).locator('.file-meta')).toHaveText(/^\d+ KB$/);
-  await expect(page.getByRole('button', { name: 'Convert 2 files' })).toBeEnabled();
-  expect(await page.evaluate(() => window.workers)).toEqual({ made: 2, ended: 2 });
 });
 
 test('Stop works while a whole file is being decoded, and while making WAV', async ({ page }) => {
@@ -366,7 +349,7 @@ test('Stop works while a whole file is being decoded, and while making WAV', asy
   await page.reload();
   await page.locator('#picker').setInputFiles([clip()]);
   await page.getByText('WAV', { exact: true }).click();
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await page.waitForFunction(() => window.release);
   await page.getByRole('button', { name: 'Stop' }).click();
   await expect(page.locator('#msg')).toHaveText('Stopped.');
@@ -384,7 +367,7 @@ test('a decoder that fails part way says the audio can’t be read', async ({ pa
   });
   await page.reload();
   await page.locator('#picker').setInputFiles([clip()]);
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await expect(page.locator('.file-meta')).toHaveText('No audio your browser can read in this file');
 });
 
@@ -422,8 +405,8 @@ for (const [name, script] of [
     await expectNoSideScroll(page);
     // Converting still works.
     await page.locator('#picker').setInputFiles([clip()]);
-    await page.getByRole('button', { name: 'Convert 1 file' }).click();
-    await expect(page.locator('#msg')).toHaveText('Done. Converted 1 file.');
+    await page.getByRole('button', { name: 'Convert', exact: true }).click();
+    await expect(page.locator('#msg')).toHaveText('Done.');
   });
 }
 
@@ -431,7 +414,7 @@ test('quality and mono settings shape the MP3', async ({ page }) => {
   await page.locator('#picker').setInputFiles([clip()]);
   await page.getByLabel('Quality').selectOption('96');
   await page.getByText('Mono', { exact: true }).click();
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   const out = await fetchDownload(page, page.locator('.track'));
   expect(mp3Header(out.bytes)).toEqual({ kbps: 96, rate: 44100, mono: true });
   const sound = await analyse(page, out.bytes);
@@ -446,7 +429,7 @@ for (const [kbps, decoded] of [[96, 'whole'], [64, 'whole'], [96, 'a piece at a 
     const upload = decoded === 'whole' ? file('song.wav', wav(tone(2, 2)), 'audio/wav') : clip();
     await page.locator('#picker').setInputFiles([upload]);
     await page.getByLabel('Quality').selectOption(String(kbps));
-    await page.getByRole('button', { name: 'Convert 1 file' }).click();
+    await page.getByRole('button', { name: 'Convert', exact: true }).click();
     const out = await fetchDownload(page, page.locator('.track'));
     if (kbps === 96) expect(mp3Header(out.bytes)).toEqual({ kbps: 96, rate: 32000, mono: false });
     expect((await analyse(page, out.bytes)).hz).toEqual([440, 660]);
@@ -457,101 +440,112 @@ test('converts to WAV, sample for sample', async ({ page }) => {
   await page.locator('#picker').setInputFiles([clip()]);
   await page.getByText('WAV', { exact: true }).click();
   await expect(page.getByLabel('Quality')).toBeHidden();
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   const out = await fetchDownload(page, page.locator('.track'));
   expect(out.name).toBe('holiday clip.wav');
   expect(readWav(out.bytes)).toEqual({ channels: 2, rate: 44100, bits: 16, frames: 44100 });
   expect((await analyse(page, out.bytes)).hz).toEqual([440, 660]);
 });
 
-test('audio files convert too, several at once', async ({ page }) => {
-  await page.locator('#picker').setInputFiles([
-    file('voice memo.wav', wav(tone(1, 1)), 'audio/wav'),
-    clip()
-  ]);
-  await expect(page.locator('#summary')).toHaveText('2 files');
-  await page.getByRole('button', { name: 'Convert 2 files' }).click();
-  await expect(page.locator('#msg')).toHaveText('Done. Converted 2 files.');
-  const memo = await fetchDownload(page, page.locator('.track').first());
+test('audio files convert too, and a mono one stays mono', async ({ page }) => {
+  await page.locator('#picker').setInputFiles([file('voice memo.wav', wav(tone(1, 1)), 'audio/wav')]);
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('#msg')).toHaveText('Done.');
+  const memo = await fetchDownload(page, page.locator('.track'));
   expect(memo.name).toBe('voice memo.mp3');
   // A mono source stays mono even with Stereo picked.
   expect(mp3Header(memo.bytes).mono).toBe(true);
   expect((await analyse(page, memo.bytes)).hz).toEqual([440]);
 });
 
-test('skips files that aren’t video or audio, and explains ones it can’t read', async ({ page }) => {
-  await page.locator('#picker').setInputFiles([
-    file('notes.txt', 'hello', 'text/plain'),
-    file('broken.mp4', 'not really a video', 'video/mp4')
-  ]);
+test('skips files that aren’t video or audio, and explains one it can’t read', async ({ page }) => {
+  await page.locator('#picker').setInputFiles([file('notes.txt', 'hello', 'text/plain')]);
   await expect(page.locator('#msg')).toHaveText('Skipped: notes.txt isn’t a video or audio file.');
-  await expect(page.locator('.file-name')).toHaveText(['broken.mp4']);
+  await expect(page.locator('#filesWrap')).toBeHidden();
 
-  await page.locator('#picker').setInputFiles([file('a.txt', 'x', 'text/plain'), file('b.txt', 'y', 'text/plain')]);
+  await dropFiles(page, [file('a.txt', 'x', 'text/plain'), file('b.txt', 'y', 'text/plain')]);
   await expect(page.locator('#msg')).toHaveText('Skipped: a.txt, b.txt aren’t a video or audio file.');
 
-  await page.locator('#picker').setInputFiles([clip()]);
+  await page.locator('#picker').setInputFiles([file('broken.mp4', 'not really a video', 'video/mp4')]);
   await expect(page.locator('#msg')).toHaveText('');
-  await page.getByRole('button', { name: 'Convert 2 files' }).click();
-  await expect(page.locator('#msg')).toHaveText('Converted 1 file. 1 file couldn’t be converted. Your browser may not support its audio format.');
-  await expect(page.locator('.file-meta').first()).toHaveText('No audio your browser can read in this file');
-  await expect(page.locator('.track').first().locator('.dl')).toHaveCount(0);
-  await expect(page.locator('.track').nth(1).locator('.dl')).toHaveCount(1);
-});
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('#msg')).toHaveText('This file couldn’t be converted. Your browser may not support its audio format.');
+  await expect(page.locator('#msg')).toHaveClass(/error/);
+  await expect(page.locator('.file-meta')).toHaveText('No audio your browser can read in this file');
+  await expect(page.locator('.track .dl')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Convert', exact: true })).toBeDisabled();
 
-test('when nothing converts, the message says so', async ({ page }) => {
-  await page.locator('#picker').setInputFiles([file('a.mp4', 'x', 'video/mp4'), file('b.mov', 'y', '')]);
-  await page.getByRole('button', { name: 'Convert 2 files' }).click();
-  await expect(page.locator('#msg')).toHaveText('2 files couldn’t be converted. Your browser may not support their audio format.');
+  // A file that isn't video or audio leaves the one open as it is.
+  await page.locator('#picker').setInputFiles([file('notes.txt', 'hello', 'text/plain')]);
+  await expect(page.locator('.file-name')).toHaveText(['broken.mp4']);
 });
 
 test('an encoder failure is reported on the file', async ({ page }) => {
   await loadLame(page);
   await page.evaluate(() => { window.lamejs.Mp3Encoder = function(){ throw new Error('out of memory'); }; });
   await page.locator('#picker').setInputFiles([clip()]);
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await expect(page.locator('.file-meta')).toHaveText('Couldn’t convert: out of memory');
 });
 
-test('changing a setting clears earlier results; new files convert on their own', async ({ page }) => {
+test('changing a setting clears the result, and opening another file replaces the one open', async ({ page }) => {
   await page.locator('#picker').setInputFiles([clip()]);
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await expect(page.locator('.dl')).toHaveCount(1);
-
-  await page.locator('#picker').setInputFiles([file('second.wav', wav(tone(1, 2)), 'audio/wav')]);
-  await expect(page.locator('.dl')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
-  await expect(page.locator('.dl')).toHaveCount(2);
-
   await page.getByLabel('Quality').selectOption('320');
   await expect(page.locator('.dl')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Convert 2 files' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Convert', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('.dl')).toHaveCount(1);
+
+  // The result of the first file goes with it.
+  const url = await page.locator('.dl').getAttribute('href');
+  await page.locator('#picker').setInputFiles([file('second.wav', wav(tone(1, 2)), 'audio/wav')]);
+  await expect(page.locator('.file-name')).toHaveText(['second.wav']);
+  await expect(page.locator('.dl')).toHaveCount(0);
+  expect(await page.evaluate((u) => fetch(u).then(() => 'kept', () => 'gone'), url)).toBe('gone');
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Download second.mp3' })).toBeVisible();
 });
 
-test('removing a file and clearing the list', async ({ page }) => {
-  await page.locator('#picker').setInputFiles([clip(), file('two.wav', wav(tone(1, 1)), 'audio/wav')]);
-  await page.getByRole('button', { name: 'Convert 2 files' }).click();
-  await expect(page.locator('.dl')).toHaveCount(2);
+test('removing the file', async ({ page }) => {
+  await page.locator('#picker').setInputFiles([clip()]);
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('.dl')).toHaveCount(1);
   await page.getByRole('button', { name: 'Remove holiday clip.mp4' }).click();
-  await expect(page.locator('.file-name')).toHaveText(['two.wav']);
-  await page.getByRole('button', { name: 'Clear all' }).click();
   await expect(page.locator('.track')).toHaveCount(0);
   await expect(page.locator('#filesWrap')).toBeHidden();
+  await expect(page.locator('#drop')).not.toHaveClass(/compact/);
 });
 
-test('files can be dropped anywhere on the page', async ({ page }) => {
-  const data = flacMp4(tone(1, 2)).toString('base64');
-  const transfer = await page.evaluateHandle((b64) => {
+// Drops files on the page, as from a file manager.
+async function dropFiles(page, files, { enter = false } = {}){
+  const transfer = await page.evaluateHandle((list) => {
     const dt = new DataTransfer();
-    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-    dt.items.add(new File([bytes], 'dropped.mp4', { type: 'video/mp4' }));
+    for (const f of list) dt.items.add(new File([Uint8Array.from(atob(f.b64), (c) => c.charCodeAt(0))], f.name, { type: f.mimeType }));
     return dt;
-  }, data);
-  await page.dispatchEvent('body', 'dragenter', { dataTransfer: transfer });
-  await expect(page.locator('#drop')).toHaveClass(/over/);
+  }, files.map((f) => ({ name: f.name, mimeType: f.mimeType, b64: Buffer.from(f.buffer).toString('base64') })));
+  if (enter) {
+    await page.dispatchEvent('body', 'dragenter', { dataTransfer: transfer });
+    await expect(page.locator('#drop')).toHaveClass(/over/);
+  }
   await page.dispatchEvent('body', 'drop', { dataTransfer: transfer });
+}
+
+test('a file can be dropped anywhere on the page', async ({ page }) => {
+  await dropFiles(page, [file('dropped.mp4', flacMp4(tone(1, 2)), 'video/mp4')], { enter: true });
   await expect(page.locator('#drop')).not.toHaveClass(/over/);
   await expect(page.locator('.file-name')).toHaveText(['dropped.mp4']);
+});
+
+test('of several files dropped at once, the first video or audio file opens', async ({ page }) => {
+  await dropFiles(page, [file('notes.txt', 'hello', 'text/plain'), file('first.wav', wav(tone(1, 1)), 'audio/wav'), clip()]);
+  await expect(page.locator('.file-name')).toHaveText(['first.wav']);
+  await expect(page.locator('#msg')).toHaveText('This tool converts one file at a time, so it opened first.wav.');
+  await expect(page.locator('#msg')).not.toHaveClass(/error/);
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('#msg')).toHaveText('Done.');
+  await expect(page.locator('.track .dl')).toHaveCount(1);
 });
 
 test('controls are locked while converting, and progress is shown', async ({ page }) => {
@@ -565,53 +559,48 @@ test('controls are locked while converting, and progress is shown', async ({ pag
         meta: meta && meta.textContent,
         bar: !!document.querySelector('.track-bar:not([hidden])'),
         label: document.getElementById('convertLabel').textContent,
-        locked: document.getElementById('clearBtn').disabled && document.querySelector('[name=kbps]').disabled,
+        locked: document.querySelector('.rm').disabled && document.querySelector('[name=kbps]').disabled,
         stop: !document.getElementById('stopBtn').hidden,
         drop: document.getElementById('drop').className
       });
     }).observe(document.getElementById('filesWrap'), { subtree: true, childList: true, characterData: true, attributes: true });
   });
   await page.locator('#picker').setInputFiles([file('long.wav', wav(tone(5, 2)), 'audio/wav')]);
-  await page.getByRole('button', { name: 'Convert 1 file' }).click();
-  await expect(page.locator('#msg')).toHaveText('Done. Converted 1 file.');
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('#msg')).toHaveText('Done.');
   const seen = await page.evaluate(() => window.seen);
-  const busy = { bar: true, label: 'Converting 1 of 1…', locked: true, stop: true, drop: 'drop panel compact busy' };
+  const busy = { bar: true, label: 'Converting…', locked: true, stop: true, drop: 'drop panel compact busy' };
   expect(seen).toContainEqual({ meta: 'Converting… 0%', ...busy });
   expect(seen).toContainEqual({ meta: 'Converting… 100%', ...busy });
-  await expect(page.getByRole('button', { name: 'Clear all' })).toBeEnabled();
+  await expect(page.locator('.rm')).toBeEnabled();
   await expect(page.locator('.track-bar')).toBeHidden();
   await expect(page.getByRole('button', { name: 'Stop' })).toBeHidden();
   await expect(page.locator('#drop')).toHaveClass('drop panel compact');
 });
 
-test('once files are open, the drop zone is a row for adding more', async ({ page }) => {
+test('once a file is open, the drop zone is a row for opening another', async ({ page }) => {
   const drop = page.locator('#drop');
-  await expect(drop.getByText('Drop videos or audio files here')).toBeVisible();
-  await expect(drop.getByText('Add more files')).toBeHidden();
+  await expect(page.locator('#picker')).not.toHaveAttribute('multiple');
+  await expect(drop.getByText('Drop a video or audio file here')).toBeVisible();
+  await expect(drop.getByText('Open another file')).toBeHidden();
   const tall = (await drop.boundingBox()).height;
 
   await page.locator('#picker').setInputFiles([clip()]);
   await expect(drop).toHaveClass(/compact/);
-  await expect(drop.getByText('Add more files')).toBeVisible();
-  await expect(drop.getByText('Drop videos or audio files here')).toBeHidden();
-  await expect(drop.getByText('or choose files')).toBeHidden();
+  await expect(drop.getByText('Open another file')).toBeVisible();
+  await expect(drop.getByText('Drop a video or audio file here')).toBeHidden();
+  await expect(drop.getByText('or choose a file')).toBeHidden();
   expect((await drop.boundingBox()).height).toBeLessThan(tall / 2);
   await expectNoSideScroll(page);
 
-  // It still takes files.
-  await page.locator('#picker').setInputFiles([file('second.wav', wav(tone(1, 1)), 'audio/wav')]);
-  await expect(page.locator('.file-name')).toHaveText(['holiday clip.mp4', 'second.wav']);
-
-  // While converting, it's dimmed and takes none.
+  // While converting, it's dimmed and takes no file.
   await fakeWorkers(page, 'hang');
-  await page.getByRole('button', { name: 'Convert 2 files' }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await expect(drop).toHaveClass(/busy/);
   await expect(drop).toHaveCSS('pointer-events', 'none');
   await expect(page.locator('#picker')).toBeDisabled();
+  await dropFiles(page, [file('other.wav', wav(tone(1, 1)), 'audio/wav')]);
+  await expect(page.locator('.file-name')).toHaveText(['holiday clip.mp4']);
   await page.getByRole('button', { name: 'Stop' }).click();
   await expect(drop).not.toHaveClass(/busy/);
-
-  await page.getByRole('button', { name: 'Clear all' }).click();
-  await expect(drop).not.toHaveClass(/compact/);
-  await expect(drop.getByText('Drop videos or audio files here')).toBeVisible();
 });

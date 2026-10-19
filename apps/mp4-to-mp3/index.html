@@ -42,18 +42,18 @@
       <li><b>Any video or audio in.</b> MP4, MOV, M4V, WebM, MKV and 3GP videos, and M4A, MP3, WAV, FLAC, AAC, Ogg and Opus audio: whatever your browser can play.</li>
       <li><b>MP3 or WAV out.</b> MP3 at 64 to 320 kbps, from small voice notes to best quality, or uncompressed 16-bit WAV for editing.</li>
       <li><b>Stereo or mono.</b> Keep the left and right channels, or mix everything into one channel for a smaller file.</li>
-      <li><b>Several files at once.</b> Each gets its own download, named after the original: <code>clip.mp4</code> becomes <code>clip.mp3</code>.</li>
+      <li><b>Named after the original.</b> <code>clip.mp4</code> becomes <code>clip.mp3</code>.</li>
       <li><b>Long phone videos.</b> MP4 and MOV recordings are read a piece at a time, audio only, so long recordings don’t fill up your phone’s memory.</li>
     </ul>
 
     <p class="support-warn panel" id="supportWarn" role="note" hidden><b>Long videos may not convert in this browser.</b> It can’t decode a video’s sound a piece at a time, so all of it has to fit in memory at once, and videos longer than about 15 minutes can make the page reload. To convert longer videos, update your browser: on iPhone and iPad, to iOS 26 or later; on Android, to the latest Chrome.</p>
 
     <label class="drop panel" id="drop">
-      <input type="file" id="picker" accept="video/*,audio/*,.mp4,.m4a,.m4v,.mov,.webm,.mkv,.ogg,.opus,.mp3,.wav,.flac,.aac" multiple>
+      <input type="file" id="picker" accept="video/*,audio/*,.mp4,.m4a,.m4v,.mov,.webm,.mkv,.ogg,.opus,.mp3,.wav,.flac,.aac">
       <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
-      <b>Drop videos or audio files here</b>
-      <span>MP4, MOV, WebM, MKV, M4A, MP3, WAV, FLAC, Ogg and more, or <u>choose files</u></span>
-      <b class="more">Add more files</b>
+      <b>Drop a video or audio file here</b>
+      <span>MP4, MOV, WebM, MKV, M4A, MP3, WAV, FLAC, Ogg and more, or <u>choose a file</u></span>
+      <b class="more">Open another file</b>
     </label>
 
     <p class="msg" id="msg" role="status" aria-live="polite"></p>
@@ -83,10 +83,6 @@
         </fieldset>
       </form>
 
-      <div class="files-head">
-        <span class="label" id="summary"></span>
-        <button class="link-btn" id="clearBtn" type="button">Clear all</button>
-      </div>
       <ol class="track-list" id="list"></ol>
 
       <div class="actions">

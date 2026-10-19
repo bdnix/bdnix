@@ -110,15 +110,15 @@ pdf-lib can't decrypt, so the decryption is the tool's own: `unlock-core.js` hol
 
 `/mp4-to-mp3/`
 
-Drop in videos or audio files (MP4, MOV, WebM, M4A, MKV, WAV, FLAC, Ogg, MP3 and similar), choose the output, and convert:
+Drop in a video or audio file (MP4, MOV, WebM, M4A, MKV, WAV, FLAC, Ogg, MP3 and similar), choose the output, and convert:
 
 - **Convert to** MP3 or WAV (16-bit, uncompressed).
 - **Quality** for MP3: 320, 256, 192 (default), 128, 96 or 64 kbps. At 96 kbps and below the encoder lowers a stereo file's sample rate, as LAME always does, to keep the sound clean.
 - **Channels:** stereo keeps the left and right channels (the front pair of a surround file); mono mixes every channel into one. A mono file stays mono.
 
-Several files can be added and converted in one go, one after another, and each gets its own download named after the original (`clip.mp4` becomes `clip.mp3`). Once files are open, the drop zone shrinks to an **Add more files** row, dimmed while converting. **Stop** ends the conversion under way at once: files already converted keep their downloads, and the rest, including the one that was stopped, stay in the list to be converted again. Changing a setting clears earlier results so they can be converted again.
+It converts one file at a time, and the download is named after the original (`clip.mp4` becomes `clip.mp3`). Once a file is open, the drop zone shrinks to an **Open another file** row, dimmed while converting; opening another file replaces the one open, and its result. Of several files dropped at once, the first video or audio file is opened, and a message says so. **Stop** ends the conversion at once, and the file stays open to be converted again. Changing a setting clears the result so the file can be converted again.
 
-The browser decodes the audio itself and [lamejs](https://github.com/zhuker/lamejs) encodes the MP3, so the formats supported depend on the browser. A file whose audio the browser can't decode is marked in the list with a message.
+The browser decodes the audio itself and [lamejs](https://github.com/zhuker/lamejs) encodes the MP3, so the formats supported depend on the browser. A file whose audio the browser can't decode is marked with a message.
 
 ### Speed
 

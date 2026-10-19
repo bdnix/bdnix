@@ -3,7 +3,7 @@
 // uploaded. The encoding itself lives in audio-core.js.
 (function(){
   var T = window.bdnixFiles, A = window.bdnixAudio;
-  var Lang = window.bdnixLang, t = Lang.t, count = Lang.count;
+  var Lang = window.bdnixLang, t = Lang.t;
   var fmtSize = T.fmtSize, readBytes = T.readBytes;
 
   // Audio decoded whole is resampled to this rate, which MP3 and WAV both
@@ -27,8 +27,6 @@
   var form = document.getElementById('settings');
   var qualityField = document.getElementById('qualityField');
   var list = document.getElementById('list');
-  var summary = document.getElementById('summary');
-  var clearBtn = document.getElementById('clearBtn');
   var convertBtn = document.getElementById('convertBtn');
   var convertLabel = document.getElementById('convertLabel');
   var stopBtn = document.getElementById('stopBtn');
@@ -46,10 +44,10 @@
   }
   streamsAac().then(function(ok){ supportWarn.hidden = ok; });
 
-  // Each entry: { id, file, state, progress, error, url, out, outSize, seconds }
-  // state is 'ready', 'working', 'done' or 'error'.
-  var files = [];
-  var nextId = 1;
+  // The file open, one at a time, or null: { file, state, progress, error,
+  // url, out, outSize, seconds }. state is 'ready', 'working', 'done' or
+  // 'error'.
+  var current = null;
   var busy = false, stopping = false;
 
   function say(text, isError){
@@ -61,36 +59,37 @@
     return { format: form.elements.format.value, kbps: +form.elements.kbps.value, mono: form.elements.channels.value === 'mono' };
   }
 
-  // Drops a converted file, so the entry can be converted again.
+  // Drops a converted file, so it can be converted again.
   function reset(f){
     if (f.url) URL.revokeObjectURL(f.url);
     f.url = null;
     if (f.state === 'done') f.state = 'ready';
   }
 
-  function addFiles(fileList){
+  // Opens the first video or audio file of those chosen or dropped, in
+  // place of the one open.
+  function openFile(fileList){
     if (busy) return;
-    var incoming = Array.prototype.slice.call(fileList);
-    var skipped = incoming.filter(function(f){ return !A.isMedia(f); });
-    incoming.filter(A.isMedia).forEach(function(file){
-      files.push({ id: nextId++, file: file, state: 'ready', progress: 0 });
-    });
-    render();
-    if (skipped.length) {
-      say(t(skipped.length === 1 ? 'Skipped: {names} isn’t a video or audio file.' : 'Skipped: {names} aren’t a video or audio file.', { names: skipped.map(function(f){ return f.name; }).join(', ') }), true);
-    } else {
-      say('');
+    var incoming = Array.prototype.slice.call(fileList), file = incoming.filter(A.isMedia)[0];
+    if (!file) {
+      if (incoming.length) say(t(incoming.length === 1 ? 'Skipped: {names} isn’t a video or audio file.' : 'Skipped: {names} aren’t a video or audio file.', { names: incoming.map(function(f){ return f.name; }).join(', ') }), true);
+      return;
     }
+    if (current) reset(current);
+    current = { file: file, state: 'ready', progress: 0 };
+    render();
+    say(incoming.length > 1 ? t('This tool converts one file at a time, so it opened {name}.', { name: file.name }) : '');
   }
 
   function render(){
-    wrap.hidden = files.length === 0;
-    // Once there are files, the drop zone shrinks to a row for adding more,
-    // and it's dimmed while converting, when it takes none.
-    drop.classList.toggle('compact', files.length > 0);
+    var f = current;
+    wrap.hidden = !f;
+    // Once a file is open, the drop zone shrinks to a row for opening
+    // another, and it's dimmed while converting, when it takes none.
+    drop.classList.toggle('compact', !!f);
     drop.classList.toggle('busy', busy);
     list.textContent = '';
-    files.forEach(function(f, i){
+    if (f) {
       var li = document.createElement('li');
       li.className = 'track panel ' + f.state;
 
@@ -131,19 +130,16 @@
       rm.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
       rm.addEventListener('click', function(){
         reset(f);
-        files.splice(i, 1);
+        current = null;
         render();
         say('');
       });
       li.appendChild(rm);
       list.appendChild(li);
-    });
+    }
 
-    var ready = files.filter(function(f){ return f.state === 'ready'; }).length;
-    summary.textContent = count(files.length, '{n} file', '{n} files');
-    if (!busy) convertLabel.textContent = ready ? t('Convert {files}', { files: count(ready, '{n} file', '{n} files') }) : t('Convert');
-    convertBtn.disabled = busy || !ready;
-    clearBtn.disabled = busy;
+    if (!busy) convertLabel.textContent = t('Convert');
+    convertBtn.disabled = busy || !f || f.state !== 'ready';
     stopBtn.hidden = !busy;
     if (!busy) stopBtn.disabled = false;
     picker.disabled = busy;
@@ -489,29 +485,20 @@
   }
 
   convertBtn.addEventListener('click', function(){
-    var todo = files.filter(function(f){ return f.state === 'ready'; });
-    if (busy || !todo.length) return;
+    var f = current;
+    if (busy || !f || f.state !== 'ready') return;
     busy = true;
     stopping = false;
     say('');
-    var opts = settings();
-    todo.reduce(function(chain, f, i){
-      return chain.then(function(){
-        if (stopping) return;
-        convertLabel.textContent = t('Converting {i} of {total}…', { i: i + 1, total: todo.length });
-        return convert(f, opts);
-      });
-    }, Promise.resolve()).then(function(){
+    convertLabel.textContent = t('Converting…');
+    convert(f, settings()).then(function(){
       busy = false;
       render();
-      var failed = todo.filter(function(f){ return f.state === 'error'; }).length;
-      var done = todo.filter(function(f){ return f.state === 'done'; }).length;
-      var files = function(n){ return count(n, '{n} file', '{n} files'); };
-      if (stopping) say(done ? t('Stopped. Converted {files}.', { files: files(done) }) : t('Stopped.'));
-      else if (!failed) say(t('Done. Converted {files}.', { files: files(done) }));
-      else say((done ? t('Converted {files}. ', { files: files(done) }) : '') + t(failed === 1 ? '{files} couldn’t be converted. Your browser may not support its audio format.' : '{files} couldn’t be converted. Your browser may not support their audio format.', { files: files(failed) }), true);
-      var first = list.querySelector('.dl');
-      if (first) first.focus();
+      if (stopping) say(t('Stopped.'));
+      else if (f.state === 'done') say(t('Done.'));
+      else say(t('This file couldn’t be converted. Your browser may not support its audio format.'), true);
+      var dl = list.querySelector('.dl');
+      if (dl) dl.focus();
       else if (stopping) convertBtn.focus();
     });
   });
@@ -522,25 +509,18 @@
     if (halt) halt();
   });
 
-  // Different settings make earlier results stale.
+  // Different settings make an earlier result stale.
   form.addEventListener('change', function(){
-    files.forEach(reset);
+    if (current) reset(current);
     render();
     say('');
   });
 
   picker.addEventListener('change', function(){
-    addFiles(picker.files);
+    openFile(picker.files);
     picker.value = '';
   });
-  T.onFileDrop(drop, addFiles);
-
-  clearBtn.addEventListener('click', function(){
-    files.forEach(reset);
-    files = [];
-    render();
-    say('');
-  });
+  T.onFileDrop(drop, openFile);
 
   render();
 })();

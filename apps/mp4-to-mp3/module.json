@@ -13,7 +13,7 @@
   "uses": ["analytics", "avatar", "backdrop", "base", "features", "file", "files", "footer", "icon-btn", "lang", "page", "profile", "profile-chip", "seg", "settings", "tool", "tracks"],
   "page": {
     "title": "MP4 to MP3 — Convert video to audio free | bdnix",
-    "description": "Extract the sound from MP4, MOV, WebM and MKV videos, or convert M4A, WAV, FLAC and Ogg audio, to MP3 (64 to 320 kbps) or WAV, in stereo or mono. Convert several files at once. Runs in your browser; your files are never uploaded.",
+    "description": "Extract the sound from MP4, MOV, WebM and MKV videos, or convert M4A, WAV, FLAC and Ogg audio, to MP3 (64 to 320 kbps) or WAV, in stereo or mono. Runs in your browser; your files are never uploaded.",
     "schema": "WebApplication",
     "category": "MultimediaApplication"
   },
