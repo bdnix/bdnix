@@ -6,6 +6,7 @@
     "index.html": "/mp4-to-mp3/index.html",
     "audio.js": "/assets/js/audio.js",
     "audio-core.js": "/assets/js/audio-core.js",
+    "audio-worker.js": "/assets/js/audio-worker.js",
     "audio.css": "/assets/css/audio.css",
     "vendor/": "/assets/vendor/"
   },

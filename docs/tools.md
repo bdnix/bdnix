@@ -116,13 +116,19 @@ Drop in videos or audio files (MP4, MOV, WebM, M4A, MKV, WAV, FLAC, Ogg, MP3 and
 - **Quality** for MP3: 320, 256, 192 (default), 128, 96 or 64 kbps. At 96 kbps and below the encoder lowers a stereo file's sample rate, as LAME always does, to keep the sound clean.
 - **Channels:** stereo keeps the left and right channels (the front pair of a surround file); mono mixes every channel into one. A mono file stays mono.
 
-Several files can be converted at once, and each gets its own download named after the original (`clip.mp4` becomes `clip.mp3`). Changing a setting clears earlier results so they can be converted again.
+Several files can be added and converted in one go, one after another, and each gets its own download named after the original (`clip.mp4` becomes `clip.mp3`). Once files are open, the drop zone shrinks to an **Add more files** row, dimmed while converting. **Stop** ends the conversion under way at once: files already converted keep their downloads, and the rest, including the one that was stopped, stay in the list to be converted again. Changing a setting clears earlier results so they can be converted again.
 
 The browser decodes the audio itself and [lamejs](https://github.com/zhuker/lamejs) encodes the MP3, so the formats supported depend on the browser. A file whose audio the browser can't decode is marked in the list with a message.
 
+### Speed
+
+lamejs runs in Web Workers (`audio-worker.js`), off the page, one per processor core but one (at most six). An MP3 is cut into pieces of 512 frames (about 13 seconds at 44.1 kHz), and the workers encode several at once. lamejs keeps no bit reservoir, so each MP3 frame stands alone; each piece is encoded with 8 frames of the sound before and after it, and only its own frames are kept, so the pieces join without a seam. For a pure tone the result is frame for frame what one encoder makes; for other sound a few frames in a hundred, anywhere in the file, are quantized slightly differently. On a 4-core computer a one-hour stereo recording at 192 kbps took about 2 minutes instead of about 3.
+
+Stereo at 64 and 96 kbps is the exception: lamejs lowers its sample rate (to 24 and 32 kHz), its frames then don't line up with the pieces, and its resampling drifts from one encoder to another, so those pieces all go through one worker in order. lamejs is also given at most 576 samples at a time, since where it resamples, more at once makes near silence.
+
 ### Memory use and long recordings
 
-MP4, MOV and M4A files (what phones record) are converted a piece at a time, so memory use doesn't grow with the length of the recording. Only the file's index and its audio are read, never the video; the audio is decoded with WebCodecs and encoded as it arrives, keeping its own sample rate and following the file's edit list (which trims AAC's encoder warm-up). Only the finished file is held in memory: about 1.4 MB per minute as a 192 kbps MP3, or 10.6 MB per minute as a stereo WAV.
+MP4, MOV and M4A files (what phones record) are decoded a piece at a time, so memory use doesn't grow with the length of the recording. Only the file's index and its audio are read, never the video; the audio is decoded with WebCodecs and encoded as it arrives, keeping its own sample rate and following the file's edit list (which trims AAC's encoder warm-up). Decoding waits while every worker is busy, so only a few pieces of sound wait in memory. Otherwise only the finished file is held in memory: about 1.4 MB per minute as a 192 kbps MP3, or 10.6 MB per minute as a stereo WAV.
 
 Other formats (WebM, MKV, MP3, WAV, FLAC, Ogg), codecs the browser can't decode through WebCodecs, and browsers without WebCodecs' `AudioDecoder` (Safari before 26) are decoded whole instead and resampled to 44.1 kHz. That needs about 21 MB of memory per minute of stereo sound, so very long recordings may be too large for a phone. A browser that can't decode AAC this way shows a warning that videos over about 15 minutes may make the page reload, with how to update (iOS 26 or later on iPhone and iPad, the latest Chrome on Android). The check is based on what the browser can do, not on which device it is.
 

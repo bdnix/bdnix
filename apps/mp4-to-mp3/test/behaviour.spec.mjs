@@ -171,19 +171,210 @@ test('a decoder that fails at the end says the audio can’t be read', async ({ 
 // now so a test can swap parts of it out.
 const loadLame = (page) => page.evaluate(() => window.bdnixFiles.loadScript('/assets/vendor/lame.min.js?v=1.2.1', 'lamejs'));
 
-test('an encoder failure while finishing is reported on the file', async ({ page }) => {
-  await loadLame(page);
-  await page.evaluate(() => {
-    const Real = window.lamejs.Mp3Encoder;
-    window.lamejs.Mp3Encoder = function(...args){
-      const enc = new Real(...args);
-      enc.flush = () => { throw new Error('out of memory'); };
-      return enc;
+// Stands in for the workers that encode MP3. The first `real` workers the
+// page hires are real ones; the others answer each piece as `mode` says:
+// 'hang' never answers (the pieces wait in window.held), 'fail' sends an
+// encoder's error, 'unloaded' says the scripts didn't load and 'error' is
+// the worker's own script failing. window.workers counts those hired and
+// stopped.
+async function fakeWorkers(page, mode, real = 0){
+  await page.evaluate(([mode, real]) => {
+    const Real = window.RealWorker = window.RealWorker || window.Worker;
+    window.workers = { made: 0, ended: 0 };
+    window.held = [];
+    window.Worker = function(url){
+      const self = this;
+      this.terminate = () => { window.workers.ended++; };
+      if (++window.workers.made <= real) {
+        const w = new Real(url);
+        w.onmessage = (e) => self.onmessage(e);
+        w.onerror = (e) => self.onerror(e);
+        this.postMessage = (data, transfer) => w.postMessage(data, transfer);
+        this.terminate = () => { window.workers.ended++; w.terminate(); };
+        return;
+      }
+      this.postMessage = (data) => {
+        if (data.load) return;
+        if (mode === 'hang') window.held.push({ worker: self, index: data.index });
+        else if (mode === 'error') setTimeout(() => self.onerror(new ErrorEvent('error', { message: 'NetworkError' })));
+        else setTimeout(() => self.onmessage({ data: mode === 'fail' ? { index: data.index, error: 'out of memory' } : { index: data.index, unloaded: true } }));
+      };
     };
-  });
+  }, [mode, real]);
+}
+
+test('an encoder failure in a worker is reported on the file', async ({ page }) => {
+  await fakeWorkers(page, 'fail');
   await page.locator('#picker').setInputFiles([clip()]);
   await page.getByRole('button', { name: 'Convert 1 file' }).click();
   await expect(page.locator('.file-meta')).toHaveText('Couldn’t convert: out of memory');
+  expect(await page.evaluate(() => window.workers)).toEqual({ made: 1, ended: 1 });
+});
+
+for (const mode of ['unloaded', 'error']) {
+  test(`a worker whose scripts don’t load says so (${mode})`, async ({ page }) => {
+    await fakeWorkers(page, mode);
+    await page.locator('#picker').setInputFiles([clip()]);
+    await page.getByRole('button', { name: 'Convert 1 file' }).click();
+    await expect(page.locator('.file-meta')).toHaveText('Couldn’t convert: the MP3 encoder didn’t load. Check your connection and try again');
+  });
+}
+
+// Thirty seconds of the two tones: several pieces, so several workers.
+const long = () => file('lecture.mp4', flacMp4(tone(30, 2)), 'video/mp4');
+const cores = (page, n) => page.addInitScript((n) => Object.defineProperty(Navigator.prototype, 'hardwareConcurrency', { get: () => n }), n);
+
+test('a worker failing while the decoding waits for it is reported on the file', async ({ page }) => {
+  // One worker, so the decoding waits once a second piece is cut: after
+  // 2 × 512 frames and the 8 after them, of 1152 samples each.
+  await cores(page, 2);
+  await page.addInitScript(() => {
+    window.decoded = 0;
+    const copy = AudioData.prototype.copyTo;
+    AudioData.prototype.copyTo = function(dest, options){
+      if (!options.planeIndex) window.decoded += this.numberOfFrames;
+      return copy.call(this, dest, options);
+    };
+  });
+  await page.reload();
+  await fakeWorkers(page, 'hang');
+  await page.locator('#picker').setInputFiles([long()]);
+  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.waitForFunction(() => window.held.length === 1 && window.decoded >= 1152 * (2 * 512 + 8));
+  await page.evaluate(() => {
+    const { worker, index } = window.held[0];
+    worker.onmessage({ data: { index, error: 'out of memory' } });
+  });
+  await expect(page.locator('.file-meta')).toHaveText('Couldn’t convert: out of memory');
+  expect(await page.evaluate(() => window.workers)).toEqual({ made: 1, ended: 1 });
+});
+
+test('a long recording is encoded in pieces on several cores at once, and joined seamlessly', async ({ page }) => {
+  await cores(page, 4);
+  await page.reload();
+  await fakeWorkers(page, 'hang', 99);
+  const out = await convertOne(page, long());
+  // One core is left for the page.
+  expect(await page.evaluate(() => window.workers)).toEqual({ made: 3, ended: 3 });
+  expect(mp3Header(out.bytes)).toEqual({ kbps: 192, rate: 44100, mono: false });
+  const sound = await analyse(page, out.bytes);
+  expect(sound.seconds).toBeGreaterThanOrEqual(30);
+  expect(sound.seconds).toBeLessThan(30.1);
+  expect(sound.hz).toEqual([440, 660]);
+  // The same sound, sample for sample, as one encoder makes of it, joins
+  // and all.
+  const diff = await page.evaluate(async ([bytes, tones]) => {
+    const A = window.bdnixAudio, n = 30 * 44100;
+    const channels = tones.map((hz) => Float32Array.from({ length: n }, (_, i) => Math.round(12000 * Math.sin(2 * Math.PI * hz * i / 44100)) / 32768));
+    const one = A.stream({ format: 'mp3', kbps: 192 }, window.lamejs);
+    one.write(channels, 44100);
+    const ctx = new OfflineAudioContext(1, 1, 44100);
+    const decode = (data) => ctx.decodeAudioData(data);
+    const a = await decode(await new Blob(one.end().parts).arrayBuffer()), b = await decode(new Uint8Array(bytes).buffer);
+    let most = a.length === b.length ? 0 : Infinity;
+    for (let c = 0; c < 2; c++) {
+      const x = a.getChannelData(c), y = b.getChannelData(c);
+      for (let i = 0; i < x.length; i++) most = Math.max(most, Math.abs(x[i] - y[i]));
+    }
+    return most;
+  }, [[...out.bytes], [440, 660]]);
+  expect(diff).toBe(0);
+});
+
+test('stereo at a low bitrate, which lamejs resamples, goes through one encoder', async ({ page }) => {
+  await cores(page, 4);
+  await page.reload();
+  await fakeWorkers(page, 'hang', 99);
+  await page.locator('#picker').setInputFiles([long()]);
+  await page.getByLabel('Quality').selectOption('96');
+  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await expect(page.locator('#msg')).toHaveText('Done. Converted 1 file.');
+  expect(await page.evaluate(() => window.workers)).toEqual({ made: 1, ended: 1 });
+  const out = await fetchDownload(page, page.locator('.track'));
+  expect(mp3Header(out.bytes)).toEqual({ kbps: 96, rate: 32000, mono: false });
+  const sound = await analyse(page, out.bytes);
+  expect(sound.seconds).toBeGreaterThanOrEqual(30);
+  expect(sound.seconds).toBeLessThan(30.1);
+  expect(sound.hz).toEqual([440, 660]);
+});
+
+test('Stop stops converting at once; the file can be converted again', async ({ page }) => {
+  await fakeWorkers(page, 'hang');
+  await page.locator('#picker').setInputFiles([clip()]);
+  await expect(page.getByRole('button', { name: 'Stop' })).toBeHidden();
+  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await expect(page.locator('.file-meta')).toHaveText(/^Converting… \d+%$/);
+  await page.waitForFunction(() => window.workers.made === 1);
+  await page.getByRole('button', { name: 'Stop' }).click();
+  await expect(page.locator('#msg')).toHaveText('Stopped.');
+  await expect(page.locator('#msg')).not.toHaveClass(/error/);
+  await expect(page.locator('.file-meta')).toHaveText(/^\d+ KB$/);
+  await expect(page.getByRole('button', { name: 'Stop' })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Convert 1 file' })).toBeFocused();
+  // Its workers were stopped too.
+  expect(await page.evaluate(() => window.workers)).toEqual({ made: 1, ended: 1 });
+
+  await page.evaluate(() => { window.Worker = window.RealWorker; });
+  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await expect(page.locator('#msg')).toHaveText('Done. Converted 1 file.');
+});
+
+test('Stop before converting gets going starts nothing', async ({ page }) => {
+  // lamejs arrives only when the test lets it.
+  let arrive;
+  const held = new Promise((resolve) => { arrive = resolve; });
+  await page.route(/\/assets\/vendor\/lame\.min\.js/, async (route) => { await held; await route.continue(); });
+  await fakeWorkers(page, 'hang', 99);
+  await page.locator('#picker').setInputFiles([clip()]);
+  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.getByRole('button', { name: 'Stop' }).click();
+  await expect(page.locator('#msg')).toHaveText('Stopped.');
+  arrive();
+  await page.unroute(/\/assets\/vendor\/lame\.min\.js/);
+  // Converting again takes the same steps, after the stopped conversion's
+  // own; only this one hires a worker.
+  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await expect(page.locator('#msg')).toHaveText('Done. Converted 1 file.');
+  expect(await page.evaluate(() => window.workers)).toEqual({ made: 1, ended: 1 });
+});
+
+test('Stop keeps the files already converted and leaves the rest to convert', async ({ page }) => {
+  // The first file's worker is real; the second's never answers.
+  await fakeWorkers(page, 'hang', 1);
+  await page.locator('#picker').setInputFiles([clip(), file('second.wav', wav(tone(1, 2)), 'audio/wav'), file('third.wav', wav(tone(1, 2)), 'audio/wav')]);
+  await page.getByRole('button', { name: 'Convert 3 files' }).click();
+  await expect(page.locator('#convertLabel')).toHaveText('Converting 2 of 3…');
+  await page.waitForFunction(() => window.workers.made === 2);
+  await page.getByRole('button', { name: 'Stop' }).click();
+  await expect(page.locator('#msg')).toHaveText('Stopped. Converted 1 file.');
+  await expect(page.locator('.track .dl')).toHaveCount(1);
+  await expect(page.getByRole('link', { name: 'Download holiday clip.mp3' })).toBeFocused();
+  await expect(page.locator('.track').nth(1).locator('.file-meta')).toHaveText(/^\d+ KB$/);
+  await expect(page.getByRole('button', { name: 'Convert 2 files' })).toBeEnabled();
+  expect(await page.evaluate(() => window.workers)).toEqual({ made: 2, ended: 2 });
+});
+
+test('Stop works while a whole file is being decoded, and while making WAV', async ({ page }) => {
+  // Decoding whole waits until the test lets it finish.
+  await page.addInitScript(() => {
+    delete window.AudioDecoder;
+    const decode = BaseAudioContext.prototype.decodeAudioData;
+    BaseAudioContext.prototype.decodeAudioData = function(...args){
+      return new Promise((resolve) => { window.release = () => resolve(decode.apply(this, args)); });
+    };
+  });
+  await page.reload();
+  await page.locator('#picker').setInputFiles([clip()]);
+  await page.getByText('WAV', { exact: true }).click();
+  await page.getByRole('button', { name: 'Convert 1 file' }).click();
+  await page.waitForFunction(() => window.release);
+  await page.getByRole('button', { name: 'Stop' }).click();
+  await expect(page.locator('#msg')).toHaveText('Stopped.');
+  // The decoding finishing late changes nothing.
+  await page.evaluate(() => window.release());
+  await expect(page.locator('.file-meta')).toHaveText(/^\d+ KB$/);
+  await expect(page.locator('.track .dl')).toHaveCount(0);
+  await expect(page.locator('#msg')).toHaveText('Stopped.');
 });
 
 test('a decoder that fails part way says the audio can’t be read', async ({ page }) => {
@@ -246,6 +437,21 @@ test('quality and mono settings shape the MP3', async ({ page }) => {
   const sound = await analyse(page, out.bytes);
   expect(sound.hz.length).toBe(1);
 });
+
+// lamejs lowers the sample rate for stereo at 96 kbps (to 32 kHz) and
+// 64 kbps (to 24 kHz). Given more than a few hundred samples at a time, as
+// when a file is decoded whole, it made near silence.
+for (const [kbps, decoded] of [[96, 'whole'], [64, 'whole'], [96, 'a piece at a time']]) {
+  test(`stereo at ${kbps} kbps keeps its sound, decoded ${decoded}`, async ({ page }) => {
+    const upload = decoded === 'whole' ? file('song.wav', wav(tone(2, 2)), 'audio/wav') : clip();
+    await page.locator('#picker').setInputFiles([upload]);
+    await page.getByLabel('Quality').selectOption(String(kbps));
+    await page.getByRole('button', { name: 'Convert 1 file' }).click();
+    const out = await fetchDownload(page, page.locator('.track'));
+    if (kbps === 96) expect(mp3Header(out.bytes)).toEqual({ kbps: 96, rate: 32000, mono: false });
+    expect((await analyse(page, out.bytes)).hz).toEqual([440, 660]);
+  });
+}
 
 test('converts to WAV, sample for sample', async ({ page }) => {
   await page.locator('#picker').setInputFiles([clip()]);
@@ -359,7 +565,9 @@ test('controls are locked while converting, and progress is shown', async ({ pag
         meta: meta && meta.textContent,
         bar: !!document.querySelector('.track-bar:not([hidden])'),
         label: document.getElementById('convertLabel').textContent,
-        locked: document.getElementById('clearBtn').disabled && document.querySelector('[name=kbps]').disabled
+        locked: document.getElementById('clearBtn').disabled && document.querySelector('[name=kbps]').disabled,
+        stop: !document.getElementById('stopBtn').hidden,
+        drop: document.getElementById('drop').className
       });
     }).observe(document.getElementById('filesWrap'), { subtree: true, childList: true, characterData: true, attributes: true });
   });
@@ -367,8 +575,43 @@ test('controls are locked while converting, and progress is shown', async ({ pag
   await page.getByRole('button', { name: 'Convert 1 file' }).click();
   await expect(page.locator('#msg')).toHaveText('Done. Converted 1 file.');
   const seen = await page.evaluate(() => window.seen);
-  expect(seen).toContainEqual({ meta: 'Converting… 0%', bar: true, label: 'Converting 1 of 1…', locked: true });
-  expect(seen).toContainEqual({ meta: 'Converting… 100%', bar: true, label: 'Converting 1 of 1…', locked: true });
+  const busy = { bar: true, label: 'Converting 1 of 1…', locked: true, stop: true, drop: 'drop panel compact busy' };
+  expect(seen).toContainEqual({ meta: 'Converting… 0%', ...busy });
+  expect(seen).toContainEqual({ meta: 'Converting… 100%', ...busy });
   await expect(page.getByRole('button', { name: 'Clear all' })).toBeEnabled();
   await expect(page.locator('.track-bar')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Stop' })).toBeHidden();
+  await expect(page.locator('#drop')).toHaveClass('drop panel compact');
+});
+
+test('once files are open, the drop zone is a row for adding more', async ({ page }) => {
+  const drop = page.locator('#drop');
+  await expect(drop.getByText('Drop videos or audio files here')).toBeVisible();
+  await expect(drop.getByText('Add more files')).toBeHidden();
+  const tall = (await drop.boundingBox()).height;
+
+  await page.locator('#picker').setInputFiles([clip()]);
+  await expect(drop).toHaveClass(/compact/);
+  await expect(drop.getByText('Add more files')).toBeVisible();
+  await expect(drop.getByText('Drop videos or audio files here')).toBeHidden();
+  await expect(drop.getByText('or choose files')).toBeHidden();
+  expect((await drop.boundingBox()).height).toBeLessThan(tall / 2);
+  await expectNoSideScroll(page);
+
+  // It still takes files.
+  await page.locator('#picker').setInputFiles([file('second.wav', wav(tone(1, 1)), 'audio/wav')]);
+  await expect(page.locator('.file-name')).toHaveText(['holiday clip.mp4', 'second.wav']);
+
+  // While converting, it's dimmed and takes none.
+  await fakeWorkers(page, 'hang');
+  await page.getByRole('button', { name: 'Convert 2 files' }).click();
+  await expect(drop).toHaveClass(/busy/);
+  await expect(drop).toHaveCSS('pointer-events', 'none');
+  await expect(page.locator('#picker')).toBeDisabled();
+  await page.getByRole('button', { name: 'Stop' }).click();
+  await expect(drop).not.toHaveClass(/busy/);
+
+  await page.getByRole('button', { name: 'Clear all' }).click();
+  await expect(drop).not.toHaveClass(/compact/);
+  await expect(drop.getByText('Drop videos or audio files here')).toBeVisible();
 });

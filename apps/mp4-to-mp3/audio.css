@@ -1,3 +1,12 @@
 /* Audio converter (mp4-to-mp3). Page layout, settings and the file list live in tool.css. */
 .support-warn{margin:0 0 16px;padding:12px 14px;font-size:14px;line-height:1.5;color:var(--muted);border-color:rgba(244,114,182,.45)}
 .support-warn b{color:var(--pink)}
+
+/* Once files are open, the drop zone is a row for adding more; while
+   converting it takes none, so it's dimmed. */
+.drop .more{display:none}
+.drop.compact{flex-direction:row;justify-content:center;gap:10px;padding:14px 16px}
+.drop.compact svg{width:20px;height:20px;margin:0}
+.drop.compact > b:not(.more),.drop.compact > span{display:none}
+.drop.compact .more{display:inline;font-size:15px}
+.drop.busy{opacity:.4;cursor:default;pointer-events:none}
