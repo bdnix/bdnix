@@ -177,7 +177,7 @@
   // through the same encoder) }; end() sends the last. size (optional, at
   // least LEAD, whole frames) is the length of a piece's own sound.
   function splitter(kbps, lame, cut, onPiece, size){
-    size = size || PIECE;
+    size = size || api.PIECE;
     var trim = trimmer(cut), rate = 0, lead = LEAD, buf = null, have = 0, start = 0, at = 0;
 
     // buf holds the sound from sample start (of the trimmed sound) on; the
@@ -536,9 +536,11 @@
     }, Promise.resolve()).then(function(){ return out; });
   }
 
-  window.bdnixAudio = {
+  // PIECE is the pieces' length unless splitter() is told otherwise; tests
+  // make it shorter, to have several pieces in a short recording.
+  var api = window.bdnixAudio = {
     isMedia: isMedia, outName: outName, fmtTime: fmtTime,
     mix: mix, toPcm16: toPcm16, stream: stream, mp3Rate: mp3Rate, splitter: splitter, pieceEncoder: pieceEncoder, keepFrames: keepFrames,
-    mp4: mp4, audioOnly: audioOnly
+    mp4: mp4, audioOnly: audioOnly, PIECE: PIECE
   };
 })();

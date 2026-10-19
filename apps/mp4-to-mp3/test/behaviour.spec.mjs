@@ -219,13 +219,16 @@ for (const mode of ['unloaded', 'error']) {
   });
 }
 
-// Thirty seconds of the two tones: several pieces, so several workers.
-const long = () => file('lecture.mp4', flacMp4(tone(30, 2)), 'video/mp4');
+// Three seconds of the two tones, in pieces of 16 frames (18,432 samples)
+// rather than 512, so there are several pieces, and several workers,
+// without encoding a long recording.
+const long = () => file('lecture.mp4', flacMp4(tone(3, 2)), 'video/mp4');
+const smallPieces = (page) => page.evaluate(() => { window.bdnixAudio.PIECE = 1152 * 16; });
 const cores = (page, n) => page.addInitScript((n) => Object.defineProperty(Navigator.prototype, 'hardwareConcurrency', { get: () => n }), n);
 
 test('a worker failing while the decoding waits for it is reported on the file', async ({ page }) => {
   // One worker, so the decoding waits once a second piece is cut: after
-  // 2 × 512 frames and the 8 after them, of 1152 samples each.
+  // 2 × 16 frames and the 8 after them, of 1152 samples each.
   await cores(page, 2);
   await page.addInitScript(() => {
     window.decoded = 0;
@@ -237,9 +240,10 @@ test('a worker failing while the decoding waits for it is reported on the file',
   });
   await page.reload();
   await fakeWorkers(page, 'hang');
+  await smallPieces(page);
   await page.locator('#picker').setInputFiles([long()]);
   await page.getByRole('button', { name: 'Convert', exact: true }).click();
-  await page.waitForFunction(() => window.held.length === 1 && window.decoded >= 1152 * (2 * 512 + 8));
+  await page.waitForFunction(() => window.held.length === 1 && window.decoded >= 1152 * (2 * 16 + 8));
   await page.evaluate(() => {
     const { worker, index } = window.held[0];
     worker.onmessage({ data: { index, error: 'out of memory' } });
@@ -252,18 +256,20 @@ test('a long recording is encoded in pieces on several cores at once, and joined
   await cores(page, 4);
   await page.reload();
   await fakeWorkers(page, 'hang', 99);
+  await smallPieces(page);
   const out = await convertOne(page, long());
   // One core is left for the page.
   expect(await page.evaluate(() => window.workers)).toEqual({ made: 3, ended: 3 });
   expect(mp3Header(out.bytes)).toEqual({ kbps: 192, rate: 44100, mono: false });
   const sound = await analyse(page, out.bytes);
-  expect(sound.seconds).toBeGreaterThanOrEqual(30);
-  expect(sound.seconds).toBeLessThan(30.1);
+  expect(sound.seconds).toBeGreaterThanOrEqual(3);
+  expect(sound.seconds).toBeLessThan(3.1);
   expect(sound.hz).toEqual([440, 660]);
-  // The same sound, sample for sample, as one encoder makes of it, joins
-  // and all.
+  // Sounding as one encoder makes it, joins and all: a seam would be a
+  // click, near the tones' own level (0.37). The joined MP3 is the same
+  // frames, a few quantized slightly differently, so within 0.001 (-60 dB).
   const diff = await page.evaluate(async ([bytes, tones]) => {
-    const A = window.bdnixAudio, n = 30 * 44100;
+    const A = window.bdnixAudio, n = 3 * 44100;
     const channels = tones.map((hz) => Float32Array.from({ length: n }, (_, i) => Math.round(12000 * Math.sin(2 * Math.PI * hz * i / 44100)) / 32768));
     const one = A.stream({ format: 'mp3', kbps: 192 }, window.lamejs);
     one.write(channels, 44100);
@@ -277,13 +283,14 @@ test('a long recording is encoded in pieces on several cores at once, and joined
     }
     return most;
   }, [[...out.bytes], [440, 660]]);
-  expect(diff).toBe(0);
+  expect(diff).toBeLessThan(0.001);
 });
 
 test('stereo at a low bitrate, which lamejs resamples, goes through one encoder', async ({ page }) => {
   await cores(page, 4);
   await page.reload();
   await fakeWorkers(page, 'hang', 99);
+  await smallPieces(page);
   await page.locator('#picker').setInputFiles([long()]);
   await page.getByLabel('Quality').selectOption('96');
   await page.getByRole('button', { name: 'Convert', exact: true }).click();
@@ -292,8 +299,8 @@ test('stereo at a low bitrate, which lamejs resamples, goes through one encoder'
   const out = await fetchDownload(page, page.locator('.track'));
   expect(mp3Header(out.bytes)).toEqual({ kbps: 96, rate: 32000, mono: false });
   const sound = await analyse(page, out.bytes);
-  expect(sound.seconds).toBeGreaterThanOrEqual(30);
-  expect(sound.seconds).toBeLessThan(30.1);
+  expect(sound.seconds).toBeGreaterThanOrEqual(3);
+  expect(sound.seconds).toBeLessThan(3.1);
   expect(sound.hz).toEqual([440, 660]);
 });
 
