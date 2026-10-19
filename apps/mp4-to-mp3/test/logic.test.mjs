@@ -8,7 +8,11 @@ import { load, plain } from '../../../tests/unit/load.mjs';
 import { flacMp4, wav, tone, box, full, u8, u16, u32 } from '../../../tests/ui/media.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const { bdnixAudio: A, lamejs } = load(['apps/mp4-to-mp3/vendor/lame.min.js', 'apps/mp4-to-mp3/audio-core.js']);
+const { bdnixAudio: A } = load(['apps/mp4-to-mp3/audio-core.js'], { WebAssembly });
+// LAME, built to WebAssembly (apps/mp4-to-mp3/lame/), as the page and its
+// workers use it.
+const LAME = fs.readFileSync(path.join(root, 'apps/mp4-to-mp3/vendor/lame.wasm'));
+const lame = await A.lame(LAME);
 
 // A sine tone as float samples, the way the browser hands decoded audio over.
 const sine = (n, hz, rate = 44100, amp = 0.5) => Float32Array.from({ length: n }, (_, i) => amp * Math.sin(2 * Math.PI * hz * i / rate));
@@ -63,6 +67,36 @@ test('timeLeft: about how long is left, once it can tell', () => {
   assert.equal(A.timeLeft(12 * 60000, 0.1), 'about 1 h 48 min left');
 });
 
+test('reportRows: how a conversion went, in words', () => {
+  const base = { took: 23160, seconds: 3600, whole: false, size: '82.4 MB', format: 'mp3', kbps: 192, rate: 44100, channels: 2, cores: 4, awake: { on: true, hidden: 0 } };
+  const rows = (r) => Object.fromEntries(A.reportRows({ ...base, ...r }).map((row) => [...row]));
+  assert.deepEqual(rows({ mp3: { workers: 3, pieces: [13.37, 13.37, 2.24], oneEncoder: false } }), {
+    'Time taken': '23.2 s', Length: '1:00:00', Speed: '155× real time',
+    Encoders: '3 at once, of 4 cores', Pieces: '3 pieces of 13.4 s, the last 2.2 s',
+    'Sound read': 'A piece at a time', File: '82.4 MB · 192 kbps · 44.1 kHz · stereo', Screen: 'Kept on'
+  });
+  // A minute or more is minutes and seconds; under 10× real time has a decimal.
+  const slow = rows({ took: 125000, seconds: 600, whole: true, cores: 0, mp3: { workers: 1, pieces: [13.4], oneEncoder: false }, awake: { on: false, hidden: 61500 } });
+  assert.equal(slow['Time taken'], '2:05');
+  assert.equal(slow.Speed, '4.8× real time');
+  assert.equal(slow.Encoders, '1 at once');
+  assert.equal(slow.Pieces, '1 piece of 13.4 s');
+  assert.equal(slow['Sound read'], 'All at once');
+  assert.equal(slow.Screen, 'Not kept on: this browser didn’t allow it');
+  assert.equal(slow['Page hidden'], '1:02: converting pauses while the page is hidden');
+  // Under a second hidden isn't worth a row.
+  assert.equal(rows({ mp3: { workers: 1, pieces: [], oneEncoder: false }, awake: { on: true, hidden: 999 } })['Page hidden'], undefined);
+  assert.equal(rows({ mp3: { workers: 1, pieces: [], oneEncoder: false } }).Pieces, '0 pieces of 0 s');
+  assert.equal(rows({ mp3: { workers: 1, pieces: [13.4, 13.4], oneEncoder: true }, rate: 32000 }).Pieces,
+    '2 pieces, one after another through one encoder: at this setting LAME lowers the sample rate, and that can’t be shared out');
+  // WAV has no encoders or pieces.
+  const wav = rows({ format: 'wav', mp3: null, channels: 1, size: '86 KB' });
+  assert.deepEqual(Object.keys(wav), ['Time taken', 'Length', 'Speed', 'Sound read', 'File', 'Screen']);
+  assert.equal(wav.File, '86 KB · 44.1 kHz · mono');
+  // Instant conversions don't divide by nothing.
+  assert.equal(rows({ took: 0, seconds: 1, mp3: null, format: 'wav' }).Speed, '1000× real time');
+});
+
 test('fmtTime', () => {
   assert.equal(A.fmtTime(0), '0:00');
   assert.equal(A.fmtTime(1.04), '0:01');
@@ -89,7 +123,7 @@ test('toPcm16: scales, rounds and clips', () => {
 });
 
 const mp3Of = (channels, rate, kbps, block = channels[0].length) => {
-  const out = A.stream({ format: 'mp3', kbps }, lamejs);
+  const out = A.stream({ format: 'mp3', kbps }, lame);
   for (let at = 0; at < channels[0].length; at += block) out.write(channels.map((c) => c.subarray(at, at + block)), rate);
   return bytesOf(out.end().parts);
 };
@@ -121,7 +155,7 @@ test('stream: WAV has the right header and samples', () => {
 
 test('stream: MP3 frames carry the chosen bitrate and channel count', () => {
   const second = 44100;
-  // Like the lame command line, lamejs lowers the sample rate for stereo at
+  // Like its command line, LAME lowers the sample rate for stereo at
   // lower bitrates (96 kbps is 32 kHz; 64 kbps drops to MPEG-2, which this
   // test doesn't read).
   for (const [kbps, rate] of [[96, 32000], [128, 44100], [192, 44100], [320, 44100]]) {
@@ -139,7 +173,7 @@ test('stream: MP3 frames carry the chosen bitrate and channel count', () => {
 
 const LEAD = 1152 * 8;
 function piecesOf(channels, rate, kbps, { size = LEAD, block = 1000, cut = null } = {}){
-  const out = [], split = A.splitter(kbps, lamejs, cut, (p) => out.push(p), size);
+  const out = [], split = A.splitter(kbps, lame, cut, (p) => out.push(p), size);
   for (let at = 0; at < channels[0].length; at += block) split.write(channels.map((c) => c.subarray(at, at + block)), rate);
   split.end();
   return out;
@@ -149,7 +183,7 @@ function piecesOf(channels, rate, kbps, { size = LEAD, block = 1000, cut = null 
 function joined(pieces){
   let encode = null;
   return Buffer.concat(pieces.map((p) => {
-    encode = encode || A.pieceEncoder(lamejs);
+    encode = encode || A.pieceEncoder(lame);
     const out = Buffer.from(encode(p));
     if (!p.more) encode = null;
     return out;
@@ -188,19 +222,57 @@ function compare(a, b){
   }).length;
 }
 
-test('mp3Rate: the rate lamejs makes MP3s at', () => {
-  assert.equal(A.mp3Rate(lamejs, 2, 44100, 128), 44100);
-  assert.equal(A.mp3Rate(lamejs, 1, 44100, 64), 44100);
-  assert.equal(A.mp3Rate(lamejs, 2, 48000, 192), 48000);
-  assert.equal(A.mp3Rate(lamejs, 1, 16000, 64), 16000);
+test('mp3Rate: the rate lame makes MP3s at', () => {
+  assert.equal(A.mp3Rate(lame, 2, 44100, 128), 44100);
+  assert.equal(A.mp3Rate(lame, 1, 44100, 64), 44100);
+  assert.equal(A.mp3Rate(lame, 2, 48000, 192), 48000);
+  assert.equal(A.mp3Rate(lame, 1, 16000, 64), 16000);
   // Stereo at low bitrates is made at a lower rate.
-  assert.equal(A.mp3Rate(lamejs, 2, 44100, 96), 32000);
-  assert.equal(A.mp3Rate(lamejs, 2, 48000, 64), 24000);
+  assert.equal(A.mp3Rate(lame, 2, 44100, 96), 32000);
+  assert.equal(A.mp3Rate(lame, 2, 48000, 64), 24000);
 });
 
-test('mp3Rate: a frame it can’t read gives no rate', () => {
-  const fake = { Mp3Encoder: function(){ this.encodeBuffer = () => new Int8Array(0); this.flush = () => new Int8Array([-1, -22, 0, 0]); } };
-  assert.equal(A.mp3Rate(fake, 2, 44100, 128), 0);
+test('lame: starts from a compiled module as well as from the file', async () => {
+  const sound = [sine(1152 * 4, 440), sine(1152 * 4, 660)];
+  const fromModule = await A.lame(new WebAssembly.Module(LAME));
+  const mp3 = (enc) => {
+    enc.start(2, 44100, 192);
+    return Buffer.concat([...enc.encode(sound, 0, sound[0].length), enc.flush()].map((b) => Buffer.from(b)));
+  };
+  assert.deepEqual(mp3(fromModule), mp3(lame));
+});
+
+// LAME with its calls answered as a test says: { calls: { name: fn } }.
+async function fakeLame(calls){
+  const memory = new WebAssembly.Memory({ initial: 1 });
+  const exports = { memory, _initialize(){}, enc_left: () => 0, enc_right: () => 4096, enc_out: () => 8192, enc_init: () => 44100, enc_encode: () => 0, enc_flush: () => 0, ...calls };
+  const { bdnixAudio } = load(['apps/mp4-to-mp3/audio-core.js'], { WebAssembly: { instantiate: () => Promise.resolve({ exports }) } });
+  return bdnixAudio.lame(LAME);
+}
+
+test('lame: settings LAME can’t start with, and LAME’s errors, are errors', async () => {
+  // LAME adjusts settings it doesn't take; it fails to start only when out
+  // of memory.
+  const refused = await fakeLame({ enc_init: () => 0 });
+  assert.throws(() => refused.start(2, 44100, 128), /LAME can’t make 128 kbps MP3 from 2 channels at 44100 Hz/);
+  const failing = await fakeLame({ enc_encode: () => -2, enc_flush: () => -1 });
+  assert.equal(failing.start(2, 44100, 128), 44100);
+  assert.throws(() => failing.encode([sine(10, 440)], 0, 10), /LAME couldn’t encode \(error -2\)/);
+  assert.throws(() => failing.flush(), /LAME couldn’t encode \(error -1\)/);
+  // Nothing made yet is no bytes.
+  const quiet = await fakeLame({});
+  assert.equal(quiet.encode([sine(10, 440)], 0, 10).length, 0);
+});
+
+test('lame: LAME giving up is an error', async () => {
+  // proc_exit is how LAME's C library stops; it never should.
+  let exit = null;
+  const real = WebAssembly.instantiate;
+  const { bdnixAudio } = load(['apps/mp4-to-mp3/audio-core.js'], { WebAssembly: { instantiate: (m, imports) => { exit = imports.wasi_snapshot_preview1.proc_exit; return real(m, imports); } } });
+  await bdnixAudio.lame(LAME);
+  assert.throws(() => exit(1), /LAME stopped/);
+  const quiet = await bdnixAudio.lame(LAME);
+  assert.ok(quiet);
 });
 
 test('splitter: pieces of the sound, with the sound around each', () => {
@@ -256,7 +328,7 @@ test('splitter: frames are counted in 576 samples below 32 kHz', () => {
   assert.deepEqual(pieces.map((p) => [p.skip, p.keep]), [[0, 16], [16, -1]]);
 });
 
-test('splitter: where lamejs changes the rate, pieces carry on through one encoder', () => {
+test('splitter: where lame changes the rate, pieces carry on through one encoder', () => {
   const n = LEAD * 2 + 100, sound = sine(n, 440);
   const pieces = piecesOf([sound, sound], 44100, 96);
   assert.deepEqual(shape(pieces), [[0, -1, LEAD, LEAD, true], [0, -1, LEAD, LEAD, true], [0, -1, 100, 100, false]]);
@@ -289,7 +361,7 @@ test('pieceEncoder: the pieces of a tone joined are the MP3 one encoder makes', 
 });
 
 test('pieceEncoder: busier sound joins into the same frames, a few quantized differently', () => {
-  // lamejs carries a little from frame to frame beyond the sound around a
+  // lame carries a little from frame to frame beyond the sound around a
   // piece, so a few frames, anywhere in a piece, come out slightly
   // differently: still the same sound. The page's tests check the joins
   // by ear (behaviour.spec.mjs).
@@ -301,7 +373,7 @@ test('pieceEncoder: busier sound joins into the same frames, a few quantized dif
 });
 
 test('pieceEncoder: pieces through one encoder are exactly its MP3', () => {
-  // Resampling depends on where each call to lamejs starts, so the encoder
+  // Resampling depends on where each call to lame starts, so the encoder
   // here gets the sound in the same blocks.
   for (const [rate, kbps] of [[44100, 96], [48000, 64]]) {
     const sound = busy(LEAD * 3 + 9, rate), pieces = piecesOf(sound, rate, kbps);
@@ -338,52 +410,74 @@ test('keepFrames: something that isn’t MP3 frames is an error', () => {
 // The worker in a sandbox: importScripts is given, and what it posts is
 // recorded.
 function worker(importScripts){
-  const posted = [], sandbox = load([]), file = path.join(root, 'apps/mp4-to-mp3/audio-worker.js');
+  const posted = [], sandbox = load([], { WebAssembly }), file = path.join(root, 'apps/mp4-to-mp3/audio-worker.js');
   Object.assign(sandbox, { self: sandbox, importScripts, postMessage: (data, transfer) => posted.push({ data, transfer }) });
   vm.runInContext(fs.readFileSync(file, 'utf8'), sandbox, { filename: file });
-  return { send: (data) => sandbox.onmessage({ data }), posted: () => JSON.parse(JSON.stringify(posted.map((p) => p.data))), raw: posted, sandbox };
+  return {
+    send: (data) => sandbox.onmessage({ data }),
+    // Answers come once LAME has started, in turn.
+    answers: async (n) => {
+      for (let i = 0; i < 1000 && posted.length < n; i++) await new Promise((resolve) => setImmediate(resolve));
+      return JSON.parse(JSON.stringify(posted.map((p) => p.data)));
+    },
+    raw: posted, sandbox
+  };
 }
-const LOAD = ['/assets/js/audio-core.js?v=1', '/assets/vendor/lame.min.js?v=1.2.1'];
-// Loads the real scripts into the worker's sandbox.
-const realScripts = (w) => (...urls) => {
-  assert.deepEqual(urls, LOAD);
-  for (const file of ['apps/mp4-to-mp3/audio-core.js', 'apps/mp4-to-mp3/vendor/lame.min.js']) vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), w.sandbox);
+const CORE = '/assets/js/audio-core.js?v=1';
+const LOAD = { load: true, core: '1' };
+// Loads the real audio-core.js into the worker's sandbox.
+const realCore = (w) => (url) => {
+  assert.equal(url, CORE);
+  vm.runInContext(fs.readFileSync(path.join(root, 'apps/mp4-to-mp3/audio-core.js'), 'utf8'), w.sandbox);
 };
 
-test('worker: loads the scripts it is sent, then encodes pieces, carrying on where they do', () => {
-  const w = worker((...urls) => realScripts(w)(...urls));
-  w.send({ load: LOAD });
+test('worker: loads what it is sent, then encodes pieces in turn, carrying on where they do', async () => {
+  const w = worker((url) => realCore(w)(url));
+  w.send({ ...LOAD, lame: new WebAssembly.Module(LAME) });
   assert.equal(typeof w.sandbox.bdnixAudio.pieceEncoder, 'function');
   const sound = busy(LEAD * 3, 44100), pieces = [...piecesOf(sound, 44100, 128), ...piecesOf(sound, 44100, 96)];
   pieces.forEach((p, index) => w.send({ ...p, index }));
-  assert.deepEqual(w.posted().map((d) => d.index), pieces.map((p, i) => i));
+  assert.deepEqual((await w.answers(pieces.length)).map((d) => d.index), pieces.map((p, i) => i));
   const bytes = w.raw.map((p) => Buffer.from(p.data.bytes));
   assert.deepEqual(Buffer.concat(bytes.slice(0, 3)), joined(pieces.slice(0, 3)));
   assert.deepEqual(Buffer.concat(bytes.slice(3)), mp3Of(sound, 44100, 96, LEAD));
   assert.ok(w.raw.every((p) => p.transfer.length === 1 && p.transfer[0] === p.data.bytes.buffer));
 });
 
-test('worker: an encoder failure is sent back', () => {
-  const w = worker((...urls) => {
-    realScripts(w)(...urls);
-    w.sandbox.lamejs.Mp3Encoder = function(){ throw new Error('out of memory'); };
+test('worker: an encoder failure is sent back', async () => {
+  const w = worker((url) => {
+    realCore(w)(url);
+    w.sandbox.bdnixAudio.lame = () => Promise.resolve({ start(){ throw new Error('out of memory'); } });
   });
-  w.send({ load: LOAD });
+  w.send({ ...LOAD, lame: LAME });
   w.send({ ...piecesOf([sine(100, 440)], 44100, 128)[0], index: 0 });
-  assert.deepEqual(w.posted(), [{ index: 0, error: 'out of memory' }]);
+  assert.deepEqual(await w.answers(1), [{ index: 0, error: 'out of memory' }]);
   // Something thrown that isn't an Error.
-  const odd = worker(() => { odd.sandbox.bdnixAudio = { pieceEncoder: () => () => { throw 'odd'; } }; });
-  odd.send({ load: LOAD });
+  const odd = worker(() => { odd.sandbox.bdnixAudio = { lame: () => Promise.resolve({}), pieceEncoder: () => () => { throw 'odd'; } }; });
+  odd.send(LOAD);
   odd.send({ index: 1 });
-  assert.deepEqual(odd.posted(), [{ index: 1, error: 'odd' }]);
+  assert.deepEqual(await odd.answers(1), [{ index: 1, error: 'odd' }]);
 });
 
-test('worker: scripts that don’t load are reported with each piece', () => {
+test('worker: loads audio-core.js from its own place, whatever version it is told', async () => {
+  const urls = [];
+  for (const core of ['1', '', 'a b&x=//elsewhere.example/']) {
+    const w = worker((url) => { urls.push(url); throw new Error('stop'); });
+    w.send({ load: true, core });
+  }
+  assert.deepEqual(urls, ['/assets/js/audio-core.js?v=1', '/assets/js/audio-core.js', '/assets/js/audio-core.js?v=a%20b%26x%3D%2F%2Felsewhere.example%2F']);
+});
+
+test('worker: when its script or LAME doesn’t load, each piece says so', async () => {
   const w = worker(() => { throw new Error('NetworkError'); });
-  w.send({ load: LOAD });
+  w.send(LOAD);
   w.send({ index: 2 });
   w.send({ index: 3 });
-  assert.deepEqual(w.posted(), [{ index: 2, unloaded: true }, { index: 3, unloaded: true }]);
+  assert.deepEqual(await w.answers(2), [{ index: 2, unloaded: true }, { index: 3, unloaded: true }]);
+  const broken = worker((url) => realCore(broken)(url));
+  broken.send({ ...LOAD, lame: new Uint8Array([0, 97, 115, 109]) });
+  broken.send({ index: 4 });
+  assert.deepEqual(await broken.answers(1), [{ index: 4, unloaded: true }]);
 });
 
 // --- audioOnly: the audio track of an MP4 or MOV ---
@@ -568,7 +662,7 @@ test('stream: WAV written in blocks matches the whole, with the header filled in
 
 test('stream: MP3 written in odd-sized blocks matches the whole', () => {
   const l = sine(30000, 440), r = sine(30000, 550);
-  const out = A.stream({ format: 'mp3', kbps: 128 }, lamejs);
+  const out = A.stream({ format: 'mp3', kbps: 128 }, lame);
   for (let at = 0; at < 30000; at += 1000) out.write([l.subarray(at, at + 1000), r.subarray(at, at + 1000)], 44100);
   assert.deepEqual(bytesOf(out.end().parts), mp3Of([l, r], 44100, 128));
 });
@@ -584,7 +678,11 @@ test('stream: an edit list cut drops the start and caps the length, across block
   assert.equal(buf.readInt16LE(buf.length - 2), 7499);
   // No cap on the length.
   const open = A.stream({ format: 'wav' }, null, { skip: 0.5, keep: Infinity });
-  open.write([ramp], 1000);
+  assert.equal(open.written(), 0);
+  open.write([ramp.subarray(0, 1000)], 1000);
+  assert.equal(open.written(), 500, 'after the edit list');
+  open.write([ramp.subarray(1000)], 1000);
+  assert.equal(open.written(), 9500);
   assert.equal(open.end().frames, 9500);
 });
 
@@ -592,24 +690,18 @@ test('stream: nothing written still makes a valid, empty file', () => {
   const wav = A.stream({ format: 'wav' }).end();
   assert.equal(bytesOf(wav.parts).length, 44);
   assert.deepEqual([wav.frames, wav.rate], [0, 44100]);
-  const mp3 = A.stream({ format: 'mp3', kbps: 128 }, lamejs).end();
+  const mp3 = A.stream({ format: 'mp3', kbps: 128 }, lame).end();
   assert.equal(mp3.frames, 0);
 });
 
-test('stream: lamejs is given 576 samples at a time, however many come in', () => {
-  // Where lamejs resamples, more at once made near silence. Its resampling
-  // also depends on where each call starts, so the MP3 shows how it was
-  // handed over.
-  for (const [rate, kbps] of [[44100, 96], [32000, 64]]) {
-    const sound = [sine(1152 * 30, 440, rate), sine(1152 * 30, 660, rate)];
-    assert.deepEqual(mp3Of(sound, rate, kbps), mp3Of(sound, rate, kbps, 576));
-    assert.notDeepEqual(mp3Of(sound, rate, kbps), mp3Of(sound, rate, kbps, 500));
-  }
+test('stream: MP3 is the same in any blocks, more or less than LAME takes at once', () => {
+  const sound = [sine(1152 * 12, 440), sine(1152 * 12, 660)];
+  for (const block of [1000, 1152 * 4, 1152 * 5 + 7]) assert.deepEqual(mp3Of(sound, 44100, 192, block), mp3Of(sound, 44100, 192));
 });
 
 test('stream: take() hands over the MP3 made so far', () => {
   const sound = [sine(1152 * 20, 440)], whole = mp3Of(sound, 44100, 128);
-  const out = A.stream({ format: 'mp3', kbps: 128 }, lamejs), taken = [];
+  const out = A.stream({ format: 'mp3', kbps: 128 }, lame), taken = [];
   out.write([sound[0].subarray(0, 1152 * 10)], 44100);
   taken.push(...out.take());
   assert.ok(taken.length);

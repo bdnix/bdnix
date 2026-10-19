@@ -166,9 +166,6 @@ test('a decoder that fails at the end says the audio can’t be read', async ({ 
   await expect(page.locator('.file-meta')).toHaveText('No audio your browser can read in this file');
 });
 
-// lamejs is fetched with the first MP3 (see libraries.spec.mjs); load it
-// now so a test can swap parts of it out.
-const loadLame = (page) => page.evaluate(() => window.bdnixFiles.loadScript('/assets/vendor/lame.min.js?v=1.2.1', 'lamejs'));
 
 // Stands in for the workers that encode MP3. The first `real` workers the
 // page hires are real ones; the others answer each piece as `mode` says:
@@ -254,6 +251,16 @@ test('a worker failing while the decoding waits for it is reported on the file',
 
 test('a long recording is encoded in pieces on several cores at once, and joined seamlessly', async ({ page }) => {
   await cores(page, 4);
+  // The sound as the browser decodes it, to encode in one go below.
+  await page.addInitScript(() => {
+    window.decodedSound = [[], []];
+    const copy = AudioData.prototype.copyTo;
+    AudioData.prototype.copyTo = function(dest, options){
+      const done = copy.call(this, dest, options);
+      window.decodedSound[options.planeIndex].push(dest.slice());
+      return done;
+    };
+  });
   await page.reload();
   await fakeWorkers(page, 'hang', 99);
   await smallPieces(page);
@@ -265,13 +272,20 @@ test('a long recording is encoded in pieces on several cores at once, and joined
   expect(sound.seconds).toBeGreaterThanOrEqual(3);
   expect(sound.seconds).toBeLessThan(3.1);
   expect(sound.hz).toEqual([440, 660]);
-  // Sounding as one encoder makes it, joins and all: a seam would be a
-  // click, near the tones' own level (0.37). The joined MP3 is the same
-  // frames, a few quantized slightly differently, so within 0.001 (-60 dB).
-  const diff = await page.evaluate(async ([bytes, tones]) => {
-    const A = window.bdnixAudio, n = 3 * 44100;
-    const channels = tones.map((hz) => Float32Array.from({ length: n }, (_, i) => Math.round(12000 * Math.sin(2 * Math.PI * hz * i / 44100)) / 32768));
-    const one = A.stream({ format: 'mp3', kbps: 192 }, window.lamejs);
+  // Sounding as one encoder makes it of the same sound, joins and all: a
+  // seam would be a click, near the tones' own level (0.37). Short of the
+  // last frame, where each encoder pads out the end in its own way, the
+  // joined MP3 is the same frames, at most a few quantized slightly
+  // differently, so within 0.001 (-60 dB).
+  const diff = await page.evaluate(async (bytes) => {
+    const A = window.bdnixAudio;
+    const channels = window.decodedSound.map((planes) => {
+      const all = new Float32Array(planes.reduce((n, p) => n + p.length, 0));
+      planes.reduce((at, p) => { all.set(p, at); return at + p.length; }, 0);
+      return all;
+    });
+    const lame = await A.lame(await (await fetch('/assets/vendor/lame.wasm?v=3.100-1')).arrayBuffer());
+    const one = A.stream({ format: 'mp3', kbps: 192 }, lame);
     one.write(channels, 44100);
     const ctx = new OfflineAudioContext(1, 1, 44100);
     const decode = (data) => ctx.decodeAudioData(data);
@@ -279,10 +293,10 @@ test('a long recording is encoded in pieces on several cores at once, and joined
     let most = a.length === b.length ? 0 : Infinity;
     for (let c = 0; c < 2; c++) {
       const x = a.getChannelData(c), y = b.getChannelData(c);
-      for (let i = 0; i < x.length; i++) most = Math.max(most, Math.abs(x[i] - y[i]));
+      for (let i = 0; i < x.length - 2 * 1152; i++) most = Math.max(most, Math.abs(x[i] - y[i]));
     }
     return most;
-  }, [[...out.bytes], [440, 660]]);
+  }, [...out.bytes]);
   expect(diff).toBeLessThan(0.001);
 });
 
@@ -322,24 +336,22 @@ test('while converting, it says about how long is left', async ({ page }) => {
   const meta = page.locator('.file-meta');
   await page.waitForFunction(() => window.held.length === 1);
   // Nothing encoded yet: too early to tell.
-  await expect(meta).toHaveText(/^Converting… \d+%$/);
+  await expect(meta).toHaveText('Converting… 0%');
   // A minute and a half later, the first piece is done.
   await page.evaluate(() => {
     window.later(90000);
     const { worker, index } = window.held[0];
     worker.onmessage({ data: { index, bytes: new Uint8Array(0) } });
   });
-  await expect(meta).toHaveText(/^Converting… (\d+)% · about \d+ minutes left$/);
-  // At the same pace, what's left takes as long as what's done did, for
-  // the share still to do.
-  const [percent, minutes] = (await meta.textContent()).match(/\d+/g).map(Number);
-  expect(Math.abs(minutes - 1.5 * (100 - percent) / percent)).toBeLessThan(1);
+  // Its 18,432 samples are 13.9% of the 132,300, so at the same pace the
+  // rest takes 556 seconds: about 9 minutes.
+  await expect(meta).toHaveText('Converting… 13% · about 9 minutes left');
   await expectNoSideScroll(page);
   await page.getByRole('button', { name: 'Stop' }).click();
   await expect(meta).toHaveText(/^\d+ KB$/);
 });
 
-test('stereo at a low bitrate, which lamejs resamples, goes through one encoder', async ({ page }) => {
+test('stereo at a low bitrate, which LAME resamples, goes through one encoder', async ({ page }) => {
   await cores(page, 4);
   await page.reload();
   await fakeWorkers(page, 'hang', 99);
@@ -379,17 +391,17 @@ test('Stop stops converting at once; the file can be converted again', async ({ 
 });
 
 test('Stop before converting gets going starts nothing', async ({ page }) => {
-  // lamejs arrives only when the test lets it.
+  // LAME arrives only when the test lets it.
   let arrive;
   const held = new Promise((resolve) => { arrive = resolve; });
-  await page.route(/\/assets\/vendor\/lame\.min\.js/, async (route) => { await held; await route.continue(); });
+  await page.route(/\/assets\/vendor\/lame\.wasm/, async (route) => { await held; await route.continue(); });
   await fakeWorkers(page, 'hang', 99);
   await page.locator('#picker').setInputFiles([clip()]);
   await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await page.getByRole('button', { name: 'Stop' }).click();
   await expect(page.locator('#msg')).toHaveText('Stopped.');
   arrive();
-  await page.unroute(/\/assets\/vendor\/lame\.min\.js/);
+  await page.unroute(/\/assets\/vendor\/lame\.wasm/);
   // Converting again takes the same steps, after the stopped conversion's
   // own; only this one hires a worker.
   await page.getByRole('button', { name: 'Convert', exact: true }).click();
@@ -481,9 +493,10 @@ test('quality and mono settings shape the MP3', async ({ page }) => {
   expect(sound.hz.length).toBe(1);
 });
 
-// lamejs lowers the sample rate for stereo at 96 kbps (to 32 kHz) and
-// 64 kbps (to 24 kHz). Given more than a few hundred samples at a time, as
-// when a file is decoded whole, it made near silence.
+// LAME lowers the sample rate for stereo at 96 kbps (to 32 kHz) and
+// 64 kbps (to 24 kHz). lamejs, which encoded MP3s before LAME, made near
+// silence there when given more than a few hundred samples at a time, as
+// when a file is decoded whole.
 for (const [kbps, decoded] of [[96, 'whole'], [64, 'whole'], [96, 'a piece at a time']]) {
   test(`stereo at ${kbps} kbps keeps its sound, decoded ${decoded}`, async ({ page }) => {
     const upload = decoded === 'whole' ? file('song.wav', wav(tone(2, 2)), 'audio/wav') : clip();
@@ -541,8 +554,8 @@ test('skips files that aren’t video or audio, and explains one it can’t read
 });
 
 test('an encoder failure is reported on the file', async ({ page }) => {
-  await loadLame(page);
-  await page.evaluate(() => { window.lamejs.Mp3Encoder = function(){ throw new Error('out of memory'); }; });
+  // The page's own encoder, which sees what sample rate the MP3 will have.
+  await page.evaluate(() => { window.bdnixAudio.lame = () => Promise.resolve({ start(){ throw new Error('out of memory'); } }); });
   await page.locator('#picker').setInputFiles([clip()]);
   await page.getByRole('button', { name: 'Convert', exact: true }).click();
   await expect(page.locator('.file-meta')).toHaveText('Couldn’t convert: out of memory');
@@ -664,3 +677,170 @@ test('once a file is open, the drop zone is a row for opening another', async ({
   await page.getByRole('button', { name: 'Stop' }).click();
   await expect(drop).not.toHaveClass(/busy/);
 });
+
+// --- Keeping the screen on, and the report ---
+
+// A wake lock the test can see: window.locks counts what was asked for and
+// let go of. With refuse the browser says no; with none it has no wake
+// lock at all.
+const wakeLock = (page, { refuse = false, none = false } = {}) => page.addInitScript(([refuse, none]) => {
+  window.locks = { requested: 0, released: 0 };
+  const lock = none ? undefined : {
+    request(type){
+      window.locks.requested++;
+      if (type !== 'screen' || refuse) return Promise.reject(new DOMException('Not now', 'NotAllowedError'));
+      return Promise.resolve({ release(){ window.locks.released++; return Promise.resolve(); } });
+    }
+  };
+  Object.defineProperty(Navigator.prototype, 'wakeLock', { get: () => lock, configurable: true });
+}, [refuse, none]);
+
+// The page's clock, moved by the test, and its hiding and showing.
+const clockAndVisibility = (page) => page.addInitScript(() => {
+  let now = Date.now(), hidden = false;
+  Date.now = () => now;
+  window.later = (ms) => { now += ms; };
+  Object.defineProperty(Document.prototype, 'hidden', { get: () => hidden, configurable: true });
+  window.setHidden = (h) => {
+    hidden = h;
+    document.dispatchEvent(new Event('visibilitychange'));
+  };
+});
+
+// The report's rows, as { label: value }.
+const reportOf = async (page) => {
+  const labels = await page.locator('#reportList dt').allTextContents(), values = await page.locator('#reportList dd').allTextContents();
+  return Object.fromEntries(labels.map((label, i) => [label, values[i]]));
+};
+
+// Answers the pieces the workers hold, with no bytes.
+const answerHeld = (page) => page.evaluate(() => {
+  for (const { worker, index } of window.held.splice(0)) worker.onmessage({ data: { index, bytes: new Uint8Array(0) } });
+});
+
+test('keeps the screen on while converting, again on coming back, and says how long the page was hidden', async ({ page }) => {
+  await wakeLock(page);
+  await clockAndVisibility(page);
+  await page.reload();
+  await fakeWorkers(page, 'hang');
+  await page.locator('#picker').setInputFiles([clip()]);
+  const note = page.locator('#awakeNote');
+  await expect(note).toBeHidden();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(note).toHaveText('The screen stays on until converting is done.');
+  expect(await page.evaluate(() => window.locks)).toEqual({ requested: 1, released: 0 });
+  await page.waitForFunction(() => window.held.length === 1);
+
+  // Hidden for 45 seconds: the browser let go of the lock, so it's asked
+  // for again on coming back.
+  await page.evaluate(() => { window.setHidden(true); window.later(45000); window.setHidden(false); });
+  await expect.poll(() => page.evaluate(() => window.locks.requested)).toBe(2);
+  // Hiding and showing while not converting changes nothing.
+  await answerHeld(page);
+  await expect(page.locator('#msg')).toHaveText('Done.');
+  await expect(note).toBeHidden();
+  expect(await page.evaluate(() => window.locks)).toEqual({ requested: 2, released: 1 });
+  await page.evaluate(() => { window.setHidden(true); window.setHidden(false); });
+  expect(await page.evaluate(() => window.locks.requested)).toBe(2);
+
+  const report = await reportOf(page);
+  expect(report.Screen).toBe('Kept on');
+  expect(report['Page hidden']).toBe('0:45: converting pauses while the page is hidden');
+});
+
+test('a conversion that ends while the page is hidden counts the time until it ended', async ({ page }) => {
+  await wakeLock(page);
+  await clockAndVisibility(page);
+  await page.reload();
+  await fakeWorkers(page, 'hang');
+  await page.locator('#picker').setInputFiles([clip()]);
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await page.waitForFunction(() => window.held.length === 1);
+  await page.evaluate(() => { window.setHidden(true); window.later(90000); });
+  await answerHeld(page);
+  await expect(page.locator('#msg')).toHaveText('Done.');
+  expect((await reportOf(page))['Page hidden']).toBe('1:30: converting pauses while the page is hidden');
+  // A lock that arrives after converting has ended is let go of at once.
+  expect(await page.evaluate(() => window.locks)).toEqual({ requested: 1, released: 1 });
+});
+
+for (const [name, options] of [['has no wake lock', { none: true }], ['refuses it', { refuse: true }]]) {
+  test(`when the browser ${name}, it asks for the screen to be kept on`, async ({ page }) => {
+    await wakeLock(page, options);
+    await page.reload();
+    await fakeWorkers(page, 'hang');
+    await page.locator('#picker').setInputFiles([clip()]);
+    await page.getByRole('button', { name: 'Convert', exact: true }).click();
+    await expect(page.locator('#awakeNote')).toHaveText('Keep the screen on: converting pauses if the phone locks.');
+    await page.waitForFunction(() => window.held.length === 1);
+    await answerHeld(page);
+    await expect(page.locator('#msg')).toHaveText('Done.');
+    const report = await reportOf(page);
+    expect(report.Screen).toBe('Not kept on: this browser didn’t allow it');
+    expect(report['Page hidden']).toBeUndefined();
+  });
+}
+
+test('after converting, a report says how it went', async ({ page }) => {
+  await wakeLock(page);
+  await cores(page, 4);
+  await page.reload();
+  await smallPieces(page);
+  const report = page.locator('#report');
+  await page.locator('#picker').setInputFiles([long()]);
+  await expect(report).toBeHidden();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('#msg')).toHaveText('Done.');
+  await expect(report).toBeVisible();
+  await expect(report.getByRole('heading', { name: 'How it went' })).toBeVisible();
+  const rows = await reportOf(page);
+  expect(Object.keys(rows)).toEqual(['Time taken', 'Length', 'Speed', 'Encoders', 'Pieces', 'Sound read', 'File', 'Screen']);
+  expect(rows['Time taken']).toMatch(/^\d+(\.\d)? s$/);
+  expect(rows.Length).toBe('0:03');
+  expect(rows.Speed).toMatch(/^\d+(\.\d)?× real time$/);
+  expect(rows.Encoders).toBe('3 at once, of 4 cores');
+  // 3 seconds (132,300 samples) in pieces of 18,432: the last takes what's
+  // left after six, as it's less than a piece and the sound after it.
+  expect(rows.Pieces).toBe('7 pieces of 0.4 s, the last 0.5 s');
+  expect(rows['Sound read']).toBe('A piece at a time');
+  expect(rows.File).toMatch(/^\d+ KB · 192 kbps · 44\.1 kHz · stereo$/);
+  expect(rows.Screen).toBe('Kept on');
+  await expectNoSideScroll(page);
+
+  // It goes with the result.
+  await page.getByLabel('Quality').selectOption('128');
+  await expect(report).toBeHidden();
+});
+
+test('the report on WAV, on a short file and on MP3 that LAME resamples', async ({ page }) => {
+  await wakeLock(page);
+  await page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'hardwareConcurrency', { get: () => undefined }));
+  await page.reload();
+  await page.locator('#picker').setInputFiles([file('memo.wav', wav(tone(1, 1)), 'audio/wav')]);
+  await page.getByText('WAV', { exact: true }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('#msg')).toHaveText('Done.');
+  let rows = await reportOf(page);
+  expect(Object.keys(rows)).toEqual(['Time taken', 'Length', 'Speed', 'Sound read', 'File', 'Screen']);
+  expect(rows['Sound read']).toBe('All at once');
+  expect(rows.File).toMatch(/^\d+ KB · 44\.1 kHz · mono$/);
+
+  // One piece, with the cores the browser doesn't say.
+  await page.getByText('MP3', { exact: true }).click();
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('#msg')).toHaveText('Done.');
+  rows = await reportOf(page);
+  expect(rows.Encoders).toBe('1 at once');
+  expect(rows.Pieces).toBe('1 piece of 1 s');
+
+  // Pieces that carry on through one encoder.
+  await smallPieces(page);
+  await page.locator('#picker').setInputFiles([long()]);
+  await page.getByLabel('Quality').selectOption('96');
+  await page.getByRole('button', { name: 'Convert', exact: true }).click();
+  await expect(page.locator('#msg')).toHaveText('Done.');
+  rows = await reportOf(page);
+  expect(rows.Pieces).toBe('8 pieces, one after another through one encoder: at this setting LAME lowers the sample rate, and that can’t be shared out');
+  expect(rows.File).toMatch(/^\d+ KB · 96 kbps · 32 kHz · stereo$/);
+});
+

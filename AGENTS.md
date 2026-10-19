@@ -27,7 +27,7 @@ A module is a folder with everything it is and a `module.json` (where its files 
 | Redact `/redact-pdf/` | `apps/redact-pdf/` (`redact.js`, `redact-core.js`, `redact.css`) |
 | Sign `/sign-pdf/` | `apps/sign-pdf/` (`sign.js`, `sign-core.js`, `sign.css`, `fonts/`) |
 | Unlock `/unlock-pdf/` | `apps/unlock-pdf/` (`unlock.js`, `unlock-core.js`, `unlock.css`) |
-| MP4 to MP3 `/mp4-to-mp3/` | `apps/mp4-to-mp3/` (`audio.js`, `audio-core.js`, `audio.css`, `vendor/` lamejs) |
+| MP4 to MP3 `/mp4-to-mp3/` | `apps/mp4-to-mp3/` (`audio.js`, `audio-core.js`, `audio.css`, `vendor/` LAME, built by `lame/`) |
 | Compress Images `/compress-image/` | `apps/compress-image/` (`image.js`, `image-core.js`, `image.css`) |
 | Photo Collage `/photo-collage/` | `apps/photo-collage/` (`collage.js`, `collage-core.js`, `collage.css`) |
 | Resize Without Cropping `/fit-to-frame/` | `apps/fit-to-frame/` (`frame.js`, `frame-core.js`, `frame.css`) |
@@ -56,7 +56,7 @@ Scripts, each exposing one `window.bdnix*` object:
 - `upright` (`upright.js`): games are played with the phone upright (`window.bdnixUpright`). On a phone turned sideways it covers the page with a note asking for it to be turned back, and calls what each game passed to `bdnixUpright.onTurn()`, so the game pauses. Screens with a mouse are never covered, however short the window. Its styles are in `game-shell`'s `game.css`.
 - `sound` (`sound.js`): the sound engine for the games (`window.bdnixSound`), made with the Web Audio API from short recipes, so there are no audio files. It has only the sounds every game plays (`start`, `over` and `best`); each game adds its own with `bdnixSound.add({ name: [tones] })`, made with `bdnixSound.tone()` and `bdnixSound.notes()`. `bdnixSound.play('<name>')` plays one unless sound is muted. It also runs the mute button (`#soundBtn` in a game's top bar) and the M key.
 
-Third-party libraries are vendored in the module that loads them, each with its licence file, and published at `/assets/vendor/`: pdf-lib and PDF.js in `shared/pdftools/vendor/`, fontkit in `apps/watermark-pdf/vendor/`, lamejs in `apps/mp4-to-mp3/vendor/`, Stockfish in `apps/chess/vendor/stockfish/`. None is linked from a page: each is fetched the first time a tool needs it (`bdnixPdf.loadPdfLib()`, `bdnixPdf.loadPdfjs()`, `bdnixFiles.loadScript()`; the chess page starts Stockfish as a web worker when the first game starts), so a page opens without them. Link a new big library the same way. The fonts are self-hosted and published in `/assets/fonts/`: Inter and JetBrains Mono from `shared/base/fonts/`, declared in `base.css`, Kalpurush (from Avro, OmicronLab) from `shared/lang/fonts/`, the unmodified TTF, declared in `bangla.css`, and the signing tool's handwriting fonts from `apps/sign-pdf/fonts/`, declared in `sign.css`; never link a font service, since a page must contact nothing but bdnix.com until the visitor accepts analytics.
+Third-party libraries are vendored in the module that loads them, each with its licence file, and published at `/assets/vendor/`: pdf-lib and PDF.js in `shared/pdftools/vendor/`, fontkit in `apps/watermark-pdf/vendor/`, LAME (compiled to WebAssembly by `apps/mp4-to-mp3/lame/`) in `apps/mp4-to-mp3/vendor/`, Stockfish in `apps/chess/vendor/stockfish/`. None is linked from a page: each is fetched the first time a tool needs it (`bdnixPdf.loadPdfLib()`, `bdnixPdf.loadPdfjs()`, `bdnixFiles.loadScript()`; the audio converter fetches LAME with the first MP3; the chess page starts Stockfish as a web worker when the first game starts), so a page opens without them. Link a new big library the same way. The fonts are self-hosted and published in `/assets/fonts/`: Inter and JetBrains Mono from `shared/base/fonts/`, declared in `base.css`, Kalpurush (from Avro, OmicronLab) from `shared/lang/fonts/`, the unmodified TTF, declared in `bangla.css`, and the signing tool's handwriting fonts from `apps/sign-pdf/fonts/`, declared in `sign.css`; never link a font service, since a page must contact nothing but bdnix.com until the visitor accepts analytics.
 
 ## Every change ends in a pull request with green CI
 
@@ -170,6 +170,7 @@ npm run test:unit
 npm run test:ui
 npm run coverage       # both suites with coverage, combined into coverage/report
 npm run serve          # the site at http://localhost:4173
+npm run build:lame     # rebuild the MP3 encoder (apps/mp4-to-mp3/lame/README.md; rarely needed)
 ```
 
 ## Before you open a pull request

@@ -29,6 +29,38 @@
     return Lang.t('about {h} h {m} min left', { h: Math.floor(minutes / 60), m: minutes % 60 });
   }
 
+  // Numbers for the report: one decimal place, or whole above 10 (tenth()
+  // always has one).
+  function tenth(n){ return Math.round(n * 10) / 10; }
+  function short(n){ return n < 10 ? tenth(n) : Math.round(n); }
+
+  // The report on a finished conversion, as [label, value] rows. r: { took
+  // (ms), seconds (of sound), whole (decoded all at once), size (the
+  // file's, in words), format, kbps, rate, channels (the file's), cores
+  // (as the browser reports them; 0 if it doesn't), mp3 (for MP3: {
+  // workers, pieces (each one's seconds), oneEncoder (pieces went one after
+  // another through one encoder) }), awake: { on (the screen was kept on),
+  // hidden (ms the page was hidden) } }.
+  function reportRows(r){
+    var Lang = window.bdnixLang, t = Lang.t, rows = [], took = r.took / 1000;
+    rows.push([t('Time taken'), took < 60 ? t('{seconds} s', { seconds: tenth(took) }) : fmtTime(took)]);
+    rows.push([t('Length'), fmtTime(r.seconds)]);
+    rows.push([t('Speed'), t('{times}× real time', { times: short(r.seconds / Math.max(took, 0.001)) })]);
+    if (r.mp3) {
+      var n = r.mp3.pieces.length, pieces = Lang.count(n, '{n} piece', '{n} pieces');
+      rows.push([t('Encoders'), r.cores ? t('{workers} at once, of {cores} cores', { workers: r.mp3.workers, cores: r.cores }) : t('{workers} at once', { workers: r.mp3.workers })]);
+      if (r.mp3.oneEncoder) rows.push([t('Pieces'), t('{pieces}, one after another through one encoder: at this setting LAME lowers the sample rate, and that can’t be shared out', { pieces: pieces, count: n })]);
+      else if (n > 1) rows.push([t('Pieces'), t('{pieces} of {length} s, the last {last} s', { pieces: pieces, count: n, length: tenth(r.mp3.pieces[0]), last: tenth(r.mp3.pieces[n - 1]) })]);
+      else rows.push([t('Pieces'), t('{pieces} of {length} s', { pieces: pieces, count: n, length: tenth(r.mp3.pieces[0] || 0) })]);
+    }
+    rows.push([t('Sound read'), r.whole ? t('All at once') : t('A piece at a time')]);
+    var file = { size: r.size, kbps: r.kbps, rate: tenth(r.rate / 1000), channels: r.channels > 1 ? t('stereo') : t('mono') };
+    rows.push([t('File'), r.format === 'mp3' ? t('{size} · {kbps} kbps · {rate} kHz · {channels}', file) : t('{size} · {rate} kHz · {channels}', file)]);
+    rows.push([t('Screen'), r.awake.on ? t('Kept on') : t('Not kept on: this browser didn’t allow it')]);
+    if (r.awake.hidden >= 1000) rows.push([t('Page hidden'), t('{time}: converting pauses while the page is hidden', { time: fmtTime(r.awake.hidden / 1000) })]);
+    return rows;
+  }
+
   // 65 -> "1:05", 3725 -> "1:02:05". Partial seconds round to the nearest.
   function fmtTime(seconds){
     var s = Math.round(seconds), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60;
@@ -93,28 +125,69 @@
     };
   }
 
-  // Samples lamejs is given at a time. Where it lowers the sample rate
-  // (stereo at 64 and 96 kbps), it keeps the sound only if each call holds
-  // no more than a frame at the lower rate, and makes near silence
-  // otherwise; 576 samples is within that at every rate it lowers from.
-  var BITE = 576;
+  // --- LAME, built to WebAssembly (vendor/lame.wasm, from lame/) ---
+
+  // Samples a channel LAME's buffers hold, so the most it's given at once.
+  var BLOCK = 1152 * 4;
+
+  // LAME, ready to use, from its compiled module (a WebAssembly.Module, or
+  // the file's bytes). Resolves to an encoder with one MP3 on the go at a
+  // time: start(channels, rate, kbps) begins one and returns its sample
+  // rate (LAME lowers it for stereo at low bitrates); encode(channels,
+  // from, to) takes those samples of Float32Arrays (one or two) and
+  // returns the MP3 bytes made, as Uint8Arrays; flush() ends the MP3 and
+  // returns its last bytes.
+  function lame(module){
+    // LAME's C library only writes to the console, when something's wrong.
+    var none = function(){ return 0; };
+    var system = { fd_close: none, fd_seek: none, fd_write: none, proc_exit: function(){ throw new Error('LAME stopped'); } };
+    return WebAssembly.instantiate(module, { wasi_snapshot_preview1: system }).then(function(made){
+      var x = (made.instance || made).exports;
+      x._initialize();
+      // The memory can grow, which replaces its buffer, so views of it are
+      // made afresh each time.
+      function bytes(n){
+        if (n < 0) throw new Error('LAME couldn’t encode (error ' + n + ')');
+        return new Uint8Array(x.memory.buffer, x.enc_out(), n).slice();
+      }
+      return {
+        start: function(channels, rate, kbps){
+          var out = x.enc_init(channels, rate, kbps, BLOCK);
+          if (!out) throw new Error('LAME can’t make ' + kbps + ' kbps MP3 from ' + channels + ' channels at ' + rate + ' Hz');
+          return out;
+        },
+        encode: function(channels, from, to){
+          var out = [];
+          for (var at = from; at < to; at += BLOCK) {
+            var n = Math.min(to, at + BLOCK) - at;
+            new Float32Array(x.memory.buffer, x.enc_left(), n).set(channels[0].subarray(at, at + n));
+            if (channels.length > 1) new Float32Array(x.memory.buffer, x.enc_right(), n).set(channels[1].subarray(at, at + n));
+            var b = bytes(x.enc_encode(n));
+            if (b.length) out.push(b);
+          }
+          return out;
+        },
+        flush: function(){ return bytes(x.enc_flush()); }
+      };
+    });
+  }
 
   // Encodes audio handed over a block at a time, as it's decoded, so the
   // whole sound never has to be in memory. opts: { format: 'mp3' or 'wav',
-  // kbps }. lame is the lamejs library, needed for MP3. cut is as
+  // kbps }. enc is a LAME encoder from lame(), needed for MP3. cut is as
   // trimmer() takes it.
   // write(channels, rate) takes Float32Arrays (one or two, the same length);
   // the first call sets the rate and channel count. end() finishes the file
   // and returns { parts (its bytes), frames, rate }.
-  function stream(opts, lame, cut){
-    var mp3 = opts.format === 'mp3', enc = null, count = 0, rate = 0, frames = 0;
+  function stream(opts, enc, cut){
+    var mp3 = opts.format === 'mp3', count = 0, rate = 0, frames = 0;
     var trim = trimmer(cut), parts = [];
 
     function start(channels, sampleRate){
       count = channels;
       rate = sampleRate;
       trim.start(rate);
-      if (mp3) enc = new lame.Mp3Encoder(count, rate, opts.kbps);
+      if (mp3) enc.start(count, rate, opts.kbps);
       // The WAV header needs the length, so it's filled in at the end.
       else parts.push(null);
     }
@@ -123,15 +196,8 @@
       if (!count) start(channels.length, sampleRate);
       var r = trim.range(channels[0].length), from = r[0], to = r[1];
       if (to <= from) return;
-      if (mp3) {
-        for (var at = from; at < to; at += BITE) {
-          var end = Math.min(to, at + BITE), left = toPcm16(channels[0], at, end);
-          var chunk = count > 1 ? enc.encodeBuffer(left, toPcm16(channels[1], at, end)) : enc.encodeBuffer(left);
-          if (chunk.length) parts.push(chunk);
-        }
-      } else {
-        parts.push(interleave(channels, from, to));
-      }
+      if (mp3) parts.push.apply(parts, enc.encode(channels, from, to));
+      else parts.push(interleave(channels, from, to));
       frames += to - from;
     }
 
@@ -144,23 +210,26 @@
       } else {
         parts[0] = wavHeader(frames, count, rate);
       }
-      return { parts: parts, frames: frames, rate: rate };
+      return { parts: parts, frames: frames, rate: rate, channels: count };
     }
 
     // The MP3 made so far, once; what's taken isn't kept here.
     function take(){ return parts.splice(0); }
 
-    return { write: write, end: end, take: take };
+    // How many samples have been written, after the edit list.
+    function written(){ return frames; }
+
+    return { write: write, end: end, take: take, written: written };
   }
 
   // --- MP3 on several cores at once ---
-  // lamejs makes MP3 frames that each stand alone (it keeps no bit
-  // reservoir), so a long recording can be cut into pieces, each encoded by
+  // LAME is set to make MP3 frames that each stand alone (no bit
+  // reservoir: lame/glue.c), so a long recording can be cut into pieces, each encoded by
   // its own worker (audio-worker.js) at the same time, and the frames put
   // back together. Each piece is encoded with LEAD samples of the sound
   // before it and after it, and only its own frames are kept, so the joins
   // come out as one encoder would make them. PIECE and LEAD are whole
-  // frames at every rate. Where lamejs changes the sample rate (stereo at
+  // frames at every rate. Where LAME changes the sample rate (stereo at
   // low bitrates), its frames don't line up with the sound's samples and
   // its resampling drifts from piece to piece, so the pieces then follow
   // one another through one encoder instead.
@@ -183,25 +252,21 @@
   // rates 576.
   function frameSize(rate){ return rate >= 32000 ? 1152 : 576; }
 
-  // The sample rate lamejs makes an MP3 at from this sound (lame is the
-  // lamejs library): its first frame says.
-  function mp3Rate(lame, channels, rate, kbps){
-    var enc = new lame.Mp3Encoder(channels, rate, kbps), quiet = new Int16Array(1152 * 2);
-    var b = enc.encodeBuffer(quiet, quiet);
-    if (!b.length) b = enc.flush();
-    var rates = RATES[b[1] >> 3 & 3];
-    return rates ? rates[b[2] >> 2 & 3] : 0;
+  // The sample rate LAME makes an MP3 at from this sound (enc is a LAME
+  // encoder from lame()).
+  function mp3Rate(enc, channels, rate, kbps){
+    return enc.start(channels, rate, kbps);
   }
 
   // Cuts the sound into pieces for pieceEncoder(). write(channels, rate) is
-  // as stream()'s, lame is the lamejs library and cut is as trimmer() takes
-  // it. onPiece gets each piece as soon as it's whole: { channels
+  // as stream()'s, enc is a LAME encoder from lame() and cut is as
+  // trimmer() takes it. onPiece gets each piece as soon as it's whole: { channels
   // (Float32Arrays), rate, kbps, skip, keep (frames to drop from its start,
   // and to keep after them; keep is -1 for all the rest), samples (how many
   // of its samples are its own), more (whether the next piece carries on
   // through the same encoder) }; end() sends the last. size (optional, at
   // least LEAD, whole frames) is the length of a piece's own sound.
-  function splitter(kbps, lame, cut, onPiece, size){
+  function splitter(kbps, enc, cut, onPiece, size){
     size = size || api.PIECE;
     var trim = trimmer(cut), rate = 0, lead = LEAD, buf = null, have = 0, start = 0, at = 0;
 
@@ -220,7 +285,7 @@
       if (!buf) {
         rate = sampleRate;
         trim.start(rate);
-        if (mp3Rate(lame, channels.length, rate, kbps) !== rate) lead = 0;
+        if (mp3Rate(enc, channels.length, rate, kbps) !== rate) lead = 0;
         buf = channels.map(function(){ return new Float32Array(size + 2 * lead); });
       }
       var r = trim.range(channels[0].length);
@@ -273,14 +338,15 @@
     return n > skip ? b.subarray(from, Math.min(at, b.length)) : new Uint8Array(0);
   }
 
-  // Makes pieces from splitter() into MP3 (lame is the lamejs library).
+  // Makes pieces from splitter() into MP3 (enc is a LAME encoder from
+  // lame()).
   // The function returned takes a piece and returns its own frames, ready
   // to join to the pieces before and after it, as a Uint8Array. A piece
   // with more set carries on in the next one it's given.
-  function pieceEncoder(lame){
+  function pieceEncoder(enc){
     var out = null;
     return function(piece){
-      if (!out) out = stream({ format: 'mp3', kbps: piece.kbps }, lame);
+      if (!out) out = stream({ format: 'mp3', kbps: piece.kbps }, enc);
       if (piece.channels.length) out.write(piece.channels, piece.rate);
       var parts = piece.more ? out.take() : out.end().parts, size = 0, at = 0;
       if (!piece.more) out = null;
@@ -566,7 +632,7 @@
   // PIECE is the longest a piece is; tests make it shorter, to have several
   // pieces in a short recording.
   var api = window.bdnixAudio = {
-    isMedia: isMedia, outName: outName, fmtTime: fmtTime, timeLeft: timeLeft,
+    lame: lame, isMedia: isMedia, outName: outName, fmtTime: fmtTime, timeLeft: timeLeft, reportRows: reportRows,
     mix: mix, toPcm16: toPcm16, stream: stream, mp3Rate: mp3Rate, pieceSize: pieceSize, splitter: splitter, pieceEncoder: pieceEncoder, keepFrames: keepFrames,
     mp4: mp4, audioOnly: audioOnly, PIECE: PIECE
   };

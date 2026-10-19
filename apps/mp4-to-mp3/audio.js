@@ -1,5 +1,5 @@
 // Audio converter (mp4-to-mp3). The browser decodes each file's audio and
-// lamejs encodes the MP3, in workers (audio-worker.js), so nothing is
+// LAME encodes the MP3, in workers (audio-worker.js), so nothing is
 // uploaded. The encoding itself lives in audio-core.js.
 (function(){
   var T = window.bdnixFiles, A = window.bdnixAudio;
@@ -14,8 +14,13 @@
   // The page names the worker and the core it loads, so the build stamps
   // them like its other links and they always match this script.
   var me = document.currentScript;
-  var WORKER = me.getAttribute('data-worker'), CORE = me.getAttribute('data-core');
-  var LAME = '/assets/vendor/lame.min.js?v=1.2.1';
+  var WORKER = me.getAttribute('data-worker');
+  // The workers load audio-core.js from its own place; they're only told
+  // its version, the build's stamp.
+  var CORE = (/[?&]v=([^&]*)/.exec(me.getAttribute('data-core')) || [])[1] || '';
+  // LAME, built to WebAssembly (lame/README.md); its version, and a build
+  // number for changes to how it's built.
+  var LAME = '/assets/vendor/lame.wasm?v=3.100-1';
   // MP3 workers at once: one per core, leaving one for the page and the
   // decoding.
   var WORKERS = Math.max(1, Math.min(6, (navigator.hardwareConcurrency || 2) - 1));
@@ -30,6 +35,9 @@
   var convertBtn = document.getElementById('convertBtn');
   var convertLabel = document.getElementById('convertLabel');
   var stopBtn = document.getElementById('stopBtn');
+  var awakeNote = document.getElementById('awakeNote');
+  var report = document.getElementById('report');
+  var reportList = document.getElementById('reportList');
   var supportWarn = document.getElementById('supportWarn');
 
   document.getElementById('year').textContent = new Date().getFullYear();
@@ -142,6 +150,19 @@
     convertBtn.disabled = busy || !f || f.state !== 'ready';
     stopBtn.hidden = !busy;
     if (!busy) stopBtn.disabled = false;
+    awakeNote.hidden = !busy;
+    if (!busy) awakeNote.textContent = '';
+    report.hidden = !(f && f.state === 'done' && f.report);
+    reportList.textContent = '';
+    if (!report.hidden) {
+      A.reportRows(f.report).forEach(function(row){
+        var dt = document.createElement('dt'), dd = document.createElement('dd');
+        dt.textContent = row[0];
+        dd.textContent = row[1];
+        reportList.appendChild(dt);
+        reportList.appendChild(dd);
+      });
+    }
     picker.disabled = busy;
     Array.prototype.forEach.call(form.elements, function(el){ el.disabled = busy; });
     qualityField.hidden = settings().format !== 'mp3';
@@ -201,19 +222,19 @@
   // Where the decoded sound goes. write(channels, rate) is as
   // bdnixAudio.stream()'s, and end() resolves to { parts, frames, rate }.
   // While full() is true, wait for room: the sink calls onRoom when it has
-  // some. share() is how much of what's been written is encoded, 0 to 1.
-  // broken rejects if encoding fails before the end. expect(samples) says,
-  // before the first write, how long the sound will be. stop() drops the
-  // work, and stopped() says whether it has been.
+  // some. broken rejects if encoding fails before the end.
+  // expect(samples) says, before the first write, how long the sound will
+  // be, and progress() is how much of that is done, 0 to 1 (0 if it isn't
+  // known). stop() drops the work, and stopped() says whether it has been.
   function wavSink(cut){
-    var out = A.stream({ format: 'wav' }, null, cut), dead = false;
+    var out = A.stream({ format: 'wav' }, null, cut), dead = false, length = 0;
     return {
       write: out.write,
       end: function(){ return Promise.resolve(out.end()); },
       full: function(){ return false; },
-      share: function(){ return 1; },
       broken: new Promise(function(){}),
-      expect: function(){},
+      expect: function(samples){ length = samples; },
+      progress: function(){ return length > 0 ? Math.min(1, out.written() / length) : 0; },
       stop: function(){ dead = true; },
       stopped: function(){ return dead; }
     };
@@ -223,15 +244,24 @@
   // workers at once and put back together in order; pieces that carry on
   // into the next all go through one worker. A recording too short to
   // keep every worker busy with full-length pieces is shared out evenly
-  // (bdnixAudio.pieceSize). lame is the lamejs library. onEncoded is
+  // (bdnixAudio.pieceSize). lame is LAME's module and enc a LAME encoder
+  // (bdnixAudio.lame) for the page's own use. onEncoded is
   // called as each piece is done.
-  function mp3Sink(opts, lame, cut, onEncoded){
+  function mp3Sink(opts, lame, enc, cut, onEncoded){
     var workers = [], idle = [], queue = [], blobs = [], own = [], most = WORKERS, length = 0, split = null;
     var sent = 0, done = 0, written = 0, encoded = 0, rate = 0, dead = false, failure = null, settle = null, breaks;
+    // For the report: workers hired, whether the pieces were chained
+    // through one, and the MP3's channels and rate.
+    var hired = 0, chained = false, channels = 1, outRate = 0;
     // Made with the first sound, once the length is known.
     function splitter(){
-      return split || (split = A.splitter(opts.kbps, lame, cut, function(piece){
-        if (piece.more) most = 1;
+      return split || (split = A.splitter(opts.kbps, enc, cut, function(piece){
+        if (piece.more) chained = true;
+        if (chained) most = 1;
+        if (!sent) {
+          channels = piece.channels.length || 1;
+          outRate = A.mp3Rate(enc, channels, piece.rate, opts.kbps);
+        }
         piece.index = sent++;
         own[piece.index] = piece.samples;
         written += piece.samples;
@@ -252,7 +282,7 @@
       },
       expect: function(samples){ length = samples; },
       full: function(){ return sent - done > most; },
-      share: function(){ return written ? encoded / written : 0; },
+      progress: function(){ return length > 0 ? Math.min(1, encoded / length) : 0; },
       // A failure can come while the decoding waits for room that never
       // comes.
       broken: new Promise(function(resolve, reject){ breaks = reject; }),
@@ -278,6 +308,7 @@
     }
     function hire(){
       var w = new Worker(WORKER);
+      hired++;
       w.onmessage = function(e){
         var d = e.data;
         if (d.unloaded) return unloaded();
@@ -298,7 +329,7 @@
         e.preventDefault();
         unloaded();
       };
-      w.postMessage({ load: [CORE, LAME] });
+      w.postMessage({ load: true, core: CORE, lame: lame });
       workers.push(w);
       return w;
     }
@@ -309,15 +340,31 @@
       }
     }
     function finish(){
-      if (settle && !dead && done === sent) settle.resolve({ parts: blobs, frames: written, rate: rate });
+      if (settle && !dead && done === sent) {
+        settle.resolve({
+          parts: blobs, frames: written, rate: rate, channels: channels,
+          mp3: { workers: hired, pieces: own.slice(), oneEncoder: chained, rate: outRate }
+        });
+      }
     }
     return sink;
   }
 
-  // lamejs is only fetched the first time someone makes an MP3.
+  // LAME is only fetched the first time someone makes an MP3, and compiled
+  // once: the page keeps an encoder of its own (to see which sample rate an
+  // MP3 will have) and hands the module to the workers. Resolves to
+  // { module, enc }, or null for WAV. A failure is tried again next time.
+  var loading = null;
   function loadEncoder(opts){
     if (opts.format !== 'mp3') return Promise.resolve(null);
-    return T.loadScript(LAME, 'lamejs').catch(function(){
+    loading = loading || fetch(LAME).then(function(res){
+      if (!res.ok) throw new Error(res.status);
+      return res.arrayBuffer();
+    }).then(function(bytes){ return WebAssembly.compile(bytes); }).then(function(module){
+      return A.lame(module).then(function(enc){ return { module: module, enc: enc }; });
+    });
+    return loading.catch(function(){
+      loading = null;
       throw new Error(t('the MP3 encoder didn’t load. Check your connection and try again'));
     });
   }
@@ -327,7 +374,7 @@
   // Resolves to what the sink's end() does.
   function streamed(track, read, opts, out, unreadable, onProgress){
     return new Promise(function(resolve, reject){
-      var failed = false, wake = null, next = 0, fed = 0;
+      var failed = false, wake = null, next = 0;
       function fail(err){
         if (failed) return;
         failed = true;
@@ -342,7 +389,9 @@
       }
       // Stopping closes the decoder.
       stoppers.push(function(){ fail(STOPPED); });
-      out.expect(track.seconds * track.config.sampleRate);
+      // As long as the edit list says, if it says.
+      var cut = track.cut, seconds = cut ? Math.min(track.seconds - cut.skip, cut.keep) : track.seconds;
+      out.expect(seconds * track.config.sampleRate);
       var decoder = new AudioDecoder({
         output: function(data){
           try {
@@ -394,8 +443,7 @@
           for (var k = 0, at = 0; k < ch.sizes.length; at += ch.sizes[k++]) {
             decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: ch.times[k], data: b.subarray(at, at + ch.sizes[k]) }));
           }
-          fed += ch.sizes.length;
-          onProgress(fed / track.samples);
+          onProgress();
           feed();
         }).catch(function(){ fail(unreadable); });
       }
@@ -419,7 +467,7 @@
           out.write(channels.map(function(c){ return c.subarray(pos, end); }), rate);
           pos = end;
         }
-        onProgress(total ? pos / total : 1);
+        onProgress();
         if (pos >= total) resolve(out.end());
         else if (out.full()) out.onRoom = slice;
         else nextTick(slice);
@@ -439,6 +487,35 @@
       });
   }
 
+  // Keeps the screen on while converting, where the browser can (the
+  // Screen Wake Lock API): a phone that locks itself pauses the page, and
+  // the converting with it. The browser lets go whenever the page is
+  // hidden, so it's asked again on coming back. awake is how it went, for
+  // the report: whether the screen was kept on, and for how long (ms) the
+  // page was hidden.
+  var lock = null, hiddenAt = 0, awake = { on: false, hidden: 0 };
+  function wake(){
+    if (!navigator.wakeLock) return Promise.resolve();
+    return navigator.wakeLock.request('screen').then(function(l){
+      lock = l;
+      awake.on = true;
+      if (!busy) sleep();
+    }, function(){});
+  }
+  function sleep(){
+    if (lock) Promise.resolve(lock.release()).catch(function(){});
+    lock = null;
+  }
+  function hidden(){
+    if (hiddenAt) awake.hidden += Date.now() - hiddenAt;
+    hiddenAt = document.hidden ? Date.now() : 0;
+  }
+  document.addEventListener('visibilitychange', function(){
+    if (!busy) return;
+    hidden();
+    if (!document.hidden) wake();
+  });
+
   // The conversion under way: halt() stops it at once, and stoppers are
   // what then closes its decoder and workers. They're also run when it
   // ends.
@@ -449,15 +526,14 @@
     f.progress = 0;
     f.started = Date.now();
     render();
-    var unreadable = {}, read = reader(f.file), out = null, input = 0, lame;
-    // input is how much of the sound has been decoded, and the sink says
-    // how much of that is encoded.
-    function progress(fraction){
-      if (fraction != null) input = fraction;
-      f.progress = out ? input * out.share() : input;
+    var unreadable = {}, read = reader(f.file), out = null, lame;
+    // How much of the sound is encoded (or written, for WAV), as the sink
+    // says.
+    function progress(){
+      f.progress = out ? out.progress() : 0;
       showMeta(f);
     }
-    var live = true, stopped = new Promise(function(resolve, reject){
+    var streams = false, live = true, stopped = new Promise(function(resolve, reject){
       halt = function(){
         live = false;
         reject(STOPPED);
@@ -470,8 +546,9 @@
       return canStream(track, opts).then(function(ok){
         // Stopped while the file was being opened: start nothing.
         if (!live) throw STOPPED;
+        streams = ok;
         var cut = ok ? track.cut : null;
-        out = lame ? mp3Sink(opts, lame, cut, function(){ progress(); }) : wavSink(cut);
+        out = lame ? mp3Sink(opts, lame.module, lame.enc, cut, function(){ progress(); }) : wavSink(cut);
         stoppers.push(out.stop);
         return Promise.race([ok ? streamed(track, read, opts, out, unreadable, progress) : whole(f, track, opts, out, unreadable, progress), out.broken]);
       });
@@ -483,6 +560,14 @@
       f.outSize = blob.size;
       f.seconds = result.frames / result.rate;
       f.state = 'done';
+      // The rest of the report (awake) is filled in as converting ends.
+      f.report = {
+        took: Date.now() - f.started, seconds: f.seconds, whole: !streams,
+        size: fmtSize(blob.size), format: opts.format, kbps: opts.kbps, channels: result.channels,
+        rate: result.mp3 ? result.mp3.rate : result.rate, mp3: result.mp3 || null,
+        cores: navigator.hardwareConcurrency || 0, awake: awake
+      };
+      if (result.mp3) f.report.mp3.pieces = result.mp3.pieces.map(function(n){ return n / result.rate; });
     }).catch(function(err){
       if (err === STOPPED) {
         f.state = 'ready';
@@ -505,7 +590,15 @@
     stopping = false;
     say('');
     convertLabel.textContent = t('Converting…');
+    awake = { on: false, hidden: 0 };
+    hiddenAt = document.hidden ? Date.now() : 0;
+    wake().then(function(){
+      if (busy) awakeNote.textContent = awake.on ? t('The screen stays on until converting is done.') : t('Keep the screen on: converting pauses if the phone locks.');
+    });
     convert(f, settings()).then(function(){
+      hidden();
+      hiddenAt = 0;
+      sleep();
       busy = false;
       render();
       if (stopping) say(t('Stopped.'));

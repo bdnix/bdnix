@@ -10,7 +10,7 @@ export default [
   {
     files: ['apps/*/*.js', 'shared/*/*.js', 'site/*/*.js'],
     // The vendored libraries' globals (each module's vendor/).
-    languageOptions: { ecmaVersion: 2020, sourceType: 'script', globals: { ...globals.browser, PDFLib: 'readonly', lamejs: 'readonly', fontkit: 'readonly' } },
+    languageOptions: { ecmaVersion: 2020, sourceType: 'script', globals: { ...globals.browser, PDFLib: 'readonly', fontkit: 'readonly' } },
     rules: {
       // Storage may be blocked (private browsing), and that's fine: catch (e) {}.
       'no-empty': ['error', { allowEmptyCatch: true }],
