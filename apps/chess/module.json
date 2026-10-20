@@ -5,11 +5,9 @@
   "publish": {
     "index.html": "/chess/index.html",
     "chess.js": "/assets/js/chess.js",
-    "chess-core.js": "/assets/js/chess-core.js",
-    "chess.css": "/assets/css/chess.css",
-    "vendor/stockfish/": "/assets/vendor/stockfish/"
+    "chess.css": "/assets/css/chess.css"
   },
-  "uses": ["analytics", "backdrop", "base", "files", "game-shell", "gamesave", "icon-btn", "lang", "seg", "sound", "upright"],
+  "uses": ["analytics", "backdrop", "base", "chess-core", "files", "game-shell", "gamesave", "icon-btn", "lang", "seg", "sound", "stockfish", "upright"],
   "page": {
     "title": "Chess — Play Stockfish free in your browser | bdnix",
     "description": "Play chess free in your browser against Stockfish, at ten levels, as White or Black, then review every move with the engine. Open a PGN file to analyse any game. Nothing to install.",

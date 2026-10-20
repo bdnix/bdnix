@@ -1,0 +1,7 @@
+{
+  "name": "stockfish",
+  "kind": "shared",
+  "publish": {
+    "vendor/": "/assets/vendor/stockfish/"
+  }
+}

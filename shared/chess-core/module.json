@@ -1,0 +1,7 @@
+{
+  "name": "chess-core",
+  "kind": "shared",
+  "publish": {
+    "chess-core.js": "/assets/js/chess-core.js"
+  }
+}

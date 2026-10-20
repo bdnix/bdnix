@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load, plain } from '../../../tests/unit/load.mjs';
 
-const C = load('apps/chess/chess-core.js').bdnixChess;
+const C = load('shared/chess-core/chess-core.js').bdnixChess;
 
 // Plays UCI moves from the start (or a game passed in); fails on an illegal one.
 function playAll(list, game = C.newGame()){
