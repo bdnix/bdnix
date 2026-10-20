@@ -89,7 +89,9 @@
     $('courseSide').textContent = t('Level {n} · you play {color}', { n: c.level, color: colorName(c.side) });
     $('courseIntro').textContent = c.intro;
     showLines();
-    $('courseTitle').focus();
+    // The course's board at the top of the screen, its title read out.
+    window.scrollTo(0, 0);
+    $('courseTitle').focus({ preventScroll: true });
   }
 
   // ---------- A course's lines ----------
@@ -141,7 +143,7 @@
     $('lessonTitle').textContent = line().name;
     hintBtn.hidden = how !== 'practice';
     render();
-    $('lessonTitle').focus();
+    $('lessonTitle').focus({ preventScroll: true });
     next();
   }
 
@@ -240,7 +242,7 @@
     var after = L.nextLine(progress, course, lineAt);
     $('nextBtn').hidden = after === null;
     render();
-    $('doneTitle').focus();
+    $('doneTitle').focus({ preventScroll: true });
   }
 
   // Stops whatever's under way: the other side's move, Stockfish.
@@ -265,7 +267,7 @@
     selected = -1;
     render();
     updatePlay();
-    $('playTitle').focus();
+    $('playTitle').focus({ preventScroll: true });
     think();
   }
   function startEngine(){
