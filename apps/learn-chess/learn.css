@@ -1,0 +1,129 @@
+/* Learn Chess: the list of courses, and a course's board beside its panel.
+   The page layout is in page.css, the tool page's parts in tool.css. */
+.defs{position:absolute;width:0;height:0;overflow:hidden}
+
+/* ---- The courses ---- */
+.courses .label{margin:0 0 12px}
+.course-list{
+  list-style:none;margin:0;padding:0;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;
+}
+.course{display:flex;flex-direction:column;gap:8px;padding:18px}
+.course p{margin:0}
+.course-name{margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em}
+.course-about{font-size:14px;line-height:1.5;color:var(--muted);flex:1}
+.course-progress{font:400 12px var(--mono);color:var(--faint)}
+.course .btn{align-self:flex-start;margin-top:4px}
+.saved-note{margin:14px 0 0;font-size:13px;color:var(--faint)}
+
+/* ---- A course: the board and its panel ---- */
+.study{
+  margin-top:24px;
+  display:grid;
+  grid-template-columns:minmax(0,520px) minmax(0,1fr);
+  align-items:start;gap:20px;
+}
+.board-wrap{position:relative;width:100%}
+#board.board{
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  aspect-ratio:1;width:100%;
+  border-radius:6px;overflow:hidden;
+  touch-action:none;
+}
+.sq{
+  position:relative;
+  display:block;width:100%;height:100%;min-width:0;
+  margin:0;padding:0;border:0;border-radius:0;
+  background:#d6d9ee;
+  line-height:0;
+}
+.sq.dark{background:#8576c4}
+.sq:focus{outline:none}
+.sq:focus-visible{box-shadow:inset 0 0 0 3px var(--cyan)}
+.sq.last{background:#e8d98a}
+.sq.dark.last{background:#b8a45a}
+.sq.hint{background:#9ee8f4}
+.sq.dark.hint{background:#4fbfd2}
+.sq.sel{background:#7fe0f0}
+.sq.dark.sel{background:#3fb3c8}
+.sq.check{background:radial-gradient(circle,#ff5470 0%,#e2304f 45%,transparent 80%),#d6d9ee}
+.sq.dark.check{background:radial-gradient(circle,#ff5470 0%,#e2304f 45%,transparent 80%),#8576c4}
+/* Where the selected piece can go: a dot, or a ring around a piece it can take. */
+.sq.to::after{
+  content:"";position:absolute;left:50%;top:50%;
+  width:30%;height:30%;margin:-15% 0 0 -15%;border-radius:50%;
+  background:rgba(8,10,18,.32);
+}
+.sq.to.take::after{width:88%;height:88%;margin:-44% 0 0 -44%;background:none;border:4px solid rgba(8,10,18,.32)}
+.coord{
+  position:absolute;
+  font:600 10px/1 var(--mono);color:rgba(8,10,18,.55);
+  pointer-events:none;
+}
+.coord.file{right:3px;bottom:3px}
+.coord.rank{left:3px;top:3px}
+.dark .coord{color:rgba(255,255,255,.7)}
+
+/* The pieces: white with a dark outline, black with a light one. */
+.pc{
+  position:absolute;inset:4%;width:92%;height:92%;
+  pointer-events:none;
+  stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round;
+}
+.pc.w{fill:#f8f9fd;stroke:#121626}
+.pc.b{fill:#1b2036;stroke:#e4e7f4}
+.pc.w .cut{stroke:#121626;fill:none}
+.pc.b .cut{stroke:#e4e7f4;fill:none}
+.pc.slide{transition:transform .18s ease}
+.pc.drag{z-index:2;transition:none;filter:drop-shadow(0 6px 8px rgba(0,0,0,.45))}
+
+/* The move to play, as an arrow over the board. */
+.arrows{position:absolute;inset:0;z-index:1;width:100%;height:100%;pointer-events:none}
+.arrows polygon{fill:rgba(250,204,21,.85)}
+
+/* ---- The panel beside the board ---- */
+.study-panel{display:flex;flex-direction:column;gap:10px;padding:18px;min-width:0}
+.study-panel p{margin:0}
+.back{align-self:flex-start}
+.course-title{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}
+.course-title:focus,.view-title:focus{outline:none}
+.view-title{margin:0;font-size:18px;font-weight:700}
+.intro,.done-text,.end-text{font-size:14px;line-height:1.55;color:var(--muted)}
+.end-text{color:var(--fg)}
+
+.line-list{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+.line{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:12px}
+.line-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.line-name{font-weight:600}
+.line-state{flex-shrink:0;font:600 11px var(--mono);color:var(--faint)}
+.line.learned .line-state{color:var(--cyan)}
+.line.mastered .line-state{color:var(--violet)}
+.line-actions{display:flex;flex-wrap:wrap;gap:8px}
+
+/* The moves so far, each with its note, the newest first. */
+.notes{
+  list-style:none;margin:0;padding:0;
+  display:flex;flex-direction:column;gap:8px;
+  max-height:320px;overflow-y:auto;
+}
+.notes:empty{display:none}
+.notes li{font-size:14px;line-height:1.5;color:var(--muted);padding-left:10px;border-left:2px solid var(--line)}
+.notes li.mine{border-left-color:var(--violet)}
+.notes li:first-child{color:var(--fg)}
+.notes li b{color:var(--fg);font:600 13px var(--mono);margin-right:4px}
+.prompt{font-weight:600;line-height:1.45}
+.lesson-msg{min-height:1.4em;font-size:14px;color:var(--pink)}
+.study-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+
+/* Three levels side by side. */
+.seg.level-seg{grid-template-columns:repeat(3,1fr);border:0;margin:0;padding:0}
+.level-seg legend{margin-bottom:8px;padding:0}
+.level-seg label + label span{border-left:0}
+.level-seg label:nth-of-type(2) span{border-radius:0}
+
+@media (max-width:820px){
+  .study{grid-template-columns:minmax(0,1fr)}
+  .board-col{max-width:520px;width:100%;margin:0 auto}
+  .notes{max-height:240px}
+}

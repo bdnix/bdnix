@@ -56,7 +56,9 @@ test('cards and scores follow the order of the list', () => {
   const html = cards(pages, 'games').join('\n');
   const hrefs = [...html.matchAll(/<a class="card panel" href="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(hrefs, apps.filter((p) => p.app.kind === 'game').map((p) => p.path));
-  assert.equal(cards(pages, 'tools').filter((l) => l.startsWith('<a ')).length, 9);
+  const tools = [...cards(pages, 'tools').join('\n').matchAll(/<a class="card panel" href="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(tools, apps.filter((p) => p.app.kind === 'tool').map((p) => p.path));
+  assert.ok(tools.length > 0);
   assert.deepEqual(cards(pages, 'nothing'), []);
   const rows = scores(pages).filter((l) => l.startsWith('<div class="score panel"'));
   assert.deepEqual(rows.map((l) => l.match(/data-best="([^"]+)"/)[1]),

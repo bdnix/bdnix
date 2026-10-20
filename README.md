@@ -24,6 +24,7 @@ The whole site, games included, is also in Bangla: the switch in the top bar pic
 | [Compress Images](https://www.bdnix.com/compress-image/) | Shrink photos and images as JPEG, WebP or PNG, optionally resizing them. Camera metadata such as location is stripped. |
 | [Photo Collage](https://www.bdnix.com/photo-collage/) | Put 3, 6 or 9 photos into one picture: choose a layout and shape, the spacing, corners and background, and download a JPEG or PNG. |
 | [Resize Without Cropping](https://www.bdnix.com/fit-to-frame/) | Make an image fit a social media shape (square, 4:5, 9:16 and more) or any size without cropping, by adding space around it in the colour you choose. |
+| [Learn Chess](https://www.bdnix.com/learn-chess/) | Learn chess openings move by move: four courses, easiest first (the Italian Game and the London System as White, the Scandinavian and the Queen's Gambit Declined as Black), every move explained. Practise each line from memory until it's mastered, then play on against Stockfish from where it ends. |
 
 ## Games
 

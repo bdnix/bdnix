@@ -1,0 +1,33 @@
+{
+  "name": "learn-chess",
+  "kind": "app",
+  "url": "/learn-chess/",
+  "publish": {
+    "index.html": "/learn-chess/index.html",
+    "lessons.js": "/assets/js/lessons.js",
+    "learn-core.js": "/assets/js/learn-core.js",
+    "learn.js": "/assets/js/learn.js",
+    "learn.css": "/assets/css/learn.css"
+  },
+  "uses": ["analytics", "avatar", "backdrop", "base", "chess-core", "features", "footer", "lang", "page", "profile", "profile-chip", "seg", "stockfish", "tool"],
+  "page": {
+    "title": "Learn Chess — Chess openings, move by move | bdnix",
+    "description": "Learn chess openings free, step by step: the Italian Game, the London System, the Scandinavian and the Queen’s Gambit Declined, every move explained. Practise each line, then play on against Stockfish.",
+    "schema": "WebApplication",
+    "category": "EducationalApplication"
+  },
+  "card": {
+    "kind": "tool",
+    "name": "Learn Chess",
+    "blurb": "Chess openings, move by move",
+    "keywords": "tool chess learn openings lessons course tutorial beginner practice italian london scandinavian queen's gambit stockfish",
+    "icon": [
+      "<rect x=\"4\" y=\"4\" width=\"32\" height=\"32\" rx=\"3\" fill=\"#22d3ee\" opacity=\".3\"/>",
+      "<rect x=\"20\" y=\"4\" width=\"16\" height=\"16\" rx=\"3\" fill=\"#a855f7\" opacity=\".55\"/>",
+      "<rect x=\"4\" y=\"20\" width=\"16\" height=\"16\" rx=\"3\" fill=\"#a855f7\" opacity=\".55\"/>",
+      "<path d=\"M9 12h11M9 17h8\" stroke=\"#eef1f8\" stroke-width=\"2.4\" stroke-linecap=\"round\"/>",
+      "<path d=\"M24 32l4-10 4 10z\" fill=\"#eef1f8\"/>",
+      "<circle cx=\"28\" cy=\"20\" r=\"2.6\" fill=\"#eef1f8\"/>"
+    ]
+  }
+}
