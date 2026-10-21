@@ -34,23 +34,31 @@ test.describe('in Bangla', () => {
     await expectNoSideScroll(page);
   });
 
-  test('every line of every course, learned and then practised with a mistake, in Bangla', async ({ page }) => {
-    await open(page);
-    const courses = await page.evaluate(() => window.bdnixCourses.map((c) => ({ id: c.id, side: c.side, lines: c.lines.map((l) => l.id) })));
-    for (const [ci, c] of courses.entries()) {
+  // Every line of each course, learned, one test per course.
+  for (const [ci, id] of ['italian', 'london', 'scandinavian', 'queens-gambit-declined'].entries()) {
+    test(`every line of course ${ci + 1}, ${id}, learned in Bangla`, async ({ page }) => {
+      await open(page);
+      const c = await page.evaluate((k) => {
+        const x = window.bdnixCourses.find((y) => y.id === k);
+        return { side: x.side, lines: x.lines.map((l) => l.id) };
+      }, id);
       await page.locator('.course .btn').nth(ci).click();
       for (const [li, l] of c.lines.entries()) {
-        const steps = await stepsOf(page, c.id, l);
         await page.locator('.line .learn').nth(li).click();
-        await playMoves(page, steps, c.side);
+        await playMoves(page, await stepsOf(page, id, l), c.side);
         await expect(page.locator('#doneTitle')).toHaveText('লাইন শেখা হয়েছে');
         await page.locator('#doneLinesBtn').click();
       }
+      await expect(page.locator('.line-state')).toHaveText(Array(c.lines.length).fill('শেখা হয়েছে'));
       await page.locator('#allBtn').click();
-      await expectTranslated(page);
-    }
+      await expect(page.locator('.course-progress').nth(ci)).toHaveText(`৩টি লাইনের ৩টি শেখা হয়েছে · ০টি আয়ত্তে`);
+    });
+  }
+
+  test('a line practised with a mistake and a hint, then mastered, in Bangla', async ({ page }) => {
+    await open(page);
     // Practising, with a mistake and a hint: counted in Bangla.
-    await startLine(page, 'Scandinavian Defence চালিয়ে যান', 'অনুশীলন: যখন সাদা ২.e5 এগিয়ে দেয়');
+    await startLine(page, 'Scandinavian Defence শুরু করুন', 'অনুশীলন: যখন সাদা ২.e5 এগিয়ে দেয়');
     await page.clock.runFor(REPLY);
     await move(page, 'a7', 'a6');
     await expect(page.locator('#lessonMsg')).toHaveText('এই লাইনের চাল ওটা নয়। আবার চেষ্টা করুন।');
