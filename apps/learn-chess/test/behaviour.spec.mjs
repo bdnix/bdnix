@@ -21,6 +21,12 @@ test('lists the courses, easiest first, each with how far you are', async ({ pag
   await expect(courses.locator('.course-progress')).toHaveText(Array(4).fill('0 of 3 lines learned · 0 mastered'));
   await expect(courses.getByRole('button')).toHaveText(['Start', 'Start', 'Start', 'Start']);
   await expect(page.locator('#study')).toBeHidden();
+  // The guide for someone new to chess, closed until it's asked for.
+  const guide = page.locator('.guide');
+  await expect(guide.locator('ul')).toBeHidden();
+  await guide.getByText('New to chess? Start here').click();
+  await expect(guide.locator('li b')).toHaveText(['The board', 'White moves first', 'How the pieces move:', 'Taking:', 'An opening']);
+  await expect(guide.locator('li').first()).toContainText('So e4 is the square in column e, row 4.');
   await expectNoSideScroll(page);
 });
 
@@ -31,21 +37,22 @@ test('learns a line: an arrow shows each move, the other side replies, every mov
   await expect(page.locator('#courseTitle')).toBeFocused();
   await expect(page.locator('#courseSide')).toHaveText('Level 1 · you play White');
   await expect(page.locator('#about')).toBeHidden();
-  await expect(page.locator('.line-name')).toHaveText(['The quiet main line', 'Two Knights Defence', 'Don’t take the bait']);
+  await expect(page.locator('.line-name')).toHaveText(['The calm main line', 'When Black brings out both knights', 'Don’t fall for the trap']);
   await expect(page.locator('.line-state')).toHaveText(['New', 'New', 'New']);
 
-  await page.getByRole('button', { name: 'Learn: The quiet main line' }).click();
+  await page.getByRole('button', { name: 'Learn: The calm main line' }).click();
   await expect(page.locator('#lessonMode')).toHaveText('Learning');
-  await expect(page.locator('#lessonTitle')).toHaveText('The quiet main line');
+  await expect(page.locator('#lessonTitle')).toHaveText('The calm main line');
   await expect(page.locator('#hintBtn')).toBeHidden();
-  await expect(prompt(page)).toHaveText('Your move: move the pawn to e4.');
+  await expect(prompt(page)).toHaveText('Your move: move your pawn from e2 to e4.');
+  await expect(page.locator('#how')).toHaveText('To move, tap a piece and then the square it goes to, or drag it. The yellow arrow shows the move.');
   expect(await arrowShown(page)).toBe(1);
   await expect(sq(page, 'e2')).toHaveClass(/\bhint\b/);
   await expect(sq(page, 'e4')).toHaveClass(/\bhint\b/);
 
   // Not the move: the piece stays, and the arrow still shows the way.
   await move(page, 'd2', 'd4');
-  await expect(msg(page)).toHaveText('Not that one. Follow the arrow.');
+  await expect(msg(page)).toHaveText('Not quite. Follow the yellow arrow: move your pawn from e2 to e4.');
   expect(await label(page, 'd2')).toBe('d2, White pawn');
   await expect(notes(page)).toHaveCount(0);
   // A black piece can't be picked up.
@@ -58,30 +65,33 @@ test('learns a line: an arrow shows each move, the other side replies, every mov
   expect(await label(page, 'e4')).toBe('e4, can move here');
   await sq(page, 'e4').click();
   await expect(msg(page)).toHaveText('');
-  await expect(notes(page)).toHaveText(['1.e4 Push the king’s pawn two squares. It takes space in the centre and opens lines for the queen and the bishop on f1.']);
-  await expect(prompt(page)).toHaveText('Black plays…');
+  await expect(notes(page)).toHaveText(['Move 1 You moved your pawn from e2 to e4. Start by pushing the pawn in front of your king two squares. It grabs space in the middle of the board, and opens a path for your queen and one of your bishops.']);
+  await expect(prompt(page)).toHaveText('Black is moving…');
   expect(await arrowShown(page)).toBe(0);
   await sq(page, 'd2').click();            // not your turn: nothing happens
   await expect(sq(page, 'd2')).not.toHaveClass(/\bsel\b/);
   await page.clock.runFor(REPLY);
-  await expect(notes(page).first()).toHaveText('1...e5 Black does the same, claiming an equal share of the centre.');
+  await expect(notes(page).first()).toHaveText('Move 1 Black moved their pawn from e7 to e5. Black does exactly the same, so both sides have a pawn in the middle.');
   await expect(sq(page, 'e5')).toHaveClass(/\blast\b/);
-  await expect(prompt(page)).toHaveText('Your move: move the knight to f3.');
+  await expect(prompt(page)).toHaveText('Your move: move your knight from g1 to f3.');
 
   // The rest of the line, up to castling, which is asked for as castling.
   const steps = await stepsOf(page, 'italian', 'giuoco-piano');
   await playMoves(page, steps, 'w', 2, 10);
-  await expect(prompt(page)).toHaveText('Your move: castle on the king’s side.');
+  await expect(prompt(page)).toHaveText('Your move: castle. Move your king from e1 to g1, and the rook jumps over it, from h1 to f1.');
   await playMoves(page, steps, 'w', 10, steps.length);
   await expect(notes(page)).toHaveCount(steps.length);
-  await expect(notes(page).first()).toHaveText(/^9\.h3 Stop \.\.\.Bg4/);
+  await expect(notes(page).first()).toHaveText(/^Move 9 You moved your pawn from h2 to h3\. A small pawn move next to your king\./);
+  // Castling, said in words: the learner's and Black's.
+  await expect(notes(page).filter({ hasText: 'You castled' })).toHaveText(/^Move 6 You castled: your king went to g1 and your rook to f1\. Castle! In this special move/);
+  await expect(notes(page).filter({ hasText: 'Black castled' })).toHaveText(/^Move 6 Black castled: their king went to g8 and their rook to f8\. Black castles too/);
 
   // Learned: what next, and the progress kept.
   await expect(page.locator('#doneView')).toBeVisible();
   await expect(page.locator('#doneTitle')).toHaveText('Line learned');
   await expect(page.locator('#doneTitle')).toBeFocused();
   await expect(page.locator('#doneText')).toHaveText('Now practise it from memory. Play it with no mistakes and it’s mastered.');
-  await expect(page.locator('#endText')).toHaveText(/^White’s king is safe and every piece has a job\./);
+  await expect(page.locator('#endText')).toHaveText(/^Well done: your king is safe and your pieces are out\. What to do next:/);
   await expect(page.locator('#nextBtn')).toBeVisible();
   expect(await saved(page)).toEqual({ 'italian/giuoco-piano': 1 });
 
@@ -97,18 +107,19 @@ test('learns a line: an arrow shows each move, the other side replies, every mov
 
 test('practises a line from memory: mistakes count, a second wrong move or a hint shows the move, and no mistakes masters it', async ({ page }) => {
   await open(page);
-  await startLine(page, 'Start Italian Game', 'Practise: Don’t take the bait');
+  await startLine(page, 'Start Italian Game', 'Practise: Don’t fall for the trap');
   await expect(page.locator('#lessonMode')).toHaveText('Practising');
-  await expect(prompt(page)).toHaveText('Your move. Play the move from the line.');
+  await expect(prompt(page)).toHaveText('Your move. Which move comes next in this line?');
+  await expect(page.locator('#how')).toHaveText('To move, tap a piece and then the square it goes to, or drag it.');
   expect(await arrowShown(page)).toBe(0);
   await expect(page.locator('#hintBtn')).toBeVisible();
 
   // A wrong move, then another: the second shows the move.
   await move(page, 'd2', 'd4');
-  await expect(msg(page)).toHaveText('That’s not the move in this line. Try again.');
+  await expect(msg(page)).toHaveText('That’s not the move in this line. Have another go.');
   expect(await arrowShown(page)).toBe(0);
   await move(page, 'c2', 'c4');
-  await expect(msg(page)).toHaveText('Not that one either. Here’s the move: follow the arrow.');
+  await expect(msg(page)).toHaveText('Not that one either. Here’s the move: move your pawn from e2 to e4.');
   expect(await arrowShown(page)).toBe(1);
   await move(page, 'e2', 'e4');
   await expect(msg(page)).toHaveText('');
@@ -116,12 +127,12 @@ test('practises a line from memory: mistakes count, a second wrong move or a hin
 
   // Right first time.
   await move(page, 'g1', 'f3');
-  await expect(msg(page)).toHaveText('Right!');
+  await expect(msg(page)).toHaveText('Right, well done!');
   await page.clock.runFor(REPLY);
 
   // A hint, asked for once: it counts once.
   await page.locator('#hintBtn').click();
-  await expect(msg(page)).toHaveText('Here’s the move: follow the arrow.');
+  await expect(msg(page)).toHaveText('Here’s the move: move your bishop from f1 to c4.');
   expect(await arrowShown(page)).toBe(1);
   await page.locator('#hintBtn').click();
   const steps = await stepsOf(page, 'italian', 'knight-jump');
@@ -149,7 +160,7 @@ test('practises a line from memory: mistakes count, a second wrong move or a hin
 
   // Next line: the first one after it not mastered, learned if it's new.
   await page.locator('#nextBtn').click();
-  await expect(page.locator('#lessonTitle')).toHaveText('The quiet main line');
+  await expect(page.locator('#lessonTitle')).toHaveText('The calm main line');
   await expect(page.locator('#lessonMode')).toHaveText('Learning');
   await page.locator('#linesBtn').click();
   await expect(page.locator('.line-state')).toHaveText(['New', 'New', 'Mastered']);
@@ -159,16 +170,16 @@ test('next line is practice for a line already learned, and gone once every othe
   await page.addInitScript((k) => localStorage.setItem(k, JSON.stringify({ 'london/against-d5': 1, 'london/queen-b6': 2 })), STORE);
   await open(page);
   await expect(page.locator('.course-progress').nth(1)).toHaveText('2 of 3 lines learned · 1 mastered');
-  await startLine(page, 'Carry on with London System', 'Learn: Against the fianchetto');
+  await startLine(page, 'Carry on with London System', 'Learn: When Black plays g6');
   const steps = await stepsOf(page, 'london', 'kings-indian');
   await playMoves(page, steps, 'w');
   await page.locator('#nextBtn').click();
-  await expect(page.locator('#lessonTitle')).toHaveText('Against 1...d5');
+  await expect(page.locator('#lessonTitle')).toHaveText('When Black copies your first move');
   await expect(page.locator('#lessonMode')).toHaveText('Practising');
   await playMoves(page, await stepsOf(page, 'london', 'against-d5'), 'w');
   await expect(page.locator('#nextBtn')).toBeVisible();   // the fianchetto line is learned, not mastered
   await page.locator('#doneLinesBtn').click();
-  await page.getByRole('button', { name: 'Practise: Against the fianchetto' }).click();
+  await page.getByRole('button', { name: 'Practise: When Black plays g6' }).click();
   await playMoves(page, steps, 'w');
   await expect(page.locator('#doneTitle')).toHaveText('Line mastered: no mistakes!');
   await expect(page.locator('#nextBtn')).toBeHidden();
@@ -176,31 +187,35 @@ test('next line is practice for a line already learned, and gone once every othe
 
 test('as Black, the board is turned round and White moves first', async ({ page }) => {
   await open(page);
-  await startLine(page, 'Start Scandinavian Defence', 'Learn: The main line: queen to a5');
+  await startLine(page, 'Start Scandinavian Defence', 'Learn: Main line: your queen goes to a5');
   await expect(page.locator('#courseSide')).toHaveText('Level 3 · you play Black');
   await expect(page.locator('#board .sq').first()).toHaveAttribute('data-sq', 'h1');
   await expect(page.locator('#board .sq').last()).toHaveAttribute('data-sq', 'a8');
-  await expect(prompt(page)).toHaveText('White plays…');
+  await expect(prompt(page)).toHaveText('White is moving…');
   await page.clock.runFor(REPLY);
-  await expect(notes(page)).toHaveText(['1.e4 White opens with the king’s pawn.']);
-  await expect(prompt(page)).toHaveText('Your move: move the pawn to d5.');
+  await expect(notes(page)).toHaveText(['Move 1 White moved their pawn from e2 to e4. White starts by pushing the pawn in front of their king two squares.']);
+  await expect(prompt(page)).toHaveText('Your move: move your pawn from d7 to d5.');
   await move(page, 'd7', 'd5');
   await page.clock.runFor(REPLY);
-  await expect(prompt(page)).toHaveText('Your move: take on d5 with the queen.');
+  // Taking, said in words: White's, then the learner's.
+  await expect(notes(page).first()).toHaveText('Move 2 White took your pawn on d5 with their pawn. White takes your pawn.');
+  await expect(prompt(page)).toHaveText('Your move: take the pawn on d5 with your queen from d8.');
+  await move(page, 'd8', 'd5');
+  await expect(notes(page).first()).toHaveText(/^Move 2 You took the pawn on d5 with your queen\. Take back with your queen\./);
   const steps = await stepsOf(page, 'scandinavian', 'queen-a5');
-  await playMoves(page, steps, 'b', 3, steps.length);
+  await playMoves(page, steps, 'b', 4, steps.length);
   await expect(page.locator('#doneTitle')).toHaveText('Line learned');
-  await expect(page.locator('#endText')).toHaveText(/^Next comes \.\.\.Bb4 or \.\.\.Be7/);
+  await expect(page.locator('#endText')).toHaveText(/^Next, bring out your other bishop \(to b4 or e7\)/);
 });
 
 test('the other side’s move waits for no one who has left: starting again, or going back to the lines', async ({ page }) => {
   await open(page);
-  await startLine(page, 'Start Italian Game', 'Learn: Two Knights Defence');
+  await startLine(page, 'Start Italian Game', 'Learn: When Black brings out both knights');
   await move(page, 'e2', 'e4');
   await page.locator('#restartBtn').click();
   await page.clock.runFor(REPLY);
   await expect(notes(page)).toHaveCount(0);
-  await expect(prompt(page)).toHaveText('Your move: move the pawn to e4.');
+  await expect(prompt(page)).toHaveText('Your move: move your pawn from e2 to e4.');
   expect(await label(page, 'e7')).toBe('e7, Black pawn');
   await move(page, 'e2', 'e4');
   await page.locator('#linesBtn').click();
@@ -228,7 +243,7 @@ test('progress is kept between visits, and a save that makes no sense is ignored
 
 test('a piece can be dragged to its square, and the keys move round the board', async ({ page }) => {
   await open(page);
-  await startLine(page, 'Start Italian Game', 'Learn: The quiet main line');
+  await startLine(page, 'Start Italian Game', 'Learn: The calm main line');
   const from = await sq(page, 'e2').boundingBox(), to = await sq(page, 'e4').boundingBox();
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
   await page.mouse.down();
@@ -249,7 +264,7 @@ test('a piece can be dragged to its square, and the keys move round the board', 
   await sq(page, 'a1').focus();
   for (const key of ['ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowRight', 'Enter', 'ArrowUp', 'ArrowUp', 'ArrowLeft', 'Enter']) await page.keyboard.press(key);
   await expect(notes(page)).toHaveCount(3);
-  await expect(notes(page).first()).toHaveText(/^2\.Nf3 /);
+  await expect(notes(page).first()).toHaveText(/^Move 2 You moved your knight from g1 to f3\. /);
   await expect(sq(page, 'f3')).toHaveAttribute('tabindex', '0');
   // The keys stop at the edge of the board.
   await sq(page, 'h1').focus();
@@ -261,7 +276,7 @@ test('a piece can be dragged to its square, and the keys move round the board', 
 test('plays on against Stockfish from the end of a line, at the level picked, and can win', async ({ page }) => {
   await fakeEngine(page, ['f3e5', 'e2c4']);
   await open(page);
-  await startLine(page, 'Start Scandinavian Defence', 'Learn: When White plays 3.Nf3');
+  await startLine(page, 'Start Scandinavian Defence', 'Learn: When White brings out a knight first');
   await playMoves(page, await stepsOf(page, 'scandinavian', 'knight-f3'), 'b');
   expect(await page.evaluate(() => window.engines)).toBe(0);   // not started until it's needed
 
@@ -298,7 +313,7 @@ test('Stockfish can win too', async ({ page }) => {
   await fakeEngine(page, ['g5f6', 'd3h7']);
   await page.addInitScript((k) => localStorage.setItem(k, JSON.stringify({ 'queens-gambit-declined/exchange': 1 })), STORE);
   await open(page);
-  await startLine(page, 'Carry on with Queen’s Gambit Declined', 'Practise: The Exchange Variation');
+  await startLine(page, 'Carry on with Queen’s Gambit Declined', 'Practise: When White swaps pawns');
   await playMoves(page, await stepsOf(page, 'queens-gambit-declined', 'exchange'), 'b');
   await page.locator('#playBtn').click();
   await expect(page.locator('#playStatus')).toHaveText('Your move.');
@@ -309,7 +324,7 @@ test('Stockfish can win too', async ({ page }) => {
 test('check is said', async ({ page }) => {
   await fakeEngine(page, ['d3h7']);
   await open(page);
-  await startLine(page, 'Start Queen’s Gambit Declined', 'Learn: The Exchange Variation');
+  await startLine(page, 'Start Queen’s Gambit Declined', 'Learn: When White swaps pawns');
   await playMoves(page, await stepsOf(page, 'queens-gambit-declined', 'exchange'), 'b');
   await page.locator('#playBtn').click();
   await expect(page.locator('#playStatus')).toHaveText('Check! Your move.');
@@ -321,7 +336,7 @@ test('if the engine can’t be loaded, it says so', async ({ page }) => {
   await open(page);
   await startLine(page, 'Start Queen’s Gambit Declined', 'Learn: The Elephant Trap');
   await playMoves(page, await stepsOf(page, 'queens-gambit-declined', 'elephant-trap'), 'b');
-  await expect(page.locator('#endText')).toHaveText(/^You’ve won a piece\./);
+  await expect(page.locator('#endText')).toHaveText(/^You’ve won a whole piece\./);
   await page.locator('#playBtn').click();
   await expect(page.locator('#playStatus')).toHaveText('Couldn’t load the chess engine. Check your connection and try again.');
 });
@@ -330,7 +345,7 @@ test('no accessibility problems while learning, done, or playing on', async ({ p
   // Not open(): axe needs a running clock.
   await fakeEngine(page);
   await page.goto('/learn-chess/');
-  await startLine(page, 'Start London System', 'Learn: When the queen attacks b2');
+  await startLine(page, 'Start London System', 'Learn: When Black’s queen attacks b2');
   await move(page, 'd2', 'd4');
   await sq(page, 'd4').click();
   expect(await axeProblems(page)).toEqual([]);

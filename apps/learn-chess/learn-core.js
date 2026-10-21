@@ -18,8 +18,8 @@
   var LEARNED = 1, MASTERED = 2;
 
   // A line's moves played out from the start: for each, what the page needs
-  // (its UCI, its squares, the piece that moves, whether it takes or
-  // castles, the side that plays it and its note). Throws if a move isn't
+  // (its UCI, its squares, the piece that moves and the one it takes,
+  // whether it castles, the side that plays it and its note). Throws if a move isn't
   // legal, or isn't written as chess-core writes it.
   function steps(line){
     var game = C.newGame(), out = [];
@@ -30,6 +30,7 @@
       out.push({
         san: m[0], note: m[1], uci: C.uci(found), from: found.from, to: found.to,
         piece: found.piece.toLowerCase(), take: !!found.captured,
+        captured: found.captured ? found.captured.toLowerCase() : '',
         castle: found.castle ? found.castle.toLowerCase() : '',
         color: pos.turn, number: pos.full
       });
@@ -38,18 +39,19 @@
     return out;
   }
 
-  // How a move is written for the learner, before they play it: 3.Bc4 for
-  // White's third move, 3...Bc5 for Black's.
-  function label(step){
-    return step.number + (step.color === 'w' ? '.' : '...') + step.san;
-  }
-
-  // What the learner is asked to do, in words the page puts in their
-  // language: castle on a side, take on a square with a piece, or move a
-  // piece to a square.
+  // A move in words the page puts in the learner's language: which piece
+  // moves from which square to which, what it takes, and in castling where
+  // the rook goes (it jumps from its corner to the square the king passed
+  // over).
   function prompt(step){
-    if (step.castle) return { kind: 'castle', side: step.castle };
-    return { kind: step.take ? 'take' : 'move', piece: step.piece, square: C.name(step.to) };
+    var p = { kind: step.castle ? 'castle' : step.take ? 'take' : 'move', piece: step.piece, from: C.name(step.from), to: C.name(step.to) };
+    if (step.take) p.captured = step.captured;
+    if (step.castle) {
+      p.side = step.castle;
+      p.rookFrom = C.name(step.castle === 'k' ? step.to + 1 : step.to - 2);
+      p.rookTo = C.name(step.castle === 'k' ? step.to - 1 : step.to + 1);
+    }
+    return p;
   }
 
   // ---------- Progress ----------
@@ -143,7 +145,7 @@
 
   window.bdnixLearn = {
     LEVELS: LEVELS, LEARNED: LEARNED, MASTERED: MASTERED,
-    steps: steps, label: label, prompt: prompt,
+    steps: steps, prompt: prompt,
     key: key, readProgress: readProgress, stateOf: stateOf, finish: finish, tally: tally, nextLine: nextLine,
     problems: problems
   };

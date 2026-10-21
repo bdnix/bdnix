@@ -18,16 +18,16 @@ test.describe('in Bangla', () => {
     await expect(page.locator('.course-name').first()).toHaveText('Italian Game');
     await startLine(page, 'Italian Game শুরু করুন', 'শিখুন: শান্ত প্রধান লাইন');
     await expect(page.locator('#lessonMode')).toHaveText('শেখা হচ্ছে');
-    await expect(page.locator('#prompt')).toHaveText('আপনার চাল: বোড়ে e4-এ নিন।');
+    await expect(page.locator('#prompt')).toHaveText('আপনার চাল: আপনার বোড়ে e2 থেকে e4-এ নিন।');
     await move(page, 'd2', 'd4');
-    await expect(page.locator('#lessonMsg')).toHaveText('ওটা নয়। তীরচিহ্ন দেখে চালুন।');
+    await expect(page.locator('#lessonMsg')).toHaveText('ঠিক হলো না। হলুদ তীরচিহ্ন দেখুন: আপনার বোড়ে e2 থেকে e4-এ নিন।');
     await move(page, 'e2', 'e4');
-    await expect(page.locator('#notes li').first()).toHaveText('1.e4 রাজার সামনের বোড়েটি দুই ঘর এগিয়ে দিন। এটি কেন্দ্রে জায়গা নেয় আর মন্ত্রী ও f1-এর হাতির জন্য পথ খুলে দেয়।');
+    await expect(page.locator('#notes li').first()).toHaveText('চাল ১ আপনি বোড়ে e2 থেকে e4-এ নিলেন। রাজার সামনের বোড়েটি দুই ঘর এগিয়ে শুরু করুন। এটি বোর্ডের মাঝখানে জায়গা নেয়, আর আপনার মন্ত্রী ও একটি হাতির জন্য পথ খুলে দেয়।');
     await expect(page.locator('#prompt')).toHaveText('কালো চাল দিচ্ছে…');
     await page.clock.runFor(REPLY);
     const steps = await stepsOf(page, 'italian', 'giuoco-piano');
     await playMoves(page, steps, 'w', 1, 10);
-    await expect(page.locator('#prompt')).toHaveText('আপনার চাল: রাজার দিকে ক্যাসল করুন।');
+    await expect(page.locator('#prompt')).toHaveText('আপনার চাল: ক্যাসল করুন। রাজাকে e1 থেকে g1-এ নিন, আর নৌকা তাকে টপকে h1 থেকে f1-এ চলে যাবে।');
     await playMoves(page, steps, 'w', 10, steps.length);
     await expect(page.locator('#doneTitle')).toHaveText('লাইন শেখা হয়েছে');
     await expectTranslated(page);
@@ -58,17 +58,17 @@ test.describe('in Bangla', () => {
   test('a line practised with a mistake and a hint, then mastered, in Bangla', async ({ page }) => {
     await open(page);
     // Practising, with a mistake and a hint: counted in Bangla.
-    await startLine(page, 'Scandinavian Defence শুরু করুন', 'অনুশীলন: যখন সাদা ২.e5 এগিয়ে দেয়');
+    await startLine(page, 'Scandinavian Defence শুরু করুন', 'অনুশীলন: যখন সাদা আপনার বোড়েকে পাশ কাটিয়ে এগোয়');
     await page.clock.runFor(REPLY);
     await move(page, 'a7', 'a6');
-    await expect(page.locator('#lessonMsg')).toHaveText('এই লাইনের চাল ওটা নয়। আবার চেষ্টা করুন।');
+    await expect(page.locator('#lessonMsg')).toHaveText('এই লাইনের চাল ওটা নয়। আরেকবার চেষ্টা করুন।');
     await move(page, 'a7', 'a5');
-    await expect(page.locator('#lessonMsg')).toHaveText('ওটাও নয়। চালটি এই: তীরচিহ্ন দেখে চালুন।');
+    await expect(page.locator('#lessonMsg')).toHaveText('ওটাও নয়। চালটি হলো: আপনার বোড়ে d7 থেকে d5-এ নিন।');
     await move(page, 'd7', 'd5');
     await expect(page.locator('#lessonMsg')).toHaveText('');
     await page.clock.runFor(REPLY);
     await page.locator('#hintBtn').click();
-    await expect(page.locator('#lessonMsg')).toHaveText('চালটি এই: তীরচিহ্ন দেখে চালুন।');
+    await expect(page.locator('#lessonMsg')).toHaveText('চালটি হলো: আপনার হাতি c8 থেকে f5-এ নিন।');
     const steps = await stepsOf(page, 'scandinavian', 'push-e5');
     await playMoves(page, steps, 'b', 3, steps.length);
     await expect(page.locator('#doneTitle')).toHaveText('অনুশীলন হয়েছে, ৩টি ভুলসহ');
@@ -76,7 +76,7 @@ test.describe('in Bangla', () => {
     await page.locator('#practiseBtn').click();
     await page.clock.runFor(REPLY);
     await move(page, 'd7', 'd5');
-    await expect(page.locator('#lessonMsg')).toHaveText('ঠিক!');
+    await expect(page.locator('#lessonMsg')).toHaveText('ঠিক, দারুণ!');
     await playMoves(page, steps, 'b', 2, steps.length);
     await expect(page.locator('#doneTitle')).toHaveText('লাইন আয়ত্তে: একটিও ভুল নেই!');
   });
@@ -84,7 +84,7 @@ test.describe('in Bangla', () => {
   test('playing on against Stockfish, to checkmate, in Bangla', async ({ page }) => {
     await fakeEngine(page, ['f3e5', 'e2c4']);
     await open(page);
-    await startLine(page, 'Scandinavian Defence শুরু করুন', 'শিখুন: যখন সাদা ৩.Nf3 খেলে');
+    await startLine(page, 'Scandinavian Defence শুরু করুন', 'শিখুন: যখন সাদা আগে একটি ঘোড়া বের করে');
     await playMoves(page, await stepsOf(page, 'scandinavian', 'knight-f3'), 'b');
     await page.getByRole('button', { name: 'Stockfish-এর সঙ্গে খেলা চালিয়ে যান' }).click();
     await expect(page.locator('#playStatus')).toHaveText('আপনার চাল।');

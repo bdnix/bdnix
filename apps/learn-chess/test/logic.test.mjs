@@ -37,23 +37,38 @@ test('the lines play the openings they name', () => {
   assert.equal(sans('queens-gambit-declined', 'elephant-trap'), 'd4 d5 c4 e6 Nc3 Nf6 Bg5 Nbd7 cxd5 exd5 Nxd5 Nxd5 Bxd8 Bb4+ Qd2 Bxd2+ Kxd2 Kxd8');
 });
 
-test('the trap a line warns of is checkmate, as its note says', () => {
+test('the trap a line warns of is as its note says: the queen hits the knight and g2, and grabbing more is checkmate', () => {
   const note = COURSES[0].lines.find((l) => l.id === 'knight-jump').moves.find((m) => m[0] === 'Nxd4')[1];
-  const trap = /after (.+) it’s checkmate/.exec(note)[1].replace(/\d+\.(\.\.)?/g, '').split(' ');
+  assert.match(note, /queen moves to g5 and attacks your knight and your pawn on g2 at once, and if you keep grabbing, Black can checkmate you/);
   const g = C.newGame();
-  for (const san of 'e4 e5 Nf3 Nc6 Bc4 Nd4 Nxe5 Qg5'.split(' ').concat(trap)) {
-    const m = C.moves(C.current(g)).find((x) => C.san(C.current(g), x).replace(/[+#]$/, '') === san.replace(/[+#]$/, ''));
+  const play = (list) => list.split(' ').forEach((san) => {
+    const m = C.moves(C.current(g)).find((x) => C.san(C.current(g), x).replace(/[+#]$/, '') === san);
     assert.ok(m, san);
     C.play(g, C.uci(m));
-  }
+  });
+  play('e4 e5 Nf3 Nc6 Bc4 Nd4 Nxe5 Qg5');
+  const attacked = C.attacked;
+  assert.ok(attacked(C.current(g).board, C.square('e5'), 'b'), 'the knight on e5 is attacked');
+  assert.ok(attacked(C.current(g).board, C.square('g2'), 'b'), 'the pawn on g2 is attacked');
+  play('Nxf7 Qxg2 Rf1 Qxe4 Be2 Nf3');
   assert.equal(C.status(g).result, 'checkmate');
 });
 
-test('steps: each move of a line, with its squares, piece, side, number and note', () => {
+test('the words are for a beginner: no move is written in chess notation', () => {
+  const NOTATION = /\b[KQRBN][a-h]?[1-8]?x?[a-h][1-8]\b|\b\d+\.(\.\.)?\s?[a-hKQRBNO]|\.\.\.[a-hKQRBN]|\b[a-h][1-8]-[a-h][1-8]\b|O-O/;
+  for (const c of COURSES) {
+    for (const s of [c.about, c.intro]) assert.doesNotMatch(s, NOTATION, c.id);
+    for (const l of c.lines) {
+      for (const s of [l.name, l.end, ...l.moves.map((m) => m[1])]) assert.doesNotMatch(s, NOTATION, `${c.id}/${l.id}: ${s}`);
+    }
+  }
+});
+
+test('steps: each move of a line, with its squares, the piece that moves and the one it takes, side, number and note', () => {
   const s = L.steps(line('x', [['e4', 'a'], ['d5', 'b'], ['exd5', 'c'], ['Qxd5', 'd'], ['Nc3', 'e']]));
-  assert.deepEqual(plain(s.map((x) => [x.uci, x.piece, x.take, x.color, x.number, x.note])), [
-    ['e2e4', 'p', false, 'w', 1, 'a'], ['d7d5', 'p', false, 'b', 1, 'b'], ['e4d5', 'p', true, 'w', 2, 'c'],
-    ['d8d5', 'q', true, 'b', 2, 'd'], ['b1c3', 'n', false, 'w', 3, 'e']
+  assert.deepEqual(plain(s.map((x) => [x.uci, x.piece, x.take, x.captured, x.color, x.number, x.note])), [
+    ['e2e4', 'p', false, '', 'w', 1, 'a'], ['d7d5', 'p', false, '', 'b', 1, 'b'], ['e4d5', 'p', true, 'p', 'w', 2, 'c'],
+    ['d8d5', 'q', true, 'p', 'b', 2, 'd'], ['b1c3', 'n', false, '', 'w', 3, 'e']
   ]);
   assert.equal(s[0].from, C.square('e2'));
   assert.equal(s[0].to, C.square('e4'));
@@ -70,18 +85,19 @@ test('steps: a move that isn’t legal, or isn’t written as chess-core writes 
   assert.equal(L.steps(line('x', [['e4', 'a'], ['f6', 'b'], ['d4', 'c'], ['g5', 'd'], ['Qh5#', 'e']]))[4].san, 'Qh5#');
 });
 
-test('label: a move as it’s written, with its number', () => {
+test('prompt: which piece moves from where to where, what it takes, and where a castling rook goes', () => {
   const s = L.steps(COURSES[0].lines[0]);
-  assert.deepEqual(plain(s.slice(0, 5).map(L.label)), ['1.e4', '1...e5', '2.Nf3', '2...Nc6', '3.Bc4']);
-});
-
-test('prompt: castle on a side, take on a square, or move a piece to a square', () => {
-  const s = L.steps(COURSES[0].lines[0]);
-  assert.deepEqual(plain(L.prompt(s[0])), { kind: 'move', piece: 'p', square: 'e4' });
-  assert.deepEqual(plain(L.prompt(s[2])), { kind: 'move', piece: 'n', square: 'f3' });
-  assert.deepEqual(plain(L.prompt(s[10])), { kind: 'castle', side: 'k' });
+  assert.deepEqual(plain(L.prompt(s[0])), { kind: 'move', piece: 'p', from: 'e2', to: 'e4' });
+  assert.deepEqual(plain(L.prompt(s[2])), { kind: 'move', piece: 'n', from: 'g1', to: 'f3' });
+  assert.deepEqual(plain(L.prompt(s[10])), { kind: 'castle', piece: 'k', from: 'e1', to: 'g1', side: 'k', rookFrom: 'h1', rookTo: 'f1' });
+  assert.deepEqual(plain(L.prompt(s[11])), { kind: 'castle', piece: 'k', from: 'e8', to: 'g8', side: 'k', rookFrom: 'h8', rookTo: 'f8' });
   const taking = L.steps(COURSES[2].lines[0]);
-  assert.deepEqual(plain(L.prompt(taking[3])), { kind: 'take', piece: 'q', square: 'd5' });
+  assert.deepEqual(plain(L.prompt(taking[2])), { kind: 'take', piece: 'p', from: 'e4', to: 'd5', captured: 'p' });
+  assert.deepEqual(plain(L.prompt(taking[3])), { kind: 'take', piece: 'q', from: 'd8', to: 'd5', captured: 'p' });
+  const long = L.steps(COURSES[2].lines.find((l) => l.id === 'knight-f3'));
+  assert.deepEqual(plain(L.prompt(long[long.length - 1])), { kind: 'castle', piece: 'k', from: 'e8', to: 'c8', side: 'q', rookFrom: 'a8', rookTo: 'd8' });
+  const trap = L.steps(COURSES[3].lines.find((l) => l.id === 'elephant-trap'));
+  assert.deepEqual(plain(L.prompt(trap[12])), { kind: 'take', piece: 'b', from: 'g5', to: 'd8', captured: 'q' });
 });
 
 test('progress: learned, then mastered with no mistakes, and never back', () => {
