@@ -54,6 +54,16 @@
     </div>
 
     <section class="courses" id="courses" aria-labelledby="coursesTitle">
+      <details class="guide panel">
+        <summary>New to chess? Start here</summary>
+        <ul>
+          <li><b>The board</b> has 64 squares, and each has a name: a letter for its column (a to h) and a number for its row (1 to 8). So e4 is the square in column e, row 4. The letters and numbers are printed along the edges of the board.</li>
+          <li><b>White moves first</b>, then the players take turns, one move each.</li>
+          <li><b>How the pieces move:</b> a pawn moves straight ahead one square (or two, on its first move) and takes on the slant, one square forward; a knight jumps in an L shape, two squares one way and one to the side, and can hop over pieces; a bishop moves any distance along slanting lines; a rook any distance along rows and columns; the queen like a rook or a bishop; the king one square in any direction.</li>
+          <li><b>Taking:</b> a piece takes an enemy piece by moving onto its square. A king that’s attacked is in check, and must get out of it. If it can’t, that’s checkmate, and the game is over.</li>
+          <li><b>An opening</b> is the first few moves of a game. A good one puts pawns in the middle, brings out the knights and bishops, and castles the king to safety. Each course teaches one opening, a line (a set of moves) at a time.</li>
+        </ul>
+      </details>
       <h2 class="label" id="coursesTitle">Courses</h2>
       <ol class="course-list" id="courseList"></ol>
       <p class="saved-note">Your progress is kept in this browser.</p>
@@ -81,6 +91,7 @@
           <p class="label" id="lessonMode"></p>
           <h3 id="lessonTitle" class="view-title" tabindex="-1"></h3>
           <p id="prompt" class="prompt"></p>
+          <p id="how" class="how"></p>
           <p id="lessonMsg" class="lesson-msg" role="status" aria-live="polite"></p>
           <ol class="notes" id="notes" aria-label="Moves so far, the newest first" aria-live="polite"></ol>
           <div class="study-actions">

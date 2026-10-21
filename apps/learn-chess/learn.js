@@ -141,6 +141,7 @@
     show('lesson');
     $('lessonMode').textContent = t(how === 'learn' ? 'Learning' : 'Practising');
     $('lessonTitle').textContent = line().name;
+    $('how').textContent = how === 'learn' ? t('To move, tap a piece and then the square it goes to, or drag it. The yellow arrow shows the move.') : t('To move, tap a piece and then the square it goes to, or drag it.');
     hintBtn.hidden = how !== 'practice';
     render();
     $('lessonTitle').focus({ preventScroll: true });
@@ -153,22 +154,36 @@
     if (ply >= steps.length) { finishLine(); return; }
     var step = steps[ply];
     if (step.color !== course.side) {
-      promptEl.textContent = t('{color} plays…', { color: colorName(step.color) });
+      promptEl.textContent = t('{color} is moving…', { color: colorName(step.color) });
       timer = setTimeout(function(){ timer = 0; playStep(); }, REPLY);
       return;
     }
     wrong = 0;
     shown = mode === 'learn';
-    promptEl.textContent = mode === 'learn' ? t('Your move: {what}', { what: describeMove(step) }) : t('Your move. Play the move from the line.');
+    promptEl.textContent = mode === 'learn' ? t('Your move: {what}', { what: ask(step) }) : t('Your move. Which move comes next in this line?');
     render();
   }
 
-  // The move the learner is asked for, in words.
-  function describeMove(step){
+  // The move the learner is asked for, in words: which piece, from where
+  // to where.
+  function ask(step){
     var p = L.prompt(step);
-    if (p.kind === 'castle') return t(p.side === 'k' ? 'castle on the king’s side.' : 'castle on the queen’s side.');
-    if (p.kind === 'take') return t('take on {square} with the {piece}.', { square: p.square, piece: piece(p.piece) });
-    return t('move the {piece} to {square}.', { piece: piece(p.piece), square: p.square });
+    if (p.kind === 'castle') return t('castle. Move your king from {from} to {to}, and the rook jumps over it, from {rookFrom} to {rookTo}.', p);
+    if (p.kind === 'take') return t('take the {captured} on {to} with your {piece} from {from}.', { captured: piece(p.captured), to: p.to, piece: piece(p.piece), from: p.from });
+    return t('move your {piece} from {from} to {to}.', { piece: piece(p.piece), from: p.from, to: p.to });
+  }
+
+  // A move played, in words: the learner's, or the other side's.
+  function said(step){
+    var p = L.prompt(step), v = { piece: piece(p.piece), from: p.from, to: p.to, color: colorName(step.color), rook: p.rookTo };
+    if (step.color === course.side) {
+      if (p.kind === 'castle') return t('You castled: your king went to {to} and your rook to {rook}.', v);
+      if (p.kind === 'take') return t('You took the {captured} on {to} with your {piece}.', { captured: piece(p.captured), to: p.to, piece: v.piece });
+      return t('You moved your {piece} from {from} to {to}.', v);
+    }
+    if (p.kind === 'castle') return t('{color} castled: their king went to {to} and their rook to {rook}.', v);
+    if (p.kind === 'take') return t('{color} took your {captured} on {to} with their {piece}.', { color: v.color, captured: piece(p.captured), to: p.to, piece: v.piece });
+    return t('{color} moved their {piece} from {from} to {to}.', v);
   }
 
   // Plays the line's next move, with its note.
@@ -181,9 +196,10 @@
     selected = -1;
     var li = document.createElement('li');
     li.className = step.color === course.side ? 'mine' : 'theirs';
-    li.innerHTML = '<b translate="no"></b> <span></span>';
-    li.querySelector('b').textContent = L.label(step);
-    li.querySelector('span').textContent = step.note;
+    li.innerHTML = '<span class="label"></span> <b></b> <span class="why"></span>';
+    li.querySelector('.label').textContent = t('Move {n}', { n: step.number });
+    li.querySelector('b').textContent = said(step);
+    li.querySelector('.why').textContent = step.note;
     notesEl.insertBefore(li, notesEl.firstChild);
     notesEl.scrollTop = 0;
     render();
@@ -194,19 +210,19 @@
   function tried(uci){
     var step = steps[ply];
     if (uci === step.uci) {
-      msgEl.textContent = mode === 'practice' && wrong === 0 ? t('Right!') : '';
+      msgEl.textContent = mode === 'practice' && wrong === 0 ? t('Right, well done!') : '';
       playStep();
       return;
     }
     selected = -1;
     wrong++;
-    if (mode === 'learn') msgEl.textContent = t('Not that one. Follow the arrow.');
+    if (mode === 'learn') msgEl.textContent = t('Not quite. Follow the yellow arrow: {what}', { what: ask(steps[ply]) });
     else {
       mistakes++;
       if (wrong >= 2) {
         shown = true;
-        msgEl.textContent = t('Not that one either. Here’s the move: follow the arrow.');
-      } else msgEl.textContent = t('That’s not the move in this line. Try again.');
+        msgEl.textContent = t('Not that one either. Here’s the move: {what}', { what: ask(steps[ply]) });
+      } else msgEl.textContent = t('That’s not the move in this line. Have another go.');
     }
     render();
   }
@@ -216,7 +232,7 @@
     if (view !== 'lesson' || mode !== 'practice' || shown || ply >= steps.length || steps[ply].color !== course.side) return;
     shown = true;
     mistakes++;
-    msgEl.textContent = t('Here’s the move: follow the arrow.');
+    msgEl.textContent = t('Here’s the move: {what}', { what: ask(steps[ply]) });
     render();
   }
 
