@@ -2,7 +2,7 @@
   // The rules live in chess-core.js; this file draws the board, handles
   // input, plays the other side with Stockfish and reviews finished games
   // (and games opened from a PGN or text file) with it. Stockfish runs in a
-  // web worker (vendor/stockfish, published at /assets/vendor/stockfish/)
+  // web worker (the stockfish module, published at /assets/vendor/stockfish/)
   // fetched the first time it's needed.
   var C = window.bdnixChess;
   // The visitor's language (lang.js). chess-core.js writes some things in

@@ -16,6 +16,6 @@
   },
   "cards": {
     "games": ["falling-blocks", "maze-chase", "flap", "road-hop", "snake", "brick-bounce", "chess"],
-    "tools": ["merge-pdf", "watermark-pdf", "redact-pdf", "sign-pdf", "unlock-pdf", "mp4-to-mp3", "compress-image", "photo-collage", "fit-to-frame"]
+    "tools": ["merge-pdf", "watermark-pdf", "redact-pdf", "sign-pdf", "unlock-pdf", "mp4-to-mp3", "compress-image", "photo-collage", "fit-to-frame", "learn-chess"]
   }
 }

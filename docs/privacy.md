@@ -27,6 +27,7 @@ In `localStorage`:
 | `bdnix_tetris_save`, `bdnix_pacman_save`, `bdnix_flappy_save`, `bdnix_hop_save`, `bdnix_snake_save`, `bdnix_bricks_save`, `bdnix_chess_save` | Games in progress |
 | `bdnix_sound` | Whether game sounds are on (`on`) or muted (`off`) |
 | `bdnix_watermark_v1` | Watermark tool settings |
+| `bdnix_learn_chess` | Which Learn Chess lines are learned or mastered |
 | `bdnix_analytics` | Analytics consent choice |
 | `bdnix_lang` | The language the visitor picked |
 

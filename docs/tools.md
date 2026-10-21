@@ -11,6 +11,7 @@ Every tool runs entirely in the browser. Files are never uploaded, and all proce
 - [Compress Images](#compress-images)
 - [Photo Collage](#photo-collage)
 - [Resize Without Cropping](#resize-without-cropping)
+- [Learn Chess](#learn-chess)
 
 ## Merge PDFs
 
@@ -195,3 +196,26 @@ Makes an image fit a shape it doesn't have, such as a landscape photo for a squa
 - **Save as:** the same format as the original (any format other than JPEG, PNG or WebP becomes JPEG), or JPEG, WebP or PNG. JPEG and WebP are saved at 92% quality.
 
 The preview shows the chosen image with the current settings and the size in pixels of the result; with several images, the arrows or a click on a thumbnail pick which one. Each image gets its own download (`photo.png` becomes `photo-framed.png`). Changing a setting clears earlier results. As with Compress Images, the saved images don't carry the camera's hidden details, frames bigger than 16.7 megapixels are scaled down so iPhones and iPads can draw them, and an image the browser can't open or a format it can't save is marked in the list. The placement rules live in `apps/fit-to-frame/frame-core.js`.
+
+## Learn Chess
+
+`/learn-chess/`
+
+Courses in chess openings, easiest first, each a few lines (sequences of moves) from the usual start:
+
+| Level | Course | Plays | Lines |
+|---|---|---|---|
+| 1 | Italian Game | White | the quiet main line (Giuoco Piano), the Two Knights Defence, and a knight jump not to fall for (4.Nxe5? Qg5!) |
+| 2 | London System | White | against 1...d5, against an early ...Qb6 attacking b2, and against the fianchetto (...g6 and ...Bg7) |
+| 3 | Scandinavian Defence | Black, against 1.e4 | the main line with ...Qa5, against 3.Nf3, and against 2.e5 |
+| 4 | Queen's Gambit Declined | Black, against 1.d4 | the main line with 4.Bg5, the Exchange Variation, and the Elephant Trap |
+
+So the first four together give a beginner an opening as White and an answer as Black to each of White's two main first moves.
+
+Pick a course, then a line, to **Learn** or **Practise** it. The board is turned round when the learner plays Black. Learning, the move to play is shown with an arrow and in words ("move the knight to f3", "take on d5 with the queen", "castle on the king's side"); another move is refused, and the piece goes back. The other side's moves are played for the learner after a moment. Every move played, by either side, is listed with a sentence on why it's played, the newest first. Practising, there's no arrow: a wrong move counts as a mistake, a second wrong move in the same place shows the move, and **Show the move** shows it too (counting once). A line ends with what to aim for in the game from there.
+
+A line walked through is **learned**; one practised with no mistakes or hints is **mastered**, and stays so. **Next line** goes on to the next line of the course that isn't mastered (practising it if it's been learned). Progress is kept in the browser (`bdnix_learn_chess`); a save that doesn't make sense is ignored.
+
+From the end of a line, **Play on against Stockfish** carries the game on from that position, at Easy, Medium or Hard (Stockfish's skill level 2, 8 or 16, looking 2, 5 or 10 moves ahead). Stockfish, the same engine as the Chess game's (the `stockfish` module), is fetched only then, and stopped on leaving; a pawn that reaches the far side becomes a queen. If it can't be fetched, the page says so.
+
+The courses are in `apps/learn-chess/lessons.js`: each line is its moves in standard notation with a note on each. Every move of every line was checked with Stockfish, so the learner's moves are sound (the Scandinavian is rated a little below Black's most popular replies to 1.e4, which its course says), and the unit tests check that every move is legal, every move has its note, every line ends on a move of the learner's, and every note is translated. The rules of learning (the prompts, what's learned and mastered, the next line, the checks) are in `apps/learn-chess/learn-core.js`, and the rules of chess in the shared `chess-core` module.

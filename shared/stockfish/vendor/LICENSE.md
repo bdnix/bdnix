@@ -1,6 +1,6 @@
 # Stockfish.js 19
 
-The chess page's opponent. From https://github.com/nmrugg/stockfish.js (npm package `stockfish` 19.0.0, files `bin/stockfish-19-lite-single.js` and `bin/stockfish-19-lite-single.wasm`, unmodified): the lite, single-threaded WebAssembly build of [Stockfish](https://github.com/official-stockfish/Stockfish), (c) the Stockfish developers and Chess.com, LLC. The source code is at those two links. It runs in its own web worker, separate from the site's scripts, and is licensed under the GNU General Public License, version 3; the licence text shipped with the package (`Copying.txt`) follows.
+The chess engine of the site's chess pages. From https://github.com/nmrugg/stockfish.js (npm package `stockfish` 19.0.0, files `bin/stockfish-19-lite-single.js` and `bin/stockfish-19-lite-single.wasm`, unmodified): the lite, single-threaded WebAssembly build of [Stockfish](https://github.com/official-stockfish/Stockfish), (c) the Stockfish developers and Chess.com, LLC. The source code is at those two links. It runs in its own web worker, separate from the site's scripts, and is licensed under the GNU General Public License, version 3; the licence text shipped with the package (`Copying.txt`) follows.
 
 ```
                     GNU GENERAL PUBLIC LICENSE
