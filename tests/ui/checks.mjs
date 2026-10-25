@@ -47,7 +47,7 @@ const WORDS = {
   consent: 'Cookie consent', banner: 'Google Analytics cookies', accept: 'Accept', decline: 'Decline', profile: 'your profile'
 };
 // Other games' names, which only a credit line may use.
-const TRADEMARKS = /tetris|pac-?man|flappy|crossy|blockade|breakout/i;
+const TRADEMARKS = /tetris|pac-?man|flappy|crossy|blockade|breakout|road ?rash/i;
 
 // The checks every page gets. opts:
 //   schema    'WebSite' or 'WebApplication' (structured data), or none

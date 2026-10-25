@@ -1,6 +1,6 @@
 # Games guide
 
-All seven games work with a keyboard, mouse or touch screen, and at phone size.
+All eight games work with a keyboard, mouse or touch screen, and at phone size.
 
 There's no pause button: **P** or **Esc** pauses, on a phone so does tapping the score (every game but Chess), and so does leaving the page (another tab, window or app, or the phone's home screen). Coming back shows the pause screen, with its big **Resume** button. The language switch sits in the top bar, beside the mute button.
 
@@ -14,6 +14,7 @@ On a phone, there are no buttons under the board: the games are played by touchi
 - [Road Hop](#road-hop)
 - [Snake](#snake)
 - [Brick Bounce](#brick-bounce)
+- [Street Kids](#street-kids)
 - [Chess](#chess)
 - [Sound](#sound)
 - [Scores and saved games](#scores-and-saved-games)
@@ -116,6 +117,28 @@ Six bricks in every wall, picked at random, hide a power: they glow and pulse in
 
 Each wall hides two multi-balls and one of each of the others. The seconds left of the fireball, laser and wide paddle show under the paddle, beside their icons. Losing a ball or clearing a wall ends every power and clears away falling capsules and shots.
 
+## Street Kids
+
+`/street-kids/`
+
+| Action | Keyboard | Touch |
+|---|---|---|
+| Steer | ← → (or A / D) | Drag sideways anywhere, as far as you want to turn |
+| Brake | ↓ (or S) | Flick down and hold |
+| Punch (or swing your weapon) | X (or J) | Tap |
+| Kick | Z (or K) | Flick up |
+| Pause | P / Esc | Tap the score, or leave the page |
+
+A motorbike race through a city at dusk, against six rivals: Kalu, Bablu, Mintu, Rocky, Tinku and Pinky. Everyone lines up on the grid, you at the back; a countdown (3, 2, 1, Go!) starts the race, and the bike speeds up on its own to its top speed (216 km/h in the first race, a little more in each after), so the work is steering, braking and fighting. Bends pull a fast bike towards the outside, so steer into them. Off the tarmac, on the kerb, the bike can't go faster than 79 km/h, and the lamp posts, palms and trees standing there throw you off it. So does riding into the back of the traffic: rickshaws, green CNG auto-rickshaws, painted trucks, buses and cars, each driving on at its own pace in its lane.
+
+Ride up beside a rival to fight. A punch is quick and reaches a short way; a kick reaches further, hits harder and shoves them across the road, but takes longer. A rival close enough to hit shows their name and health above them. Some rivals carry a weapon (a stick, a chain or nunchaku), and the keen ones pull alongside to use it on you. Knock a rival off their bike (100 points) and they're out of the race, and their weapon is yours: from then on a punch swings it, harder than a kick. A crash drops it.
+
+Your health is the bar under your place in the race. Rivals' blows and crashes take it away (a crash costs 20); when it runs out you're knocked out and the game is over. After a crash you're back on the bike in the road a couple of seconds later, blinking while nothing can hit you. The top of the board shows how far along the race everyone is, your place (1 of 7 to 7 of 7) and your speed.
+
+Finish in the top three to go on: first, second and third score 1000, 600 and 300 points, times the race's number. Each race is longer than the last (2.4 km, then 300 m more each time, up to 4 km), with busier traffic, tougher and faster rivals, and the weapons in other hands; your health is full again at the start of each. Finishing fourth or lower ends the game. The road, its bends, hills and traffic, and who rides in each race are the same every time, so a race can be learnt.
+
+The city is drawn as you ride: the setting sun behind a skyline of towers, domes and minarets that turns as the road bends, lit windows, shops with striped awnings, billboards and street lamps casting pools of light, the road rising and falling over hills and fading into the haze.
+
 ## Chess
 
 `/chess/`
@@ -156,7 +179,7 @@ The summary gives each side's accuracy (the average over its moves of lichess's 
 
 ## Sound
 
-Every game has sound effects: a jingle when a game starts, sounds for the main moves (moving, turning and dropping pieces, eating dots and power pellets, flapping, hopping, eating food, the ball hitting the paddle, the walls and bricks, catching a power and firing the laser, chess moves, captures and checks), for scoring and clearing lines, for each way a round can end (a car, the river, a crash, a lost ball), and a tune at game over, a brighter one for a new best score.
+Every game has sound effects: a jingle when a game starts, sounds for the main moves (moving, turning and dropping pieces, eating dots and power pellets, flapping, hopping, eating food, the ball hitting the paddle, the walls and bricks, catching a power and firing the laser, the countdown to a race, punches, kicks and weapon blows landing and missing, being hit, bikes bumping, a rival knocked off, chess moves, captures and checks), for scoring and clearing lines, for each way a round can end (a car, the river, a crash, a lost ball, a knockout), a fanfare for a race finished in the top three, and a tune at game over, a brighter one for a new best score.
 
 The speaker button in the top bar, or **M**, turns sound off and on. The choice applies to every game and is remembered in the browser (`bdnix_sound`). Sound is on until it's turned off.
 
@@ -166,7 +189,7 @@ The sounds are made in the browser with the Web Audio API, so there are no audio
 
 Each game keeps its best score in the browser's `localStorage`, and the [profile page](privacy.md#profile) shows them all.
 
-A game in progress is saved whenever it pauses and when the page is reloaded, closed or left. Returning to the page, even days later, shows the game paused exactly where it was, with the message "Picked up where you left off.": **Resume** carries on and **New game** starts over. The save is removed when the game ends. Flap only keeps a round once the bird has flapped, Road Hop once the chicken has hopped, Snake once the snake has started moving, Brick Bounce once the first ball has been launched, and Chess once the first move has been played.
+A game in progress is saved whenever it pauses and when the page is reloaded, closed or left. Returning to the page, even days later, shows the game paused exactly where it was, with the message "Picked up where you left off.": **Resume** carries on and **New game** starts over. The save is removed when the game ends. Flap only keeps a round once the bird has flapped, Road Hop once the chicken has hopped, Snake once the snake has started moving, Brick Bounce once the first ball has been launched, Street Kids once the first race has started (a race won saves as the start of the next), and Chess once the first move has been played.
 
 Clearing the browser's site data removes saved games and best scores. See [Privacy and data](privacy.md) for the storage keys.
 
@@ -182,6 +205,7 @@ Each game is our own take on a classic, with its own name, artwork and code. The
 | Road Hop | Crossy Road, created by Hipster Whale in 2014 |
 | Snake | Blockade, created by Gremlin in 1976, and the snake games that followed |
 | Brick Bounce | Breakout, created by Atari in 1976 |
+| Street Kids | Road Rash, created by Electronic Arts in 1991 |
 
 These names are trademarks of their owners. bdnix isn't affiliated with or endorsed by them.
 

@@ -106,7 +106,7 @@ export function boundaries(root){
     if (pages.some((o) => o !== m && o.page.description === description)) errors.push(`${where}: another page has the same description`);
     if (title.length > 60) errors.push(`${where}: the title is longer than 60 characters`);
     if (description.length > 230 || (!m.page.noindex && description.length < 70)) errors.push(`${where}: the description should be 70 to 230 characters`);
-    if (/Tetris|Pac-Man|Flappy|Crossy|Breakout|Blockade/.test(title + description)) errors.push(`${where}: another game's name in the title or description`);
+    if (/Tetris|Pac-Man|Flappy|Crossy|Breakout|Blockade|Road Rash/.test(title + description)) errors.push(`${where}: another game's name in the title or description`);
     if (m.kind !== 'app') continue;
     const c = m.card;
     if (m.page.schema !== 'WebApplication') errors.push(`${where}: an app's schema is WebApplication`);

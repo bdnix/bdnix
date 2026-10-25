@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <!-- build:meta -->
+  <!-- /build:meta -->
+  <link rel="preload" href="/assets/fonts/inter-latin-400-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/inter-latin-800-normal.woff2?v=5.3.0" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/icon-btn.css">
+  <link rel="stylesheet" href="/assets/css/lang.css">
+  <link rel="stylesheet" href="/assets/css/game.css">
+  <link rel="stylesheet" href="/assets/css/gestures.css">
+  <link rel="stylesheet" href="/assets/css/street.css">
+  <script src="/assets/js/analytics.js"></script>
+</head>
+<body class="play">
+  <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
+
+  <header class="bar">
+    <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span translate="no">/ street kids</span></a>
+    <div class="bar-actions">
+      <nav class="langs" aria-label="Language" data-languages></nav>
+      <button type="button" id="soundBtn" class="icon-btn" aria-label="Mute sound"></button>
+    </div>
+  </header>
+
+  <main class="game" id="game">
+    <section class="panel box stats">
+      <div><span class="label">Score</span><b id="score">0</b></div>
+      <div><span class="label">Best</span><b id="best">0</b></div>
+    </section>
+
+    <div class="board-wrap">
+      <canvas id="board" role="img" aria-label="Street Kids race"></canvas>
+      <div id="overlay" class="overlay">
+        <p class="label" id="ovKicker">bdnix arcade</p>
+        <h1 id="ovTitle">Street Kids</h1>
+        <p id="ovText">Race through the city. Punch and kick your rivals off their bikes, and finish in the top three to ride on.</p>
+        <div class="ov-actions">
+          <button type="button" id="startBtn" class="btn btn-primary">Start game</button>
+          <button type="button" id="newBtn" class="btn btn-ghost" hidden>New game</button>
+        </div>
+        <p class="keys only-keys"><kbd>←</kbd><kbd>→</kbd> steer · <kbd>↓</kbd> brake · <kbd>X</kbd> punch · <kbd>Z</kbd> kick · <kbd>P</kbd> pause</p>
+        <ul class="gestures" aria-label="Touch controls">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg><b>Steer</b><span>drag</span></li>
+          <li><i class="tap"></i><b>Punch</b><span>tap</span></li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V5M6 11l6-6 6 6"/></svg><b>Kick</b><span>flick</span></li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v16M6 13l6 6 6-6"/></svg><b>Brake</b><span>flick</span></li>
+        </ul>
+        <p class="keys only-touch">Tap the score to pause.</p>
+        <p class="credit">Inspired by Road Rash, created by Electronic Arts in 1991. Road Rash is a trademark of its owner; bdnix isn’t affiliated with or endorsed by them.</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="/assets/js/blocks.js"></script>
+  <script src="/assets/js/gamesave.js"></script>
+  <script src="/assets/js/sound.js"></script>
+  <script src="/assets/js/upright.js"></script>
+  <script src="/assets/js/street-core.js"></script>
+  <script src="/assets/js/street.js"></script>
+</body>
+</html>
