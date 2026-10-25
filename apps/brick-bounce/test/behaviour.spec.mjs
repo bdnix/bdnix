@@ -282,31 +282,38 @@ test('New game from the pause screen starts over, and before the first launch th
   expect(await page.evaluate(() => localStorage.getItem('bdnix_bricks_save'))).toBeNull();
 });
 
-test('saves that do not make sense are thrown away', async ({ page }) => {
-  const good = saved({ bricks: only(...Array.from({ length: 70 }, (_, i) => i)), score: 10 });
-  for (const bad of [
-    { bricks: [1] },                                                         // missing most fields
-    { ...good, score: 11 },                                                  // score doesn't match the bricks broken
-    { ...good, level: 2, bricks: full(2).map((b, i) => (i >= 70 ? 0 : b)), score: 1 }, // less than this wall's bricks are worth
-    { ...good, bricks: full().map((b, i) => (i === 0 ? 1 : b)) },            // a brick that isn't part of this wall
-    { ...good, level: 0 },                                                   // no such wall
-    { ...good, bricks: full().slice(1) },                                    // too few bricks
-    { ...good, bricks: full().map(() => 0), score: 320 },                    // an empty wall
-    { ...good, bricks: full().map(() => 2) },                                // not a brick
-    { ...good, lives: 6 },                                                   // too many balls
-    { ...good, lives: 0 },                                                   // no ball to play
-    { ...good, small: 'yes' },
-    { ...good, paddle: 10 },                                                 // the paddle off the end
-    { ...good, balls: [{ x: 180, y: 300, dx: 1, dy: 1 }], stuck: false },       // not a direction
-    { ...good, balls: [{ x: -5, y: 300, dx: 0, dy: 1 }], stuck: false },        // off the board
-    { ...good, balls: [{ x: 180, y: 70, dx: 0, dy: 1 }], stuck: false }         // inside a brick
-  ]) {
-    await openSaved(page, bad);
-    await expect(page.locator('#ovTitle'), JSON.stringify(bad)).toHaveText('Brick Bounce');
+// Saves that don't make sense, each thrown away on load: one test each, so
+// none reloads the page more than once. Each is made from a good save
+// (only its last row of bricks broken) once the page has given the walls.
+const goodSave = () => saved({ bricks: only(...Array.from({ length: 70 }, (_, i) => i)), score: 10 });
+const BAD_SAVES = [
+  ['missing most fields', () => ({ bricks: [1] })],
+  ['a score that doesn’t match the bricks broken', (good) => ({ ...good, score: 11 })],
+  ['less than this wall’s bricks are worth', (good) => ({ ...good, level: 2, bricks: full(2).map((b, i) => (i >= 70 ? 0 : b)), score: 1 })],
+  ['a brick that isn’t part of this wall', (good) => ({ ...good, bricks: full().map((b, i) => (i === 0 ? 1 : b)) })],
+  ['no such wall', (good) => ({ ...good, level: 0 })],
+  ['too few bricks', (good) => ({ ...good, bricks: full().slice(1) })],
+  ['an empty wall', (good) => ({ ...good, bricks: full().map(() => 0), score: 320 })],
+  ['not a brick', (good) => ({ ...good, bricks: full().map(() => 2) })],
+  ['too many balls', (good) => ({ ...good, lives: 6 })],
+  ['no ball to play', (good) => ({ ...good, lives: 0 })],
+  ['whether the paddle has shrunk, not true or false', (good) => ({ ...good, small: 'yes' })],
+  ['the paddle off the end', (good) => ({ ...good, paddle: 10 })],
+  ['a ball with no direction', (good) => ({ ...good, balls: [{ x: 180, y: 300, dx: 1, dy: 1 }], stuck: false })],
+  ['a ball off the board', (good) => ({ ...good, balls: [{ x: -5, y: 300, dx: 0, dy: 1 }], stuck: false })],
+  ['a ball inside a brick', (good) => ({ ...good, balls: [{ x: 180, y: 70, dx: 0, dy: 1 }], stuck: false })]
+];
+for (const [what, make] of BAD_SAVES) {
+  test(`a save that doesn’t make sense is thrown away: ${what}`, async ({ page }) => {
+    await openSaved(page, make(goodSave()));
+    await expect(page.locator('#ovTitle')).toHaveText('Brick Bounce');
     expect(await page.evaluate(() => localStorage.getItem('bdnix_bricks_save'))).toBeNull();
-  }
-  const third = full(3).map((b, i) => (i >= 70 ? 0 : b));                   // and a good one is kept
-  await openSaved(page, { ...good, level: 3, bricks: third, score: 700, balls: [{ x: 180, y: 300, dx: 0, dy: 1 }], stuck: false });
+  });
+}
+
+test('a save that makes sense is kept', async ({ page }) => {
+  const third = full(3).map((b, i) => (i >= 70 ? 0 : b));
+  await openSaved(page, { ...goodSave(), level: 3, bricks: third, score: 700, balls: [{ x: 180, y: 300, dx: 0, dy: 1 }], stuck: false });
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
   await expect(page.locator('#level')).toHaveText('3');
 });
@@ -436,31 +443,37 @@ test('a reload keeps the powers, the balls and everything in flight', async ({ p
   expect([o.balls, o.loot.every((l) => l === ''), o.fire, o.drops]).toEqual([[{ x: 180, y: 300, dx: 0, dy: 1 }], true, 0, []]);
 });
 
-test('saved powers that do not make sense are thrown away', async ({ page }) => {
-  const good = saved({ balls: [aside], stuck: false });
-  const loot = (i, kind) => { const l = none(); l[i] = kind; return l; };
-  for (const bad of [
-    { ...good, loot: none().slice(1) },                                      // too few
-    { ...good, loot: loot(4, 'rocket') },                                    // no such power
-    { ...good, loot: loot(4, 'fire'), bricks: only(5) },                     // in a broken brick
-    { ...good, balls: [] },                                                  // no ball
-    { ...good, balls: Array(13).fill(aside) },                               // too many balls
-    { ...good, balls: [aside, { x: 180, y: 70, dx: 0, dy: 1 }] },            // one inside a brick
-    { ...good, drops: [{ x: 100, y: 100, kind: 'rocket' }] },
-    { ...good, drops: [{ x: -10, y: 100, kind: 'fire' }] },
-    { ...good, drops: 'fire' },
-    { ...good, shots: [{ x: 100, y: 470 }] },                                // below the paddle
-    { ...good, shots: [null] },
-    { ...good, fire: 20 },                                                   // longer than it lasts
-    { ...good, laser: -1 },
-    { ...good, wide: 'yes' },
-    { ...good, reload: 5 }
-  ]) {
-    await openSaved(page, bad);
-    await expect(page.locator('#ovTitle'), JSON.stringify(bad).slice(0, 300)).toHaveText('Brick Bounce');
+// Saved powers that don't make sense, each thrown away on load: one test
+// each, as above. Each is made from a good save with a ball in flight.
+const goodPowers = () => saved({ balls: [aside], stuck: false });
+const loot = (i, kind) => { const l = none(); l[i] = kind; return l; };
+const BAD_POWERS = [
+  ['too few power bricks', (good) => ({ ...good, loot: none().slice(1) })],
+  ['no such power', (good) => ({ ...good, loot: loot(4, 'rocket') })],
+  ['a power in a broken brick', (good) => ({ ...good, loot: loot(4, 'fire'), bricks: only(5) })],
+  ['no ball', (good) => ({ ...good, balls: [] })],
+  ['too many balls in flight', (good) => ({ ...good, balls: Array(13).fill(aside) })],
+  ['a ball inside a brick', (good) => ({ ...good, balls: [aside, { x: 180, y: 70, dx: 0, dy: 1 }] })],
+  ['a falling power that doesn’t exist', (good) => ({ ...good, drops: [{ x: 100, y: 100, kind: 'rocket' }] })],
+  ['a falling power off the board', (good) => ({ ...good, drops: [{ x: -10, y: 100, kind: 'fire' }] })],
+  ['falling powers that aren’t a list', (good) => ({ ...good, drops: 'fire' })],
+  ['a laser shot below the paddle', (good) => ({ ...good, shots: [{ x: 100, y: 470 }] })],
+  ['a laser shot that isn’t one', (good) => ({ ...good, shots: [null] })],
+  ['fire for longer than it lasts', (good) => ({ ...good, fire: 20 })],
+  ['a laser time below zero', (good) => ({ ...good, laser: -1 })],
+  ['a wide paddle time that isn’t a number', (good) => ({ ...good, wide: 'yes' })],
+  ['a laser reload longer than the gap between shots', (good) => ({ ...good, reload: 5 })]
+];
+for (const [what, make] of BAD_POWERS) {
+  test(`saved powers that don’t make sense are thrown away: ${what}`, async ({ page }) => {
+    await openSaved(page, make(goodPowers()));
+    await expect(page.locator('#ovTitle')).toHaveText('Brick Bounce');
     expect(await page.evaluate(() => localStorage.getItem('bdnix_bricks_save'))).toBeNull();
-  }
-  await openSaved(page, { ...good, lives: 5 });                                // five balls is fine
+  });
+}
+
+test('saved powers that make sense are kept, five balls and all', async ({ page }) => {
+  await openSaved(page, { ...goodPowers(), lives: 5 });
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
 });
 
