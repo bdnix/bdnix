@@ -10,20 +10,22 @@ import { bike, rider, thing, CHARACTERS, hairModel } from './common.js';
 import { seat, helmet } from './rider.js';
 import { dress, paintHelmet, ponytail } from './gear.js';
 const q = new URLSearchParams(location.search);
-const W = innerWidth, H = innerHeight, cols = W > H ? 3 : 2, rows = 6 / cols;
+const W = innerWidth, H = innerHeight, cols = W > H ? 3 : 2, rows = new URLSearchParams(location.search).get('bikes') ? 2 : 6 / cols;
 document.body.style.setProperty('--cols', cols);
 const r = new THREE.WebGLRenderer({ antialias: true }); r.setPixelRatio(+(q.get('dpr') || devicePixelRatio)); r.setSize(W, H); document.body.appendChild(r.domElement);
 r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.9;
 r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
 const hdr = await new RGBELoader().loadAsync('/ph/wide_street_01_2k.hdr'); hdr.mapping = THREE.EquirectangularReflectionMapping;
-const BIKES = ['nr750', 'gsxr', 'z1000', 'gsxr', 'nr750', 'z1000'];
+const LEVELS = q.get('bikes') ? q.get('bikes').split(',') : null;
+const BIKES = LEVELS ? LEVELS.concat(LEVELS[0]) : ['nr750', 'gsxr', 'z1000', 'gsxr', 'nr750', 'z1000'];
+const NAMES = { k1_vino: 'Level 1 · Scooter', k2_125: 'Level 2 · 125 cc commuter', k3_pulsar: 'Level 3 · 135 cc street bike', k4_zx6r: 'Level 4 · 600 cc sport bike', k5_h2: 'Level 5 · Superbike' };
 const LEAN = { nr750: 1.3, gsxr: 1.3, z1000: 0.85 };
 const tl = new THREE.TextureLoader(); let pending = 0;
 const tex = n => { pending++; const t = tl.load('/ph/' + n, () => pending--); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(4, 4); return t; };
 const groundMat = new THREE.MeshStandardMaterial({ map: tex('asphalt_02_diff.jpg'), normalMap: tex('asphalt_02_nor_gl.jpg'), roughness: 1 });
 groundMat.map.colorSpace = THREE.SRGBColorSpace;
 const scenes = [];
-const only = q.get('only'); for (let i = 0; i < 6; i++) { if (only && CHARACTERS[i].id !== only) { scenes.push(null); continue; }
+const only = q.get('only'); for (let i = 0; i < (LEVELS ? LEVELS.length : 6); i++) { if (only && CHARACTERS[i].id !== only) { scenes.push(null); continue; }
   const ch = CHARACTERS[i];
   const sc = new THREE.Scene(); sc.background = hdr; sc.environment = hdr; sc.backgroundBlurriness = 0.35; sc.environmentIntensity = 0.9;
   const sun = new THREE.DirectionalLight(0xfff1dc, 3); sun.position.set(-3, 6, 4); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
@@ -31,7 +33,7 @@ const only = q.get('only'); for (let i = 0; i < 6; i++) { if (only && CHARACTERS
   const g = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), groundMat); g.rotation.x = -Math.PI / 2; g.receiveShadow = true; sc.add(g);
   const bk = await bike(BIKES[i]); sc.add(bk); bk.updateMatrixWorld(true);
   const rd = await rider(ch.id); bk.add(rd); dress(rd, ch);
-  const bn = seat(rd, bk, Object.assign({}, bk.userData.fit, { lean: LEAN[BIKES[i]] }));
+  const bn = seat(rd, bk, Object.assign({}, bk.userData.fit, { lean: LEAN[BIKES[i]] ?? bk.userData.fit.lean }));
   const hm = await thing('fullface', 1); paintHelmet(hm, ch.helmet); helmet(bn, hm, ch.id === 'justman' ? 0.37 : ch.sex === 'f' ? 0.29 : 0.31, ch.id === 'justman' ? (q.get('jdef') ? {} : { up: new THREE.Vector3(0, 1, +(q.get('tilt') || 0.15)), lift: +(q.get('lift') || 0.06), push: +(q.get('push') || 0) }) : {}); if (ch.hair) ponytail(bn._helmet, await hairModel(), ch.hair);
   const cam = new THREE.PerspectiveCamera(21, (W / cols) / (H / rows), 0.1, 100);
   const view = q.get('view') || 'front';
@@ -39,7 +41,7 @@ const only = q.get('only'); for (let i = 0; i < 6; i++) { if (only && CHARACTERS
   else if (view === 'cback') { cam.position.set(-1.2, 1.7, -2.2); } else if (view === 'side') { cam.position.set(5.2, 1.2, 0.0); } else if (view === 'cfront') { cam.position.set(1.4, 1.4, 2.0); } else if (view === 'xs') { cam.position.set(1.6, 1.25, 0.2); }
   cam.lookAt(0, view === 'xs' ? 1.0 : view[0] === 'c' ? 1.05 : view === 'side' ? 0.75 : 0.85, view[0] === 'c' ? -0.2 : 0);
   scenes.push({ sc, cam });
-  const tag = document.createElement('div'); tag.textContent = (ch.sex === 'f' ? 'Female' : 'Male') + ' ' + (i % 3 + 1); document.getElementById('tags').appendChild(tag);
+  const tag = document.createElement('div'); tag.textContent = LEVELS ? NAMES[BIKES[i]] : (ch.sex === 'f' ? 'Female' : 'Male') + ' ' + (i % 3 + 1); document.getElementById('tags').appendChild(tag);
 }
 await new Promise(res => { const t = setInterval(() => { if (pending === 0) { clearInterval(t); res(); } }, 100); });
 r.setScissorTest(true);

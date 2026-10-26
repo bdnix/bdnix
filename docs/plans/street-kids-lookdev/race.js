@@ -78,38 +78,31 @@ const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, LEN), new THREE.MeshS
 ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0.01, LEN / 2 - 60); ground.receiveShadow = true; scene.add(ground);
 road.position.y = 0.02;
 
-// Buildings, palms and lamps along both sides.
+// Buildings, trees and lamps along both sides.
 const block = await thing('block', 40, { byWidth: true });
-const palms = await thing('palms', 1);
 const lamp = await thing('lamp', 9, { byHeight: true });
 let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const FRONT = ROAD / 2 + WALK + 0.5;   // where the buildings' fronts stand, just behind the pavement
 for (const s of [-1, 1]) {
-  for (let z = -40; z < LEN - 100; z += 46 + rnd() * 14) {
-    const b = block.clone(); b.rotation.y = s > 0 ? -Math.PI / 2 : Math.PI / 2;
-    b.scale.setScalar(0.85 + rnd() * 0.35);
-    b.position.set(s * (ROAD / 2 + WALK + 14 + rnd() * 4), 0, z); scene.add(b);
+  // Long side along the road, front face on the pavement's back edge.
+  for (let z = -40; z < LEN - 100;) {
+    const b = block.clone(); b.rotation.y = s > 0 ? Math.PI : 0;
+    b.scale.setScalar(0.8 + rnd() * 0.3);
+    b.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(b, true), size = box.getSize(new THREE.Vector3());
+    b.position.set(s * (FRONT + size.x / 2), 0, z + size.z / 2); scene.add(b);
+    z += size.z + 2 + rnd() * 6;
   }
   for (let z = -30; z < LEN - 100; z += 30) {
     const l = lamp.clone(); l.position.set(s * (ROAD / 2 + 0.7), 0.16, z); scene.add(l);
   }
 }
 
-// Palms: pick single trees out of the pack.
-const singlePalms = [];
-palms.traverse(n => { if (n.isMesh && /Trunk/.test(n.name)) singlePalms.push(n.name.replace(/_Trunk.*$/, '')); });
-palms.updateMatrixWorld(true);
-function palm(id) {
-  const g = new THREE.Group();
-  palms.traverse(n => { if (n.isMesh && n.name.startsWith(id + '_')) { const m = n.clone(); n.matrixWorld.decompose(m.position, m.quaternion, m.scale); g.add(m); } });
-  const box = new THREE.Box3().setFromObject(g); const c = box.getCenter(new THREE.Vector3());
-  const inner = new THREE.Group(); g.children.slice().forEach(m => { m.position.sub(new THREE.Vector3(c.x, box.min.y, c.z)); inner.add(m); });
-  const h = box.max.y - box.min.y; inner.scale.setScalar(9 / h);
-  const o = new THREE.Group(); o.add(inner); return o;
-}
-const palmSet = singlePalms.slice(0, 6).map(palm);
-let pi = 0;
-for (const s of [-1, 1]) for (let z = -15; z < LEN - 100; z += 30) {
-  const p = palmSet[pi++ % palmSet.length].clone(); p.position.set(s * (ROAD / 2 + 2.6), 0.16, z); p.rotation.y = rnd() * 6; p.scale.setScalar(0.8 + rnd() * 0.4); scene.add(p);
+// Shade trees on the pavement: mango and rain trees, as on a Bangladeshi street.
+const trees = [await thing('tr_mango', 7.5, { byHeight: true }), await thing('tr_rain', 10, { byHeight: true })];
+let ti = 0;
+for (const s of [-1, 1]) for (let z = -15 + (s > 0 ? 12 : 0); z < LEN - 100; z += 24 + rnd() * 10) {
+  const t = trees[ti++ % trees.length].clone(); t.position.set(s * (ROAD / 2 + 3.2), 0.16, z); t.rotation.y = rnd() * 6; t.scale.setScalar(0.85 + rnd() * 0.3); scene.add(t);
 }
 
 // Soft contact shadow under a vehicle (sun shadows alone leave them floating).
@@ -144,7 +137,7 @@ async function racer(b, r, x, z, opts = {}) {
   const ch = CHARACTERS.find(c => c.id === r);
   const bk = await bike(b); const rd = await rider(r); bk.add(rd);
   if (ch) dress(rd, ch);
-  const fit = Object.assign({}, bk.userData.fit, { lean: opts.lean ?? LEAN[b] });
+  const fit = Object.assign({}, bk.userData.fit, { lean: opts.lean ?? LEAN[b] ?? bk.userData.fit.lean });
   bk.position.set(x, 0.02, z); bk.rotation.z = opts.roll || 0; bk.rotation.y = opts.yaw || 0; scene.add(bk); bk.updateMatrixWorld(true);
   const bn = seat(rd, bk, fit, opts);
   const hm = await thing('fullface', 1); paintHelmet(hm, ch && ch.helmet); helmet(bn, hm, ch && ch.id === 'justman' ? 0.37 : ch && ch.sex === 'f' ? 0.29 : 0.31, ch && ch.id === 'justman' ? { up: new THREE.Vector3(0, 1, 0.15).applyQuaternion(bk.quaternion), lift: 0.06, push: 0 } : {}); if (ch && ch.hair) ponytail(bn._helmet, await hairModel(), ch.hair);
@@ -156,9 +149,16 @@ const P = { x: +(q.get('px') || 0.4), z: 0 };
 const headOf = r => r.bn.head.getWorldPosition(new THREE.Vector3());
 let me;
 if (shot === 'none') {
+} else if (shot === 'career') {
+  me = await racer('k1_vino', 'c_teenboy', P.x, P.z);
+  await racer('k1_vino', 'c_teew', P.x - 1.7, P.z + 1.6, { roll: 0.02 });
+  await racer('k2_125', 'c_polom', P.x + 3.2, P.z + 6, { roll: -0.03 });
+  await racer('k2_125', 'c_leatherw', P.x - 2.8, P.z + 14);
+  await racer('k1_vino', 'c_teenblack', P.x + 4.6, P.z + 16);
+  await racer('k2_125', 'c_blackm', P.x + 1.5, P.z + 24);
 } else if (shot === 'race') {
-  me = await racer('nr750', 'c_teenboy', P.x, P.z);
-  await racer('gsxr', 'c_teew', P.x - 1.7, P.z + 1.6, { roll: 0.02 });
+  me = await racer('k5_h2', 'c_teenboy', P.x, P.z);
+  await racer('k4_zx6r', 'c_teew', P.x - 1.7, P.z + 1.6, { roll: 0.02 });
   await racer('z1000', 'c_polom', P.x + 3.2, P.z + 6, { roll: -0.03 });
   await racer('gsxr', 'c_leatherw', P.x - 2.8, P.z + 14);
   await racer('z1000', 'c_teenblack', P.x + 4.6, P.z + 16);
