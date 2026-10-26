@@ -1,0 +1,28 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#888}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"/work/node_modules/three/build/three.module.js","three/addons/":"/work/node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { thing } from './common.js';
+const q = new URLSearchParams(location.search);
+const W = innerWidth, H = innerHeight, list = q.get('m').split(','), cols = Math.min(4, list.length), rows = Math.ceil(list.length / cols);
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); r.setPixelRatio(devicePixelRatio); r.setSize(W, H); document.body.appendChild(r.domElement);
+r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.9; r.shadowMap.enabled = true;
+const hdr = await new RGBELoader().loadAsync('/ph/wide_street_01_2k.hdr'); hdr.mapping = THREE.EquirectangularReflectionMapping;
+r.setScissorTest(true);
+for (let i = 0; i < list.length; i++) {
+  const [name, len, ry] = list[i].split(':');
+  const sc = new THREE.Scene(); sc.background = new THREE.Color(0xc8ccd0); sc.environment = hdr;
+  const sun = new THREE.DirectionalLight(0xfff1dc, 3); sun.position.set(-6, 10, 8); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10 }); sc.add(sun);
+  const g = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 1 })); g.rotation.x = -Math.PI / 2; g.receiveShadow = true; sc.add(g);
+  const v = await thing(name, +len, { ry: +ry || 0 }); sc.add(v);
+  const box = new THREE.Box3().setFromObject(v, true), sz = box.getSize(new THREE.Vector3());
+  const cam = new THREE.PerspectiveCamera(35, (W / cols) / (H / rows), 0.1, 200);
+  const d = Math.max(sz.z, sz.y * 2) * 1.5; cam.position.set(d * 0.75, sz.y * 0.9, d * 0.85); cam.lookAt(0, sz.y * 0.45, 0);
+  const x = (i % cols) * W / cols, y = H - (Math.floor(i / cols) + 1) * H / rows;
+  r.setViewport(x, y, W / cols, H / rows); r.setScissor(x, y, W / cols, H / rows); r.render(sc, cam);
+  console.error(name, 'size', sz.toArray().map(a => a.toFixed(2)).join(' '));
+}
+document.title = 'ok';
+</script></body></html>

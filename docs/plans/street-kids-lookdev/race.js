@@ -126,14 +126,16 @@ function blob(o) {
 const traffic = [
   ['cng', 2.6, { ry: -90 }, 5.25, 17],
   ['corolla', 4.6, {}, -1.75, 27],
-  ['townbus', 11, { ry: 90 }, 1.75, 44],
+  ['b_hino', 10.5, { ry: 180, hide: /_blinn6_|_phongE3_|CarPlate/, mirror: true }, 1.75, 44],
   ['yaris', 3.7, { ry: 180 }, 5.25, 58],
-  ['truck', 9.5, {}, -5.25, 72],
+  ['t_al', 8, {}, -5.25, 72],
+  ['b_ecolin', 12, {}, 5.25, 150],
+  ['t_bd', 8.5, {}, -1.75, 180],
   ['cng', 2.6, { ry: -90 }, -1.75, 95],
   ['corolla', 4.6, {}, 1.75, 125],
 ];
 for (const [name, len, opts, x, z] of traffic) {
-  const v = await thing(name, len, opts); v.position.set(x, 0.02, z); scene.add(v); v.updateMatrixWorld(true); blob(v);
+  const v = await thing(name, len, opts); if (opts.mirror) v.scale.x = -1; v.position.set(x, 0.02, z); scene.add(v); v.updateMatrixWorld(true); blob(v);
 }
 
 // The riders.
