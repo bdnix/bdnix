@@ -109,11 +109,33 @@ function signTexture(widthM, big) {
   else { g.fillText(name, c.width / 2, 50); g.font = '28px Kalpurush'; g.fillText(sub, c.width / 2, 103); }
   // Sun-faded and dusty.
   g.fillStyle = 'rgba(120,110,90,0.12)'; g.fillRect(0, 0, c.width, c.height);
+  // Vinyl wrinkles and sag: soft light and dark bands running across.
+  for (let i = 0; i < c.width / 40; i++) {
+    const x = rnd() * c.width, w = 6 + rnd() * 30, gr = g.createLinearGradient(x - w, 0, x + w, 0);
+    gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, rnd() < 0.5 ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.14)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.save(); g.translate(x, 0); g.rotate((rnd() - 0.5) * 0.5); g.fillRect(-w, -20, 2 * w, c.height + 40); g.restore();
+  }
+  // Dust settling on the top edge, rain streaks, faded corners.
+  let dg = g.createLinearGradient(0, 0, 0, c.height * 0.35); dg.addColorStop(0, 'rgba(70,60,45,0.45)'); dg.addColorStop(1, 'rgba(70,60,45,0)'); g.fillStyle = dg; g.fillRect(0, 0, c.width, c.height * 0.35);
+  for (let i = 0; i < c.width / 25; i++) { const x = rnd() * c.width, l = rnd() * c.height; dg = g.createLinearGradient(0, 0, 0, l); dg.addColorStop(0, 'rgba(50,45,35,0.3)'); dg.addColorStop(1, 'rgba(50,45,35,0)'); g.fillStyle = dg; g.fillRect(x, 0, 1 + rnd() * 3, l); }
+  // The aluminium frame.
+  g.strokeStyle = '#8d8f8f'; g.lineWidth = 6; g.strokeRect(3, 3, c.width - 6, c.height - 6);
+  g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 2; g.strokeRect(7, 7, c.width - 14, c.height - 14);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
   return t;
 }
 
 const M = {};
+// A paper notice: "দোকান ভাড়া দেওয়া হইবে" (shop to let) with a phone number, red on white.
+function noticeTexture() {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 300; const g = c.getContext('2d');
+  g.fillStyle = '#efece4'; g.fillRect(0, 0, 256, 300);
+  g.fillStyle = '#c62828'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = '44px Kalpurush'; g.fillText('দোকান', 128, 50); g.fillText('ভাড়া দেওয়া', 128, 105); g.fillText('হইবে', 128, 160);
+  g.fillStyle = '#222'; g.font = '30px Kalpurush'; g.fillText('০১৭' + '১২৩৪৫৬৭৮'.split('').sort(() => rnd() - 0.5).join(''), 128, 230);
+  for (let i = 0; i < 200; i++) { g.fillStyle = `rgba(90,80,60,${rnd() * 0.2})`; g.fillRect(rnd() * 256, rnd() * 300, 2, 2); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
 function box(w, h, d, mat) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.castShadow = m.receiveShadow = true; return m; }
 // A box whose UVs are in metres in the facade's plane, so the wall texture lines up across pieces.
 function wallBox(w, h, d, mat, x0, y0, W, H) {
@@ -123,7 +145,7 @@ function wallBox(w, h, d, mat, x0, y0, W, H) {
   const m = new THREE.Mesh(geo, mat); m.castShadow = m.receiveShadow = true; return m;
 }
 
-let AC, SHUTTER;
+let AC, SHUTTER, SCAN;
 export async function prepare() {
   const [p, st] = await Promise.all([img('/ph/plastered_wall_04_diff.jpg'), img('/ph/worn_plaster_wall_diff.jpg')]);
   PLASTER = p; STAIN = st;
@@ -131,6 +153,9 @@ export async function prepare() {
   await document.fonts.load('64px Kalpurush');
   AC = await thing('p_ac', 0.85, { byWidth: true });
   SHUTTER = await thing('p_shutter', 3, { byWidth: true });
+  // Photo scans of real shopfronts and street clutter (albentan2012, CC BY), front to +z, base at y = 0.
+  const scan = async (name, h) => { const o = await thing(name, h, { ry: 90, byHeight: true }); o.traverse(n => { if (n.isMesh) { n.material.side = THREE.DoubleSide; n.castShadow = n.receiveShadow = true; } }); const g = new THREE.Group(); o.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(o, true); o.position.z -= b.max.z; g.add(o); return g; };
+  SCAN = { shutter: await scan('x_front', 3.24), store: await scan('x_crates', 2.1), meters: await scan('x_meters', 2.12) };
   M.glass = new THREE.MeshStandardMaterial({ color: 0x1d2a2c, roughness: 0.08, metalness: 0.6 });
   M.dark = new THREE.MeshStandardMaterial({ color: 0x15130f, roughness: 0.9 });
   M.shopIn = new THREE.MeshStandardMaterial({ color: 0x2b2620, roughness: 0.9 });
@@ -169,34 +194,39 @@ export function building(w) {
   const balconyFloors = new Set(); for (let f = 0; f < floors; f++) if (style === 'balconies' || (style === 'shades' && rnd() < 0.25)) balconyFloors.add(f);
   // Ground floor: shops.
   const slab0 = box(w, 0.25, 1.4, M.slab); slab0.position.set(w / 2, groundH, 0.3); g.add(slab0);
-  for (let b = 0; b < bays; b++) {
-    const x0 = b * bw;
+  // Shops 4–5.5 m wide, each a photo scan of a real shopfront: a shutter pulled down, or an open
+  // store with its crates and goods out at the front, lit inside. Now and then a wall of
+  // electric meters on the pier between two shops.
+  const nShops = Math.max(1, Math.round(w / 4.7)), sw = w / nShops;
+  for (let b = 0; b < nShops; b++) {
+    const x0 = b * sw, cx = x0 + sw / 2, inner = sw - 0.3;
     const pier = wallBox(0.3, groundH, 3.1, wallMat, x0, 0, w, H + 1.1); pier.position.set(x0 + 0.15, groundH / 2, -1.55); g.add(pier);
-    const state = rnd(), open = state < 0.7;
-    if (open) {
-      // A lit shop: back wall, shelves of goods, a tube light.
-      const bwall = box(bw - 0.3, groundH - 1.0, 0.1, pick(M.shopWalls)); bwall.position.set(x0 + bw / 2 + 0.15, (groundH - 1.0) / 2, -3); g.add(bwall);
-      const floor = box(bw - 0.3, 0.05, 3, M.shopLit); floor.position.set(x0 + bw / 2 + 0.15, 0.02, -1.5); g.add(floor);
-      for (const side of [-1, 1]) { const sw2 = box(0.1, groundH - 1.0, 3, M.shopLit); sw2.position.set(x0 + bw / 2 + 0.15 + side * (bw - 0.4) / 2, (groundH - 1.0) / 2, -1.5); g.add(sw2); }
-      const ceil = box(bw - 0.3, 0.05, 3, M.shopLit); ceil.position.set(x0 + bw / 2 + 0.15, groundH - 1.0, -1.5); g.add(ceil);
-      const tube = box(1.2, 0.04, 0.04, M.tube); tube.position.set(x0 + bw / 2 + 0.15, groundH - 1.08, -1.2); g.add(tube);
-      for (let r = 0; r < 4; r++) for (let k = 0; k < 8; k++) {
-        const it = box(0.12 + rnd() * 0.2, 0.15 + rnd() * 0.25, 0.25, pick(M.goods));
-        it.position.set(x0 + 0.5 + rnd() * (bw - 0.7), 0.4 + r * 0.55 + 0.1, -2.8 + rnd() * 0.3); it.castShadow = false; g.add(it);
-      }
-      // Goods on show at the front: strings of packets hanging from the top, sacks and crates on the step.
-      for (let k = 0; k < 10; k++) { const pk = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.24), pick(M.goods)); pk.position.set(x0 + 0.45 + k * (bw - 0.9) / 9, groundH - 1.25 - (k % 2) * 0.1, -0.15); g.add(pk); }
-      for (let k = 0; k < 6; k++) { const pk = box(0.3 + rnd() * 0.3, 0.3 + rnd() * 0.5, 0.4, pick([M.sack, M.crate, ...M.goods])); pk.position.set(x0 + 0.5 + rnd() * (bw - 1), 0.25, -0.35 - rnd() * 0.6); pk.rotation.y = (rnd() - 0.5) * 0.4; g.add(pk); }
-      const counter = box(bw * 0.6, 0.9, 0.5, M.counter); counter.position.set(x0 + bw / 2 + 0.15, 0.45, -0.8); g.add(counter);
-      // The shutter rolled up into its box.
-      const sh = SHUTTER.clone(); sh.scale.multiplyScalar((bw - 0.3) / 3); sh.position.set(x0 + bw / 2 + 0.15, groundH - 1.0 - 0.15, -0.35); sh.scale.y *= 0.06; g.add(sh);
+    const kind = rnd();
+    if (kind < 0.62) {
+      // Open: a dim, tube-lit room, the shelves and crates scan at its mouth.
+      const room = new THREE.Mesh(new THREE.BoxGeometry(inner, groundH - 0.95, 3), [M.shopLit, M.shopLit, M.shopLit, M.shopLit, M.shopIn, M.shopLit]);
+      room.material = room.material.map(m => { const c = m.clone(); c.side = THREE.BackSide; return c; });
+      room.position.set(cx + 0.15, (groundH - 0.95) / 2, -1.6); g.add(room);
+      const tube = box(1.2, 0.04, 0.04, M.tube); tube.position.set(cx + 0.15, groundH - 1.0, -1.0); g.add(tube);
+      const sc = SCAN.store.clone(); sc.scale.set(inner / 4.06, (groundH - 1.15) / 2.1, 0.8); sc.position.set(cx + 0.15, 0.02, -0.75); g.add(sc);
+      const sh = SHUTTER.clone(); sh.scale.multiplyScalar(inner / 3); sh.scale.y *= 0.06; sh.position.set(cx + 0.15, groundH - 1.08, -0.3); g.add(sh);
     } else {
-      const inside = box(bw - 0.3, groundH - 1.0, 2.6, M.shopIn); inside.position.set(x0 + bw / 2 + 0.15, (groundH - 1.0) / 2, -1.8); g.add(inside);
-      const sh = SHUTTER.clone(); sh.scale.multiplyScalar((bw - 0.3) / 3); sh.position.set(x0 + bw / 2 + 0.15, 0, -0.35); g.add(sh);
+      const inside = box(inner, groundH - 0.95, 1.2, M.shopIn); inside.position.set(cx + 0.15, (groundH - 0.95) / 2, -2.5); g.add(inside);
+      const sc = SCAN.shutter.clone(); sc.scale.set(inner / 5.45, (groundH - 0.95) / 3.0, 0.5); sc.position.set(cx + 0.15, 0, -0.3); g.add(sc);
+      // The scan's notice is in English: a Bangla to-let notice pasted over it, or a shop's own notice.
+      const n = new THREE.Mesh(new THREE.PlaneGeometry(inner * 0.3, (groundH - 0.95) * 0.38), new THREE.MeshStandardMaterial({ map: noticeTexture(), roughness: 0.8 }));
+      // Pasted over the scan's English notice: find the shutter's surface there with a ray.
+      g.updateMatrixWorld(true);
+      const nx = cx + 0.15 + inner * 0.14, ny = (groundH - 0.95) * 0.72;
+      const ray = new THREE.Raycaster(new THREE.Vector3(nx, ny, 2).applyMatrix4(g.matrixWorld), new THREE.Vector3(0, 0, -1).transformDirection(g.matrixWorld));
+      const hit = ray.intersectObject(sc, true)[0];
+      const nz = hit ? g.worldToLocal(hit.point.clone()).z + 0.06 : -0.5;
+      n.position.set(nx + 0.06, ny, nz); g.add(n);
     }
+    if (b > 0 && rnd() < 0.25) { const m = SCAN.meters.clone(); m.scale.setScalar(0.55); m.position.set(x0 + 0.15, 0.6, 0.05); g.add(m); }
     // Signboard over the shop.
-    const sw = bw - 0.3, sign = new THREE.Mesh(new THREE.BoxGeometry(sw, 0.85, 0.06), [M.dark, M.dark, M.dark, M.dark, new THREE.MeshStandardMaterial({ map: signTexture(sw), roughness: 0.7 }), M.dark]);
-    sign.position.set(x0 + bw / 2 + 0.15, groundH - 0.55, 0.05); sign.castShadow = true; g.add(sign);
+    const sgn = new THREE.Mesh(new THREE.BoxGeometry(inner, 0.85, 0.06), [M.dark, M.dark, M.dark, M.dark, new THREE.MeshStandardMaterial({ map: signTexture(inner), roughness: 0.7 }), M.dark]);
+    sgn.position.set(cx + 0.15, groundH - 0.55, 0.05); sgn.castShadow = true; g.add(sgn);
   }
   if (style === 'glass') {
     const cw = box(w - 0.6, floors * floorH - 0.4, 0.1, M.blueGlass); cw.position.set(w / 2, groundH + floors * floorH / 2, 0.05); g.add(cw);

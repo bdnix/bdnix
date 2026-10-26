@@ -10,6 +10,7 @@ scene.add(new THREE.HemisphereLight(0xffffff, 0x666666, 2.5)); const d = new THR
 const g = await new GLTFLoader().loadAsync('/models/' + q.get('m') + '.glb');
 const o = g.scene; scene.add(o); const hide = q.get('hide'); if (hide) { const re = new RegExp(hide, 'i'); const kill=[]; o.traverse(n => { if (n.isMesh && (re.test(n.name) || re.test(n.material?.name||''))) kill.push(n); }); kill.forEach(n => n.removeFromParent()); }
 const only = q.get('only'); if (only) { const re = new RegExp('^(' + only + ')$'); const kill=[]; o.traverse(n => { if (n.isMesh && !re.test(n.name)) kill.push(n); }); kill.forEach(n => n.removeFromParent()); }
+if (q.get('dside')) o.traverse(n => { if (n.isMesh) { n.material.side = THREE.DoubleSide; n.material.transparent = false; n.material.alphaTest = 0; n.material.opacity = 1; } });
 if (q.get('ry')) o.rotation.y = +q.get('ry') * Math.PI / 180;
 const box = new THREE.Box3().setFromObject(o); const size = box.getSize(new THREE.Vector3()); const c = box.getCenter(new THREE.Vector3());
 const len = +(q.get('len') || 0); const s = len ? len / Math.max(size.x, size.z) : 1; o.scale.setScalar(s);
