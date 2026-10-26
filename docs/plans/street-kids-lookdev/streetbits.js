@@ -142,15 +142,17 @@ function plateTexture(cls, aspect) {
   const bg = g.createLinearGradient(0, 0, 512, 256); bg.addColorStop(0, '#dcdcd6'); bg.addColorStop(1, '#c9c9c2');
   g.fillStyle = bg; g.fillRect(0, 0, 512, c.height);
   g.strokeStyle = '#222'; g.lineWidth = 6; g.strokeRect(12, 12, 488, c.height - 24);
-  const k = c.height / 256; g.save(); g.translate(0, 0); g.scale(1, k);
   g.textAlign = 'center'; g.textBaseline = 'middle';
   const num = bn(11 + Math.floor(rnd() * 89)) + '-' + bn(1000 + Math.floor(rnd() * 9000));
-  // Embossed: a light edge below and a shadow above each letter.
-  for (const [dx, dy, col] of [[0, 3, 'rgba(255,255,255,0.6)'], [0, -2, 'rgba(0,0,0,0.35)'], [0, 0, '#1a1a1a']]) {
-    g.fillStyle = col; g.font = '80px Kalpurush'; g.fillText('ঢাকা মেট্রো-' + cls, 256 + dx, 82 + dy);
-    g.font = '104px Kalpurush'; g.fillText(num, 256 + dx, 180 + dy);
+  // Two lines, sized to the plate's height; squeezed sideways only if they don't fit.
+  const Hc = c.height, lines = [['ঢাকা মেট্রো-' + cls, 0.36, 0.31], [num, 0.47, 0.71]];
+  for (const [txt, size, yy] of lines) {
+    g.font = `${Math.round(Hc * size)}px Kalpurush`;
+    const sx = Math.min(1, 440 / g.measureText(txt).width);
+    for (const [dy, col] of [[Math.max(1, Hc * 0.012), 'rgba(255,255,255,0.6)'], [-Math.max(1, Hc * 0.008), 'rgba(0,0,0,0.35)'], [0, '#1a1a1a']]) {
+      g.save(); g.translate(256, Hc * yy + dy); g.scale(sx, 1); g.fillStyle = col; g.fillText(txt, 0, 0); g.restore();
+    }
   }
-  g.restore();
   // Grit and smears.
   for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(80,70,55,${rnd() * 0.25})`; g.fillRect(rnd() * 512, rnd() * c.height, 1 + rnd() * 3, 1 + rnd() * 3); }
   // Road dust.
@@ -174,15 +176,9 @@ export function plates(v, cls, spots) {
       sp.z = (hit ? hit.point.z : (sp.end > 0 ? box.max.z : box.min.z)) - v.position.z - dir * 0.012;
       sp.ry = sp.end > 0 ? 0 : Math.PI;
     }
-    // A black plastic holder with a lip, the plate set into it.
     const w = sp.w || 0.4, h = sp.h || w * 0.5;
-    const grp = new THREE.Group();
-    const holder = new THREE.Mesh(new THREE.BoxGeometry(w + 0.04, h + 0.04, 0.02), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.6 }));
-    holder.position.z = -0.01; grp.add(holder);
-    const plate = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: plateTexture(cls, h / w), roughness: 0.35, metalness: 0.15 }));
-    plate.position.z = 0.002; grp.add(plate);
-    for (const yy of [h / 2 + 0.012, -h / 2 - 0.012]) { const lip = new THREE.Mesh(new THREE.BoxGeometry(w + 0.04, 0.012, 0.012), holder.material); lip.position.set(0, yy, 0.006); grp.add(lip); }
-    grp.position.set(sp.x || 0, sp.y, sp.z + (sp.end > 0 ? -0.006 : 0.006)); grp.rotation.y = sp.ry || 0; grp.traverse(o => { o.castShadow = o.receiveShadow = true; });
+    const grp = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: plateTexture(cls, h / w), roughness: 0.35, metalness: 0.15 }));
+    grp.position.set(sp.x || 0, sp.y, sp.z); grp.rotation.y = sp.ry || 0; grp.receiveShadow = true;
     v.add(grp);
   }
 }
@@ -240,4 +236,23 @@ export function livery(v, body, i) {
     m.material = mat;
   });
   return L;
+}
+
+// Paint plates onto a vehicle's own plate parts (meshes whose name matches `re`), keeping the
+// model's shape and recess; the plate is projected flat from behind or in front.
+export function platesOnModel(v, cls, re) {
+  v.updateMatrixWorld(true);
+  v.traverse(m => {
+    if (!m.isMesh || !re.test(m.name)) return;
+    const box = new THREE.Box3().setFromObject(m, true), sz = box.getSize(new THREE.Vector3());
+    const g = m.geometry = m.geometry.clone(), p = g.attributes.position, uv = new Float32Array(p.count * 2), w = new THREE.Vector3();
+    const back = box.getCenter(new THREE.Vector3()).z < v.position.z;
+    for (let k = 0; k < p.count; k++) {
+      w.fromBufferAttribute(p, k).applyMatrix4(m.matrixWorld);
+      const u = (w.x - box.min.x) / sz.x;
+      uv[k * 2] = back ? 1 - u : u; uv[k * 2 + 1] = (w.y - box.min.y) / sz.y;
+    }
+    g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    m.material = new THREE.MeshStandardMaterial({ map: plateTexture(cls, sz.y / sz.x), roughness: 0.35, metalness: 0.15 });
+  });
 }

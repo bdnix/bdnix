@@ -145,8 +145,8 @@ function blob(o) {
 
 // Number plates: where each vehicle carries them (height in metres, which end).
 const PLATES = {
-  corolla: { cls: 'গ', spots: [{ y: 0.745, end: -1, w: 0.5, h: 0.155 }, { y: 0.42, end: 1, w: 0.5, h: 0.155 }] },
-  yaris: { cls: 'গ', spots: [{ y: 0.62, end: -1 }, { y: 0.40, end: 1 }] },
+  corolla: { cls: 'গ', model: /^Cube00[23]/, spots: [] },
+  yaris: { cls: 'গ', spots: [{ y: 0.462, end: -1, w: 0.505, h: 0.17 }, { y: 0.40, end: 1, w: 0.42, h: 0.15 }] },
   cng: { cls: 'থ', spots: [{ y: 0.62, end: -1, w: 0.4 }] },
   b_viking: { cls: 'ব', spots: [{ y: 0.75, end: -1 }] },
   t_al: { cls: 'ট', spots: [{ y: 0.9, end: -1 }] },
@@ -155,20 +155,20 @@ const PLATES = {
 // Traffic, going our way.
 const traffic = [
   ['cng', 2.6, { ry: -90 }, 5.25, 17],
-  ['corolla', 4.6, { hide: /^Cube\.00[23]/ }, -1.75, 27],
+  ['corolla', 4.6, {}, -1.75, 27],
   ['b_viking', 11, { bus: 0 }, 1.75, 44],
-  ['yaris', 3.7, { ry: 180 }, 5.25, 58],
+  ['yaris', 3.7, {}, 5.25, 58],
   ['t_al', 8, {}, -5.25, 72],
   ['b_viking', 11, { bus: 1 }, 5.25, 150],
   ['t_bd', 8.5, {}, -1.75, 180],
   ['cng', 2.6, { ry: -90 }, -1.75, 95],
-  ['corolla', 4.6, { hide: /^Cube\.00[23]/ }, 1.75, 125],
+  ['corolla', 4.6, {}, 1.75, 125],
 ];
 for (const [name, len, opts, x, z] of traffic) {
   const v = await thing(name, len, opts); if (opts.mirror) v.scale.x = -1; v.position.set(x, 0.02, z); scene.add(v); v.updateMatrixWorld(true); blob(v);
   v.traverse(m => { if (m.isMesh && /glass|kaca|window|vidrio/i.test(m.material.name || '')) { m.material = m.material.clone(); m.material.color = new THREE.Color(0x0e1214); m.material.map = null; m.material.metalness = 0.6; m.material.roughness = 0.08; m.material.transparent = false; m.material.opacity = 1; } });
   if (opts.bus !== undefined) bits.livery(v, /^(Material_13|Material_23|Material_23_1)$/, opts.bus);
-  const P = PLATES[name]; if (P) bits.plates(v, P.cls, P.spots.map(o => Object.assign({}, o)));
+  const P = PLATES[name]; if (P && P.model) bits.platesOnModel(v, P.cls, P.model); else if (P) bits.plates(v, P.cls, P.spots.map(o => Object.assign({}, o)));
 }
 
 // The riders.
