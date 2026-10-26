@@ -146,7 +146,7 @@ function blob(o) {
 // Number plates: where each vehicle carries them (height in metres, which end).
 const PLATES = {
   corolla: { cls: 'গ', model: /^Cube00[23]/, spots: [] },
-  yaris: { cls: 'গ', spots: [{ y: 0.462, end: -1, w: 0.505, h: 0.17 }, { y: 0.40, end: 1, w: 0.42, h: 0.15 }] },
+  yaris: { cls: 'গ', spots: [{ y: 0.462, end: -1, w: 0.47, h: 0.15 }, { y: 0.40, end: 1, w: 0.42, h: 0.15 }] },
   cng: { cls: 'থ', spots: [{ y: 0.62, end: -1, w: 0.4 }] },
   b_viking: { cls: 'ব', spots: [{ y: 0.75, end: -1 }] },
   t_al: { cls: 'ট', spots: [{ y: 0.9, end: -1 }] },

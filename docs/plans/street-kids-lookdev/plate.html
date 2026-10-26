@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><style>@font-face{font-family:Kalpurush;src:url(/fonts/kalpurush.ttf)}html,body{margin:0;background:#888}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"/work/node_modules/three/build/three.module.js","three/addons/":"/work/node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { thing } from './common.js';
+import * as bits from './streetbits.js';
+const q = new URLSearchParams(location.search);
+await document.fonts.load('64px Kalpurush');
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); r.setPixelRatio(devicePixelRatio); r.setSize(innerWidth, innerHeight); document.body.appendChild(r.domElement);
+r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.9;
+const sc = new THREE.Scene(); const hdr = await new RGBELoader().loadAsync('/ph/kloofendal_48d_partly_cloudy_puresky_2k.hdr'); hdr.mapping = THREE.EquirectangularReflectionMapping; sc.environment = hdr; sc.background = new THREE.Color(0x9a9a96);
+const sun = new THREE.DirectionalLight(0xfff1dc, 2.5); sun.position.set(-3, 6, -5); sc.add(sun);
+const name = q.get('m');
+const v = await thing(name, +q.get('len'), {}); sc.add(v); v.updateMatrixWorld(true);
+const fn = window.PLATE = (await import('./plates.js')).default; await fn(v, name);
+const box = new THREE.Box3().setFromObject(v, true);
+const cam = new THREE.PerspectiveCamera(+q.get('fov') || 20, innerWidth / innerHeight, 0.05, 100);
+const end = q.get('front') ? 1 : -1, z = end > 0 ? box.max.z : box.min.z;
+cam.position.set(+(q.get('cx') || 0), +q.get('y') + 0.1, z + end * (+q.get('d') || 2.2)); cam.lookAt(0, +q.get('y'), z);
+r.render(sc, cam); document.title = 'ok';
+</script></body></html>

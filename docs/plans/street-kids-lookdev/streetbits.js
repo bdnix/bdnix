@@ -137,27 +137,28 @@ function kerbGeometry() {
 const DIG = '০১২৩৪৫৬৭৮৯';
 const bn = n => String(n).split('').map(d => DIG[+d]).join('');
 function plateTexture(cls, aspect) {
-  const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512 * aspect);
+  // A real plate is matte, slightly off-white and grubby; the lettering fills its height.
+  const W = 1024, H = Math.round(W * aspect), c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d');
-  const bg = g.createLinearGradient(0, 0, 512, 256); bg.addColorStop(0, '#dcdcd6'); bg.addColorStop(1, '#c9c9c2');
-  g.fillStyle = bg; g.fillRect(0, 0, 512, c.height);
-  g.strokeStyle = '#222'; g.lineWidth = 6; g.strokeRect(12, 12, 488, c.height - 24);
-  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = '#ecebe5'; g.fillRect(0, 0, W, H);
+  const m = Math.round(H * 0.045), r = H * 0.08;
+  g.strokeStyle = '#1c1c1c'; g.lineWidth = Math.max(3, H * 0.035);
+  g.beginPath(); g.roundRect(m, m, W - 2 * m, H - 2 * m, r); g.stroke();
+  g.textAlign = 'center'; g.textBaseline = 'alphabetic';
   const num = bn(11 + Math.floor(rnd() * 89)) + '-' + bn(1000 + Math.floor(rnd() * 9000));
-  // Two lines, sized to the plate's height; squeezed sideways only if they don't fit.
-  const Hc = c.height, lines = [['ঢাকা মেট্রো-' + cls, 0.36, 0.31], [num, 0.47, 0.71]];
-  for (const [txt, size, yy] of lines) {
-    g.font = `${Math.round(Hc * size)}px Kalpurush`;
-    const sx = Math.min(1, 440 / g.measureText(txt).width);
-    for (const [dy, col] of [[Math.max(1, Hc * 0.012), 'rgba(255,255,255,0.6)'], [-Math.max(1, Hc * 0.008), 'rgba(0,0,0,0.35)'], [0, '#1a1a1a']]) {
-      g.save(); g.translate(256, Hc * yy + dy); g.scale(sx, 1); g.fillStyle = col; g.fillText(txt, 0, 0); g.restore();
-    }
+  // Two lines between the border's inner edges. Bangla glyphs sit about 0.72 of the font size
+  // above the baseline, so size each line from the height it gets.
+  const top = m * 2.6, bot = H - m * 2.6, gap = (bot - top) * 0.1, h1 = (bot - top - gap) * 0.42, h2 = (bot - top - gap) * 0.58;
+  const lines = [['ঢাকা মেট্রো-' + cls, h1, top + h1], [num, h2, bot]];
+  for (const [txt, hh, base] of lines) {
+    g.font = `${Math.round(hh / 0.74)}px Kalpurush`;
+    const sx = Math.min(1, (W - 7 * m) / g.measureText(txt).width);
+    g.save(); g.translate(W / 2, base); g.scale(sx, 1); g.fillStyle = '#151515'; g.fillText(txt, 0, 0); g.restore();
   }
-  // Grit and smears.
-  for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(80,70,55,${rnd() * 0.25})`; g.fillRect(rnd() * 512, rnd() * c.height, 1 + rnd() * 3, 1 + rnd() * 3); }
-  // Road dust.
-  const d = g.createLinearGradient(0, 0, 0, 256); d.addColorStop(0, 'rgba(110,95,70,0.08)'); d.addColorStop(1, 'rgba(110,95,70,0.3)');
-  g.fillStyle = d; g.fillRect(0, 0, 512, 256);
+  // Grime: speckles, a darker band along the bottom where road spray lands, smudged corners.
+  for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(70,62,50,${rnd() * 0.15})`; g.fillRect(rnd() * W, rnd() * H, 1 + rnd() * 3, 1 + rnd() * 3); }
+  let d = g.createLinearGradient(0, H * 0.55, 0, H); d.addColorStop(0, 'rgba(95,82,62,0)'); d.addColorStop(1, 'rgba(95,82,62,0.2)'); g.fillStyle = d; g.fillRect(0, 0, W, H);
+  for (const [x, y] of [[0, 0], [W, 0], [0, H], [W, H]]) { d = g.createRadialGradient(x, y, 0, x, y, H * 0.7); d.addColorStop(0, 'rgba(60,52,40,0.18)'); d.addColorStop(1, 'rgba(60,52,40,0)'); g.fillStyle = d; g.fillRect(0, 0, W, H); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 16;
   return t;
 }
@@ -170,14 +171,27 @@ export function plates(v, cls, spots) {
     // Find the body's surface at that height by casting a ray in from the end of the vehicle.
     if (sp.z === undefined) {
       const box = new THREE.Box3().setFromObject(v, true), dir = sp.end > 0 ? -1 : 1;
-      const from = new THREE.Vector3(v.position.x + (sp.x || 0), sp.y + v.position.y, (sp.end > 0 ? box.max.z : box.min.z) - dir * 0.5);
-      ray.set(from, new THREE.Vector3(0, 0, dir));
-      const hit = ray.intersectObject(v, true).find(h => h.object.visible);
-      sp.z = (hit ? hit.point.z : (sp.end > 0 ? box.max.z : box.min.z)) - v.position.z - dir * 0.012;
+      // Cast rays over the plate's whole area and seat it on the outermost point, so a curved
+      // bumper never pokes through.
+      const w0 = sp.w || 0.4, h0 = sp.h || w0 * 0.5; let best = null;
+      for (let ix = -1; ix <= 1; ix += 0.5) for (let iy = -1; iy <= 1; iy += 0.5) {
+        const from = new THREE.Vector3(v.position.x + (sp.x || 0) + ix * w0 * 0.48, sp.y + v.position.y + iy * h0 * 0.48, (sp.end > 0 ? box.max.z : box.min.z) - dir * 0.5);
+        ray.set(from, new THREE.Vector3(0, 0, dir));
+        const hit = ray.intersectObject(v, true).find(hh => hh.object.visible);
+        if (hit && (best === null || (dir > 0 ? hit.point.z < best : hit.point.z > best))) best = hit.point.z;
+      }
+      sp.z = (best !== null ? best : (sp.end > 0 ? box.max.z : box.min.z)) - v.position.z - dir * 0.006;
       sp.ry = sp.end > 0 ? 0 : Math.PI;
     }
     const w = sp.w || 0.4, h = sp.h || w * 0.5;
-    const grp = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: plateTexture(cls, h / w), roughness: 0.35, metalness: 0.15 }));
+    const sh = new THREE.Shape(), rr = h * 0.08; sh.moveTo(-w / 2 + rr, -h / 2); sh.lineTo(w / 2 - rr, -h / 2); sh.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + rr); sh.lineTo(w / 2, h / 2 - rr); sh.quadraticCurveTo(w / 2, h / 2, w / 2 - rr, h / 2); sh.lineTo(-w / 2 + rr, h / 2); sh.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - rr); sh.lineTo(-w / 2, -h / 2 + rr); sh.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + rr, -h / 2);
+    // A pressed aluminium plate, 3 mm thick, with a rolled edge.
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.003, bevelEnabled: true, bevelThickness: 0.0015, bevelSize: 0.002, bevelSegments: 2, curveSegments: 6 });
+    geo.translate(0, 0, -0.003);
+    const pa = geo.attributes.position, uva = geo.attributes.uv; for (let i = 0; i < pa.count; i++) uva.setXY(i, pa.getX(i) / w + 0.5, pa.getY(i) / h + 0.5);
+    const face = new THREE.MeshStandardMaterial({ map: plateTexture(cls, h / w), roughness: 0.6, metalness: 0, color: 0xe2e0d8 });
+    const edge = new THREE.MeshStandardMaterial({ color: 0x8e8e88, roughness: 0.45, metalness: 0.7 });
+    const grp = new THREE.Mesh(geo, [face, edge]); grp.castShadow = true;
     grp.position.set(sp.x || 0, sp.y, sp.z); grp.rotation.y = sp.ry || 0; grp.receiveShadow = true;
     v.add(grp);
   }
@@ -240,10 +254,10 @@ export function livery(v, body, i) {
 
 // Paint plates onto a vehicle's own plate parts (meshes whose name matches `re`), keeping the
 // model's shape and recess; the plate is projected flat from behind or in front.
-export function platesOnModel(v, cls, re) {
+export function platesOnModel(v, cls, re, face) {
   v.updateMatrixWorld(true);
   v.traverse(m => {
-    if (!m.isMesh || !re.test(m.name)) return;
+    if (!m.isMesh || !re.test(m.name) || (face && !face.test(m.material.name || ''))) return;
     const box = new THREE.Box3().setFromObject(m, true), sz = box.getSize(new THREE.Vector3());
     const g = m.geometry = m.geometry.clone(), p = g.attributes.position, uv = new Float32Array(p.count * 2), w = new THREE.Vector3();
     const back = box.getCenter(new THREE.Vector3()).z < v.position.z;
@@ -253,6 +267,6 @@ export function platesOnModel(v, cls, re) {
       uv[k * 2] = back ? 1 - u : u; uv[k * 2 + 1] = (w.y - box.min.y) / sz.y;
     }
     g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-    m.material = new THREE.MeshStandardMaterial({ map: plateTexture(cls, sz.y / sz.x), roughness: 0.35, metalness: 0.15 });
+    m.material = new THREE.MeshStandardMaterial({ map: plateTexture(cls, sz.y / sz.x), roughness: 0.6, metalness: 0, color: 0xe2e0d8 });
   });
 }
