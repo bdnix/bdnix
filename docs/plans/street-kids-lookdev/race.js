@@ -5,10 +5,18 @@ import { bike, rider, thing, CHARACTERS, hairModel } from './common.js';
 import { dress, paintHelmet, ponytail } from './gear.js';
 import { seat, helmet, hold } from './rider.js';
 import * as dhaka from './dhaka.js';
+import * as bits from './streetbits.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
 const q = new URLSearchParams(location.search);
 const W = innerWidth, H = innerHeight;
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(+(q.get('dpr') || devicePixelRatio));
 renderer.setSize(W, H);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -30,7 +38,7 @@ const skyTurn = +(q.get('skyrot') || 0) * Math.PI / 180;
 scene.backgroundRotation.set(0, skyTurn, 0);
 scene.environmentRotation.set(0, skyTurn, 0);
 scene.environmentIntensity = 0.9;
-scene.fog = new THREE.Fog(0xc9c3b4, 60, 330);
+scene.fog = new THREE.Fog(0xcdc6b5, 40, 300);
 
 const sun = new THREE.DirectionalLight(0xfff1dc, 3.2);
 sun.position.set(-30, 60, 25);
@@ -63,10 +71,7 @@ const LEN = 900, ROAD = 14, WALK = 5;
 const road = new THREE.Mesh(new THREE.PlaneGeometry(ROAD, LEN), new THREE.MeshStandardMaterial({ ...pbr('asphalt_02', [ROAD / 5, LEN / 5]), roughness: 1 }));
 road.rotation.x = -Math.PI / 2; road.position.z = LEN / 2 - 60; road.receiveShadow = true; scene.add(road);
 for (const s of [-1, 1]) {
-  const walk = new THREE.Mesh(new THREE.BoxGeometry(WALK, 0.16, LEN), new THREE.MeshStandardMaterial({ ...pbr('concrete_pavement', [WALK / 2, LEN / 2]) }));
-  walk.position.set(s * (ROAD / 2 + WALK / 2), 0.08, LEN / 2 - 60); walk.receiveShadow = true; scene.add(walk);
-  const kt = bands.clone(); kt.repeat.set(LEN / 2, 1); kt.needsUpdate = true; const kerb = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.18, LEN), new THREE.MeshStandardMaterial({ map: kt, roughness: 0.85 }));
-  kerb.position.set(s * (ROAD / 2 + 0.1), 0.09, LEN / 2 - 60); kerb.receiveShadow = true; scene.add(kerb);
+  await bits.footpath(scene, s, ROAD / 2, WALK, -60, LEN);
 }
 // Lane markings: dashed lines between lanes, a double yellow line in the middle, solid edges.
 const paint = new THREE.MeshStandardMaterial({ color: 0xe8e6dc, roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -2 });
@@ -104,6 +109,30 @@ for (const s of [-1, 1]) for (let z = -15 + (s > 0 ? 25 : 0); z < 320; z += 45 +
   const t = trees[ti++ % trees.length].clone(); t.position.set(s * (ROAD / 2 + 2.6), 0.16, z); t.rotation.y = rnd() * 6; t.scale.setScalar(0.85 + rnd() * 0.3); scene.add(t);
 }
 
+// People walking along the footpaths: photo-scanned walkers, each at a different moment of its stride.
+{
+  const { clone } = await import('three/addons/utils/SkeletonUtils.js');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  const walkers = await Promise.all(['nathan', 'sophia', 'walkman'].map(n => new GLTFLoader().loadAsync('/models/' + n + '.glb')));
+  const heights = { 0: 1.78, 1: 1.64, 2: 1.75 };
+  let ps = 3;
+  const prnd = () => (ps = (ps * 16807) % 2147483647) / 2147483647;
+  for (const side of [-1, 1]) for (let z = -10; z < 260; z += 4 + prnd() * 10) {
+    const k = Math.floor(prnd() * walkers.length), gl = walkers[k];
+    const o = clone(gl.scene);
+    const wrap = new THREE.Group(); wrap.add(o); wrap.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(o, true); o.scale.multiplyScalar(heights[k] / (box.max.y - box.min.y));
+    const mixer = new THREE.AnimationMixer(o);
+    if (gl.animations[0]) { const a = mixer.clipAction(gl.animations[0]); a.play(); mixer.setTime(prnd() * gl.animations[0].duration); }
+    wrap.updateMatrixWorld(true); const b2 = new THREE.Box3().setFromObject(o, true);
+    o.position.y -= b2.min.y; o.position.x -= (b2.min.x + b2.max.x) / 2; o.position.z -= (b2.min.z + b2.max.z) / 2;
+    o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; } });
+    wrap.position.set(side * (ROAD / 2 + 1.2 + prnd() * 3.2), 0.2, z);
+    wrap.rotation.y = prnd() < 0.5 ? 0 : Math.PI;
+    scene.add(wrap);
+  }
+}
+
 // Soft contact shadow under a vehicle (sun shadows alone leave them floating).
 const blobTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
   const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(0,0,0,0.75)'); gr.addColorStop(0.6, 'rgba(0,0,0,0.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
@@ -114,20 +143,31 @@ function blob(o) {
   const m = new THREE.Mesh(new THREE.PlaneGeometry(sz.x * 1.25, sz.z * 1.15), blobMat); m.rotation.x = -Math.PI / 2; m.position.set(c.x, 0.03, c.z); scene.add(m);
 }
 
+// Number plates: where each vehicle carries them (height in metres, which end).
+const PLATES = {
+  corolla: { cls: 'গ', spots: [{ y: 0.74, end: -1 }, { y: 0.42, end: 1 }] },
+  yaris: { cls: 'গ', spots: [{ y: 0.62, end: -1 }, { y: 0.40, end: 1 }] },
+  cng: { cls: 'থ', spots: [{ y: 0.62, end: -1, w: 0.4 }, { y: 1.33, end: -1, w: 0.5 }] },
+  b_viking: { cls: 'ব', spots: [{ y: 0.75, end: -1 }] },
+  t_al: { cls: 'ট', spots: [{ y: 0.9, end: -1 }] },
+  t_bd: { cls: 'ট', spots: [{ y: 0.9, end: -1 }] },
+};
 // Traffic, going our way.
 const traffic = [
   ['cng', 2.6, { ry: -90 }, 5.25, 17],
   ['corolla', 4.6, {}, -1.75, 27],
-  ['b_hino', 10.5, { ry: 180, hide: /_blinn6_|_phongE3_|CarPlate/, mirror: true }, 1.75, 44],
+  ['b_viking', 11, { bus: 0 }, 1.75, 44],
   ['yaris', 3.7, { ry: 180 }, 5.25, 58],
   ['t_al', 8, {}, -5.25, 72],
-  ['b_ecolin', 12, {}, 5.25, 150],
+  ['b_viking', 11, { bus: 1 }, 5.25, 150],
   ['t_bd', 8.5, {}, -1.75, 180],
   ['cng', 2.6, { ry: -90 }, -1.75, 95],
   ['corolla', 4.6, {}, 1.75, 125],
 ];
 for (const [name, len, opts, x, z] of traffic) {
   const v = await thing(name, len, opts); if (opts.mirror) v.scale.x = -1; v.position.set(x, 0.02, z); scene.add(v); v.updateMatrixWorld(true); blob(v);
+  if (opts.bus !== undefined) bits.livery(v, /^(Material_13|Material_23|Material_23_1)$/, opts.bus);
+  const P = PLATES[name]; if (P) bits.plates(v, P.cls, P.spots.map(o => Object.assign({}, o)));
 }
 
 // The riders.
@@ -188,7 +228,28 @@ if (q.get('cam')) { const c = q.get('cam').split(',').map(Number); camera.positi
 if (q.get('side')) { camera.position.set(P.x + 6, 1.5, P.z); camera.lookAt(P.x, 1, P.z); }
 sun.target.position.set(P.x, 0, P.z + 15); sun.position.set(P.x - 30, 60, P.z - 10);
 
-await new Promise(r => { const t = setInterval(() => { if (pending === 0 && dhaka.loading() === 0) { clearInterval(t); r(); } }, 100); });
-renderer.render(scene, camera);
+await new Promise(r => { const t = setInterval(() => { if (pending === 0 && dhaka.loading() === 0 && bits.loading() === 0) { clearInterval(t); r(); } }, 100); });
+if (q.get('nopost')) renderer.render(scene, camera);
+else {
+  const comp = new EffectComposer(renderer);
+  comp.addPass(new RenderPass(scene, camera));
+  const ao = new GTAOPass(scene, camera, W, H); ao.updateGtaoMaterial({ radius: 0.6, distanceExponent: 1.5, thickness: 1.5, scale: 1.2, samples: 16 }); ao.blendIntensity = 1.0; comp.addPass(ao);
+  comp.addPass(new UnrealBloomPass(new THREE.Vector2(W, H), 0.18, 0.5, 0.92));
+  comp.addPass(new OutputPass());
+  // Colour grade: a little warmth and contrast, dusty highlights, a soft vignette.
+  comp.addPass(new ShaderPass({
+    uniforms: { tDiffuse: { value: null } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv;
+      void main(){ vec3 c = texture2D(tDiffuse, vUv).rgb;
+        c = mix(c, c * vec3(1.05, 1.0, 0.92), 0.6);
+        c = (c - 0.5) * 1.08 + 0.5;
+        float l = dot(c, vec3(0.299, 0.587, 0.114)); c = mix(vec3(l), c, 0.92);
+        vec2 d = vUv - 0.5; c *= 1.0 - dot(d, d) * 0.55;
+        gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0); }`,
+  }));
+  comp.addPass(new SMAAPass(W * renderer.getPixelRatio(), H * renderer.getPixelRatio()));
+  comp.render();
+}
 document.body.dataset.shot = shot; if (q.get('nohud')) document.querySelector('.hud').style.display = 'none';
 document.title = 'ok';
