@@ -13,7 +13,10 @@ In the owner's words, then what that has come to mean.
 4. **Approval first.** "Stop writing tests for something that won't be approved. First get the graphics approved and then write the full code and tests."
    - Show screenshots and get an explicit yes on the look **before** writing game code or tests.
 5. **No accounts or payments for assets** beyond what the owner has set up. "If I have to buy those things why on earth am I paying Anthropic for? Figure out how to make realistic models without any account or extra payments." The owner has since given a free Sketchfab account's API token as a network secret (see [Environment](#environment)). Don't suggest buying assets.
-6. **Ask for site access when needed.** "Sites being locked isn't an issue. Tell me what you need." When a host is refused, say exactly which domain to allow, in plain text, one per line, and only domains that are actually blocked ("Don't give me things where you already have access to").
+6. **Riders (second session):** "Don't show rider faces. They should be wearing helmets and motorcycle gear. There should be a choice of 6 characters in total. 3 male and 3 female."
+   - Every rider wears a full-face helmet with a dark visor; no face or hair shows. They wear riding suits, gloves and boots, not street clothes.
+   - The player picks one of six characters, three men and three women.
+7. **Ask for site access when needed.** "Sites being locked isn't an issue. Tell me what you need." When a host is refused, say exactly which domain to allow, in plain text, one per line, and only domains that are actually blocked ("Don't give me things where you already have access to").
 
 ### How to work with the owner
 
@@ -105,6 +108,16 @@ Steps 1 to 4 are done; the owner has been shown six screenshots (a race, a punch
 - **Page weight:** the downloads total about 220 MB. Simplified (meshoptimizer), with 512–1024 px WebP or KTX2 textures, the set should come to roughly 10–20 MB; load the road, sky and player first and the rest in the background. Not measured yet.
 - **What the screenshots don't show:** motion. They're still frames from headless Chromium with a software GPU (SwiftShader), so frame rate on a phone is untested.
 
+### Riders in gear (after the owner's feedback)
+
+The owner asked for no faces, helmets and gear, and six characters (3 male, 3 female). Ready-made realistic riders in gear are almost absent from Sketchfab (the few are cartoon or low-poly), so the riders are the six Renderpeople scans, dressed by code in `docs/plans/street-kids-lookdev/gear.js`:
+
+- **Faces hidden:** vertices weighted to the head (face and hair) are pulled in to 55% around their centre, inside the helmet. Every rider wears the unbranded full-face helmet (`6c4c23…`), its shell in the character's colour and its visor opaque, dark and mirrored. The T1 helmet is dropped: it carries Fox and Alpinestars decals.
+- **Gear:** the scan's texture is repainted per body part (found from each vertex's main bone) and per position on the body: a two-tone leather suit (main colour on the chest, upper arms and thighs; trim on the waist, side panels, back hump, forearms and shins; an accent stripe on the chest, arms and legs' outsides), black knee armour, gloves, boots and collar, with darkened seams where panels meet. The photo's folds stay as shading, so the cloth keeps real creases.
+- **The six** (`CHARACTERS` in `common.js`): men Nathan (red and black), Manuel (blue and white), Eric (green and black, yellow stripes); women Carla `acf520f450d14dd799f98a6fede3edf5` (yellow and black), Claudia `c659bd0accab47c6bbe390cf822a2b92` (white and red), Sophia `dc448c3be0e74f96a55fb475a13433cf` (orange and grey). All Renderpeople, CC BY. Names aren't decided (the rivals in `street-core.js` are Kalu, Bablu, Mintu, Rocky, Tinku and Pinky).
+- `lineup.html` shows all six on bikes (`?view=back` from behind). Shown to the owner with the race, punch and stick frames; awaiting approval.
+- Known flaws: the hands' fingers are open rather than curled round the grips; the suits have no real armour shapes (they're painted on the scans' bodies); the Z1000 sits its riders upright.
+
 ## Things the full-screen look must reconcile with AGENTS.md
 
 AGENTS.md has rules every game follows. A full-screen 3D game changes how some of them are met; decide how, and tell the owner, when building:
@@ -139,7 +152,8 @@ AGENTS.md has rules every game follows. A full-screen 3D game changes how some o
 
 ## Questions still open with the owner
 
-- **Approve the look?** (asked with the six screenshots)
+- **Approve the look?** (asked again with the six riders in gear)
+- Names for the six characters, and whether the race's rivals are the five the player didn't pick (the rules have six rivals).
 
 - Do they want to review the Bangla translations before they ship, or after?
 - Phones turned sideways: keep the "turn your phone upright" note, as every other game does, or allow landscape for this one?
