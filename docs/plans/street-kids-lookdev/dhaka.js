@@ -146,7 +146,11 @@ function wallBox(w, h, d, mat, x0, y0, W, H) {
 }
 
 let AC, SHUTTER, SCAN;
-export async function prepare() {
+// Time of day: 'night' lights windows, signs, shops and street lamps.
+let NIGHT = 0;
+export const lamps = [];
+export async function prepare(opts = {}) {
+  NIGHT = opts.night || 0;
   const [p, st] = await Promise.all([img('/ph/plastered_wall_04_diff.jpg'), img('/ph/worn_plaster_wall_diff.jpg')]);
   PLASTER = p; STAIN = st;
   PLASTER_N = tex('/ph/plastered_wall_04_nor_gl.jpg');
@@ -157,15 +161,17 @@ export async function prepare() {
   const scan = async (name, h) => { const o = await thing(name, h, { ry: 90, byHeight: true }); o.traverse(n => { if (n.isMesh) { n.material.side = THREE.DoubleSide; n.castShadow = n.receiveShadow = true; } }); const g = new THREE.Group(); o.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(o, true); o.position.z -= b.max.z; g.add(o); return g; };
   SCAN = { shutter: await scan('x_front', 3.24), store: await scan('x_crates', 2.1), meters: await scan('x_meters', 2.12) };
   M.glass = new THREE.MeshStandardMaterial({ color: 0x1d2a2c, roughness: 0.08, metalness: 0.6 });
+  // Lit rooms behind the glass at night: warm tube-light and bulb colours, curtains drawn or not.
+  M.glassLit = ['#ffd9a0', '#fff1d6', '#d8ecff', '#ffe7b8', '#f4f8ff'].map(c => new THREE.MeshStandardMaterial({ color: 0x222222, emissive: c, emissiveIntensity: 1.4, roughness: 0.2 }));
   M.dark = new THREE.MeshStandardMaterial({ color: 0x15130f, roughness: 0.9 });
   M.shopIn = new THREE.MeshStandardMaterial({ color: 0x2b2620, roughness: 0.9 });
   M.tank = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.55 });
   M.rebar = new THREE.MeshStandardMaterial({ color: 0x4a2e1e, roughness: 0.8, metalness: 0.4 });
   M.slab = new THREE.MeshStandardMaterial({ color: 0x9d988c, roughness: 0.95 });
   M.grills = [0, 1, 2, 3].flatMap(d => ['#f2f2ee', '#1f5f3a', '#222222', '#6b3a1f'].map(c => new THREE.MeshStandardMaterial({ map: grillTexture(d, c), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.6, metalness: 0.3 })));
-  M.tube = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xf4fbff, emissiveIntensity: 3 });
+  M.tube = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xf4fbff, emissiveIntensity: NIGHT ? 8 : 3 });
   M.shopWalls = ['#d9d4c4', '#c9e0d2', '#e8d7b0', '#d6dbe6'].map(c => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.45, roughness: 0.9 }));
-  M.shopLit = new THREE.MeshStandardMaterial({ color: 0x8f897c, emissive: 0x6f6a60, emissiveIntensity: 0.45, roughness: 0.9 });
+  M.shopLit = new THREE.MeshStandardMaterial({ color: 0x8f897c, emissive: 0x6f6a60, emissiveIntensity: NIGHT ? 1.6 : 0.45, roughness: 0.9 });
   M.goods = ['#c62828', '#1565c0', '#f9a825', '#2e7d32', '#6a1b9a', '#ef6c00', '#f5f5f5', '#4e342e', '#00838f'].map(c => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.55, roughness: 0.7 }));
   M.sack = new THREE.MeshStandardMaterial({ color: 0xcdb98f, roughness: 1 });
   M.crate = new THREE.MeshStandardMaterial({ color: 0x8a5a2b, roughness: 0.9 });
@@ -225,7 +231,7 @@ export function building(w) {
     }
     if (b > 0 && rnd() < 0.25) { const m = SCAN.meters.clone(); m.scale.setScalar(0.55); m.position.set(x0 + 0.15, 0.6, 0.05); g.add(m); }
     // Signboard over the shop.
-    const sgn = new THREE.Mesh(new THREE.BoxGeometry(inner, 0.85, 0.06), [M.dark, M.dark, M.dark, M.dark, new THREE.MeshStandardMaterial({ map: signTexture(inner), roughness: 0.7 }), M.dark]);
+    const sgn = new THREE.Mesh(new THREE.BoxGeometry(inner, 0.85, 0.06), [M.dark, M.dark, M.dark, M.dark, (() => { const t = signTexture(inner); return new THREE.MeshStandardMaterial({ map: t, roughness: 0.7, emissiveMap: NIGHT ? t : null, emissive: NIGHT ? 0xffffff : 0x000000, emissiveIntensity: NIGHT ? (rnd() < 0.75 ? 0.9 : 0) : 0 }); })(), M.dark]);
     sgn.position.set(cx + 0.15, groundH - 0.55, 0.05); sgn.castShadow = true; g.add(sgn);
   }
   if (style === 'glass') {
@@ -255,7 +261,7 @@ export function building(w) {
       const B = wallBox(winW, sill, 0.3, wallMat, xs, y0, w, H + 1.1); B.position.set(xs + winW / 2, y0 + sill / 2, -0.15); g.add(B);
       const T = wallBox(winW, floorH - sill - winH, 0.3, wallMat, xs, ys + winH, w, H + 1.1); T.position.set(xs + winW / 2, ys + winH + (floorH - sill - winH) / 2, -0.15); g.add(T);
       // Recessed glass, curtains half drawn behind it, and the grill in front.
-      const glass = box(winW, winH, 0.04, M.glass); glass.position.set(xs + winW / 2, ys + winH / 2, -0.3); g.add(glass);
+      const glass = box(winW, winH, 0.04, NIGHT && rnd() < 0.45 ? pick(M.glassLit) : M.glass); glass.position.set(xs + winW / 2, ys + winH / 2, -0.3); g.add(glass);
       const gr = new THREE.Mesh(new THREE.PlaneGeometry(winW, winH), grill); gr.position.set(xs + winW / 2, ys + winH / 2, 0.02); g.add(gr);
       // Sun shade over the window.
       if (style === 'shades') { const shade = box(winW + 0.3, 0.06, 0.45, M.slab); shade.position.set(xs + winW / 2, ys + winH + 0.12, 0.22); g.add(shade); }
@@ -299,6 +305,14 @@ export async function poles(scene, x, z0, z1, gap, side) {
   for (let z = z0; z < z1; z += gap * (0.8 + rnd() * 0.4)) {
     const p = pole.clone(); p.position.set(x, 0.2, z); p.rotation.y = side < 0 ? 0 : Math.PI; scene.add(p);
     tops.push(z);
+    // A street lamp on every other pole: an arm out over the road and an LED head.
+    if (tops.length % 2) {
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.4, 6), grey); arm.rotation.z = Math.PI / 2 - side * 0.12; arm.position.set(x - side * 1.15, 8.1, z); scene.add(arm);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.1, 0.25), grey); head.position.set(x - side * 2.3, 8.0, z); scene.add(head);
+      const lens = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.2), new THREE.MeshStandardMaterial({ color: 0x333333, emissive: 0xffe2b0, emissiveIntensity: NIGHT ? 12 : 0 }));
+      lens.rotation.x = Math.PI / 2; lens.position.set(x - side * 2.3, 7.94, z); scene.add(lens);
+      lamps.push(new THREE.Vector3(x - side * 2.3, 7.9, z));
+    }
     // Coils of spare cable hung on the pole, two or three per pole.
     for (let k = 0; k < 1 + rnd() * 3; k++) {
       const r = 0.25 + rnd() * 0.2, y = 5.5 + rnd() * 3;
