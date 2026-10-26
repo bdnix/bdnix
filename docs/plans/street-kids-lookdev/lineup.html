@@ -23,7 +23,7 @@ const tex = n => { pending++; const t = tl.load('/ph/' + n, () => pending--); t.
 const groundMat = new THREE.MeshStandardMaterial({ map: tex('asphalt_02_diff.jpg'), normalMap: tex('asphalt_02_nor_gl.jpg'), roughness: 1 });
 groundMat.map.colorSpace = THREE.SRGBColorSpace;
 const scenes = [];
-for (let i = 0; i < 6; i++) {
+const only = q.get('only'); for (let i = 0; i < 6; i++) { if (only && CHARACTERS[i].id !== only) { scenes.push(null); continue; }
   const ch = CHARACTERS[i];
   const sc = new THREE.Scene(); sc.background = hdr; sc.environment = hdr; sc.backgroundBlurriness = 0.35; sc.environmentIntensity = 0.9;
   const sun = new THREE.DirectionalLight(0xfff1dc, 3); sun.position.set(-3, 6, 4); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
@@ -32,7 +32,7 @@ for (let i = 0; i < 6; i++) {
   const bk = await bike(BIKES[i]); sc.add(bk); bk.updateMatrixWorld(true);
   const rd = await rider(ch.id); bk.add(rd); dress(rd, ch);
   const bn = seat(rd, bk, Object.assign({}, bk.userData.fit, { lean: LEAN[BIKES[i]] }));
-  const hm = await thing('fullface', 1); paintHelmet(hm, ch.helmet); helmet(bn, hm, ch.sex === 'f' ? 0.29 : 0.31); if (ch.hair) ponytail(bn._helmet, await hairModel(), ch.hair);
+  const hm = await thing('fullface', 1); paintHelmet(hm, ch.helmet); helmet(bn, hm, ch.id === 'justman' ? 0.37 : ch.sex === 'f' ? 0.29 : 0.31, ch.id === 'justman' ? (q.get('jdef') ? {} : { up: new THREE.Vector3(0, 1, +(q.get('tilt') || 0.15)), lift: +(q.get('lift') || 0.06), push: +(q.get('push') || 0) }) : {}); if (ch.hair) ponytail(bn._helmet, await hairModel(), ch.hair);
   const cam = new THREE.PerspectiveCamera(21, (W / cols) / (H / rows), 0.1, 100);
   const view = q.get('view') || 'front';
   if (view === 'front') cam.position.set(2.6, 1.5, 4.2); else if (view === 'back') cam.position.set(-2.4, 1.6, -4.2);
@@ -44,6 +44,6 @@ for (let i = 0; i < 6; i++) {
 await new Promise(res => { const t = setInterval(() => { if (pending === 0) { clearInterval(t); res(); } }, 100); });
 r.setScissorTest(true);
 const cw = W / cols, chh = H / rows;
-scenes.forEach(({ sc, cam }, i) => { const x = (i % cols) * cw, y = H - (Math.floor(i / cols) + 1) * chh; r.setViewport(x, y, cw, chh); r.setScissor(x, y, cw, chh); r.render(sc, cam); });
+scenes.forEach((it, i) => { if (!it) return; const { sc, cam } = it; const x = (i % cols) * cw, y = H - (Math.floor(i / cols) + 1) * chh; r.setViewport(x, y, cw, chh); r.setScissor(x, y, cw, chh); r.render(sc, cam); });
 document.title = 'ok';
 </script></body></html>

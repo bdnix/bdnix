@@ -145,7 +145,7 @@ async function racer(b, r, x, z, opts = {}) {
   const fit = Object.assign({}, bk.userData.fit, { lean: opts.lean ?? LEAN[b] });
   bk.position.set(x, 0.02, z); bk.rotation.z = opts.roll || 0; bk.rotation.y = opts.yaw || 0; scene.add(bk); bk.updateMatrixWorld(true);
   const bn = seat(rd, bk, fit, opts);
-  const hm = await thing('fullface', 1); paintHelmet(hm, ch && ch.helmet); helmet(bn, hm, ch && ch.sex === 'f' ? 0.29 : 0.31); if (ch && ch.hair) ponytail(bn._helmet, await hairModel(), ch.hair);
+  const hm = await thing('fullface', 1); paintHelmet(hm, ch && ch.helmet); helmet(bn, hm, ch && ch.id === 'justman' ? 0.37 : ch && ch.sex === 'f' ? 0.29 : 0.31, ch && ch.id === 'justman' ? { up: new THREE.Vector3(0, 1, 0.15).applyQuaternion(bk.quaternion), lift: 0.06, push: 0 } : {}); if (ch && ch.hair) ponytail(bn._helmet, await hairModel(), ch.hair);
   const sh = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 2.4), blobMat); sh.rotation.x = -Math.PI / 2; sh.position.set(x, 0.03, z); scene.add(sh);
   return { bk, bn };
 }
@@ -155,9 +155,9 @@ const headOf = r => r.bn.head.getWorldPosition(new THREE.Vector3());
 let me;
 if (shot === 'race') {
   me = await racer('nr750', 'nathan', P.x, P.z);
-  await racer('gsxr', 'carla', P.x - 1.7, P.z + 1.6, { roll: 0.02 });
-  await racer('z1000', 'eric', P.x + 3.2, P.z + 6, { roll: -0.03 });
-  await racer('gsxr', 'walkwoman_mr', P.x - 2.8, P.z + 14);
+  await racer('gsxr', 'sophia', P.x - 1.7, P.z + 1.6, { roll: 0.02 });
+  await racer('z1000', 'justman', P.x + 3.2, P.z + 6, { roll: -0.03 });
+  await racer('gsxr', 'carla', P.x - 2.8, P.z + 14);
   await racer('z1000', 'claudia', P.x + 4.6, P.z + 16);
   await racer('nr750', 'manuel', P.x + 1.5, P.z + 24);
 } else {

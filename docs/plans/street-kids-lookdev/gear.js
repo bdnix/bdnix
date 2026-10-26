@@ -121,6 +121,7 @@ export function dress(root, suit) {
       for (let i = 0; i < pos.count; i++) if (vpart[i] === 'head') pos.setXYZ(i, c.x + (pos.getX(i) - c.x) * 0.55, c.y + (pos.getY(i) - c.y) * 0.55, c.z + (pos.getZ(i) - c.z) * 0.55);
       pos.needsUpdate = true;
     }
+    if (suit.paint === false) return;   // keep their own clothes
     // Repaint the texture.
     const img = m.material.map.image, W = img.width, H = img.height;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;

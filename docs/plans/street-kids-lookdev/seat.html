@@ -16,7 +16,7 @@ const W = innerWidth / views.length;
 const bk = await bike(q.get('b')); scene.add(bk);
 const rd = await rider(q.get('r')); bk.add(rd);
 const fit = Object.assign({}, bk.userData.fit); if (q.get('lean')) fit.lean = +q.get('lean'); const bb = seat(rd, bk, fit); console.error(Object.keys(bb).join(' '), bb.spine_01 && bb.spine_01.name, bb.spine_01 && bb.spine_01.children.map(c=>c.name).join(','));
-if (q.get('h')) { const hm = await thing(q.get('h'), 1); helmet(bb, hm, q.get('r') === 'justman' ? 0.37 : 0.31, q.get('r') === 'justman' ? { up: new THREE.Vector3(0, 1, 0.35), lift: +(q.get('lift')||0.13), push: +(q.get('push')||-0.05) } : {}); const p = new THREE.Vector3(); hm.getWorldPosition(p); console.error('helmet at', p.toArray().map(v=>v.toFixed(2)).join(','), 'head', bb.head.getWorldPosition(new THREE.Vector3()).toArray().map(v=>v.toFixed(2)).join(','), 'end', bb.head_end && bb.head_end.name); }
+if (q.get('h')) { const hm = await thing(q.get('h'), 1); helmet(bb, hm, q.get('r') === 'justman' ? 0.37 : 0.31, q.get('r') === 'justman' ? { up: new THREE.Vector3(0, 1, +(q.get('tilt')||0.35)), lift: +(q.get('lift')||0.13), push: +(q.get('push')||-0.05) } : {}); const p = new THREE.Vector3(); hm.getWorldPosition(p); console.error('helmet at', p.toArray().map(v=>v.toFixed(2)).join(','), 'head', bb.head.getWorldPosition(new THREE.Vector3()).toArray().map(v=>v.toFixed(2)).join(','), 'end', bb.head_end && bb.head_end.name); }
 r.setScissorTest(true);
 views.forEach((v, i) => {
   const ext = 1.1, cam = new THREE.OrthographicCamera(-ext * W / innerHeight, ext * W / innerHeight, ext, -ext, 0.01, 100);
