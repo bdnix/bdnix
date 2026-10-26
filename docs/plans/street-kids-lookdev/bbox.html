@@ -1,0 +1,11 @@
+<!doctype html><html><head><meta charset="utf-8"><script type="importmap">{"imports":{"three":"/work/node_modules/three/build/three.module.js","three/addons/":"/work/node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const g = await new GLTFLoader().loadAsync('/models/' + new URLSearchParams(location.search).get('m') + '.glb');
+g.scene.updateMatrixWorld(true);
+const out = [];
+g.scene.traverse(n => { if (n.isMesh || n.isLine || n.isPoints) { const b = new THREE.Box3().setFromObject(n); out.push([b.min.y.toFixed(2), b.max.y.toFixed(2), n.type, n.name.slice(0, 40)]); } });
+out.sort((a, b) => a[0] - b[0]); console.error(JSON.stringify(out.slice(0, 4))); out.sort((a, b) => b[1] - a[1]); console.error(JSON.stringify(out.slice(0, 4)));
+document.title = 'ok';
+</script></body></html>

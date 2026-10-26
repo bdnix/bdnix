@@ -153,7 +153,8 @@ const shot = q.get('shot') || 'race';
 const P = { x: +(q.get('px') || 0.4), z: 0 };
 const headOf = r => r.bn.head.getWorldPosition(new THREE.Vector3());
 let me;
-if (shot === 'race') {
+if (shot === 'none') {
+} else if (shot === 'race') {
   me = await racer('nr750', 'c_teenboy', P.x, P.z);
   await racer('gsxr', 'c_teew', P.x - 1.7, P.z + 1.6, { roll: 0.02 });
   await racer('z1000', 'c_polom', P.x + 3.2, P.z + 6, { roll: -0.03 });
@@ -182,10 +183,11 @@ const cam = { back: +(q.get('back') || (tall ? 3.4 : 4.2)), up: +(q.get('up') ||
 const cx = P.x - (shot === 'race' ? (tall ? 0.1 : 0.4) : 0.6);
 camera.position.set(cx, cam.up, P.z - cam.back);
 camera.lookAt(cx, 1.0, P.z + cam.look);
+if (q.get('cam')) { const c = q.get('cam').split(',').map(Number); camera.position.set(c[0], c[1], c[2]); camera.lookAt(c[3], c[4], c[5]); if (c[6]) { camera.fov = c[6]; camera.updateProjectionMatrix(); } }
 if (q.get('side')) { camera.position.set(P.x + 6, 1.5, P.z); camera.lookAt(P.x, 1, P.z); }
 sun.target.position.set(P.x, 0, P.z + 15); sun.position.set(P.x - 30, 60, P.z - 10);
 
 await new Promise(r => { const t = setInterval(() => { if (pending === 0) { clearInterval(t); r(); } }, 100); });
 renderer.render(scene, camera);
-document.body.dataset.shot = shot;
+document.body.dataset.shot = shot; if (q.get('nohud')) document.querySelector('.hud').style.display = 'none';
 document.title = 'ok';

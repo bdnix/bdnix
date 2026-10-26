@@ -28,9 +28,9 @@ function place(o, hide, len, ry, byHeight, byWidth) {
   if (hide) { const kill = []; o.traverse(n => { if (n.isMesh && (hide.test(n.name) || hide.test(n.material?.name || ''))) kill.push(n); }); kill.forEach(n => n.removeFromParent()); }
   o.rotation.y = (ry || 0) * Math.PI / 180;
   g.add(o); g.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(o); const sz = box.getSize(new THREE.Vector3());
+  const box = new THREE.Box3().setFromObject(o, !byHeight); const sz = box.getSize(new THREE.Vector3());
   const s = byHeight ? len / sz.y : byWidth ? len / Math.max(sz.x, sz.z) : len / sz.z; o.scale.multiplyScalar(s);
-  g.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(o);
+  g.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(o, !byHeight);
   o.position.x -= (b.min.x + b.max.x) / 2; o.position.z -= (b.min.z + b.max.z) / 2; o.position.y -= b.min.y;
   o.traverse(n => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; n.frustumCulled = false; } });
   return g;
