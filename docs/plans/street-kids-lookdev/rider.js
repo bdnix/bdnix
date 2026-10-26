@@ -17,12 +17,18 @@ const CC = { Hip: 'hip', Waist: 'spine_01', Spine01: 'spine_02', Spine02: 'spine
   L_Thigh: 'upperleg_l', L_Calf: 'lowerleg_l', L_Foot: 'foot_l', L_ToeBase: 'ball_l',
   R_Thigh: 'upperleg_r', R_Calf: 'lowerleg_r', R_Foot: 'foot_r', R_ToeBase: 'ball_r' };
 
+const MIX = Object.assign({}, HIK, { Spine: 'spine_01', Spine1: 'spine_02', Spine2: 'spine_03', HeadTop: 'head_end' });
+
 // The common name of a bone in any of the rigs used (Renderpeople, HumanIK, Character Creator), or null.
 export function canonical(name) {
   const m = /(?:^|_)((?:hip|spine_0\d|neck|head|shoulder_[lr]|upperarm_[lr]|lowerarm_[lr]|hand_[lr]|upperleg_[lr]|lowerleg_[lr]|foot_[lr]|ball_[lr]|foot_end_[lr]|head_end))_\d+$/.exec(name);
   if (m) return m[1];
   const h = /^Character\d_([A-Za-z0-9]+)_\d+(_0)?$/.exec(name);
   if (h) return h[2] ? (h[1] === 'Head' ? 'head_end' : null) : HIK[h[1]] || null;
+  if (/^(?:mixamorig:?)?HeadTop_End_\d+$/.test(name)) return 'head_end';
+  // Mixamo names, with or without the mixamorig: prefix (Hips_01, mixamorig:LeftForeArm_010).
+  const x = /^(?:mixamorig:?)?([A-Za-z0-9]+)_\d+$/.exec(name);
+  if (x && MIX[x[1]]) return MIX[x[1]];
   const c = /^CC_Base_([A-Za-z0-9_]+?)_\d+$/.exec(name);
   if (c) return CC[c[1]] || null;
   return null;

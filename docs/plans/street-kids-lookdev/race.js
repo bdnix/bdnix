@@ -154,18 +154,18 @@ const P = { x: +(q.get('px') || 0.4), z: 0 };
 const headOf = r => r.bn.head.getWorldPosition(new THREE.Vector3());
 let me;
 if (shot === 'race') {
-  me = await racer('nr750', 'nathan', P.x, P.z);
-  await racer('gsxr', 'sophia', P.x - 1.7, P.z + 1.6, { roll: 0.02 });
-  await racer('z1000', 'justman', P.x + 3.2, P.z + 6, { roll: -0.03 });
-  await racer('gsxr', 'carla', P.x - 2.8, P.z + 14);
-  await racer('z1000', 'claudia', P.x + 4.6, P.z + 16);
-  await racer('nr750', 'manuel', P.x + 1.5, P.z + 24);
+  me = await racer('nr750', 'c_teenboy', P.x, P.z);
+  await racer('gsxr', 'c_teew', P.x - 1.7, P.z + 1.6, { roll: 0.02 });
+  await racer('z1000', 'c_greg', P.x + 3.2, P.z + 6, { roll: -0.03 });
+  await racer('gsxr', 'c_leatherw', P.x - 2.8, P.z + 14);
+  await racer('z1000', 'c_teenblack', P.x + 4.6, P.z + 16);
+  await racer('nr750', 'c_blackm', P.x + 1.5, P.z + 24);
 } else {
   // The rival on our right, close enough to hit.
-  const foe = await racer('gsxr', 'manuel', P.x - 1.15, P.z + 0.55, { roll: 0.09, twist: 0.35 });
+  const foe = await racer('gsxr', 'c_blackm', P.x - 1.15, P.z + 0.55, { roll: 0.09, twist: 0.35 });
   const target = headOf(foe).add(new THREE.Vector3(0.12, -0.05, -0.05));
   if (shot === 'punch') {
-    me = await racer('nr750', 'claudia', P.x, P.z, { twist: -0.45, handsWorld: { r: target } });
+    me = await racer('nr750', 'c_teenblack', P.x, P.z, { twist: -0.45, handsWorld: { r: target } });
   } else {
     // Swinging a stick down at him.
     const up = target.clone().add(new THREE.Vector3(0.35, 0.55, -0.25));
@@ -173,7 +173,7 @@ if (shot === 'race') {
     const dir = target.clone().sub(up).add(new THREE.Vector3(0, 0.25, 0));
     hold(me.bn, 'r', shot === 'nunchaku' ? await thing('nunchaku', 0.33, { byHeight: true }) : await thing('bat', 0.85, { byWidth: true }), dir, shot === 'nunchaku' ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0));
   }
-  await racer('z1000', 'carla', P.x + 3.2, P.z + 8, { roll: -0.03 });
+  await racer('z1000', 'c_teenboy', P.x + 3.2, P.z + 8, { roll: -0.03 });
 }
 
 // Chase camera behind and above.

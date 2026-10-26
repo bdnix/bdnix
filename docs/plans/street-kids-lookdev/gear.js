@@ -113,12 +113,18 @@ export function dress(root, suit) {
       if (r.dot(f.out) > 0.82) return 2;                          // stripe down the outside of the leg
       return part === 'thigh' ? 0 : 1;
     }
-    // Head and hair inside the helmet.
+    // Head, chin and hair inside the helmet: everything above the neck bone, near the spine's line
+    // (by position, since rigs weight the chin to the neck as often as to the head).
+    const inHead = new Uint8Array(pos.count);
+    for (let i = 0; i < pos.count; i++) {
+      const d = bp[i].clone().sub(at.neck), up = d.dot(torsoUp), side = d.clone().sub(torsoUp.clone().multiplyScalar(up)).length();
+      if (vpart[i] === 'head' || (up > 0.06 * torsoLen && side < 0.3 * torsoLen && vpart[i] !== 'hand' && vpart[i] !== 'forearm')) inHead[i] = 1;
+    }
     const c = V(); let nh = 0;
-    for (let i = 0; i < pos.count; i++) if (vpart[i] === 'head') { c.x += pos.getX(i); c.y += pos.getY(i); c.z += pos.getZ(i); nh++; }
+    for (let i = 0; i < pos.count; i++) if (inHead[i]) { c.x += pos.getX(i); c.y += pos.getY(i); c.z += pos.getZ(i); nh++; }
     if (nh) {
       c.divideScalar(nh);
-      for (let i = 0; i < pos.count; i++) if (vpart[i] === 'head') pos.setXYZ(i, c.x + (pos.getX(i) - c.x) * 0.55, c.y + (pos.getY(i) - c.y) * 0.55, c.z + (pos.getZ(i) - c.z) * 0.55);
+      for (let i = 0; i < pos.count; i++) if (inHead[i]) pos.setXYZ(i, c.x + (pos.getX(i) - c.x) * 0.4, c.y + (pos.getY(i) - c.y) * 0.4, c.z + (pos.getZ(i) - c.z) * 0.4);
       pos.needsUpdate = true;
     }
     if (suit.paint === false) return;   // keep their own clothes
