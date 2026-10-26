@@ -4,6 +4,7 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { bike, rider, thing, CHARACTERS, hairModel } from './common.js';
 import { dress, paintHelmet, ponytail } from './gear.js';
 import { seat, helmet, hold } from './rider.js';
+import * as dhaka from './dhaka.js';
 
 const q = new URLSearchParams(location.search);
 const W = innerWidth, H = innerHeight;
@@ -21,7 +22,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(W > H ? 55 : 70, W / H, 0.1, 1500);
 
 // Sky and light from a photographed street.
-const hdr = await new RGBELoader().loadAsync('/ph/' + (q.get('sky') || 'wide_street_01_2k') + '.hdr');
+const hdr = await new RGBELoader().loadAsync('/ph/' + (q.get('sky') || 'kloofendal_48d_partly_cloudy_puresky_2k') + '.hdr');
 hdr.mapping = THREE.EquirectangularReflectionMapping;
 scene.background = hdr;
 scene.environment = hdr;
@@ -29,7 +30,7 @@ const skyTurn = +(q.get('skyrot') || 0) * Math.PI / 180;
 scene.backgroundRotation.set(0, skyTurn, 0);
 scene.environmentRotation.set(0, skyTurn, 0);
 scene.environmentIntensity = 0.9;
-scene.fog = new THREE.Fog(0xb9c6d2, 120, 520);
+scene.fog = new THREE.Fog(0xc9c3b4, 60, 330);
 
 const sun = new THREE.DirectionalLight(0xfff1dc, 3.2);
 sun.position.set(-30, 60, 25);
@@ -54,6 +55,9 @@ function pbr(name, rep, ext = 'jpg') {
   return t;
 }
 
+const bands = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 16; const g = c.getContext('2d');
+  for (let i = 0; i < 4; i++) { g.fillStyle = i % 2 ? '#1b1b1b' : '#e3b51e'; g.fillRect(i * 64, 0, 64, 16); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping; return t; })();
 // The road: straight, 4 lanes of 3.5 m, kerbs and pavements.
 const LEN = 900, ROAD = 14, WALK = 5;
 const road = new THREE.Mesh(new THREE.PlaneGeometry(ROAD, LEN), new THREE.MeshStandardMaterial({ ...pbr('asphalt_02', [ROAD / 5, LEN / 5]), roughness: 1 }));
@@ -61,7 +65,7 @@ road.rotation.x = -Math.PI / 2; road.position.z = LEN / 2 - 60; road.receiveShad
 for (const s of [-1, 1]) {
   const walk = new THREE.Mesh(new THREE.BoxGeometry(WALK, 0.16, LEN), new THREE.MeshStandardMaterial({ ...pbr('concrete_pavement', [WALK / 2, LEN / 2]) }));
   walk.position.set(s * (ROAD / 2 + WALK / 2), 0.08, LEN / 2 - 60); walk.receiveShadow = true; scene.add(walk);
-  const kerb = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.18, LEN), new THREE.MeshStandardMaterial({ color: 0x9a9a94, roughness: 0.9 }));
+  const kt = bands.clone(); kt.repeat.set(LEN / 2, 1); kt.needsUpdate = true; const kerb = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.18, LEN), new THREE.MeshStandardMaterial({ map: kt, roughness: 0.85 }));
   kerb.position.set(s * (ROAD / 2 + 0.1), 0.09, LEN / 2 - 60); kerb.receiveShadow = true; scene.add(kerb);
 }
 // Lane markings: dashed lines between lanes, a double yellow line in the middle, solid edges.
@@ -70,39 +74,34 @@ const yellow = new THREE.MeshStandardMaterial({ color: 0xd9a520, roughness: 0.7,
 function stripe(x, z, len, w, mat) {
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, len), mat); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.005, z); m.receiveShadow = true; scene.add(m);
 }
-for (let z = -60; z < LEN - 60; z += 9) { stripe(-3.5, z, 3, 0.12, paint); stripe(3.5, z, 3, 0.12, paint); }
-stripe(-0.12, LEN / 2 - 60, LEN, 0.1, yellow); stripe(0.12, LEN / 2 - 60, LEN, 0.1, yellow);
+// One-way, four lanes: dashed white lines between them.
+for (let z = -60; z < LEN - 60; z += 9) { stripe(-3.5, z, 3, 0.12, paint); stripe(0, z, 3, 0.12, paint); stripe(3.5, z, 3, 0.12, paint); }
+
 stripe(-ROAD / 2 + 0.3, LEN / 2 - 60, LEN, 0.12, paint); stripe(ROAD / 2 - 0.3, LEN / 2 - 60, LEN, 0.12, paint);
 // The world beyond the pavements.
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, LEN), new THREE.MeshStandardMaterial({ ...pbr('concrete_pavement', [100, LEN / 4]), color: 0xbbbbbb }));
 ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0.01, LEN / 2 - 60); ground.receiveShadow = true; scene.add(ground);
 road.position.y = 0.02;
 
-// Buildings, trees and lamps along both sides.
-const block = await thing('block', 40, { byWidth: true });
-const lamp = await thing('lamp', 9, { byHeight: true });
+// Dhaka buildings along both sides, fronts on the pavement's back edge, and concrete poles with cables.
 let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-const FRONT = ROAD / 2 + WALK + 0.5;   // where the buildings' fronts stand, just behind the pavement
-for (const s of [-1, 1]) {
-  // Long side along the road, front face on the pavement's back edge.
-  for (let z = -40; z < LEN - 100;) {
-    const b = block.clone(); b.rotation.y = s > 0 ? Math.PI : 0;
-    b.scale.setScalar(0.8 + rnd() * 0.3);
-    b.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(b, true), size = box.getSize(new THREE.Vector3());
-    b.position.set(s * (FRONT + size.x / 2), 0, z + size.z / 2); scene.add(b);
-    z += size.z + 2 + rnd() * 6;
+const FRONT = ROAD / 2 + WALK;
+await dhaka.prepare();
+if (q.get('oldblocks') === null) for (const s of [-1, 1]) {
+  for (let z = -40; z < 320;) {
+    const w = 7 + rnd() * 7, b = dhaka.building(w);
+    b.rotation.y = s < 0 ? Math.PI / 2 : -Math.PI / 2;
+    b.position.set(s * FRONT, 0, s < 0 ? z + w : z); scene.add(b);
+    z += w + (rnd() < 0.25 ? 1 + rnd() * 2 : 0.05);
   }
-  for (let z = -30; z < LEN - 100; z += 30) {
-    const l = lamp.clone(); l.position.set(s * (ROAD / 2 + 0.7), 0.16, z); scene.add(l);
-  }
+  dhaka.poles(scene, s * (ROAD / 2 + 0.6), -30, 320, 32);
 }
 
 // Shade trees on the pavement: mango and rain trees, as on a Bangladeshi street.
 const trees = [await thing('tr_mango', 7.5, { byHeight: true }), await thing('tr_rain', 10, { byHeight: true })];
 let ti = 0;
-for (const s of [-1, 1]) for (let z = -15 + (s > 0 ? 12 : 0); z < LEN - 100; z += 24 + rnd() * 10) {
-  const t = trees[ti++ % trees.length].clone(); t.position.set(s * (ROAD / 2 + 3.2), 0.16, z); t.rotation.y = rnd() * 6; t.scale.setScalar(0.85 + rnd() * 0.3); scene.add(t);
+for (const s of [-1, 1]) for (let z = -15 + (s > 0 ? 25 : 0); z < 320; z += 45 + rnd() * 25) {
+  const t = trees[ti++ % trees.length].clone(); t.position.set(s * (ROAD / 2 + 2.6), 0.16, z); t.rotation.y = rnd() * 6; t.scale.setScalar(0.85 + rnd() * 0.3); scene.add(t);
 }
 
 // Soft contact shadow under a vehicle (sun shadows alone leave them floating).
@@ -189,7 +188,7 @@ if (q.get('cam')) { const c = q.get('cam').split(',').map(Number); camera.positi
 if (q.get('side')) { camera.position.set(P.x + 6, 1.5, P.z); camera.lookAt(P.x, 1, P.z); }
 sun.target.position.set(P.x, 0, P.z + 15); sun.position.set(P.x - 30, 60, P.z - 10);
 
-await new Promise(r => { const t = setInterval(() => { if (pending === 0) { clearInterval(t); r(); } }, 100); });
+await new Promise(r => { const t = setInterval(() => { if (pending === 0 && dhaka.loading() === 0) { clearInterval(t); r(); } }, 100); });
 renderer.render(scene, camera);
 document.body.dataset.shot = shot; if (q.get('nohud')) document.querySelector('.hud').style.display = 'none';
 document.title = 'ok';
