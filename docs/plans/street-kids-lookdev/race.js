@@ -8,7 +8,7 @@ import { seat, helmet, hold } from './rider.js';
 const q = new URLSearchParams(location.search);
 const W = innerWidth, H = innerHeight;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(+(q.get('dpr') || 1));
+renderer.setPixelRatio(+(q.get('dpr') || devicePixelRatio));
 renderer.setSize(W, H);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -156,7 +156,7 @@ let me;
 if (shot === 'race') {
   me = await racer('nr750', 'c_teenboy', P.x, P.z);
   await racer('gsxr', 'c_teew', P.x - 1.7, P.z + 1.6, { roll: 0.02 });
-  await racer('z1000', 'c_greg', P.x + 3.2, P.z + 6, { roll: -0.03 });
+  await racer('z1000', 'c_polom', P.x + 3.2, P.z + 6, { roll: -0.03 });
   await racer('gsxr', 'c_leatherw', P.x - 2.8, P.z + 14);
   await racer('z1000', 'c_teenblack', P.x + 4.6, P.z + 16);
   await racer('nr750', 'c_blackm', P.x + 1.5, P.z + 24);

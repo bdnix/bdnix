@@ -12,7 +12,7 @@ import { dress, paintHelmet, ponytail } from './gear.js';
 const q = new URLSearchParams(location.search);
 const W = innerWidth, H = innerHeight, cols = W > H ? 3 : 2, rows = 6 / cols;
 document.body.style.setProperty('--cols', cols);
-const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(W, H); document.body.appendChild(r.domElement);
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setPixelRatio(+(q.get('dpr') || devicePixelRatio)); r.setSize(W, H); document.body.appendChild(r.domElement);
 r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.9;
 r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
 const hdr = await new RGBELoader().loadAsync('/ph/wide_street_01_2k.hdr'); hdr.mapping = THREE.EquirectangularReflectionMapping;
@@ -36,8 +36,8 @@ const only = q.get('only'); for (let i = 0; i < 6; i++) { if (only && CHARACTERS
   const cam = new THREE.PerspectiveCamera(21, (W / cols) / (H / rows), 0.1, 100);
   const view = q.get('view') || 'front';
   if (view === 'front') cam.position.set(2.6, 1.5, 4.2); else if (view === 'back') cam.position.set(-2.4, 1.6, -4.2);
-  else if (view === 'cback') { cam.position.set(-1.2, 1.7, -2.2); } else if (view === 'side') { cam.position.set(5.2, 1.2, 0.0); } else if (view === 'cfront') { cam.position.set(1.4, 1.4, 2.0); }
-  cam.lookAt(0, view[0] === 'c' ? 1.05 : view === 'side' ? 0.75 : 0.85, view[0] === 'c' ? -0.2 : 0);
+  else if (view === 'cback') { cam.position.set(-1.2, 1.7, -2.2); } else if (view === 'side') { cam.position.set(5.2, 1.2, 0.0); } else if (view === 'cfront') { cam.position.set(1.4, 1.4, 2.0); } else if (view === 'xs') { cam.position.set(1.6, 1.25, 0.2); }
+  cam.lookAt(0, view === 'xs' ? 1.0 : view[0] === 'c' ? 1.05 : view === 'side' ? 0.75 : 0.85, view[0] === 'c' ? -0.2 : 0);
   scenes.push({ sc, cam });
   const tag = document.createElement('div'); tag.textContent = (ch.sex === 'f' ? 'Female' : 'Male') + ' ' + (i % 3 + 1); document.getElementById('tags').appendChild(tag);
 }

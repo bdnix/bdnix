@@ -127,7 +127,10 @@ export function dress(root, suit) {
       for (let i = 0; i < pos.count; i++) if (inHead[i]) pos.setXYZ(i, c.x + (pos.getX(i) - c.x) * 0.4, c.y + (pos.getY(i) - c.y) * 0.4, c.z + (pos.getZ(i) - c.z) * 0.4);
       pos.needsUpdate = true;
     }
-    if (suit.paint === false) return;   // keep their own clothes
+    if (suit.paint === false) {   // keep their own clothes, optionally in another colour
+      if (suit.top && /outfit_top|shirt|top/i.test(m.material.name)) recolor(m, suit.top);
+      return;
+    }
     // Repaint the texture.
     const img = m.material.map.image, W = img.width, H = img.height;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -256,4 +259,22 @@ export function ponytail(holder, gltf, tint) {
   pivot.rotation.x = 0.5;   // hanging back over the shoulders, blown by the wind
   holder.add(pivot);
   return pivot;
+}
+
+// Dye a garment: keep its texture's light and shade, change its colour.
+function recolor(m, rgb) {
+  const img = m.material.map.image, W = img.width, H = img.height;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0);
+  const d = ctx.getImageData(0, 0, W, H), p = d.data;
+  let sum = 0; for (let i = 0; i < p.length; i += 4) sum += Math.max(p[i], p[i + 1], p[i + 2]);
+  const mean = sum / (p.length / 4) || 1;
+  for (let i = 0; i < p.length; i += 4) {
+    const k = Math.max(p[i], p[i + 1], p[i + 2]) / mean;
+    p[i] = rgb[0] * k; p[i + 1] = rgb[1] * k; p[i + 2] = rgb[2] * k;
+  }
+  ctx.putImageData(d, 0, 0);
+  const t = new THREE.CanvasTexture(cv); t.flipY = m.material.map.flipY; t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = m.material.map.wrapS; t.wrapT = m.material.map.wrapT; t.channel = m.material.map.channel;
+  m.material = m.material.clone(); m.material.map = t; m.material.needsUpdate = true;
 }

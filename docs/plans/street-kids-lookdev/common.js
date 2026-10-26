@@ -13,10 +13,10 @@ export const RIDERS = { nathan: 1.83, manuel: 1.84, eric: 1.84, justman: 1.84, c
 export const CHARACTERS = [
   { id: 'c_teenboy', sex: 'm', paint: false, helmet: 0x1a1a1c },
   { id: 'c_blackm', sex: 'm', paint: false, helmet: 0x9c1418 },
-  { id: 'c_greg', sex: 'm', paint: false, helmet: 0x173a96 },
-  { id: 'c_leatherw', sex: 'f', paint: false, hair: [0.5, 0.35, 0.25], helmet: 0xe8e8ea },
-  { id: 'c_teenblack', sex: 'f', paint: false, hair: [0.25, 0.22, 0.22], helmet: 0x18a0a8 },
-  { id: 'c_teew', sex: 'f', paint: false, hair: [1.2, 0.8, 0.45], helmet: 0xe0601a },
+  { id: 'c_polom', sex: 'm', paint: false, top: [28, 52, 96], helmet: 0xd9a514 },
+  { id: 'c_leatherw', sex: 'f', paint: false, helmet: 0xe8e8ea },
+  { id: 'c_teenblack', sex: 'f', paint: false, helmet: 0x18a0a8 },
+  { id: 'c_teew', sex: 'f', paint: false, helmet: 0xe0601a },
 ];
 export async function hairModel() { return glb('ponytail'); }
 export async function glb(name) {
@@ -40,9 +40,25 @@ export async function bike(name) {
   const o = place(g.scene.clone(true), c.hide, c.len, c.ry, false); o.userData.fit = c.fit; return o;
 }
 import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
+// Smooth shading: vertices at the same spot (split at UV seams) share one averaged normal,
+// so seams in the clothes don't show as hard lines.
+function smoothNormals(root) {
+  root.traverse(m => {
+    if (!m.isSkinnedMesh) return;
+    const g = m.geometry = m.geometry.clone(), p = g.attributes.position, n = g.attributes.normal;
+    if (!n) return;
+    const key = i => Math.round(p.getX(i) * 1e4) + ',' + Math.round(p.getY(i) * 1e4) + ',' + Math.round(p.getZ(i) * 1e4);
+    const sum = new Map();
+    for (let i = 0; i < p.count; i++) { const k = key(i), v = sum.get(k) || [0, 0, 0]; v[0] += n.getX(i); v[1] += n.getY(i); v[2] += n.getZ(i); sum.set(k, v); }
+    for (let i = 0; i < p.count; i++) { const v = sum.get(key(i)), l = Math.hypot(v[0], v[1], v[2]) || 1; n.setXYZ(i, v[0] / l, v[1] / l, v[2] / l); }
+    n.needsUpdate = true;
+  });
+}
 export async function rider(name) {
   const g = await glb(name);
-  return place(skClone(g.scene), null, RIDERS[name], 0, true);
+  const o = place(skClone(g.scene), null, RIDERS[name], 0, true);
+  smoothNormals(o);
+  return o;
 }
 export async function thing(name, len, opts = {}) {
   const g = await glb(name);
