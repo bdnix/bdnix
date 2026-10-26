@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+html,body{margin:0;background:#000;overflow:hidden;font-family:Inter,system-ui,sans-serif}canvas{display:block}
+.hud{position:fixed;inset:0;pointer-events:none;color:#fff;font-size:14px;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.panel{background:rgba(10,14,22,.62);border:1px solid rgba(255,255,255,.14);border-radius:12px}
+.stats{position:absolute;left:12px;top:12px;display:flex;gap:14px;padding:8px 14px}
+.stats div{display:flex;flex-direction:column;align-items:flex-start}.stats b{font-size:20px;font-variant-numeric:tabular-nums}.stats span{font-size:11px;opacity:.75;text-transform:uppercase;letter-spacing:.06em}
+.top-r{position:absolute;right:12px;top:12px;display:flex;gap:8px}
+.top-r .panel{padding:8px 12px;font-weight:600}
+.health{position:absolute;left:12px;bottom:14px;width:min(40vw,260px);padding:8px 12px}
+.bar{height:8px;border-radius:4px;background:rgba(255,255,255,.18);overflow:hidden;margin-top:5px}.bar i{display:block;height:100%;background:linear-gradient(90deg,#3ddc84,#a6f07a)}
+.foe{position:absolute;left:50%;top:12px;transform:translateX(-50%);padding:6px 12px;min-width:150px;text-align:center;display:none}
+.foe .bar i{background:linear-gradient(90deg,#ff5a4e,#ff9a6b)}
+body[data-shot=punch] .foe,body[data-shot=bat] .foe{display:block}
+.speed{position:absolute;right:12px;bottom:14px;padding:6px 14px;text-align:right}.speed b{font-size:30px;font-variant-numeric:tabular-nums}
+@media (max-aspect-ratio:1/1){.foe{top:68px}.stats{gap:9px;padding:6px 9px}.stats b{font-size:15px}.stats span{font-size:9px}.top-r .panel{padding:7px 9px;font-size:13px}}
+</style>
+<script type="importmap">{"imports":{"three":"/work/node_modules/three/build/three.module.js","three/addons/":"/work/node_modules/three/examples/jsm/"}}</script></head><body>
+<div class="hud">
+  <div class="stats panel"><div><b>4/7</b><span>Place</span></div><div><b>1,300</b><span>Score</span></div><div><b>1.6 km</b><span>To go</span></div></div>
+  <div class="top-r"><div class="panel">EN · বাং</div><div class="panel">🔊</div></div>
+  <div class="foe panel">Kalu <span style="opacity:.7">· chain</span><div class="bar"><i style="width:45%"></i></div></div>
+  <div class="health panel">You<div class="bar"><i style="width:80%"></i></div></div>
+  <div class="speed panel"><b>187</b> km/h</div>
+</div>
+<script type="module" src="race.js"></script></body></html>

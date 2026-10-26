@@ -1,0 +1,29 @@
+<!doctype html><html><head><style>html,body{margin:0;background:#888}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"/work/node_modules/three/build/three.module.js","three/addons/":"/work/node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { bike, rider } from './common.js';
+import { seat, helmet, bones } from './rider.js';
+import { thing } from './common.js';
+const q = new URLSearchParams(location.search);
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(innerWidth, innerHeight); document.body.appendChild(r.domElement);
+r.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xbbbbbb);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x666666, 2.5)); const d = new THREE.DirectionalLight(0xffffff, 2); d.position.set(3, 5, 4); scene.add(d);
+scene.add(new THREE.GridHelper(10, 100, 0x000000, 0x777777));
+const views = q.get('v').split(',');
+const W = innerWidth / views.length;
+const bk = await bike(q.get('b')); scene.add(bk);
+const rd = await rider(q.get('r')); bk.add(rd);
+const fit = Object.assign({}, bk.userData.fit); if (q.get('lean')) fit.lean = +q.get('lean'); const bb = seat(rd, bk, fit); console.error(Object.keys(bb).join(' '), bb.spine_01 && bb.spine_01.name, bb.spine_01 && bb.spine_01.children.map(c=>c.name).join(','));
+if (q.get('h')) { const hm = await thing(q.get('h'), 1); helmet(bb, hm, q.get('r') === 'justman' ? 0.37 : 0.31, q.get('r') === 'justman' ? { up: new THREE.Vector3(0, 1, 0.35), lift: +(q.get('lift')||0.13), push: +(q.get('push')||-0.05) } : {}); const p = new THREE.Vector3(); hm.getWorldPosition(p); console.error('helmet at', p.toArray().map(v=>v.toFixed(2)).join(','), 'head', bb.head.getWorldPosition(new THREE.Vector3()).toArray().map(v=>v.toFixed(2)).join(','), 'end', bb.head_end && bb.head_end.name); }
+r.setScissorTest(true);
+views.forEach((v, i) => {
+  const ext = 1.1, cam = new THREE.OrthographicCamera(-ext * W / innerHeight, ext * W / innerHeight, ext, -ext, 0.01, 100);
+  const p = { side: [10, 0.9, 0], back: [0, 0.9, -10], front: [0, 0.9, 10], top: [0, 10, 0.01], persp: [-3, 1.8, -3.5] }[v];
+  cam.position.set(...p); cam.lookAt(0, v === 'top' ? 0 : 0.9, 0);
+  if (v === 'persp') { const pc = new THREE.PerspectiveCamera(40, W / innerHeight, 0.1, 100); pc.position.set(...p); pc.lookAt(0, 0.8, 0); r.setViewport(i * W, 0, W, innerHeight); r.setScissor(i * W, 0, W, innerHeight); r.render(scene, pc); return; }
+  r.setViewport(i * W, 0, W, innerHeight); r.setScissor(i * W, 0, W, innerHeight); r.render(scene, cam);
+});
+document.title = 'ok';
+</script></body></html>

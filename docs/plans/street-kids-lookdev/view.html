@@ -1,0 +1,28 @@
+<!doctype html><html><head><style>html,body{margin:0;background:#888}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"/work/node_modules/three/build/three.module.js","three/addons/":"/work/node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const q = new URLSearchParams(location.search);
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); r.setSize(innerWidth, innerHeight); document.body.appendChild(r.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xbbbbbb);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x666666, 2.5)); const d = new THREE.DirectionalLight(0xffffff, 2); d.position.set(3, 5, 4); scene.add(d);
+const g = await new GLTFLoader().loadAsync('/models/' + q.get('m') + '.glb');
+const o = g.scene; scene.add(o); const hide = q.get('hide'); if (hide) { const re = new RegExp(hide, 'i'); const kill=[]; o.traverse(n => { if (n.isMesh && (re.test(n.name) || re.test(n.material?.name||''))) kill.push(n); }); kill.forEach(n => n.removeFromParent()); }
+if (q.get('ry')) o.rotation.y = +q.get('ry') * Math.PI / 180;
+const box = new THREE.Box3().setFromObject(o); const size = box.getSize(new THREE.Vector3()); const c = box.getCenter(new THREE.Vector3());
+const len = +(q.get('len') || 0); const s = len ? len / Math.max(size.x, size.z) : 1; o.scale.setScalar(s);
+o.updateMatrixWorld(true); const b2 = new THREE.Box3().setFromObject(o); o.position.y -= b2.min.y; o.position.x -= (b2.min.x + b2.max.x) / 2; o.position.z -= (b2.min.z + b2.max.z) / 2;
+o.updateMatrixWorld(true); const b3 = new THREE.Box3().setFromObject(o); const sz = b3.getSize(new THREE.Vector3());
+const grid = new THREE.GridHelper(10, 100, 0x000000, 0x444444); scene.add(grid);
+const ext = Math.max(sz.x, sz.y, sz.z) * 0.65;
+const view = q.get('v') || 'side';
+const cam = new THREE.OrthographicCamera(-ext * innerWidth / innerHeight, ext * innerWidth / innerHeight, ext, -ext, 0.01, 100);
+const dirs = { side: [10, 0, 0], front: [0, 0, 10], back: [0, 0, -10], top: [0, 10, 0.001], persp: [6, 3, 6] };
+const dv = dirs[view]; cam.position.set(dv[0], dv[1] + sz.y / 2, dv[2]); cam.lookAt(0, sz.y / 2, 0);
+if (view === 'top') { grid.rotation.x = 0; }
+const vg = new THREE.GridHelper(10, 100, 0xff0000, 0x660000); vg.rotation.z = Math.PI / 2; if (view === 'side') scene.add(vg); 
+const fg = new THREE.GridHelper(10, 100, 0x0000ff, 0x000066); fg.rotation.x = Math.PI / 2; if (view === 'front' || view === 'back') scene.add(fg);
+r.render(scene, cam);
+document.title = 'ok ' + JSON.stringify({ size: [sz.x, sz.y, sz.z].map(v => +v.toFixed(3)), scale: +s.toFixed(5) });
+</script></body></html>

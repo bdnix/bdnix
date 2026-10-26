@@ -69,6 +69,42 @@ The lesson: realism needs **models made by 3D artists** and **real photo texture
 4. **Show the owner screenshots and wait for approval:** a full-screen race on a computer (1280 × 720) and an upright phone (390 × 844), the rider's bike from behind as in the game, rivals alongside, traffic, and a fight (a punch or a weapon swing). Use the real-time renderer the game will use (three.js in the browser), not offline Blender renders, so what's shown is what the game will look like. Say honestly what a phone browser can and can't do.
 5. **Only after approval:** build the game on the approved look, keeping `street-core.js`'s rules; then the tests, translations and docs; then the pull request. AGENTS.md's rules all apply (a pull request with green CI, coverage, the modules' boundaries, and so on).
 
+## Look test (second session): awaiting approval
+
+Steps 1 to 4 are done; the owner has been shown six screenshots (a race, a punch and a stick swing, each on a computer at 1280 × 720 and an upright phone at 390 × 844) and asked for a yes. **Don't build the game until they approve.**
+
+- **How it's made:** three.js r170 in the browser, the same renderer the game will use. A photographed sky (Poly Haven `wide_street_01`) lights the scene and is its backdrop; a sun casts shadows; ACES tone mapping. The road is Poly Haven's `asphalt_02` with painted lanes, the pavements `concrete_pavement`. Buildings, palms, lamps, traffic, bikes, riders, helmets and weapons are all Sketchfab models by 3D artists (CC BY).
+- **Riders on bikes:** the scanned people are seated by code with two-bone IK (`docs/plans/street-kids-lookdev/rider.js`): hips on the seat, the back leant forward through the pelvis and spine, the head raised to the road, feet on the pegs and hands on the grips. A punch or swing moves one hand to a target. Helmets are fitted to the head bone and weapons to the hand bone. Each bike's seat, grip and peg points are in `common.js`.
+- **The prototype** is in `docs/plans/street-kids-lookdev/` (code only, no models): `race.html?shot=race|punch|bat` is the scene, `seat.html` checks one rider on one bike, `view.html` shows one model on a 10 cm grid, and `tools/` has the Sketchfab search, download and thumbnail scripts and the Playwright screenshot script. Serve the scratch folder with `models/`, `ph/` and `work/node_modules/three` beside `view/`, as the import map expects.
+- **Models used** (all CC Attribution; credit each in `docs/games.md`):
+
+  | Use | Model | UID | Author |
+  |---|---|---|---|
+  | Player's bike | Honda NR750 1994 | `89a79e0a3c334b23830561961f9644c8` | comrade1280 |
+  | Rival bike | Suzuki GSXR 750 | `3e05cd872ef0458ca3d6b0770bb03622` | kaleemullah550 |
+  | Rival bike | Z1000 2014 | `70cecfa5568347428c5ad72e9a156be9` | EmanuelRestrepoVelez |
+  | Rider (scanned) | Nathan Animated 003 | `143a2b1ea5eb4385ae90a73657aca3bc` | renderpeople |
+  | Rider (scanned) | Manuel Animated 001 | `e65e0fef4e0743868c8d5bff36d61116` | renderpeople |
+  | Rider (scanned) | Eric Rigged 001 | `a46bc9f67aaa415bb4f3241eef900e7f` | renderpeople |
+  | Rider (leather jacket) | Just man | `e77a26778dc14b3c8f4838fe6a827dc3` | vrimen |
+  | Helmet | Motorcycle_helmet | `6c4c23305d8148ef9717799274bdde85` | zakyora |
+  | Helmet | T1 HELMET | `dd5bce9ea5ef408e96858fd0e5c93421` | Netovanniy |
+  | Stick | Baseball bat | `2669cf86386747449611396c0409db47` | k_dvlt |
+  | Nunchaku | Traditional Nunchaku | `7fe52a1072764b25932dcc9b69b38c09` | eltayerkebulan |
+  | Car | 2014 Toyota Corolla E180 | `36f95efb0585464cae43a25a3b3392e8` | armoredwave |
+  | Car | 2001 Toyota Yaris | `443fd49eb0844557a06854cae0b61267` | Tyler_Dave |
+  | Bus | Generic Town Bus | `14fe03d792914d51b6c6250b393c44fd` | own.guest |
+  | Truck | Indian Truck | `8c7650b96d6846de8cc54391ab16cf20` | afjalymail78692 |
+  | CNG | CNG | `011baf8efab94b37988e16756951a2b1` | asrafullislamsiam |
+  | Buildings | LOW POLY - SOVIET APARTMENT BUILDING 8K | `05229ac1d1f94e6c8cacaad91110c602` | Colin.Greenall |
+  | Palms | Realistic Palm Tree 2 Free | `d05c8ffb6ec64a7184c4b673e21f7224` | NextSpring |
+  | Lamps | Street Lamp | `6881aa1e84b047d79860fa9297e05e22` | bez_glaza |
+
+  Check each model's page for the exact author name and licence again before shipping. Rejected on the way: "City Bus - rigged" (`36646f…`; its skin ignores scaling), the open-face "Street Rider Helmet" (`a2e5ce…`).
+- **Fixes the models need before shipping:** strip the makers' badges (Honda, Suzuki, GSX-R, Kawasaki, Toyota, Bell, Tata) or repaint; the NR750's side stand is down; the CNG (271k triangles), truck (208k) and T1 helmet (236k) need simplifying.
+- **Page weight:** the downloads total about 220 MB. Simplified (meshoptimizer), with 512–1024 px WebP or KTX2 textures, the set should come to roughly 10–20 MB; load the road, sky and player first and the rest in the background. Not measured yet.
+- **What the screenshots don't show:** motion. They're still frames from headless Chromium with a software GPU (SwiftShader), so frame rate on a phone is untested.
+
 ## Things the full-screen look must reconcile with AGENTS.md
 
 AGENTS.md has rules every game follows. A full-screen 3D game changes how some of them are met; decide how, and tell the owner, when building:
@@ -89,7 +125,7 @@ AGENTS.md has rules every game follows. A full-screen 3D game changes how some o
 
 ## Environment
 
-- **Sketchfab:** the owner added a **network secret** for `api.sketchfab.com` (an `Authorization: Token …` header) and allowed `media.sketchfab.com`. Both take effect in a new session. Downloads go through `GET https://api.sketchfab.com/v3/models/<uid>/download`, which returns links to the files.
+- **Sketchfab:** the proxy's injected credential for `api.sketchfab.com` is rejected ("Authentication credentials were not provided"), and it replaces any `Authorization` header sent to that host. What works: the token is in the environment variable **`SF_TOKEN`**, sent as `Authorization: Token $SF_TOKEN` to **`https://sketchfab.com/v3/...`** (the same API on the main host). `GET /v3/models/<uid>/download` returns links on `sketchfab-prod-media.s3.amazonaws.com`, which downloads fine. The download endpoint rate-limits (HTTP 429) after about 15 downloads in a row; wait and retry. `docs/plans/street-kids-lookdev/tools/sf.py` wraps this. `cdn.polyhaven.com` (thumbnails) is refused; it isn't needed.
 - **Reachable:** `sketchfab.com`, `api.sketchfab.com`, `api.polyhaven.com`, `dl.polyhaven.org`, `kenney.nl`, `raw.githubusercontent.com`, PyPI and npm.
 - **Refused before the owner's latest changes:** `github.com`, `codeload.github.com`, `api.github.com`, `quaternius.com`, `opengameart.org`, `www.cgtrader.com`, `poly.pizza`, `ambientcg.com`, `blendswap.com`, `free3d.com`, `turbosquid.com` and `static.makehumancommunity.org`.
 - **Blender** installs as a Python module: `pip install bpy` (5.2.x, for Python 3.13) in a virtualenv. Rendering uses Cycles on the CPU. It's good for converting, simplifying and cleaning up downloaded models, and for exporting `.glb`.
@@ -102,6 +138,8 @@ AGENTS.md has rules every game follows. A full-screen 3D game changes how some o
   For WebGL screenshots in headless Chromium, launch with `--use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist`.
 
 ## Questions still open with the owner
+
+- **Approve the look?** (asked with the six screenshots)
 
 - Do they want to review the Bangla translations before they ship, or after?
 - Phones turned sideways: keep the "turn your phone upright" note, as every other game does, or allow landscape for this one?
