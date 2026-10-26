@@ -16,10 +16,10 @@ for (let i = 0; i < list.length; i++) {
   const sun = new THREE.DirectionalLight(0xfff1dc, 3); sun.position.set(-6, 10, 8); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10 }); sc.add(sun);
   const g = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 1 })); g.rotation.x = -Math.PI / 2; g.receiveShadow = true; sc.add(g);
-  const v = await thing(name, +len, { ry: +ry || 0 }); sc.add(v);
+  const v = await thing(name, +len, { ry: +ry || 0, byHeight: q.get('h') === '1' }); sc.add(v);
   const box = new THREE.Box3().setFromObject(v, true), sz = box.getSize(new THREE.Vector3());
   const cam = new THREE.PerspectiveCamera(35, (W / cols) / (H / rows), 0.1, 200);
-  const d = Math.max(sz.z, sz.y * 2) * 1.5; cam.position.set(d * 0.75, sz.y * 0.9, d * 0.85); cam.lookAt(0, sz.y * 0.45, 0);
+  const d = Math.max(sz.z, sz.x, sz.y * 2) * 1.1; cam.position.set(q.get('front') ? 0 : d * 0.75, sz.y * 0.6, d * (q.get('front') ? 1.1 : 0.85)); if (q.get('front') && sz.x > sz.z) cam.position.set(0, sz.y*0.6, d); cam.lookAt(0, sz.y * 0.45, 0);
   const x = (i % cols) * W / cols, y = H - (Math.floor(i / cols) + 1) * H / rows;
   r.setViewport(x, y, W / cols, H / rows); r.setScissor(x, y, W / cols, H / rows); r.render(sc, cam);
   console.error(name, 'size', sz.toArray().map(a => a.toFixed(2)).join(' '));

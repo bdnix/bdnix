@@ -136,14 +136,23 @@ function kerbGeometry() {
 // Bangladeshi number plates: white, black Bangla lettering in two lines, "ঢাকা মেট্রো-গ" over "১২-৩৪৫৬".
 const DIG = '০১২৩৪৫৬৭৮৯';
 const bn = n => String(n).split('').map(d => DIG[+d]).join('');
-function plateTexture(cls) {
-  const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+function plateTexture(cls, aspect) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512 * aspect);
   const g = c.getContext('2d');
-  g.fillStyle = '#f4f4f0'; g.fillRect(0, 0, 512, 256);
-  g.strokeStyle = '#111'; g.lineWidth = 10; g.strokeRect(8, 8, 496, 240);
-  g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.font = '88px Kalpurush'; g.fillText('ঢাকা মেট্রো-' + cls, 256, 82);
-  g.font = '108px Kalpurush'; g.fillText(bn(11 + Math.floor(rnd() * 89)) + '-' + bn(1000 + Math.floor(rnd() * 9000)), 256, 182);
+  const bg = g.createLinearGradient(0, 0, 512, 256); bg.addColorStop(0, '#dcdcd6'); bg.addColorStop(1, '#c9c9c2');
+  g.fillStyle = bg; g.fillRect(0, 0, 512, c.height);
+  g.strokeStyle = '#222'; g.lineWidth = 6; g.strokeRect(12, 12, 488, c.height - 24);
+  const k = c.height / 256; g.save(); g.translate(0, 0); g.scale(1, k);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const num = bn(11 + Math.floor(rnd() * 89)) + '-' + bn(1000 + Math.floor(rnd() * 9000));
+  // Embossed: a light edge below and a shadow above each letter.
+  for (const [dx, dy, col] of [[0, 3, 'rgba(255,255,255,0.6)'], [0, -2, 'rgba(0,0,0,0.35)'], [0, 0, '#1a1a1a']]) {
+    g.fillStyle = col; g.font = '80px Kalpurush'; g.fillText('ঢাকা মেট্রো-' + cls, 256 + dx, 82 + dy);
+    g.font = '104px Kalpurush'; g.fillText(num, 256 + dx, 180 + dy);
+  }
+  g.restore();
+  // Grit and smears.
+  for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(80,70,55,${rnd() * 0.25})`; g.fillRect(rnd() * 512, rnd() * c.height, 1 + rnd() * 3, 1 + rnd() * 3); }
   // Road dust.
   const d = g.createLinearGradient(0, 0, 0, 256); d.addColorStop(0, 'rgba(110,95,70,0.08)'); d.addColorStop(1, 'rgba(110,95,70,0.3)');
   g.fillStyle = d; g.fillRect(0, 0, 512, 256);
@@ -165,8 +174,16 @@ export function plates(v, cls, spots) {
       sp.z = (hit ? hit.point.z : (sp.end > 0 ? box.max.z : box.min.z)) - v.position.z - dir * 0.012;
       sp.ry = sp.end > 0 ? 0 : Math.PI;
     }
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(sp.w || 0.52, (sp.w || 0.52) * 0.5), new THREE.MeshStandardMaterial({ map: plateTexture(cls), roughness: 0.4 }));
-    m.position.set(sp.x || 0, sp.y, sp.z); m.rotation.y = sp.ry || 0; v.add(m);
+    // A black plastic holder with a lip, the plate set into it.
+    const w = sp.w || 0.4, h = sp.h || w * 0.5;
+    const grp = new THREE.Group();
+    const holder = new THREE.Mesh(new THREE.BoxGeometry(w + 0.04, h + 0.04, 0.02), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.6 }));
+    holder.position.z = -0.01; grp.add(holder);
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: plateTexture(cls, h / w), roughness: 0.35, metalness: 0.15 }));
+    plate.position.z = 0.002; grp.add(plate);
+    for (const yy of [h / 2 + 0.012, -h / 2 - 0.012]) { const lip = new THREE.Mesh(new THREE.BoxGeometry(w + 0.04, 0.012, 0.012), holder.material); lip.position.set(0, yy, 0.006); grp.add(lip); }
+    grp.position.set(sp.x || 0, sp.y, sp.z + (sp.end > 0 ? -0.006 : 0.006)); grp.rotation.y = sp.ry || 0; grp.traverse(o => { o.castShadow = o.receiveShadow = true; });
+    v.add(grp);
   }
 }
 

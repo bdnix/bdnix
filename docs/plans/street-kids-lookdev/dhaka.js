@@ -3,6 +3,7 @@
 // clutter on top (water tanks, rebar), built from measured parts so every building differs.
 import * as THREE from 'three';
 import { thing } from './common.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 let seed = 11;
 const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -255,21 +256,45 @@ export function building(w) {
   return g;
 }
 
-// Concrete electricity poles with sagging bundles of cables between them, as along every Dhaka road.
-export function poles(scene, x, z0, z1, gap) {
-  const mat = new THREE.MeshStandardMaterial({ color: 0x8e8b84, roughness: 0.9 });
-  const cable = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.7 });
+// Concrete electricity poles with Dhaka's tangle of cables: many bundles at different sags, coils
+// of spare cable hung on the poles, drop lines to the buildings, and the odd transformer.
+export async function poles(scene, x, z0, z1, gap, side) {
+  const pole = await thing('p_pole2', 10, { byHeight: true });
+  const cable = new THREE.MeshStandardMaterial({ color: 0x0c0c0c, roughness: 0.45, metalness: 0.1 });
+  const grey = new THREE.MeshStandardMaterial({ color: 0x5e5e58, roughness: 0.6, metalness: 0.4 });
+  const tube = (pts, r) => new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), Math.max(8, pts.length * 3), r, 5), cable);
+  const geos = [];
+  const add = m => { m.updateMatrix(); geos.push(m.geometry.applyMatrix4(m.matrix)); };
   const tops = [];
-  for (let z = z0; z < z1; z += gap) {
-    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.16, 10, 10), mat); p.position.set(x, 5, z); p.castShadow = true; scene.add(p);
-    const arm = box(1.4, 0.1, 0.1, mat); arm.position.set(x, 9.2, z); scene.add(arm);
+  for (let z = z0; z < z1; z += gap * (0.8 + rnd() * 0.4)) {
+    const p = pole.clone(); p.position.set(x, 0.2, z); p.rotation.y = side < 0 ? 0 : Math.PI; scene.add(p);
     tops.push(z);
-  }
-  for (let i = 0; i < tops.length - 1; i++) {
-    for (let k = 0; k < 7; k++) {
-      const off = (k % 4 - 1.5) * 0.35, y = 9.25 - Math.floor(k / 4) * 0.6 - rnd() * 0.3, sag = 0.5 + rnd() * 1.0;
-      const pts = []; for (let t = 0; t <= 16; t++) { const u = t / 16; pts.push(new THREE.Vector3(x + off + (rnd() - 0.5) * 0.02, y - sag * 4 * u * (1 - u), tops[i] + u * (tops[i + 1] - tops[i]))); }
-      const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.012 + rnd() * 0.012, 4), cable); scene.add(m);
+    // Coils of spare cable hung on the pole, two or three per pole.
+    for (let k = 0; k < 1 + rnd() * 3; k++) {
+      const r = 0.25 + rnd() * 0.2, y = 5.5 + rnd() * 3;
+      for (let t = 0; t < 4; t++) { const c = new THREE.Mesh(new THREE.TorusGeometry(r + t * 0.015, 0.012, 4, 20), cable); c.position.set(x + side * -0.2, y - r, z + (rnd() - 0.5) * 0.1); c.rotation.set(0, Math.PI / 2 + (rnd() - 0.5) * 0.4, (rnd() - 0.5) * 0.3); add(c); }
+    }
+    // Junction boxes and a transformer now and then.
+    if (rnd() < 0.5) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.45, 0.2), grey); b.position.set(x - side * 0.2, 3.2 + rnd() * 1.5, z); scene.add(b); }
+    if (rnd() < 0.2) { const t = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.1, 14), grey); t.position.set(x - side * 0.45, 7.2, z); t.castShadow = true; scene.add(t); }
+    // Drop lines to the buildings.
+    for (let k = 0; k < 3 + rnd() * 4; k++) {
+      const y0 = 6 + rnd() * 3, y1 = 4 + rnd() * 6, dz = (rnd() - 0.5) * 14, bx = x + side * (5 + rnd() * 0.6);
+      const pts = []; for (let t = 0; t <= 8; t++) { const u = t / 8; pts.push(new THREE.Vector3(x + (bx - x) * u, y0 + (y1 - y0) * u - 0.6 * 4 * u * (1 - u), z + dz * u)); }
+      add(tube(pts, 0.008 + rnd() * 0.008));
     }
   }
+  // Runs between poles: 15–25 cables, grouped into loose bundles, each sagging its own amount.
+  for (let i = 0; i < tops.length - 1; i++) {
+    const za = tops[i], zb = tops[i + 1];
+    for (let k = 0; k < 15 + rnd() * 10; k++) {
+      const bundle = Math.floor(rnd() * 4), y = 9.2 - bundle * 0.7 - rnd() * 0.25, off = -side * (0.05 + bundle * 0.12 + rnd() * 0.1), sag = 0.4 + bundle * 0.3 + rnd() * 0.8;
+      const pts = []; for (let t = 0; t <= 12; t++) { const u = t / 12; pts.push(new THREE.Vector3(x + off + Math.sin(u * 9 + k) * 0.02, y - sag * 4 * u * (1 - u), za + u * (zb - za))); }
+      add(tube(pts, 0.007 + rnd() * 0.012));
+    }
+    // A loose loop drooping low from the bundle.
+    if (rnd() < 0.5) { const zc = za + (0.2 + rnd() * 0.6) * (zb - za), pts = []; for (let t = 0; t <= 10; t++) { const u = t / 10; pts.push(new THREE.Vector3(x - side * 0.1, 8.2 - 2.2 * Math.sin(u * Math.PI), zc - 1.5 + 3 * u)); } add(tube(pts, 0.01)); }
+  }
+  const merged = mergeGeometries(geos, false);
+  const m = new THREE.Mesh(merged, cable); m.castShadow = true; scene.add(m);
 }
