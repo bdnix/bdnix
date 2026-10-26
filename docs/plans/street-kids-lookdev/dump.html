@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="utf-8"><script type="importmap">{"imports":{"three":"/work/node_modules/three/build/three.module.js","three/addons/":"/work/node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">
+import { rider, CHARACTERS } from './common.js';
+import { dress } from './gear.js';
+const q = new URLSearchParams(location.search); const id = q.get('r') || 'manuel'; const mat = new RegExp(q.get('mat') || '.');
+const r = await rider(id);
+let orig; r.traverse(m => { if (m.isSkinnedMesh && m.material.map && !orig && mat.test(m.material.name)) orig = m.material.map.image; });
+const c0 = document.createElement('canvas'); c0.width = orig.width; c0.height = orig.height; c0.getContext('2d').drawImage(orig, 0, 0);
+dress(r, CHARACTERS.find(c => c.id === id));
+let out; r.traverse(m => { if (m.isSkinnedMesh && m.material.map && !out && m.visible && mat.test(m.material.name)) { out = m.material.map.image; console.error(m.material.name, m.material.type, out.tagName || out.constructor.name); } });
+window.imgs = [c0.toDataURL('image/png'), out.toDataURL('image/png')];
+document.title = 'ok';
+</script></body></html>

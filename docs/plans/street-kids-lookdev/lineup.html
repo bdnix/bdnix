@@ -6,9 +6,9 @@
 <script type="module">
 import * as THREE from 'three';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
-import { bike, rider, thing, CHARACTERS } from './common.js';
+import { bike, rider, thing, CHARACTERS, hairModel } from './common.js';
 import { seat, helmet } from './rider.js';
-import { dress, paintHelmet } from './gear.js';
+import { dress, paintHelmet, ponytail } from './gear.js';
 const q = new URLSearchParams(location.search);
 const W = innerWidth, H = innerHeight, cols = W > H ? 3 : 2, rows = 6 / cols;
 document.body.style.setProperty('--cols', cols);
@@ -32,11 +32,12 @@ for (let i = 0; i < 6; i++) {
   const bk = await bike(BIKES[i]); sc.add(bk); bk.updateMatrixWorld(true);
   const rd = await rider(ch.id); bk.add(rd); dress(rd, ch);
   const bn = seat(rd, bk, Object.assign({}, bk.userData.fit, { lean: LEAN[BIKES[i]] }));
-  const hm = await thing('fullface', 1); paintHelmet(hm, ch.helmet); helmet(bn, hm, ch.sex === 'f' ? 0.30 : 0.31);
+  const hm = await thing('fullface', 1); paintHelmet(hm, ch.helmet); helmet(bn, hm, ch.sex === 'f' ? 0.29 : 0.31); if (ch.hair) ponytail(bn._helmet, await hairModel(), ch.hair);
   const cam = new THREE.PerspectiveCamera(21, (W / cols) / (H / rows), 0.1, 100);
   const view = q.get('view') || 'front';
-  if (view === 'front') cam.position.set(2.6, 1.5, 4.2); else cam.position.set(-2.4, 1.6, -4.2);
-  cam.lookAt(0, 0.85, 0);
+  if (view === 'front') cam.position.set(2.6, 1.5, 4.2); else if (view === 'back') cam.position.set(-2.4, 1.6, -4.2);
+  else if (view === 'cback') { cam.position.set(-1.2, 1.7, -2.2); } else if (view === 'side') { cam.position.set(5.2, 1.2, 0.0); } else if (view === 'cfront') { cam.position.set(1.4, 1.4, 2.0); }
+  cam.lookAt(0, view[0] === 'c' ? 1.05 : view === 'side' ? 0.75 : 0.85, view[0] === 'c' ? -0.2 : 0);
   scenes.push({ sc, cam });
   const tag = document.createElement('div'); tag.textContent = (ch.sex === 'f' ? 'Female' : 'Male') + ' ' + (i % 3 + 1); document.getElementById('tags').appendChild(tag);
 }

@@ -8,16 +8,17 @@ export const BIKES = {
   gsxr:  { len: 2.03, hide: null, ry: 0, fit: { seat: [0, 0.90, -0.36], grip: [0.27, 0.88, 0.40], peg: [0.17, 0.38, -0.30], lean: 0.95 } },
   z1000: { len: 2.05, hide: null, ry: 180, fit: { seat: [0, 0.88, -0.30], grip: [0.36, 1.00, 0.32], peg: [0.17, 0.36, -0.22], lean: 0.55 } },
 };
-export const RIDERS = { nathan: 1.78, manuel: 1.80, eric: 1.80, justman: 1.80, carla: 1.70, claudia: 1.72, sophia: 1.68 };
+export const RIDERS = { nathan: 1.83, manuel: 1.84, eric: 1.84, justman: 1.80, carla: 1.64, claudia: 1.65, sophia: 1.63, walkwoman_mr: 1.66 };
 // The six characters: a scanned body, a suit (main, trim) and a helmet colour.
 export const CHARACTERS = [
   { id: 'nathan', sex: 'm', main: [165, 20, 24], trim: [24, 24, 27], accent: [235, 235, 235], helmet: 0x9c1418 },
   { id: 'manuel', sex: 'm', main: [22, 58, 150], trim: [210, 210, 212], accent: [220, 30, 36], helmet: 0x173a96 },
   { id: 'eric', sex: 'm', main: [24, 104, 58], trim: [24, 24, 27], accent: [230, 200, 30], helmet: 0x1a1a1c },
-  { id: 'carla', sex: 'f', main: [222, 168, 24], trim: [24, 24, 27], accent: [235, 235, 235], helmet: 0xd9a514 },
-  { id: 'claudia', sex: 'f', main: [228, 228, 230], trim: [160, 20, 32], accent: [26, 26, 30], helmet: 0xe8e8ea },
-  { id: 'sophia', sex: 'f', main: [228, 98, 22], trim: [44, 44, 50], accent: [235, 235, 235], helmet: 0xe0601a },
+  { id: 'carla', sex: 'f', hair: [0.35, 0.3, 0.28], main: [222, 168, 24], trim: [24, 24, 27], accent: [235, 235, 235], helmet: 0xd9a514 },
+  { id: 'claudia', sex: 'f', hair: [2.4, 1.9, 1.15], main: [228, 228, 230], trim: [160, 20, 32], accent: [26, 26, 30], helmet: 0xe8e8ea },
+  { id: 'walkwoman_mr', sex: 'f', hair: [0.5, 0.32, 0.22], main: [228, 98, 22], trim: [44, 44, 50], accent: [235, 235, 235], helmet: 0xe0601a },
 ];
+export async function hairModel() { return glb('ponytail'); }
 export async function glb(name) {
   if (!cache[name]) cache[name] = loader.loadAsync('/models/' + name + '.glb');
   return cache[name];

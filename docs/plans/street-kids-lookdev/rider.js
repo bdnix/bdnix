@@ -10,18 +10,30 @@ const HIK = { Hips: 'hip', Spine: 'spine_01', Spine1: 'spine_02', Spine2: 'spine
   LeftUpLeg: 'upperleg_l', LeftLeg: 'lowerleg_l', LeftFoot: 'foot_l', LeftToeBase: 'ball_l',
   RightUpLeg: 'upperleg_r', RightLeg: 'lowerleg_r', RightFoot: 'foot_r', RightToeBase: 'ball_r' };
 
+// Character Creator names (CC_Base_L_Upperarm_050 and so on).
+const CC = { Hip: 'hip', Waist: 'spine_01', Spine01: 'spine_02', Spine02: 'spine_03', NeckTwist01: 'neck', Head: 'head',
+  L_Clavicle: 'shoulder_l', L_Upperarm: 'upperarm_l', L_Forearm: 'lowerarm_l', L_Hand: 'hand_l',
+  R_Clavicle: 'shoulder_r', R_Upperarm: 'upperarm_r', R_Forearm: 'lowerarm_r', R_Hand: 'hand_r',
+  L_Thigh: 'upperleg_l', L_Calf: 'lowerleg_l', L_Foot: 'foot_l', L_ToeBase: 'ball_l',
+  R_Thigh: 'upperleg_r', R_Calf: 'lowerleg_r', R_Foot: 'foot_r', R_ToeBase: 'ball_r' };
+
+// The common name of a bone in any of the rigs used (Renderpeople, HumanIK, Character Creator), or null.
+export function canonical(name) {
+  const m = /(?:^|_)((?:hip|spine_0\d|neck|head|shoulder_[lr]|upperarm_[lr]|lowerarm_[lr]|hand_[lr]|upperleg_[lr]|lowerleg_[lr]|foot_[lr]|ball_[lr]|foot_end_[lr]|head_end))_\d+$/.exec(name);
+  if (m) return m[1];
+  const h = /^Character\d_([A-Za-z0-9]+)_\d+(_0)?$/.exec(name);
+  if (h) return h[2] ? (h[1] === 'Head' ? 'head_end' : null) : HIK[h[1]] || null;
+  const c = /^CC_Base_([A-Za-z0-9_]+?)_\d+$/.exec(name);
+  if (c) return CC[c[1]] || null;
+  return null;
+}
+
 export function bones(root) {
   const b = {};
   root.traverse(n => {
     if (!n.isBone) return;
-    const m = /(?:^|_)((?:hip|spine_0\d|neck|head|shoulder_[lr]|upperarm_[lr]|lowerarm_[lr]|hand_[lr]|upperleg_[lr]|lowerleg_[lr]|foot_[lr]|ball_[lr]|foot_end_[lr]|head_end))_\d+$/.exec(n.name);
-    if (m && !b[m[1]]) b[m[1]] = n;
-    // HumanIK names (Character3_LeftForeArm_015 and so on).
-    const h = /^Character\d_([A-Za-z0-9]+)_\d+(_0)?$/.exec(n.name);
-    if (h) {
-      const k = h[2] ? (h[1] === 'Head' ? 'head_end' : null) : HIK[h[1]];
-      if (k && !b[k]) b[k] = n;
-    }
+    const k = canonical(n.name);
+    if (k && !b[k]) b[k] = n;
   });
   return b;
 }
@@ -78,10 +90,15 @@ export function seat(rider, bike, fit, opts = {}) {
   const side = new THREE.Vector3(1, 0, 0).transformDirection(bike.matrixWorld);
   const fwd = new THREE.Vector3(0, 0, 1).transformDirection(bike.matrixWorld);
   const up = new THREE.Vector3(0, 1, 0).transformDirection(bike.matrixWorld);
+  // Stand the back, neck and head straight first, whatever pose the scan was taken in.
+  for (const [a, c] of [['spine_01', 'spine_02'], ['spine_02', 'spine_03'], ['spine_03', 'neck'], ['neck', 'head'], ['head', 'head_end']]) {
+    if (!b[a] || !b[c]) continue;
+    const A = wpos(b[a]); aim(b[a], b[c], A.clone().add(up.clone().multiplyScalar(A.distanceTo(wpos(b[c])))));
+  }
   // Lean the back forward over the tank, spread over the spine.
   const lean = fit.lean ?? 0.7;
-  b.hip && turn(b.hip, side, lean * 0.55);
-  for (const s of ['spine_01', 'spine_02', 'spine_03']) b[s] && turn(b[s], side, lean * 0.45 / 3);
+  b.hip && turn(b.hip, side, lean * 0.62);
+  for (const s of ['spine_01', 'spine_02', 'spine_03']) b[s] && turn(b[s], side, lean * 0.38 / 3);
   if (opts.twist) for (const s of ['spine_02', 'spine_03']) b[s] && turn(b[s], up, opts.twist / 2);
   // Head back up to look down the road.
   b.neck && turn(b.neck, side, -lean * 0.5);
@@ -132,6 +149,7 @@ export function helmet(b, model, size = 0.31, adj = {}) {
   holder.position.copy(H).add(up.clone().multiplyScalar(adj.lift ?? hl * 0.42)).add(fwd.clone().multiplyScalar(adj.push ?? 0.015));
   b.head.parent.updateWorldMatrix(true, false);
   b.head.attach(holder);
+  b._helmet = holder;
   return holder;
 }
 
