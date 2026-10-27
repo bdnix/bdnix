@@ -15,7 +15,7 @@ Object.assign(BIKES, {
   k4_zx6r:   { len: 2.03, hide: null, ry: 0, fit: { seat: [0, 0.88, -0.36], grip: [0.30, 0.86, 0.42], bar: [[0.215, 0.898, 0.435], [0.315, 0.862, 0.34]], peg: [0.17, 0.40, -0.25], lean: 1.25 } },
   k5_h2:     { len: 2.07, hide: null, ry: 90, fit: { seat: [0, 0.84, -0.28], grip: [0.32, 0.88, 0.45], bar: [[0.248, 0.866, 0.398], [0.37, 0.80, 0.342]], peg: [0.17, 0.38, -0.20], lean: 1.2 } },
 });
-export const RIDERS = { nathan: 1.83, manuel: 1.84, eric: 1.84, justman: 1.84, carla: 1.64, claudia: 1.65, sophia: 1.63, walkwoman_mr: 1.66, c_teenboy: 1.80, c_blackm: 1.84, c_greg: 1.82, c_polom: 1.82, c_leatherw: 1.66, c_teenblack: 1.64, c_teew: 1.65, c_hoodiew: 1.64, d_striped: 1.68, d_pattern: 1.70 };
+export const RIDERS = { nathan: 1.83, manuel: 1.84, eric: 1.84, justman: 1.84, carla: 1.64, claudia: 1.65, sophia: 1.63, walkwoman_mr: 1.66, c_teenboy: 1.80, c_blackm: 1.84, c_greg: 1.82, c_polom: 1.82, c_leatherw: 1.66, c_teenblack: 1.64, c_teew: 1.65, c_hoodiew: 1.64, d_striped: 1.68, d_pattern: 1.70, p_shirt: 1.72, p_man: 1.75, p_teen: 1.70, p_old: 1.65, p_dhoti: 1.68, p_saree1: 1.58 };
 // The six characters: a scanned body, a suit (main, trim) and a helmet colour.
 export const CHARACTERS = [
   { id: 'c_teenboy', sex: 'm', paint: false, helmet: 0x1a1a1c },

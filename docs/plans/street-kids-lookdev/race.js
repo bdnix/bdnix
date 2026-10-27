@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { bike, rider, thing, CHARACTERS, hairModel } from './common.js';
-import { dress, paintHelmet, ponytail, uniform } from './gear.js';
+import { dress, paintHelmet, ponytail, uniform, skinTone } from './gear.js';
 import { seat, helmet, hold, bones, aim } from './rider.js';
 import * as dhaka from './dhaka.js';
 import * as marks from './landmarks.js';
@@ -149,24 +149,34 @@ for (const s of [-1, 1]) for (let z = -15 + (s > 0 ? 25 : 0); z < ZEND; z += 45 
   const t = trees[ti++ % trees.length].clone(); t.position.set(s * (ROAD / 2 + 2.6), 0.16, z); t.rotation.y = rnd() * 6; t.scale.setScalar(0.85 + rnd() * 0.3); scene.add(t);
 }
 
-// People walking along the footpaths: photo-scanned walkers, each at a different moment of its stride.
+// People walking along the footpaths, Bangladeshi in looks: South Asian men (shirts, a hoodie,
+// a polo, an old man in a panjabi), and women whose skin is darkened to match. The old man walks
+// with his own animation; everyone else with his walk, retargeted (walk.js).
 {
-  const { clone } = await import('three/addons/utils/SkeletonUtils.js');
   const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
-  const walkers = await Promise.all(['nathan', 'sophia', 'walkman'].map(n => new GLTFLoader().loadAsync('/models/' + n + '.glb')));
-  const heights = { 0: 1.78, 1: 1.64, 2: 1.75 };
+  const { walk } = await import('./walk.js');
+  const PEOPLE = [
+    { n: 'p_man' }, { n: 'p_teen' }, { n: 'p_shirt' }, { n: 'd_pattern' }, { n: 'd_striped' }, { n: 'p_old', own: true },
+    { n: 'c_teew', tone: true }, { n: 'c_hoodiew', tone: true },
+  ];
+  const TONES = [[0.62, 0.5, 0.42], [0.55, 0.43, 0.36], [0.7, 0.57, 0.48], [0.5, 0.39, 0.33]];
+  const own = {};
   let ps = 3;
   const prnd = () => (ps = (ps * 16807) % 2147483647) / 2147483647;
   for (const side of [-1, 1]) for (let z = -10; z < ZEND - 60; z += (4 + prnd() * 10) / TIME.people) {
-    const k = Math.floor(prnd() * walkers.length), gl = walkers[k];
-    const o = clone(gl.scene);
-    const wrap = new THREE.Group(); wrap.add(o); wrap.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(o, true); o.scale.multiplyScalar(heights[k] / (box.max.y - box.min.y));
-    const mixer = new THREE.AnimationMixer(o);
-    if (gl.animations[0]) { const a = mixer.clipAction(gl.animations[0]); a.play(); mixer.setTime(prnd() * gl.animations[0].duration); }
-    wrap.updateMatrixWorld(true); const b2 = new THREE.Box3().setFromObject(o, true);
-    o.position.y -= b2.min.y; o.position.x -= (b2.min.x + b2.max.x) / 2; o.position.z -= (b2.min.z + b2.max.z) / 2;
+    const P1 = PEOPLE[Math.floor(prnd() * PEOPLE.length)], o = await rider(P1.n);
+    if (P1.tone) skinTone(o, TONES[Math.floor(prnd() * TONES.length)]);
+    if (P1.own) {
+      const gl = own[P1.n] = own[P1.n] || await new GLTFLoader().loadAsync('/models/' + P1.n + '.glb');
+      const clip = gl.animations[0].clone();
+      // Walking on the spot: the clip's own travel along the ground taken out.
+      for (const t of clip.tracks) if (/(Hips|hip|CC_Base_Hip).*\.position$/i.test(t.name)) { const v = t.values; for (let k = 0; k < v.length; k += 3) { v[k] = v[0]; v[k + 2] = v[2]; } }
+      const mx = new THREE.AnimationMixer(o.children[0]); mx.clipAction(clip).play(); mx.setTime(prnd() * clip.duration);
+    } else await walk(o, P1.n, prnd());
+    o.updateMatrixWorld(true);
+    const b2 = new THREE.Box3().setFromObject(o, true); o.position.y -= b2.min.y;
     o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; } });
+    const wrap = new THREE.Group(); wrap.add(o);
     wrap.position.set(side * (ROAD / 2 + 1.2 + prnd() * 3.2), 0.2, z);
     wrap.rotation.y = prnd() < 0.5 ? 0 : Math.PI;
     scene.add(wrap);

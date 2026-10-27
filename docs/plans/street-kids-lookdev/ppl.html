@@ -18,7 +18,14 @@ const sp = 0.9;
 names.forEach((n, i) => document.getElementById('t').insertAdjacentHTML('beforeend', '<div>' + n + '</div>'));
 for (const [i, n] of names.entries()) {
   const rd = await rider(n); if (q.get('uniform')) uniform(rd); scene.add(rd); rd.position.x = (i - (names.length - 1) / 2) * sp; rd.updateMatrixWorld(true);
-  if (q.get('stand') !== '0') {
+  if (q.get('walk')) {
+    const { walk } = await import('./walk.js');
+    await walk(rd, n, +q.get('walk') + i * 0.13);
+  } else if (q.get('anim')) {
+    const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+    const gl = await new GLTFLoader().loadAsync('/models/' + n + '.glb');
+    if (gl.animations[0]) { const mx = new THREE.AnimationMixer(rd.children[0]); mx.clipAction(gl.animations[0]).play(); mx.setTime(+q.get('anim') * (i + 1)); }
+  } else if (q.get('stand') !== '0') {
     const b = bones(rd), up = new THREE.Vector3(0, 1, 0), fwd = new THREE.Vector3(0, 0, 1), side = new THREE.Vector3(1, 0, 0);
     const at = o => o.getWorldPosition(new THREE.Vector3());
     for (const s of ['l', 'r']) { const sx = s === 'l' ? 1 : -1, sh = b['upperarm_' + s], el = b['lowerarm_' + s], wr = b['hand_' + s]; if (!sh) continue;

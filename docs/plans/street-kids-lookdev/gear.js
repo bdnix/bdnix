@@ -301,3 +301,18 @@ export function uniform(rd, shirt = [52, 84, 158], trousers = [82, 88, 120]) {
     m.material.roughness = Math.max(m.material.roughness, 0.85); m.material.metalness = 0;
   });
 }
+
+// Darken a figure's skin (its skin materials, where the model keeps skin apart) by `tone`, an RGB multiplier.
+const toned = new Map();
+export function skinTone(rd, tone) {
+  rd.traverse(m => {
+    if (!m.isMesh) return;
+    const mats = [].concat(m.material).map(mt => {
+      if (!/AvatarBody|AvatarHead|Std_Skin|_Skin_|^Skin|Body_Skin/i.test(mt.name || '')) return mt;
+      const key = mt.uuid + '|' + tone;
+      if (!toned.has(key)) { const c = mt.clone(); c.color.multiply(new THREE.Color(...tone)); toned.set(key, c); }
+      return toned.get(key);
+    });
+    m.material = Array.isArray(m.material) ? mats : mats[0];
+  });
+}
