@@ -192,8 +192,11 @@ export function frame(camera, grips, gripsAt = -0.62, maxFov = 110) {
   for (let i = 0; i < 3; i++) {
     aimAt(camera, grips, gripsAt);
     camera.updateMatrixWorld(true);
-    const across = Math.max(...grips.map(g => { const c = camera.worldToLocal(g.clone()); return Math.abs(c.x) / -c.z; })) * 1.3 + 0.08;
-    const need = THREE.MathUtils.radToDeg(2 * Math.atan(across / camera.aspect));
+    const cs = grips.map(g => camera.worldToLocal(g.clone()));
+    const across = Math.max(...cs.map(c => Math.abs(c.x) / -c.z)) * 1.3 + 0.08;
+    // And down: the hands (the grips, plus a hand's depth below them) above the frame's bottom edge.
+    const below = Math.max(...cs.map(c => (-c.y + 0.05) / -c.z)) / 0.9;
+    const need = Math.max(THREE.MathUtils.radToDeg(2 * Math.atan(across / camera.aspect)), THREE.MathUtils.radToDeg(2 * Math.atan(below)));
     if (need <= camera.fov + 0.5) return;
     camera.fov = Math.min(maxFov, need); camera.updateProjectionMatrix();
   }
@@ -205,7 +208,8 @@ function aimAt(camera, grips, gripsAt) {
   const half = THREE.MathUtils.degToRad(camera.fov / 2);
   // Angle of a point at ndc y = gripsAt below the view's centre.
   const off = Math.atan(-gripsAt * Math.tan(half));
-  const pitch = below - off;
+  // Never so far down that the road ahead and the skyline leave the frame.
+  const pitch = Math.min(below - off, THREE.MathUtils.degToRad(camera.userData.maxPitch ?? 26));
   const dir = new THREE.Vector3(d.x / horiz, -Math.tan(pitch), d.z / horiz);
   camera.lookAt(camera.position.clone().add(dir));
 }

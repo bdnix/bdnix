@@ -131,7 +131,7 @@ export function seat(rider, bike, fit, opts = {}) {
     const gl = bike.worldToLocal(grip.clone());
     const pole = toWorld([gl.x + sx * 0.6, gl.y - 0.5, gl.z - 0.6]);
     ik(b['upperarm_' + s], b['lowerarm_' + s], b['hand_' + s], grip, pole);
-    if (opts.grip !== false && !(opts.hands && opts.hands[s]) && !(opts.handsWorld && opts.handsWorld[s])) clasp(rider, b, s, grip, pole, out, fwd, up);
+    if (opts.grip !== false && !(opts.hands && opts.hands[s]) && !(opts.handsWorld && opts.handsWorld[s])) clasp(rider, b, s, grip, pole, out, fwd, up, bar ? gripFit(bike, grip, out) : 0.017);
   }
   b._fwd = fwd;
   return b;
@@ -154,13 +154,39 @@ export function fingers(root, side) {
 // Close a hand round a grip: the palm on its top and back, the fingers across it, over the top
 // and round underneath, the index finger at the inner end; `out` runs along the grip outwards.
 // The arm reaches so that the palm, not the wrist, is on the grip.
-function clasp(root, b, s, grip, pole, out, fwd, up) {
+// A grip's real line and radius at `at`: rays cast at the measured line from all round
+// (skinned figures ignored); the hits' middle is the true centre, their spread the radius.
+// Moves `at` onto the centre and returns the radius.
+function gripFit(bike, at, out) {
+  const rc = new THREE.Raycaster(), side = new THREE.Vector3(0, 1, 0).cross(out).normalize(), up2 = out.clone().cross(side);
+  const meshes = []; bike.traverse(m => { if (m.isMesh && !m.isSkinnedMesh && m.visible) meshes.push(m); });
+  for (let round = 0; round < 2; round++) {
+    const hits = [];
+    for (let n = 0; n < 16; n++) {
+      const a = n / 16 * Math.PI * 2, dir = side.clone().multiplyScalar(Math.cos(a)).add(up2.clone().multiplyScalar(Math.sin(a)));
+      rc.set(at.clone().add(dir.clone().multiplyScalar(0.05)), dir.clone().negate()); rc.far = 0.05;
+      const h = rc.intersectObjects(meshes, false)[0];
+      // Only near hits: a lever or switch caught first lies further out.
+      if (h && h.distance > 0.022) hits.push(h.point);
+    }
+    if (hits.length < 8) return 0.017;
+    const c = new THREE.Vector3(); hits.forEach(p => c.add(p)); c.divideScalar(hits.length);
+    const d = c.clone().sub(at); at.add(d.sub(out.clone().multiplyScalar(d.dot(out))));
+    if (round === 1) {
+      const r = hits.map(p => { const v = p.clone().sub(at); return v.sub(out.clone().multiplyScalar(v.dot(out))).length(); }).sort((x, y) => x - y);
+      return Math.min(0.025, Math.max(0.012, r[Math.floor(r.length / 2)]));
+    }
+  }
+}
+
+function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017) {
   const f = fingers(root, s), hand = b['hand_' + s];
   if (!f.ind || !f.pin || !f.mid || !f.ind[0] || !f.pin[0] || !f.mid[0]) return;
   const flat = v => v.sub(out.clone().multiplyScalar(v.dot(out))).normalize();
-  // Across the grip: the way the fingers point (forward, a little up), and where the palm sits (up and back).
-  const ahead = flat(fwd.clone().multiplyScalar(0.9).add(up.clone().multiplyScalar(0.25)));
-  const onTop = flat(up.clone().multiplyScalar(0.7).sub(fwd.clone().multiplyScalar(0.7)));
+  // Round the grip (looking along it): the knuckles sit on its top and back, the back of the hand
+  // facing `onTop`, and the fingers set off along the tangent there, forward over the top.
+  const onTop = flat(up.clone().multiplyScalar(0.75).sub(fwd.clone().multiplyScalar(0.65)));
+  const ahead = new THREE.Vector3().crossVectors(onTop, out); if (ahead.dot(fwd) < 0) ahead.negate();
   const inward = out.clone().negate();
   const orient = () => {
     aim(hand, f.mid[0], wpos(hand).add(ahead));
@@ -172,29 +198,65 @@ function clasp(root, b, s, grip, pole, out, fwd, up) {
     const ang = Math.atan2(axis.dot(new THREE.Vector3().crossVectors(across, want)), across.dot(want));
     turn(hand, axis, ang);
   };
-  // The middle of the palm (the bones run through the hand's middle) sits 3 cm off the grip's line.
-  const palmAt = grip.clone().add(onTop.clone().multiplyScalar(0.03));
+  // The fingers' bones run through their middle: wrapped round a 3.4 cm grip they make a circle
+  // of about 2.6 cm radius, and the middle knuckle sits on it, straight above the grip's line.
+  // About 1.1 cm from a finger's bones to the skin that holds the grip.
+  const RHO = R + (globalThis.CLASP_PAD || 0.021);
+  const knuckleAt = grip.clone().add(onTop.clone().multiplyScalar(RHO));
   const wrist = grip.clone();
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 5; i++) {
     ik(b['upperarm_' + s], b['lowerarm_' + s], hand, wrist, pole);
     orient();
-    const palm = wpos(hand).lerp(wpos(f.mid[0]), 0.7);
-    wrist.add(palmAt.clone().sub(palm));
+    wrist.add(knuckleAt.clone().sub(wpos(f.mid[0])));
   }
-  // Curl each finger, joint by joint, round the grip.
+  // Curl each finger so its joints lie on that circle: a segment of length L spans an angle
+  // 2 asin(L / 2ρ), and each joint turns by half of each segment's angle on either side of it.
   const across = wpos(f.ind[0]).sub(wpos(f.pin[0])).normalize();
-  const curl = (chain, angles) => {
-    if (!chain || !chain[0]) return;
-    const tip = chain[chain.length - 1];
-    // Which way round the knuckle axis takes the finger down.
-    const before = wpos(tip).dot(up);
-    turn(chain[0], across, 0.3);
-    const sign = wpos(tip).dot(up) < before ? 1 : -1;
-    turn(chain[0], across, -0.3);
-    chain.forEach((j, i) => j && turn(j, across, sign * angles[i]));
-  };
-  for (const k of ['ind', 'mid', 'rin', 'pin']) curl(f[k], [1.2, 1.3, 0.95]);
-  curl(f.thu && f.thu.slice(1), [0.5, 0.6]);
+  const span = L => 2 * Math.asin(Math.min(0.999, L / (2 * RHO)));
+  for (const k of ['ind', 'mid', 'rin', 'pin']) {
+    const chain = f[k]; if (!chain || !chain[0] || !chain[2]) continue;
+    const end = chain[2].children.find(c => c.isBone);
+    const pts = chain.concat(end ? [end] : []).map(wpos);
+    const L = pts.slice(1).map((p, n) => p.distanceTo(pts[n]));
+    if (!end) L.push(L[1] * 0.75);
+    const a = L.map(span);
+    const bends = [a[0] / 2, (a[0] + a[1]) / 2, (a[1] + a[2]) / 2];
+    // Which way round the knuckle axis takes the finger towards the palm (down over the grip).
+    const tip = chain[2], before = wpos(tip).dot(onTop);
+    turn(chain[0], across, 0.3); const sg = wpos(tip).dot(onTop) < before ? 1 : -1; turn(chain[0], across, -0.3);
+    chain.forEach((j, n) => turn(j, across, sg * bends[n]));
+  }
+  // The thumb round the inner side and under.
+  if (f.thu) {
+    const tip = f.thu[2] || f.thu[1], before = tip ? wpos(tip).dot(onTop) : 0;
+    if (f.thu[1] && tip) { turn(f.thu[1], across, 0.3); const sg = wpos(tip).dot(onTop) < before ? 1 : -1; turn(f.thu[1], across, -0.3); f.thu.slice(1).forEach((j, n) => j && turn(j, across, sg * [0.6, 0.7][n])); }
+  }
+  if (globalThis.CLASP_DEBUG) {
+    const skin = fingerSkin(root, ['ind', 'mid', 'rin', 'pin'].map(k => f[k]).filter(c => c && c[0]));
+    root.updateMatrixWorld(true);
+    const d = skin.map(([m, i]) => { const p = m.getVertexPosition(i, new THREE.Vector3()).applyMatrix4(m.matrixWorld).sub(grip); return p.sub(out.clone().multiplyScalar(p.dot(out))).length(); });
+    d.sort((x, y) => x - y);
+    console.error('clasp', s, 'R', R.toFixed(4), 'skin-to-axis min', d[0].toFixed(3), 'p10', d[Math.floor(d.length * 0.1)].toFixed(3), 'median', d[Math.floor(d.length / 2)].toFixed(3), 'max', d[d.length - 1].toFixed(3));
+  }
+}
+
+// The vertices of a hand's skin that hang mostly from its fingers: [mesh, index] pairs.
+function fingerSkin(root, chains) {
+  const bonesOf = new Set(); chains.forEach(c => c[0].traverse(b => { if (b.isBone) bonesOf.add(b); }));
+  const out = [];
+  root.traverse(m => {
+    if (!m.isSkinnedMesh || !m.visible) return;
+    const hit = new Set(m.skeleton.bones.map((b, i) => bonesOf.has(b) ? i : -1).filter(i => i >= 0));
+    if (!hit.size) return;
+    const si = m.geometry.attributes.skinIndex, sw = m.geometry.attributes.skinWeight;
+    for (let v = 0; v < si.count; v += 1) {
+      let w = 0; for (let k = 0; k < 4; k++) if (hit.has(si.getComponent(v, k))) w += sw.getComponent(v, k);
+      if (w > 0.6) out.push([m, v]);
+    }
+  });
+  // A few hundred points are plenty.
+  const step = Math.max(1, Math.floor(out.length / 400));
+  return out.filter((_, i) => i % step === 0);
 }
 
 // Put a helmet (front +z, bottom at y 0) on the head, then hang it off the head bone.
