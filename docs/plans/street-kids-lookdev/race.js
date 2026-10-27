@@ -19,6 +19,7 @@ import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 const q = new URLSearchParams(location.search);
 if (q.get('dbg')) globalThis.CLASP_DEBUG = 1;
 if (q.get('pad')) globalThis.CLASP_PAD = +q.get('pad');
+if (q.get('arm')) globalThis.CLASP_ARM = +q.get('arm');
 const W = innerWidth, H = innerHeight;
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(+(q.get('dpr') || devicePixelRatio));

@@ -183,11 +183,23 @@ function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017) {
   const f = fingers(root, s), hand = b['hand_' + s];
   if (!f.ind || !f.pin || !f.mid || !f.ind[0] || !f.pin[0] || !f.mid[0]) return;
   const flat = v => v.sub(out.clone().multiplyScalar(v.dot(out))).normalize();
-  // Round the grip (looking along it): the knuckles sit on its top and back, the back of the hand
-  // facing `onTop`, and the fingers set off along the tangent there, forward over the top.
-  const onTop = flat(up.clone().multiplyScalar(0.75).sub(fwd.clone().multiplyScalar(0.65)));
-  const ahead = new THREE.Vector3().crossVectors(onTop, out); if (ahead.dot(fwd) < 0) ahead.negate();
   const inward = out.clone().negate();
+  // The fingers' bones run through their middle: wrapped round the grip they make a circle of
+  // radius ρ (the grip's radius plus about 2 cm), and the middle knuckle sits on it.
+  const RHO = R + (globalThis.CLASP_PAD || 0.021);
+  // The wrist is kept straight: the hand carries on along the forearm (looking along the grip), and
+  // meets the grip where that line touches the circle, on top, the back of the hand facing away.
+  const backOf = up.clone().multiplyScalar(0.75).sub(fwd.clone().multiplyScalar(0.65));
+  let ahead = null, onTop = null;
+  // Over the top of the grip and forward (as before), turned partway towards the forearm's own line:
+  // on swept-back bars the forearm runs nearly along the grip, so following it fully hangs the hand down.
+  const over = flat(fwd.clone().multiplyScalar(0.9).add(up.clone().multiplyScalar(0.25)));
+  const line = () => {
+    const arm = flat(wpos(hand).sub(wpos(b['lowerarm_' + s])));
+    ahead = flat(over.clone().multiplyScalar(1 - (globalThis.CLASP_ARM ?? 0.35)).add(arm.multiplyScalar(globalThis.CLASP_ARM ?? 0.35)));
+    onTop = new THREE.Vector3().crossVectors(out, ahead).normalize();
+    if (onTop.dot(backOf) < 0) onTop.negate();
+  };
   const orient = () => {
     aim(hand, f.mid[0], wpos(hand).add(ahead));
     const axis = wpos(f.mid[0]).sub(wpos(hand)).normalize();
@@ -198,16 +210,19 @@ function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017) {
     const ang = Math.atan2(axis.dot(new THREE.Vector3().crossVectors(across, want)), across.dot(want));
     turn(hand, axis, ang);
   };
-  // The fingers' bones run through their middle: wrapped round a 3.4 cm grip they make a circle
-  // of about 2.6 cm radius, and the middle knuckle sits on it, straight above the grip's line.
-  // About 1.1 cm from a finger's bones to the skin that holds the grip.
-  const RHO = R + (globalThis.CLASP_PAD || 0.021);
-  const knuckleAt = grip.clone().add(onTop.clone().multiplyScalar(RHO));
   const wrist = grip.clone();
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 8; i++) {
     ik(b['upperarm_' + s], b['lowerarm_' + s], hand, wrist, pole);
-    orient();
-    wrist.add(knuckleAt.clone().sub(wpos(f.mid[0])));
+    line(); orient();
+    wrist.add(grip.clone().add(onTop.clone().multiplyScalar(RHO)).sub(wpos(f.mid[0])));
+  }
+  // Fingers side by side, as round a grip, not spread: each turned about the back of the hand to lie
+  // parallel to the middle finger.
+  const midDir = flat(wpos(f.mid[1] || f.mid[0]).sub(wpos(f.mid[0])));
+  for (const k of ['ind', 'rin', 'pin']) {
+    const c = f[k]; if (!c || !c[0] || !c[1]) continue;
+    const d = flat(wpos(c[1]).sub(wpos(c[0])));
+    turn(c[0], out, Math.atan2(out.dot(new THREE.Vector3().crossVectors(d, midDir)), d.dot(midDir)));
   }
   // Curl each finger so its joints lie on that circle: a segment of length L spans an angle
   // 2 asin(L / 2ρ), and each joint turns by half of each segment's angle on either side of it.
@@ -226,10 +241,11 @@ function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017) {
     turn(chain[0], across, 0.3); const sg = wpos(tip).dot(onTop) < before ? 1 : -1; turn(chain[0], across, -0.3);
     chain.forEach((j, n) => turn(j, across, sg * bends[n]));
   }
-  // The thumb round the inner side and under.
-  if (f.thu) {
-    const tip = f.thu[2] || f.thu[1], before = tip ? wpos(tip).dot(onTop) : 0;
-    if (f.thu[1] && tip) { turn(f.thu[1], across, 0.3); const sg = wpos(tip).dot(onTop) < before ? 1 : -1; turn(f.thu[1], across, -0.3); f.thu.slice(1).forEach((j, n) => j && turn(j, across, sg * [0.6, 0.7][n])); }
+  // The thumb under the grip from its inner side, its tip towards the far side.
+  if (f.thu && f.thu[0] && f.thu[2]) {
+    const under = grip.clone().sub(onTop.clone().multiplyScalar(R + 0.012)).add(inward.clone().multiplyScalar(0.012)).add(ahead.clone().multiplyScalar(0.01));
+    aim(f.thu[0], f.thu[2], under);
+    aim(f.thu[1], f.thu[2], under);
   }
   if (globalThis.CLASP_DEBUG) {
     const skin = fingerSkin(root, ['ind', 'mid', 'rin', 'pin'].map(k => f[k]).filter(c => c && c[0]));
