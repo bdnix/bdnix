@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/work/node_modules/three/build/three.module.js","three/addons/":"/work/node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { thing } from './common.js';
+const q = new URLSearchParams(location.search);
+const o = await thing(q.get('t'), +q.get('len'), JSON.parse(q.get('o') || '{}')); o.updateMatrixWorld(true);
+const out = [];
+const all = new THREE.Box3().setFromObject(o); out.push('ALL ' + [all.min, all.max].map(v => v.toArray().map(x => x.toFixed(2)).join(',')).join(' / '));
+o.traverse(m => { if (!m.isMesh || !m.visible) return; const b = new THREE.Box3().setFromObject(m, true);
+  if (q.get('f') && !new RegExp(q.get('f'), 'i').test(m.name)) return;
+  out.push(m.name + ' ' + [b.min, b.max].map(v => v.toArray().map(x => x.toFixed(2)).join(',')).join(' / ')); });
+window.out = out.join('\n'); document.title = 'ok';
+</script></body></html>

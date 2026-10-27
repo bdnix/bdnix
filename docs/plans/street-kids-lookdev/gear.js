@@ -124,7 +124,7 @@ export function dress(root, suit) {
     for (let i = 0; i < pos.count; i++) if (inHead[i]) { c.x += pos.getX(i); c.y += pos.getY(i); c.z += pos.getZ(i); nh++; }
     if (nh) {
       c.divideScalar(nh);
-      for (let i = 0; i < pos.count; i++) if (inHead[i]) pos.setXYZ(i, c.x + (pos.getX(i) - c.x) * 0.4, c.y + (pos.getY(i) - c.y) * 0.4, c.z + (pos.getZ(i) - c.z) * 0.4);
+      for (let i = 0; i < pos.count; i++) if (inHead[i]) { const k = suit.headScale ?? 0.4; pos.setXYZ(i, c.x + (pos.getX(i) - c.x) * k, c.y + (pos.getY(i) - c.y) * k, c.z + (pos.getZ(i) - c.z) * k); }
       pos.needsUpdate = true;
     }
     if (suit.paint === false) {   // keep their own clothes, optionally in another colour

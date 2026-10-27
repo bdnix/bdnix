@@ -3,10 +3,11 @@ import * as THREE from 'three';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { bike, rider, thing, CHARACTERS, hairModel } from './common.js';
 import { dress, paintHelmet, ponytail } from './gear.js';
-import { seat, helmet, hold } from './rider.js';
+import { seat, helmet, hold, bones, aim } from './rider.js';
 import * as dhaka from './dhaka.js';
 import * as marks from './landmarks.js';
 import * as bits from './streetbits.js';
+import * as cockpit from './cockpit.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
@@ -99,6 +100,15 @@ ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0.01, LEN / 2 - 60); gr
 road.position.y = 0.02;
 
 // The player's spot, the flyover (if any) and how high the deck is there.
+// Each bike's cockpit: a point on each mirror's glass (rider's left first) and, where the model's dash is blank, its faces.
+const COCKPIT = {
+  k1_vino: { mirrors: [[0.33, 1.24, 0.23], [-0.33, 1.24, 0.23]] },
+  k2_125: { mirrors: [[0.29, 1.22, 0.22], [-0.26, 1.21, 0.22]] },
+  k3_pulsar: { mirrors: [[0.41, 1.24, 0.32], [-0.40, 1.23, 0.33]] },
+  k4_zx6r: { mirrors: [[0.34, 0.98, 0.66], [-0.34, 0.98, 0.66]] },
+  k5_h2: { mirrors: [[0.34, 0.97, 0.63], [-0.32, 0.97, 0.64]], dash: [[0.05, 0.96, 0.59], [-0.03, 0.96, 0.58]] },
+};
+let mirrorView = null;
 const P = { x: +(q.get('px') || 0.4), z: +(q.get('pz') || 0), y: 0 };
 const FLY = q.get('fly');   // 'flyover' (two lanes, 7.5 m up) or 'expressway' (four lanes, 14 m up)
 let deck = null;
@@ -196,13 +206,13 @@ function tailLights(v, name, on) {
 }
 // Traffic, going our way, as dense as the time of day makes it. Nothing is put where a racer is.
 const VEH = {
-  cng: { len: 2.6, w: 1.4, opts: { ry: -90 } }, corolla: { len: 4.6, w: 1.8, opts: {} }, yaris: { len: 3.7, w: 1.7, opts: {} },
+  cng: { len: 2.6, w: 1.4, opts: { ry: -90, hide: /tree_small/ } }, corolla: { len: 4.6, w: 1.8, opts: {} }, yaris: { len: 3.7, w: 1.7, opts: {} },
   b_viking: { len: 11, w: 2.6, opts: { bus: 0 } }, t_al: { len: 8, w: 2.5, opts: {} }, t_bd: { len: 8.5, w: 2.5, opts: {} },
 };
 const MIX = ['cng', 'cng', 'cng', 'corolla', 'yaris', 'b_viking', 'cng', 'corolla', 't_al', 'b_viking', 't_bd', 'yaris'];
 const keepClear = [];   // filled with the racers' spots before traffic is placed
 let busN = 0;
-async function addVehicle(name, x, z, y = 0) {
+async function addVehicle(name, x, z, y = 0, parked = false) {
   const V = VEH[name], opts = Object.assign({}, V.opts); if (name === 'b_viking') opts.bus = busN++;
   const v = await thing(name, V.len, opts); v.position.set(x, y + 0.02, z); scene.add(v); v.updateMatrixWorld(true); if (!y) blob(v);
   v.traverse(m => { if (m.isMesh && /glass|kaca|window|vidrio/i.test(m.material.name || '')) { m.material = m.material.clone(); m.material.color = new THREE.Color(0x0e1214); m.material.map = null; m.material.metalness = 0.6; m.material.roughness = 0.08; m.material.transparent = false; m.material.opacity = 1; } });
@@ -213,7 +223,53 @@ async function addVehicle(name, x, z, y = 0) {
   }
   if (opts.bus !== undefined) bits.livery(v, /^(Material_13|Material_23|Material_23_1)$/, opts.bus);
   const PL = PLATES[name]; if (PL && PL.model) bits.platesOnModel(v, PL.cls, PL.model); else if (PL) bits.plates(v, PL.cls, PL.spots.map(o => Object.assign({}, o)));
-  tailLights(v, name, TIME.lit || TIME.traffic >= 1);
+  tailLights(v, name, !parked && (TIME.lit || TIME.traffic >= 1));
+  if (name === 'cng' && !parked) await cngDriver(v, 'seat');
+  return v;
+}
+
+// CNG drivers: at the wheel when it's moving; when it's parked, standing by it on the pavement or sitting in it.
+const CNG_FIT = { seat: [0, 0.66, 0.2], grip: [0.34, 0.88, 0.72], peg: [0.14, 0.34, 0.6], lean: 0.12 };
+const DRIVERS = (q.get('drivers') || 'justman,manuel,nathan,c_polom').split(',');
+let driverN = 0;
+// Stand a figure upright with its arms hanging at its sides.
+function stand(rd) {
+  const b = bones(rd); rd.updateMatrixWorld(true);
+  const up = new THREE.Vector3(0, 1, 0).transformDirection(rd.matrixWorld), fwd = new THREE.Vector3(0, 0, 1).transformDirection(rd.matrixWorld);
+  const side = new THREE.Vector3().crossVectors(up, fwd);
+  const at = o => o.getWorldPosition(new THREE.Vector3());
+  for (const s of ['l', 'r']) {
+    const sx = s === 'l' ? 1 : -1, sh = b['upperarm_' + s], el = b['lowerarm_' + s], wr = b['hand_' + s];
+    if (!sh || !el || !wr) continue;
+    const l1 = at(sh).distanceTo(at(el)), l2 = at(el).distanceTo(at(wr));
+    const elbow = at(sh).add(up.clone().multiplyScalar(-l1 * 0.97)).add(side.clone().multiplyScalar(sx * l1 * 0.2)).add(fwd.clone().multiplyScalar(-l1 * 0.05));
+    aim(sh, el, elbow);
+    aim(el, wr, at(el).add(up.clone().multiplyScalar(-l2 * 0.9)).add(fwd.clone().multiplyScalar(l2 * 0.35)).add(side.clone().multiplyScalar(sx * l2 * 0.05)));
+  }
+}
+async function cngDriver(v, how, side = 1) {
+  const rd = await rider(DRIVERS[driverN++ % DRIVERS.length]);
+  if (how === 'stand') {
+    // On the pavement by the front wheel, facing the road.
+    scene.add(rd); const dz = (driverN % 3 - 1) * 1.1; rd.position.set(v.position.x + side * (1.6 + (driverN % 2) * 0.5), 0.2, v.position.z + dz); rd.rotation.y = (side > 0 ? -Math.PI / 2 : Math.PI / 2) + side * (dz > 0 ? 0.7 : -0.5);
+    stand(rd);
+  } else { v.add(rd); v.updateMatrixWorld(true); seat(rd, v, CNG_FIT); }
+  rd.traverse(m => { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; } });
+  return rd;
+}
+// CNGs waiting at the kerb for fares, their drivers nearby. Traffic keeps clear of them.
+async function parkedCngs(z0, z1) {
+  let ps = 11; const prnd = () => (ps = (ps * 16807) % 2147483647) / 2147483647;
+  for (const side of [-1, 1]) for (let z = z0 + prnd() * 20; z < z1; z += 25 + prnd() * 50) {
+    const n = 1 + Math.floor(prnd() * 3);
+    for (let i = 0; i < n; i++) {
+      const x = side * (ROAD / 2 - 0.85), zc = z + i * 2.9;
+      if (keepClear.some(k => Math.abs(k.x - x) < 1.6 && Math.abs(k.z - zc) < 2.8)) continue;
+      keepClear.push({ x, z: zc });
+      const v = await addVehicle('cng', x, zc, 0, true);
+      if (prnd() < 0.7) await cngDriver(v, 'stand', side); else await cngDriver(v, 'seat');
+    }
+  }
 }
 async function traffic(lanes, z0, z1, yAt) {
   let tseed = 5; const trnd = () => (tseed = (tseed * 16807) % 2147483647) / 2147483647;
@@ -233,7 +289,8 @@ async function traffic(lanes, z0, z1, yAt) {
 // The riders.
 const LEAN = { nr750: 1.3, gsxr: 1.3, z1000: 0.85 };
 async function racer(b, r, x, z, opts = {}) {
-  const ch = CHARACTERS.find(c => c.id === r);
+  let ch = CHARACTERS.find(c => c.id === r);
+  if (opts.me && q.get('view') === 'rider' && ch) ch = Object.assign({}, ch, { headScale: 0 });
   const bk = await bike(b); const rd = await rider(r); bk.add(rd);
   if (ch) dress(rd, ch);
   const fit = Object.assign({}, bk.userData.fit, { lean: opts.lean ?? LEAN[b] ?? bk.userData.fit.lean });
@@ -247,7 +304,7 @@ async function racer(b, r, x, z, opts = {}) {
     const lamp = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.05), new THREE.MeshBasicMaterial({ color: 0xff2a14 })); lamp.position.copy(at); lamp.position.z -= 0.02; lamp.rotation.y = Math.PI; scene.add(lamp);
     glow(0xff2a14, 0.32, at, 0.7);
   }
-  return { bk, bn };
+  return { bk, bn, name: b };
 }
 const shot = q.get('shot') || 'race';
 const headOf = r => r.bn.head.getWorldPosition(new THREE.Vector3());
@@ -261,7 +318,7 @@ if (shot === 'none') {
   await racer('k1_vino', 'c_teenblack', P.x + 4.6, P.z + 16);
   await racer('k2_125', 'c_blackm', P.x + 1.5, P.z + 24);
 } else if (shot === 'race') {
-  me = await racer('k5_h2', 'c_teenboy', P.x, P.z);
+  me = await racer(q.get('bike') || 'k5_h2', 'c_teenboy', P.x, P.z, { me: true });
   await racer('k4_zx6r', 'c_teew', P.x - 1.7, P.z + 1.6, { roll: 0.02 });
   await racer('z1000', 'c_polom', P.x + 3.2, P.z + 6, { roll: -0.03 });
   await racer('gsxr', 'c_leatherw', P.x - 2.8, P.z + 14);
@@ -285,6 +342,7 @@ if (shot === 'none') {
 
 // Traffic around them: on the deck if we're on the flyover, and on the road below.
 if (q.get('traffic') !== '0') {
+  if (!(deck && P.y > 0)) await parkedCngs(P.z - 15, P.z + 200);
   if (deck && P.y > 0) {
     const half = FLY === 'expressway' ? [-5.25, -1.75, 1.75, 5.25] : [-2, 2];
     await traffic(half, P.z - 10, P.z + 260, deck.h);
@@ -316,10 +374,39 @@ const cx = P.x - (shot === 'race' ? (tall ? 0.1 : 0.4) : 0.6);
 camera.position.set(cx, P.y + cam.up, P.z - cam.back);
 camera.lookAt(cx, P.y + 1.0, P.z + cam.look);
 if (q.get('cam')) { const c = q.get('cam').split(',').map(Number); camera.position.set(c[0], c[1], c[2]); camera.lookAt(c[3], c[4], c[5]); if (c[6]) { camera.fov = c[6]; camera.updateProjectionMatrix(); } }
+// The rider's own view: from inside the helmet, over the bars and the dashboard.
+if (q.get('view') === 'rider' && me) {
+  if (me.bn._helmet) me.bn._helmet.visible = false;
+  me.bk.updateMatrixWorld(true);
+  // Hide whatever of the rider is above the neck (head, hair, cap), so nothing sits in front of the lens.
+  const neckY = me.bn.neck.getWorldPosition(new THREE.Vector3()).y;
+  me.bk.traverse(m => { if (m.isMesh && !m.isSkinnedMesh) return; if (m.isSkinnedMesh) { const b = new THREE.Box3().setFromObject(m, true); if (b.min.y > neckY - 0.05) m.visible = false; } });
+  cockpit.behead(me.bk, me.bn.neck);
+  const eye = me.bn.head.getWorldPosition(new THREE.Vector3());
+  // On a phone held upright the eye rides higher, so the bars fit across the narrow screen.
+  camera.position.copy(eye).add(new THREE.Vector3(0, +(q.get('eyeup') || (W > H ? 0.07 : 0.24)), +(q.get('eyefwd') || -0.02)));
+  camera.near = +(q.get('near') || 0.15); camera.fov = W > H ? 75 : 88; camera.updateProjectionMatrix();
+  if (q.get('pitch')) camera.lookAt(camera.position.x, camera.position.y - +q.get('pitch'), camera.position.z + 2.5);
+  else cockpit.frame(camera, ['l', 'r'].map(s => me.bn['hand_' + s].getWorldPosition(new THREE.Vector3())), W > H ? -0.72 : -0.66);
+  camera.layers.enable(1);
+  const ck = COCKPIT[me.name] || {};
+  if (ck.mirrors) mirrorView = cockpit.mirrors(me.bk, scene, ck.mirrors);
+  if (ck.dash) cockpit.dashboard(me.bk, ck.dash, cockpit.sportsDash).set({ speed: 187, rpm: 9400, gear: 5, clock: { night: '01:40', dawn: '05:50', day: '13:10', rush: '08:45', dusk: '18:20' }[q.get('time') || 'day'] });
+}
+if (q.get('pick')) {
+  camera.updateMatrixWorld(true); const rc = new THREE.Raycaster(); const lines = [];
+  for (const pt of q.get('pick').split(';')) { const [x, y] = pt.split(',').map(Number);
+    rc.setFromCamera(new THREE.Vector2(x / W * 2 - 1, -(y / H) * 2 + 1), camera);
+    const h = rc.intersectObject(me.bk, true).filter(i => { for (let o = i.object; o; o = o.parent) if (!o.visible) return false; return true; })[0];
+    lines.push(pt + ' ' + (h ? h.object.name + ' / ' + [].concat(h.object.material)[0].name + ' ' + h.point.toArray().map(v => v.toFixed(2)).join(',') + ' uv:' + (h.uv ? h.uv.x.toFixed(2) + ',' + h.uv.y.toFixed(2) : '-') : 'none'));
+  }
+  const d = document.createElement('pre'); d.style.cssText = 'position:fixed;left:10px;top:80px;color:#ff0;background:#000;font-size:13px;z-index:9'; d.textContent = lines.join('\n'); document.body.appendChild(d); console.error(lines.join(' || '));
+}
 if (q.get('side')) { camera.position.set(P.x + 6, 1.5, P.z); camera.lookAt(P.x, 1, P.z); }
 sun.target.position.set(P.x, P.y, P.z + 15); sun.position.set(P.x + TIME.sunAt[0], P.y + TIME.sunAt[1], P.z + TIME.sunAt[2]);
 
 await new Promise(r => { const t = setInterval(() => { if (pending === 0 && dhaka.loading() === 0 && bits.loading() === 0 && marks.loading() === 0) { clearInterval(t); r(); } }, 100); });
+if (mirrorView) mirrorView.update(renderer);
 if (q.get('nopost')) renderer.render(scene, camera);
 else {
   const comp = new EffectComposer(renderer);

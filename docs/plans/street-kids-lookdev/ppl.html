@@ -1,0 +1,33 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#888;overflow:hidden;font-family:Inter,sans-serif}.t{position:fixed;bottom:4px;left:0;right:0;display:flex}.t div{flex:1;text-align:center;color:#fff;font:600 14px Inter;text-shadow:0 1px 2px #000}</style>
+<script type="importmap">{"imports":{"three":"/work/node_modules/three/build/three.module.js","three/addons/":"/work/node_modules/three/examples/jsm/"}}</script></head><body><div class="t" id="t"></div>
+<script type="module">
+import * as THREE from 'three';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { rider } from './common.js';
+import { bones, aim } from './rider.js';
+const q = new URLSearchParams(location.search), names = q.get('n').split(',');
+const W = innerWidth, H = innerHeight;
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(W, H); document.body.appendChild(r.domElement);
+r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.9;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x8a8f96);
+const env = await new RGBELoader().loadAsync('/ph/kloofendal_48d_partly_cloudy_puresky_2k.hdr'); env.mapping = THREE.EquirectangularReflectionMapping; scene.environment = env;
+scene.add(new THREE.DirectionalLight(0xffffff, 2.5).translateX(2).translateY(4).translateZ(5));
+const cam = new THREE.PerspectiveCamera(30, W / H, 0.1, 100);
+const sp = 0.9;
+names.forEach((n, i) => document.getElementById('t').insertAdjacentHTML('beforeend', '<div>' + n + '</div>'));
+for (const [i, n] of names.entries()) {
+  const rd = await rider(n); scene.add(rd); rd.position.x = (i - (names.length - 1) / 2) * sp; rd.updateMatrixWorld(true);
+  if (q.get('stand') !== '0') {
+    const b = bones(rd), up = new THREE.Vector3(0, 1, 0), fwd = new THREE.Vector3(0, 0, 1), side = new THREE.Vector3(1, 0, 0);
+    const at = o => o.getWorldPosition(new THREE.Vector3());
+    for (const s of ['l', 'r']) { const sx = s === 'l' ? 1 : -1, sh = b['upperarm_' + s], el = b['lowerarm_' + s], wr = b['hand_' + s]; if (!sh) continue;
+      const l1 = at(sh).distanceTo(at(el)), l2 = at(el).distanceTo(at(wr));
+      aim(sh, el, at(sh).add(up.clone().multiplyScalar(-l1 * 0.97)).add(side.clone().multiplyScalar(sx * l1 * 0.2)).add(fwd.clone().multiplyScalar(-l1 * 0.05)));
+      aim(el, wr, at(el).add(up.clone().multiplyScalar(-l2 * 0.9)).add(fwd.clone().multiplyScalar(l2 * 0.35)).add(side.clone().multiplyScalar(sx * l2 * 0.05))); }
+  }
+  if (q.get('ry')) rd.rotation.y = +q.get('ry');
+}
+const span = names.length * sp;
+cam.position.set(0, 1.0, Math.max(span * 1.05, 4.2)); cam.lookAt(0, 0.92, 0);
+r.render(scene, cam); document.title = 'ok';
+</script></body></html>

@@ -126,9 +126,66 @@ export function seat(rider, bike, fit, opts = {}) {
     const gl = bike.worldToLocal(grip.clone());
     const pole = toWorld([gl.x + sx * 0.6, gl.y - 0.5, gl.z - 0.6]);
     ik(b['upperarm_' + s], b['lowerarm_' + s], b['hand_' + s], grip, pole);
+    if (opts.grip !== false && !(opts.hands && opts.hands[s]) && !(opts.handsWorld && opts.handsWorld[s])) clasp(rider, b, s, grip, pole, side.clone().multiplyScalar(-sx), fwd, up);
   }
   b._fwd = fwd;
   return b;
+}
+
+// A hand's finger bones, { thumb: [1, 2, 3], index: [...], ... }, in any of the rigs used.
+export function fingers(root, side) {
+  const S = side === 'l' ? '(?:Left|L_)' : '(?:Right|R_)';
+  const re = new RegExp(S + '(?:Hand)?(Thumb|Index|Mid(?:dle)?|Ring|Pinky)([1-3])_\\d+$');
+  const f = {};
+  root.traverse(n => {
+    const m = n.isBone && re.exec(n.name);
+    if (!m) return;
+    const k = m[1].slice(0, 3).toLowerCase();
+    (f[k] = f[k] || [])[m[2] - 1] = n;
+  });
+  return f;
+}
+
+// Close a hand round a bar: palm down on it, the fingers' knuckles towards `inward`,
+// the fingers wrapped over and under, the arm reaching so the palm (not the wrist) is on the grip.
+function clasp(root, b, s, grip, pole, inward, fwd, up) {
+  const f = fingers(root, s), hand = b['hand_' + s];
+  if (!f.ind || !f.pin || !f.mid || !f.ind[0] || !f.pin[0] || !f.mid[0]) return;
+  const down = up.clone().negate();
+  const orient = () => {
+    // Fingers forward and down over the bar, the index finger's side inward.
+    const P = wpos(hand);
+    aim(hand, f.mid[0], P.clone().add(fwd.clone().multiplyScalar(0.8)).add(down.clone().multiplyScalar(0.45)).add(inward.clone().multiplyScalar(0.25)));
+    const axis = wpos(f.mid[0]).sub(wpos(hand)).normalize();
+    const across = wpos(f.ind[0]).sub(wpos(f.pin[0]));
+    const want = inward.clone();
+    across.sub(axis.clone().multiplyScalar(across.dot(axis))).normalize();
+    want.sub(axis.clone().multiplyScalar(want.dot(axis))).normalize();
+    const ang = Math.atan2(axis.dot(new THREE.Vector3().crossVectors(across, want)), across.dot(want));
+    turn(hand, axis, ang);
+  };
+  // The palm's middle sits on top of the bar: move the wrist back by what that leaves over.
+  let wrist = grip.clone();
+  for (let i = 0; i < 3; i++) {
+    ik(b['upperarm_' + s], b['lowerarm_' + s], hand, wrist, pole);
+    orient();
+    const palm = wpos(hand).lerp(wpos(f.mid[0]), 0.75);
+    wrist.add(grip.clone().add(up.clone().multiplyScalar(0.035)).sub(palm));
+  }
+  // Curl each finger, joint by joint, towards the palm.
+  const across = wpos(f.ind[0]).sub(wpos(f.pin[0])).normalize();
+  const curl = (chain, angles) => {
+    if (!chain || !chain[0]) return;
+    const tip = chain[chain.length - 1];
+    // Which way round the knuckle axis takes the finger down.
+    const before = wpos(tip).dot(up);
+    turn(chain[0], across, 0.3);
+    const sign = wpos(tip).dot(up) < before ? 1 : -1;
+    turn(chain[0], across, -0.3);
+    chain.forEach((j, i) => j && turn(j, across, sign * angles[i]));
+  };
+  for (const k of ['ind', 'mid', 'rin', 'pin']) curl(f[k], [1.05, 1.25, 0.9]);
+  curl(f.thu && f.thu.slice(1), [0.5, 0.6]);
 }
 
 // Put a helmet (front +z, bottom at y 0) on the head, then hang it off the head bone.

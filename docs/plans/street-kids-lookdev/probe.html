@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/work/node_modules/three/build/three.module.js","three/addons/":"/work/node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { bike } from './common.js';
+const q = new URLSearchParams(location.search);
+const out = [];
+for (const n of q.get('b').split(',')) {
+  const o = await bike(n); o.updateMatrixWorld(true);
+  o.traverse(m => { if (!m.isMesh) return; const b = new THREE.Box3().setFromObject(m, true); const c = b.getCenter(new THREE.Vector3()), s = b.getSize(new THREE.Vector3());
+    if (c.z < 0.15 || c.y < 0.75) return;
+    const mt = [].concat(m.material)[0];
+    out.push([n, m.name, mt.name, mt.color.getHexString(), +mt.metalness.toFixed(2), +mt.roughness.toFixed(2), !!mt.map, [c.x, c.y, c.z].map(v => +v.toFixed(2)), [s.x, s.y, s.z].map(v => +v.toFixed(2)), m.geometry.attributes.position.count].join(' '));
+  });
+}
+window.out = out.join('\n'); document.title = 'ok';
+</script></body></html>
