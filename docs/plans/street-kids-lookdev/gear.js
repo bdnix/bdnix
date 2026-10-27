@@ -293,7 +293,7 @@ export function uniform(rd, shirt = [52, 84, 158], trousers = [82, 88, 120]) {
   rd.traverse(m => {
     if (!m.isMesh || !m.material.map) return;
     const n = m.material.name || '';
-    if (/outfit_top/i.test(n)) recolor(m, shirt, 0.55);
+    if (/outfit_top/i.test(n)) { recolor(m, shirt, 0.55); if (m.isSkinnedMesh) untuck(m); }
     else if (/outfit_bottom/i.test(n)) recolor(m, trousers, 0.5);
     else if (/outfit_shoes/i.test(n)) recolor(m, [52, 40, 32], 0.6);
     else return;
@@ -315,4 +315,23 @@ export function skinTone(rd, tone) {
     });
     m.material = Array.isArray(m.material) ? mats : mats[0];
   });
+}
+
+// Untuck a shirt: its bottom band (the last 12 cm above the hem, in the model's own standing pose,
+// metres, y up) stretched down by `drop` to hang over the belt and hips, and flared out over the trousers.
+function untuck(m, drop = 0.11, band = 0.12) {
+  const g = m.geometry, p = g.attributes.position;
+  let hem = Infinity;
+  for (let i = 0; i < p.count; i++) if (Math.abs(p.getX(i)) < 0.3) hem = Math.min(hem, p.getY(i));
+  let cz = 0, n = 0;
+  for (let i = 0; i < p.count; i++) if (p.getY(i) < hem + band && Math.abs(p.getX(i)) < 0.3) { cz += p.getZ(i); n++; }
+  cz /= n || 1;
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i);
+    if (y > hem + band || Math.abs(p.getX(i)) > 0.3) continue;
+    const t = 1 - (y - hem) / band;
+    const k = 1 + 0.12 * t;
+    p.setXYZ(i, p.getX(i) * k, y - drop * t, cz + (p.getZ(i) - cz) * k);
+  }
+  p.needsUpdate = true; g.computeBoundingBox(); g.computeBoundingSphere();
 }

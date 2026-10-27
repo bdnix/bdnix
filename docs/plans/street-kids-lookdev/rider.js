@@ -216,36 +216,53 @@ function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017) {
     line(); orient();
     wrist.add(grip.clone().add(onTop.clone().multiplyScalar(RHO)).sub(wpos(f.mid[0])));
   }
-  // Fingers side by side, as round a grip, not spread: each turned about the back of the hand to lie
-  // parallel to the middle finger.
-  const midDir = flat(wpos(f.mid[1] || f.mid[0]).sub(wpos(f.mid[0])));
+  // Fingers side by side, as round a grip, not spread: each turned about the back of the hand's
+  // normal to lie parallel to the middle finger.
+  const normal = onTop.clone();
+  const inPlane = v => v.sub(normal.clone().multiplyScalar(v.dot(normal))).normalize();
+  const midDir = inPlane(wpos(f.mid[1] || f.mid[0]).sub(wpos(f.mid[0])));
   for (const k of ['ind', 'rin', 'pin']) {
     const c = f[k]; if (!c || !c[0] || !c[1]) continue;
-    const d = flat(wpos(c[1]).sub(wpos(c[0])));
-    turn(c[0], out, Math.atan2(out.dot(new THREE.Vector3().crossVectors(d, midDir)), d.dot(midDir)));
+    const d = inPlane(wpos(c[1]).sub(wpos(c[0])));
+    turn(c[0], normal, Math.atan2(normal.dot(new THREE.Vector3().crossVectors(d, midDir)), d.dot(midDir)));
   }
-  // Curl each finger so its joints lie on that circle: a segment of length L spans an angle
-  // 2 asin(L / 2ρ), and each joint turns by half of each segment's angle on either side of it.
-  const across = wpos(f.ind[0]).sub(wpos(f.pin[0])).normalize();
-  const span = L => 2 * Math.asin(Math.min(0.999, L / (2 * RHO)));
+  // Wrap each finger round the grip, joint by joint: each joint turns about the grip's line just
+  // enough that the next joint lands on a circle hugging the grip (its radius plus half a finger),
+  // going round the way the fingers wrap (over the top, forward, down and back underneath).
+  const perp = p => { const v = p.clone().sub(grip); return v.sub(out.clone().multiplyScalar(v.dot(out))); };
+  const wrapSign = Math.sign(out.dot(new THREE.Vector3().crossVectors(onTop, ahead))) || 1;
+  const hug = R + (globalThis.CLASP_HUG || 0.0105);
+  const solve = (J, C, sign = wrapSign) => {
+    const v = C.clone().sub(J), rel = perp(J);
+    let best = 0, bestErr = Infinity;
+    for (let n = 0; n <= 360; n++) {
+      const th = (n / 360 - 0.5) * 4.8;
+      const p2 = perp(J.clone().add(v.clone().applyAxisAngle(out, th)));
+      const goesRound = sign * out.dot(new THREE.Vector3().crossVectors(rel, p2)) > 0;
+      const err = Math.abs(p2.length() - hug) + (goesRound ? 0 : 1) + Math.abs(th) * 0.002;
+      if (err < bestErr) { bestErr = err; best = th; }
+    }
+    return best;
+  };
   for (const k of ['ind', 'mid', 'rin', 'pin']) {
     const chain = f[k]; if (!chain || !chain[0] || !chain[2]) continue;
     const end = chain[2].children.find(c => c.isBone);
-    const pts = chain.concat(end ? [end] : []).map(wpos);
-    const L = pts.slice(1).map((p, n) => p.distanceTo(pts[n]));
-    if (!end) L.push(L[1] * 0.75);
-    const a = L.map(span);
-    const bends = [a[0] / 2, (a[0] + a[1]) / 2, (a[1] + a[2]) / 2];
-    // Which way round the knuckle axis takes the finger towards the palm (down over the grip).
-    const tip = chain[2], before = wpos(tip).dot(onTop);
-    turn(chain[0], across, 0.3); const sg = wpos(tip).dot(onTop) < before ? 1 : -1; turn(chain[0], across, -0.3);
-    chain.forEach((j, n) => turn(j, across, sg * bends[n]));
+    let last = 0;
+    for (let n = 0; n < 3; n++) {
+      const C = n < 2 ? wpos(chain[n + 1]) : end ? wpos(end) : null;
+      last = C ? solve(wpos(chain[n]), C) : last * 0.8;
+      turn(chain[n], out, last);
+    }
   }
-  // The thumb under the grip from its inner side, its tip towards the far side.
-  if (f.thu && f.thu[0] && f.thu[2]) {
-    const under = grip.clone().sub(onTop.clone().multiplyScalar(R + 0.012)).add(inward.clone().multiplyScalar(0.012)).add(ahead.clone().multiplyScalar(0.01));
-    aim(f.thu[0], f.thu[2], under);
-    aim(f.thu[1], f.thu[2], under);
+  // The thumb round under the grip from behind, the other way round, its tip towards the fingers.
+  if (f.thu && f.thu[1] && f.thu[2]) {
+    const end = f.thu[2].children.find(c => c.isBone);
+    let last = 0;
+    for (let n = 1; n < 3; n++) {
+      const C = n < 2 ? wpos(f.thu[n + 1]) : end ? wpos(end) : null;
+      last = C ? solve(wpos(f.thu[n]), C, -wrapSign) : last * 0.8;
+      turn(f.thu[n], out, last);
+    }
   }
   if (globalThis.CLASP_DEBUG) {
     const skin = fingerSkin(root, ['ind', 'mid', 'rin', 'pin'].map(k => f[k]).filter(c => c && c[0]));
