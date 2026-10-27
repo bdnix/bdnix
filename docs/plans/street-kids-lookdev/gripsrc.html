@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/work/node_modules/three/build/three.module.js","three/addons/":"/work/node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">
+import { loadGrip } from './rider.js';
+const G = await loadGrip('/models/h_moto.glb');
+const f = v => v.toArray().map(x => x.toFixed(2)).join(',');
+window.out = ['l', 'r'].map(s => s + ' n ' + G[s].n + ' axis ' + f(G[s].axis) + ' centre ' + f(G[s].centre) + ' loop r ' + G[s].r.toFixed(3)).join('\n');
+document.title = 'ok';
+</script></body></html>

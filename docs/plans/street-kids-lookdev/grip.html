@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#888;overflow:hidden}</style>
+<script type="importmap">{"imports":{"three":"/work/node_modules/three/build/three.module.js","three/addons/":"/work/node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">
+// One model's hand, close up, at a moment of its animation: ?m=model&hand=Right&t=0&az=0&el=0&dist=0.35
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+const q = new URLSearchParams(location.search), W = innerWidth, H = innerHeight;
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(W, H); document.body.appendChild(r.domElement); r.toneMapping = THREE.ACESFilmicToneMapping;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x8a8f96);
+const env = await new RGBELoader().loadAsync('/ph/kloofendal_48d_partly_cloudy_puresky_2k.hdr'); env.mapping = THREE.EquirectangularReflectionMapping; scene.environment = env;
+scene.add(new THREE.DirectionalLight(0xffffff, 2).translateY(3).translateZ(2));
+const gl = await new GLTFLoader().loadAsync('/models/' + q.get('m') + '.glb'); scene.add(gl.scene);
+if (gl.animations[0]) { const mx = new THREE.AnimationMixer(gl.scene); mx.clipAction(gl.animations[0]).play(); mx.setTime(+(q.get('t') || 0)); }
+gl.scene.updateMatrixWorld(true);
+let hand = null; gl.scene.traverse(n => { if (!hand && n.isBone && new RegExp((q.get('hand') || 'Right') + 'Hand_?\\d*$').test(n.name)) hand = n; });
+const all = new THREE.Box3().setFromObject(gl.scene, true), size = all.getSize(new THREE.Vector3()).length();
+const c = hand ? hand.getWorldPosition(new THREE.Vector3()) : all.getCenter(new THREE.Vector3());
+const d = +(q.get('dist') || 0.35) * size / 2, az = +(q.get('az') || 0), el = +(q.get('el') || 0.3);
+const cam = new THREE.PerspectiveCamera(30, W / H, size / 1000, size * 10);
+if (q.get('whole')) { cam.position.copy(all.getCenter(new THREE.Vector3())).add(new THREE.Vector3(Math.sin(az), 0.3, Math.cos(az)).multiplyScalar(size)); cam.lookAt(all.getCenter(new THREE.Vector3())); }
+else { cam.position.copy(c).add(new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)).multiplyScalar(d)); cam.lookAt(c); }
+r.render(scene, cam); document.title = 'ok';
+</script></body></html>
