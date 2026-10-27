@@ -64,6 +64,7 @@ function smoothNormals(root) {
 export async function rider(name) {
   const g = await glb(name);
   const o = place(skClone(g.scene), null, RIDERS[name], 0, true);
+  o.name = name;
   smoothNormals(o);
   return o;
 }

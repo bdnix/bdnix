@@ -3,14 +3,15 @@
 <script type="module">
 import * as THREE from 'three';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
-import { bike } from './common.js';
+import { bike, thing } from './common.js';
 // Orthographic views of a bike's bars, with a 1 cm grid labelled every 5 cm: top (x across, z up the page), side (z across, y up), back (x across, y up).
 const q = new URLSearchParams(location.search), W = innerWidth, H = innerHeight;
 const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(W, H); document.body.appendChild(r.domElement);
 r.toneMapping = THREE.ACESFilmicToneMapping; r.setScissorTest(true);
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0xdddddd);
 const env = await new RGBELoader().loadAsync('/ph/kloofendal_48d_partly_cloudy_puresky_2k.hdr'); env.mapping = THREE.EquirectangularReflectionMapping; scene.environment = env;
-const bk = await bike(q.get('b')); scene.add(bk); bk.updateMatrixWorld(true);
+const bk = q.get('thing') ? await thing(q.get('thing'), +q.get('len'), JSON.parse(q.get('o') || '{}')) : await bike(q.get('b')); scene.add(bk); bk.updateMatrixWorld(true);
+if (q.get('only')) { const re = new RegExp(q.get('only'), 'i'); bk.traverse(m => { if (m.isMesh && !re.test(m.name)) m.visible = false; }); }
 const c = q.get('c').split(',').map(Number), half = +(q.get('h') || 0.2);   // centre and half-size of the window, metres
 const views = [['top', [0, 3, 0], [0, 0, 1]], ['side', [3, 0, 0], [0, 1, 0]], ['back', [0, 0, -3], [0, 1, 0]]];
 const ov = document.createElement('canvas'); ov.width = W; ov.height = H; document.body.appendChild(ov); const g = ov.getContext('2d');

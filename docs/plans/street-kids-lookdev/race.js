@@ -19,6 +19,7 @@ import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
 const q = new URLSearchParams(location.search);
 if (q.get('dbg')) globalThis.CLASP_DEBUG = 1;
+if (q.get('nothumb')) globalThis.CLASP_NOTHUMB = 1;
 if (q.get('pad')) globalThis.CLASP_PAD = +q.get('pad');
 if (q.get('arm')) globalThis.CLASP_ARM = +q.get('arm');
 const W = innerWidth, H = innerHeight;
@@ -228,7 +229,7 @@ const keepClear = [];   // filled with the racers' spots before traffic is place
 let busN = 0;
 async function addVehicle(name, x, z, y = 0, parked = false) {
   const V = VEH[name], opts = Object.assign({}, V.opts); if (name === 'b_viking') opts.bus = busN++;
-  const v = await thing(name, V.len, opts); v.position.set(x, y + 0.02, z); scene.add(v); v.updateMatrixWorld(true); if (!y) blob(v);
+  const v = await thing(name, V.len, opts); v.name = name; v.position.set(x, y + 0.02, z); scene.add(v); v.updateMatrixWorld(true); if (!y) blob(v);
   v.traverse(m => { if (m.isMesh && /glass|kaca|window|vidrio/i.test(m.material.name || '')) { m.material = m.material.clone(); m.material.color = new THREE.Color(0x0e1214); m.material.map = null; m.material.metalness = 0.6; m.material.roughness = 0.08; m.material.transparent = false; m.material.opacity = 1; } });
   // Dhaka's cars are mostly white, silver and black, with the odd red, blue or grey.
   if (name === 'corolla' || name === 'yaris') {
@@ -243,7 +244,7 @@ async function addVehicle(name, x, z, y = 0, parked = false) {
 }
 
 // CNG drivers: at the wheel when it's moving; when it's parked, standing by it on the pavement or sitting in it.
-const CNG_FIT = { seat: [0, 0.66, 0.2], grip: [0.34, 0.88, 0.72], peg: [0.14, 0.34, 0.6], lean: 0.12 };
+const CNG_FIT = { seat: [0, 0.66, 0.2], grip: [0.34, 0.88, 0.72], bar: [[0.272, 0.862, 0.70], [0.365, 0.858, 0.672]], peg: [0.14, 0.34, 0.6], lean: 0.12 };
 const DRIVERS = (q.get('drivers') || 'd_striped').split(',');
 // Each uniform faded or washed a little differently.
 const SHIRTS = [[52, 84, 158], [44, 76, 150], [62, 96, 168], [56, 88, 150]], TROUSERS = [[82, 88, 120], [70, 74, 98], [96, 100, 122]];
@@ -309,7 +310,7 @@ const LEAN = { nr750: 1.3, gsxr: 1.3, z1000: 0.85 };
 async function racer(b, r, x, z, opts = {}) {
   let ch = CHARACTERS.find(c => c.id === r);
   if (opts.me && q.get('view') === 'rider' && ch) ch = Object.assign({}, ch, { headScale: 0 });
-  const bk = await bike(b); const rd = await rider(r); bk.add(rd);
+  const bk = await bike(b); bk.name = b; const rd = await rider(r); bk.add(rd);
   if (ch) dress(rd, ch);
   const fit = Object.assign({}, bk.userData.fit, { lean: opts.lean ?? LEAN[b] ?? bk.userData.fit.lean });
   bk.position.set(x, P.y + 0.02, z); bk.rotation.z = opts.roll || 0; bk.rotation.y = opts.yaw || 0; scene.add(bk); bk.updateMatrixWorld(true);
@@ -338,10 +339,10 @@ if (shot === 'none') {
 } else if (shot === 'race') {
   me = await racer(q.get('bike') || 'k5_h2', 'c_teenboy', P.x, P.z, { me: true });
   await racer('k4_zx6r', 'c_teew', P.x - 1.7, P.z + 1.6, { roll: 0.02 });
-  await racer('z1000', 'c_polom', P.x + 3.2, P.z + 6, { roll: -0.03 });
-  await racer('gsxr', 'c_leatherw', P.x - 2.8, P.z + 14);
-  await racer('z1000', 'c_teenblack', P.x + 4.6, P.z + 16);
-  await racer('nr750', 'c_blackm', P.x + 1.5, P.z + 24);
+  await racer('k5_h2', 'c_polom', P.x + 3.2, P.z + 6, { roll: -0.03 });
+  await racer('k3_pulsar', 'c_leatherw', P.x - 2.8, P.z + 14);
+  await racer('k4_zx6r', 'c_teenblack', P.x + 4.6, P.z + 16);
+  await racer('k5_h2', 'c_blackm', P.x + 1.5, P.z + 24);
 } else {
   // The rival on our right, close enough to hit.
   const foe = await racer('gsxr', 'c_blackm', P.x - 1.15, P.z + 0.55, { roll: 0.09, twist: 0.35 });
@@ -355,7 +356,7 @@ if (shot === 'none') {
     const dir = target.clone().sub(up).add(new THREE.Vector3(0, 0.25, 0));
     hold(me.bn, 'r', shot === 'nunchaku' ? await thing('nunchaku', 0.33, { byHeight: true }) : await thing('bat', 0.85, { byWidth: true }), dir, shot === 'nunchaku' ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0));
   }
-  await racer('z1000', 'c_teenboy', P.x + 3.2, P.z + 8, { roll: -0.03 });
+  await racer('k4_zx6r', 'c_teenboy', P.x + 3.2, P.z + 8, { roll: -0.03 });
 }
 
 // Traffic around them: on the deck if we're on the flyover, and on the road below.
