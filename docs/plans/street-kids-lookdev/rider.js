@@ -224,7 +224,10 @@ function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017) {
   for (const k of ['ind', 'rin', 'pin']) {
     const c = f[k]; if (!c || !c[0] || !c[1]) continue;
     const d = inPlane(wpos(c[1]).sub(wpos(c[0])));
-    turn(c[0], normal, Math.atan2(normal.dot(new THREE.Vector3().crossVectors(d, midDir)), d.dot(midDir)));
+    if (globalThis.CLASP_DEBUG) (globalThis.CLASP_ANG = globalThis.CLASP_ANG || []).push(s + k + 'spread:' + Math.atan2(normal.dot(new THREE.Vector3().crossVectors(d, midDir)), d.dot(midDir)).toFixed(2));
+    // Only a little: a full turn twists the knuckle's skin; real fingers fan slightly anyway.
+    const sp = Math.atan2(normal.dot(new THREE.Vector3().crossVectors(d, midDir)), d.dot(midDir));
+    turn(c[0], normal, Math.max(-0.08, Math.min(0.08, sp)));
   }
   // Wrap each finger round the grip, joint by joint: each joint turns about the grip's line just
   // enough that the next joint lands on a circle hugging the grip (its radius plus half a finger),
@@ -244,14 +247,20 @@ function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017) {
     }
     return best;
   };
-  for (const k of ['ind', 'mid', 'rin', 'pin']) {
+  // The ring and little fingers curl in step with the middle finger, halfway to their own fit, so the
+  // hand closes as one fist rather than each finger bending its own way.
+  const midAng = [];
+  for (const k of ['mid', 'ind', 'rin', 'pin']) {
     const chain = f[k]; if (!chain || !chain[0] || !chain[2]) continue;
     const end = chain[2].children.find(c => c.isBone);
     let last = 0;
     for (let n = 0; n < 3; n++) {
       const C = n < 2 ? wpos(chain[n + 1]) : end ? wpos(end) : null;
       last = C ? solve(wpos(chain[n]), C) : last * 0.8;
+      if (k === 'mid') midAng[n] = last;
+      else if ((k === 'rin' || k === 'pin') && midAng[n] !== undefined) last = (last + midAng[n] * (k === 'pin' ? 1.05 : 1)) / 2;
       turn(chain[n], out, last);
+      if (globalThis.CLASP_DEBUG) (globalThis.CLASP_ANG = globalThis.CLASP_ANG || []).push(s + k + n + ':' + last.toFixed(2));
     }
   }
   // The thumb round under the grip from behind, the other way round, its tip towards the fingers.
@@ -269,6 +278,7 @@ function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017) {
     root.updateMatrixWorld(true);
     const d = skin.map(([m, i]) => { const p = m.getVertexPosition(i, new THREE.Vector3()).applyMatrix4(m.matrixWorld).sub(grip); return p.sub(out.clone().multiplyScalar(p.dot(out))).length(); });
     d.sort((x, y) => x - y);
+    console.error('angles', (globalThis.CLASP_ANG || []).join(' ')); globalThis.CLASP_ANG = [];
     console.error('clasp', s, 'R', R.toFixed(4), 'skin-to-axis min', d[0].toFixed(3), 'p10', d[Math.floor(d.length * 0.1)].toFixed(3), 'median', d[Math.floor(d.length / 2)].toFixed(3), 'max', d[d.length - 1].toFixed(3));
   }
 }
