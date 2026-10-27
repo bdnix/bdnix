@@ -121,12 +121,17 @@ export function seat(rider, bike, fit, opts = {}) {
   // Arms to the grips (or wherever opts.hands says), elbows out and down.
   for (const s of ['l', 'r']) {
     const sx = s === 'l' ? 1 : -1;
-    const g = (opts.hands && opts.hands[s]) || [fit.grip[0] * sx, fit.grip[1], fit.grip[2]];
-    const grip = (opts.handsWorld && opts.handsWorld[s]) || toWorld(g);
+    // The grip's own line (fit.bar: its inner and outer ends, rider's left), else a point.
+    const m = v => [v[0] * sx, v[1], v[2]];
+    const bar = fit.bar && [toWorld(m(fit.bar[0])), toWorld(m(fit.bar[1]))];
+    const out = bar ? bar[1].clone().sub(bar[0]).normalize() : side.clone().multiplyScalar(sx);
+    // The palm's middle sits 5.5 cm out from the switch block, the index finger beside it.
+    const g = (opts.hands && opts.hands[s]) || (bar ? null : m(fit.grip));
+    const grip = (opts.handsWorld && opts.handsWorld[s]) || (g ? toWorld(g) : bar[0].clone().add(out.clone().multiplyScalar(0.055)));
     const gl = bike.worldToLocal(grip.clone());
     const pole = toWorld([gl.x + sx * 0.6, gl.y - 0.5, gl.z - 0.6]);
     ik(b['upperarm_' + s], b['lowerarm_' + s], b['hand_' + s], grip, pole);
-    if (opts.grip !== false && !(opts.hands && opts.hands[s]) && !(opts.handsWorld && opts.handsWorld[s])) clasp(rider, b, s, grip, pole, side.clone().multiplyScalar(-sx), fwd, up);
+    if (opts.grip !== false && !(opts.hands && opts.hands[s]) && !(opts.handsWorld && opts.handsWorld[s])) clasp(rider, b, s, grip, pole, out, fwd, up);
   }
   b._fwd = fwd;
   return b;
@@ -146,16 +151,19 @@ export function fingers(root, side) {
   return f;
 }
 
-// Close a hand round a bar: palm down on it, the fingers' knuckles towards `inward`,
-// the fingers wrapped over and under, the arm reaching so the palm (not the wrist) is on the grip.
-function clasp(root, b, s, grip, pole, inward, fwd, up) {
+// Close a hand round a grip: the palm on its top and back, the fingers across it, over the top
+// and round underneath, the index finger at the inner end; `out` runs along the grip outwards.
+// The arm reaches so that the palm, not the wrist, is on the grip.
+function clasp(root, b, s, grip, pole, out, fwd, up) {
   const f = fingers(root, s), hand = b['hand_' + s];
   if (!f.ind || !f.pin || !f.mid || !f.ind[0] || !f.pin[0] || !f.mid[0]) return;
-  const down = up.clone().negate();
+  const flat = v => v.sub(out.clone().multiplyScalar(v.dot(out))).normalize();
+  // Across the grip: the way the fingers point (forward, a little up), and where the palm sits (up and back).
+  const ahead = flat(fwd.clone().multiplyScalar(0.9).add(up.clone().multiplyScalar(0.25)));
+  const onTop = flat(up.clone().multiplyScalar(0.7).sub(fwd.clone().multiplyScalar(0.7)));
+  const inward = out.clone().negate();
   const orient = () => {
-    // Fingers forward and down over the bar, the index finger's side inward.
-    const P = wpos(hand);
-    aim(hand, f.mid[0], P.clone().add(fwd.clone().multiplyScalar(0.8)).add(down.clone().multiplyScalar(0.45)).add(inward.clone().multiplyScalar(0.25)));
+    aim(hand, f.mid[0], wpos(hand).add(ahead));
     const axis = wpos(f.mid[0]).sub(wpos(hand)).normalize();
     const across = wpos(f.ind[0]).sub(wpos(f.pin[0]));
     const want = inward.clone();
@@ -164,15 +172,16 @@ function clasp(root, b, s, grip, pole, inward, fwd, up) {
     const ang = Math.atan2(axis.dot(new THREE.Vector3().crossVectors(across, want)), across.dot(want));
     turn(hand, axis, ang);
   };
-  // The palm's middle sits on top of the bar: move the wrist back by what that leaves over.
-  let wrist = grip.clone();
-  for (let i = 0; i < 3; i++) {
+  // The middle of the palm (the bones run through the hand's middle) sits 3 cm off the grip's line.
+  const palmAt = grip.clone().add(onTop.clone().multiplyScalar(0.03));
+  const wrist = grip.clone();
+  for (let i = 0; i < 4; i++) {
     ik(b['upperarm_' + s], b['lowerarm_' + s], hand, wrist, pole);
     orient();
-    const palm = wpos(hand).lerp(wpos(f.mid[0]), 0.75);
-    wrist.add(grip.clone().add(up.clone().multiplyScalar(0.035)).sub(palm));
+    const palm = wpos(hand).lerp(wpos(f.mid[0]), 0.7);
+    wrist.add(palmAt.clone().sub(palm));
   }
-  // Curl each finger, joint by joint, towards the palm.
+  // Curl each finger, joint by joint, round the grip.
   const across = wpos(f.ind[0]).sub(wpos(f.pin[0])).normalize();
   const curl = (chain, angles) => {
     if (!chain || !chain[0]) return;
@@ -184,7 +193,7 @@ function clasp(root, b, s, grip, pole, inward, fwd, up) {
     turn(chain[0], across, -0.3);
     chain.forEach((j, i) => j && turn(j, across, sign * angles[i]));
   };
-  for (const k of ['ind', 'mid', 'rin', 'pin']) curl(f[k], [1.05, 1.25, 0.9]);
+  for (const k of ['ind', 'mid', 'rin', 'pin']) curl(f[k], [1.2, 1.3, 0.95]);
   curl(f.thu && f.thu.slice(1), [0.5, 0.6]);
 }
 

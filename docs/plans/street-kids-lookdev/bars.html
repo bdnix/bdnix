@@ -1,0 +1,41 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#ddd;overflow:hidden}canvas{position:absolute;left:0;top:0}</style>
+<script type="importmap">{"imports":{"three":"/work/node_modules/three/build/three.module.js","three/addons/":"/work/node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { bike } from './common.js';
+// Orthographic views of a bike's bars, with a 1 cm grid labelled every 5 cm: top (x across, z up the page), side (z across, y up), back (x across, y up).
+const q = new URLSearchParams(location.search), W = innerWidth, H = innerHeight;
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(W, H); document.body.appendChild(r.domElement);
+r.toneMapping = THREE.ACESFilmicToneMapping; r.setScissorTest(true);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xdddddd);
+const env = await new RGBELoader().loadAsync('/ph/kloofendal_48d_partly_cloudy_puresky_2k.hdr'); env.mapping = THREE.EquirectangularReflectionMapping; scene.environment = env;
+const bk = await bike(q.get('b')); scene.add(bk); bk.updateMatrixWorld(true);
+const c = q.get('c').split(',').map(Number), half = +(q.get('h') || 0.2);   // centre and half-size of the window, metres
+const views = [['top', [0, 3, 0], [0, 0, 1]], ['side', [3, 0, 0], [0, 1, 0]], ['back', [0, 0, -3], [0, 1, 0]]];
+const ov = document.createElement('canvas'); ov.width = W; ov.height = H; document.body.appendChild(ov); const g = ov.getContext('2d');
+const vw = W / 3;
+views.forEach(([name, off, up], i) => {
+  const asp = vw / H, cam = new THREE.OrthographicCamera(-half * asp, half * asp, half, -half, 0.01, 10);
+  cam.position.set(c[0] + off[0], c[1] + off[1], c[2] + off[2]); cam.up.set(...up); cam.lookAt(c[0], c[1], c[2]); cam.updateMatrixWorld(true);
+  r.setViewport(i * vw, 0, vw, H); r.setScissor(i * vw, 0, vw, H); r.render(scene, cam);
+  // Grid: project world points.
+  const P = v => { const p = v.clone().project(cam); return [i * vw + (p.x + 1) / 2 * vw, (1 - p.y) / 2 * H]; };
+  g.save(); g.beginPath(); g.rect(i * vw, 0, vw, H); g.clip();
+  const ax = name === 'top' ? ['x', 'z'] : name === 'side' ? ['z', 'y'] : ['x', 'y'];
+  const base = { x: c[0], y: c[1], z: c[2] };
+  for (const [k, other] of [[ax[0], ax[1]], [ax[1], ax[0]]]) {
+    for (let v = Math.ceil((base[k] - half * 2) * 100); v <= (base[k] + half * 2) * 100; v++) {
+      const a = Object.assign({}, base), b = Object.assign({}, base); a[k] = b[k] = v / 100; a[other] = base[other] - half * 2; b[other] = base[other] + half * 2;
+      const pa = P(new THREE.Vector3(a.x, a.y, a.z)), pb = P(new THREE.Vector3(b.x, b.y, b.z));
+      g.strokeStyle = v % 5 === 0 ? 'rgba(255,0,0,0.55)' : 'rgba(0,0,255,0.18)'; g.lineWidth = v % 5 === 0 ? 1 : 0.5;
+      g.beginPath(); g.moveTo(...pa); g.lineTo(...pb); g.stroke();
+      if (v % 5 === 0) { g.fillStyle = '#c00'; g.font = '11px monospace'; const m = Object.assign({}, base); m[k] = v / 100; m[other] = base[other] + (k === ax[0] ? -half * 0.93 : 0) ; const pm = P(new THREE.Vector3(m.x, m.y, m.z)); g.fillText(k + (v / 100).toFixed(2), pm[0] + 2, pm[1] - 2); }
+    }
+  }
+  g.restore();
+  g.fillStyle = '#000'; g.font = 'bold 14px sans-serif'; g.fillText(name, i * vw + 6, 16);
+  g.strokeStyle = '#000'; g.beginPath(); g.moveTo(i * vw, 0); g.lineTo(i * vw, H); g.stroke();
+});
+document.title = 'ok';
+</script></body></html>
