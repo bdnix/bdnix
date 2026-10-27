@@ -12,7 +12,7 @@ Every page tells the browser what it may load: its own files, and Google Analyti
 
 ## Profile
 
-The chip in the top right of the landing and tool pages links to `/profile/`. It shows the visitor's name ("User" until they set one, up to 24 characters), their best Falling Blocks, Maze Chase, Flap, Road Hop, Snake, Brick Bounce and Street Kids scores, the highest chess level they've beaten, and the number of visits counted by the landing page. The profile page is marked `noindex`, since it only shows what's saved in the browser.
+The chip in the top right of the landing and tool pages links to `/profile/`. It shows the visitor's name ("User" until they set one, up to 24 characters), their best Falling Blocks, Maze Chase, Flap, Road Hop, Snake, Brick Bounce and King of Streets scores, the highest chess level they've beaten, and the number of visits counted by the landing page. The profile page is marked `noindex`, since it only shows what's saved in the browser.
 
 ## What is stored
 
@@ -22,9 +22,9 @@ In `localStorage`:
 |---|---|
 | `bdnix_name` | Display name |
 | `bdnix_visits` | Landing page visit count |
-| `bdnix_tetris_best`, `bdnix_pacman_best`, `bdnix_flappy_best`, `bdnix_hop_best`, `bdnix_snake_best`, `bdnix_bricks_best`, `bdnix_streetkids_best` | Best scores |
+| `bdnix_tetris_best`, `bdnix_pacman_best`, `bdnix_flappy_best`, `bdnix_hop_best`, `bdnix_snake_best`, `bdnix_bricks_best`, `bdnix_kingofstreets_best` | Best scores |
 | `bdnix_chess_best` | The highest chess level beaten |
-| `bdnix_tetris_save`, `bdnix_pacman_save`, `bdnix_flappy_save`, `bdnix_hop_save`, `bdnix_snake_save`, `bdnix_bricks_save`, `bdnix_streetkids_save`, `bdnix_chess_save` | Games in progress |
+| `bdnix_tetris_save`, `bdnix_pacman_save`, `bdnix_flappy_save`, `bdnix_hop_save`, `bdnix_snake_save`, `bdnix_bricks_save`, `bdnix_kingofstreets_save`, `bdnix_chess_save` | Games in progress |
 | `bdnix_sound` | Whether game sounds are on (`on`) or muted (`off`) |
 | `bdnix_watermark_v1` | Watermark tool settings |
 | `bdnix_learn_chess` | Which Learn Chess lines are learned or mastered |

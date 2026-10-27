@@ -1,4 +1,4 @@
-// Street Kids rules: the track, the bikes, the fighting and the race. No
+// King of Streets rules: the track, the bikes, the fighting and the race. No
 // DOM, so it can be unit tested; street.js draws the race and handles input.
 // Distances along the road (z) are in metres from the start line; across it
 // (x), in half the road's width: 0 is its middle, -1 and 1 its edges, and

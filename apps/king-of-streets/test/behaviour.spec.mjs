@@ -5,11 +5,11 @@ import { openGame, press, inkOn, tap, listen, heard, soundProblems } from '../..
 // moment, since time only moves when a test runs the clock.
 async function peek(page){
   await press(page, 'KeyP');
-  const s = await page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_streetkids_save') || 'null'));
+  const s = await page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_kingofstreets_save') || 'null'));
   await press(page, 'KeyP');
   return s && s.data;
 }
-const stored = (page) => page.evaluate(() => localStorage.getItem('bdnix_streetkids_save'));
+const stored = (page) => page.evaluate(() => localStorage.getItem('bdnix_kingofstreets_save'));
 
 // Loads the page with a race saved as `data`. Only once: a later reload
 // finds whatever the game saved, as a visitor's would. (Each call's script
@@ -19,7 +19,7 @@ async function openSaved(page, data){
   await page.addInitScript(([d, n]) => {
     if (n <= (+sessionStorage.getItem('seeded') || 0)) return;
     sessionStorage.setItem('seeded', n);
-    localStorage.setItem('bdnix_streetkids_save', JSON.stringify({ v: 1, data: d }));
+    localStorage.setItem('bdnix_kingofstreets_save', JSON.stringify({ v: 1, data: d }));
   }, [data, ++seeds]);
   await page.reload();
 }
@@ -71,8 +71,8 @@ function drawn(page){
 }
 
 test.beforeEach(async ({ page }) => {
-  await openGame(page, '/street-kids/');
-  await expect(page.locator('#ovTitle')).toHaveText('Street Kids');
+  await openGame(page, '/king-of-streets/');
+  await expect(page.locator('#ovTitle')).toHaveText('King of Streets');
   await page.clock.runFor(100);
 });
 
@@ -96,7 +96,7 @@ test('a countdown, then the race: the bike speeds up along the road', async ({ p
 
 test('the race is drawn on the board, moving, and still while paused', async ({ page }) => {
   expect(await inkOn(page, '#board')).toBeGreaterThan(1000);   // the grid, under the start screen
-  await expect(page.locator('#board')).toHaveAttribute('aria-label', 'Street Kids race');
+  await expect(page.locator('#board')).toHaveAttribute('aria-label', 'King of Streets race');
   await ride(page);
   const a = await drawn(page);
   await page.clock.runFor(200);
@@ -197,7 +197,7 @@ test('riding into the back of traffic knocks you off, and you get back on', asyn
 });
 
 test('out of health is a knockout: game over', async ({ page }) => {
-  await page.evaluate(() => localStorage.setItem('bdnix_streetkids_best', '400'));
+  await page.evaluate(() => localStorage.setItem('bdnix_kingofstreets_best', '400'));
   await ride(page, 'w.player.health = 3; w.score = 200;' + alongside(0, 0.5, 0.2, 'cool: 0'));
   await waitForOverlay(page);
   await expect(page.locator('#ovTitle')).toHaveText('Game over');
@@ -250,7 +250,7 @@ test('finishing fourth ends the game', async ({ page }) => {
   await expect(page.locator('#ovTitle')).toHaveText('Game over');
   await expect(page.locator('#ovKicker')).toHaveText('4th place: not in the top three.');
   await expect(page.locator('#ovText')).toHaveText('Score 300 — new best!');
-  expect(await page.evaluate(() => localStorage.getItem('bdnix_streetkids_best'))).toBe('300');
+  expect(await page.evaluate(() => localStorage.getItem('bdnix_kingofstreets_best'))).toBe('300');
   expect(await stored(page)).toBeNull();
 });
 
@@ -327,7 +327,7 @@ test('pausing stops the race, and it resumes where it was', async ({ page }) => 
 });
 
 test('a saved best score shows on load', async ({ page }) => {
-  await page.evaluate(() => localStorage.setItem('bdnix_streetkids_best', '3100'));
+  await page.evaluate(() => localStorage.setItem('bdnix_kingofstreets_best', '3100'));
   await page.reload();
   await expect(page.locator('#best')).toHaveText('3100');
 });
@@ -351,7 +351,7 @@ test('a reload keeps the race, paused where it was', async ({ page }) => {
 test('New game from the pause screen starts over, and before the first race starts there is nothing to keep', async ({ page }) => {
   await page.getByRole('button', { name: 'Start game' }).click();
   await page.reload();
-  await expect(page.locator('#ovTitle')).toHaveText('Street Kids');
+  await expect(page.locator('#ovTitle')).toHaveText('King of Streets');
   await page.getByRole('button', { name: 'Start game' }).click();
   await page.clock.runFor(5000);
   await press(page, 'KeyP');
@@ -359,7 +359,7 @@ test('New game from the pause screen starts over, and before the first race star
   await expect(page.locator('#overlay')).toBeHidden();
   await expect(page.locator('#score')).toHaveText('0');
   await page.reload();
-  await expect(page.locator('#ovTitle')).toHaveText('Street Kids');
+  await expect(page.locator('#ovTitle')).toHaveText('King of Streets');
   expect(await stored(page)).toBeNull();
 });
 
@@ -379,7 +379,7 @@ test('saves that do not make sense are thrown away', async ({ page }) => {
     { ...grid, world: { ...grid.world, race: 1 } }                             // the first race's grid isn't kept
   ]) {
     await openSaved(page, bad);
-    await expect(page.locator('#ovTitle'), JSON.stringify(bad).slice(0, 80)).toHaveText('Street Kids');
+    await expect(page.locator('#ovTitle'), JSON.stringify(bad).slice(0, 80)).toHaveText('King of Streets');
     expect(await stored(page)).toBeNull();
   }
   await openSaved(page, grid);                                                // and good ones are kept

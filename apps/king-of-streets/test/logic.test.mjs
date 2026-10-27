@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load, plain } from '../../../tests/unit/load.mjs';
 
-const F = load('apps/street-kids/street-core.js').bdnixStreet;
+const F = load('apps/king-of-streets/street-core.js').bdnixStreet;
 
 // Runs the race for `seconds`.
 function ride(w, seconds){ F.advance(w, seconds, 0); }

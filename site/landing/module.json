@@ -11,11 +11,11 @@
   "inputs": [".github/ISSUE_TEMPLATE/request.yml"],
   "page": {
     "title": "bdnix — Free browser games and PDF, audio and image tools",
-    "description": "Play Falling Blocks, Maze Chase, Flap, Road Hop, Snake, Brick Bounce, Street Kids and chess; merge, watermark, redact, sign and unlock PDFs; turn videos into MP3s; compress, frame or collage photos. Nothing uploaded.",
+    "description": "Play Falling Blocks, Maze Chase, Flap, Road Hop, Snake, Brick Bounce, King of Streets and chess; merge, watermark, redact, sign and unlock PDFs; turn videos into MP3s; compress, frame or collage photos. Nothing uploaded.",
     "schema": "WebSite"
   },
   "cards": {
-    "games": ["falling-blocks", "maze-chase", "flap", "road-hop", "snake", "brick-bounce", "street-kids", "chess"],
+    "games": ["falling-blocks", "maze-chase", "flap", "road-hop", "snake", "brick-bounce", "king-of-streets", "chess"],
     "tools": ["merge-pdf", "watermark-pdf", "redact-pdf", "sign-pdf", "unlock-pdf", "mp4-to-mp3", "compress-image", "photo-collage", "fit-to-frame", "learn-chess"]
   }
 }

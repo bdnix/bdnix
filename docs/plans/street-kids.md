@@ -2,6 +2,8 @@
 
 The plan for the Street Kids game, and everything the owner has asked for and decided so far. A new session picks the work up from here: **read all of it before doing anything**, then read [AGENTS.md](../../AGENTS.md). The branch is `street-kids`.
 
+**Renamed (nineteenth round): the game is now King of Streets / রাস্তার রাজা.** The module is `apps/king-of-streets/` at `/king-of-streets/`, its storage keys `bdnix_kingofstreets_best` and `bdnix_kingofstreets_save` (gamesave id `kingofstreets`). Nothing had shipped, so no visitor's data is lost. This plan and the lookdev folder keep their old paths; older rounds below say "Street Kids". Before the pull request: the lookdev prototype in `docs/plans/street-kids-lookdev/` fails `npm run lint` (43 errors, prototype code); leave it out of ESLint or move it out of the repo.
+
 ## What the owner asked for
 
 In the owner's words, then what that has come to mean.

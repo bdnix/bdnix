@@ -1,4 +1,4 @@
-/* Street Kids layout. Shared pieces live in base.css and game.css. */
+/* King of Streets layout. Shared pieces live in base.css and game.css. */
 .game{
   position:relative;z-index:1;
   flex:1;min-height:0;

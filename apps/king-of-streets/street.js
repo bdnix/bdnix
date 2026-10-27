@@ -68,7 +68,7 @@
     finish: notes([523, 659, 784, 1047, 784, 1047], 0.1, 0.18, 'square', 0.17)
   });
 
-  try { best = parseInt(localStorage.getItem('bdnix_streetkids_best'), 10) || 0; } catch (e) {}
+  try { best = parseInt(localStorage.getItem('bdnix_kingofstreets_best'), 10) || 0; } catch (e) {}
 
   // ---------- Game flow ----------
   function setState(s){ state = s; stateTime = 0; }
@@ -160,7 +160,7 @@
     setState('dying');
     if (world.score > best) {
       best = world.score;
-      try { localStorage.setItem('bdnix_streetkids_best', best); } catch (e) {}
+      try { localStorage.setItem('bdnix_kingofstreets_best', best); } catch (e) {}
     }
     updateHud();
     persist();
@@ -213,7 +213,7 @@
     if (s !== 'ready' && s !== 'playing') return null;
     return { state: s, carry: s === 'ready' ? 0 : carry, world: F.snapshot(world) };
   }
-  var persist = window.bdnixSave.keep('streetkids', snapshot);
+  var persist = window.bdnixSave.keep('kingofstreets', snapshot);
 
   function restore(s){
     if ((s.state !== 'ready' && s.state !== 'playing') || !window.bdnixSave.num(s.carry) || s.carry < 0 || s.carry >= F.STEP) return false;
@@ -1164,8 +1164,8 @@
   }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(resize);
 
-  var saved = window.bdnixSave.load('streetkids');
-  if (saved && !restore(saved)) window.bdnixSave.clear('streetkids');
+  var saved = window.bdnixSave.load('kingofstreets');
+  if (saved && !restore(saved)) window.bdnixSave.clear('kingofstreets');
   updateHud();
   resize();
   requestAnimationFrame(loop);

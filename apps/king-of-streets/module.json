@@ -1,25 +1,25 @@
 {
-  "name": "street-kids",
+  "name": "king-of-streets",
   "kind": "app",
-  "url": "/street-kids/",
+  "url": "/king-of-streets/",
   "publish": {
-    "index.html": "/street-kids/index.html",
+    "index.html": "/king-of-streets/index.html",
     "street.js": "/assets/js/street.js",
     "street-core.js": "/assets/js/street-core.js",
     "street.css": "/assets/css/street.css"
   },
   "uses": ["analytics", "backdrop", "base", "game-shell", "gestures", "gamesave", "icon-btn", "lang", "sound", "upright"],
   "page": {
-    "title": "Street Kids — Play free in your browser | bdnix",
-    "description": "Play Street Kids free in your browser: race motorbikes through the city, punch, kick and swing a chain at your rivals, and finish in the top three to ride on. Beat your best, nothing to install.",
+    "title": "King of Streets — Play free in your browser | bdnix",
+    "description": "Play King of Streets free in your browser: race motorbikes through the city, punch, kick and swing a chain at your rivals, and finish in the top three to ride on. Beat your best, nothing to install.",
     "schema": "WebApplication",
     "category": "GameApplication"
   },
   "card": {
     "kind": "game",
-    "name": "Street Kids",
+    "name": "King of Streets",
     "blurb": "Race, punch and kick to the line",
-    "best": "bdnix_streetkids_best",
+    "best": "bdnix_kingofstreets_best",
     "keywords": "game arcade racing race motorbike motorcycle bike fight punch kick",
     "icon": [
       "<path d=\"M4 33h32\" stroke=\"#a855f7\" stroke-width=\"2\" stroke-linecap=\"round\" opacity=\".5\"/>",

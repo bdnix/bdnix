@@ -14,7 +14,7 @@ On a phone, there are no buttons under the board: the games are played by touchi
 - [Road Hop](#road-hop)
 - [Snake](#snake)
 - [Brick Bounce](#brick-bounce)
-- [Street Kids](#street-kids)
+- [King of Streets](#king-of-streets)
 - [Chess](#chess)
 - [Sound](#sound)
 - [Scores and saved games](#scores-and-saved-games)
@@ -117,9 +117,9 @@ Six bricks in every wall, picked at random, hide a power: they glow and pulse in
 
 Each wall hides two multi-balls and one of each of the others. The seconds left of the fireball, laser and wide paddle show under the paddle, beside their icons. Losing a ball or clearing a wall ends every power and clears away falling capsules and shots.
 
-## Street Kids
+## King of Streets
 
-`/street-kids/`
+`/king-of-streets/`
 
 | Action | Keyboard | Touch |
 |---|---|---|
@@ -189,7 +189,7 @@ The sounds are made in the browser with the Web Audio API, so there are no audio
 
 Each game keeps its best score in the browser's `localStorage`, and the [profile page](privacy.md#profile) shows them all.
 
-A game in progress is saved whenever it pauses and when the page is reloaded, closed or left. Returning to the page, even days later, shows the game paused exactly where it was, with the message "Picked up where you left off.": **Resume** carries on and **New game** starts over. The save is removed when the game ends. Flap only keeps a round once the bird has flapped, Road Hop once the chicken has hopped, Snake once the snake has started moving, Brick Bounce once the first ball has been launched, Street Kids once the first race has started (a race won saves as the start of the next), and Chess once the first move has been played.
+A game in progress is saved whenever it pauses and when the page is reloaded, closed or left. Returning to the page, even days later, shows the game paused exactly where it was, with the message "Picked up where you left off.": **Resume** carries on and **New game** starts over. The save is removed when the game ends. Flap only keeps a round once the bird has flapped, Road Hop once the chicken has hopped, Snake once the snake has started moving, Brick Bounce once the first ball has been launched, King of Streets once the first race has started (a race won saves as the start of the next), and Chess once the first move has been played.
 
 Clearing the browser's site data removes saved games and best scores. See [Privacy and data](privacy.md) for the storage keys.
 
@@ -205,7 +205,7 @@ Each game is our own take on a classic, with its own name, artwork and code. The
 | Road Hop | Crossy Road, created by Hipster Whale in 2014 |
 | Snake | Blockade, created by Gremlin in 1976, and the snake games that followed |
 | Brick Bounce | Breakout, created by Atari in 1976 |
-| Street Kids | Road Rash, created by Electronic Arts in 1991 |
+| King of Streets | Road Rash, created by Electronic Arts in 1991 |
 
 These names are trademarks of their owners. bdnix isn't affiliated with or endorsed by them.
 
