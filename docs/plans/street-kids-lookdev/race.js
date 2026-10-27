@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { bike, rider, thing, CHARACTERS, hairModel } from './common.js';
-import { dress, paintHelmet, ponytail } from './gear.js';
+import { dress, paintHelmet, ponytail, uniform } from './gear.js';
 import { seat, helmet, hold, bones, aim } from './rider.js';
 import * as dhaka from './dhaka.js';
 import * as marks from './landmarks.js';
@@ -230,7 +230,9 @@ async function addVehicle(name, x, z, y = 0, parked = false) {
 
 // CNG drivers: at the wheel when it's moving; when it's parked, standing by it on the pavement or sitting in it.
 const CNG_FIT = { seat: [0, 0.66, 0.2], grip: [0.34, 0.88, 0.72], peg: [0.14, 0.34, 0.6], lean: 0.12 };
-const DRIVERS = (q.get('drivers') || 'justman,manuel,nathan,c_polom').split(',');
+const DRIVERS = (q.get('drivers') || 'd_striped').split(',');
+// Each uniform faded or washed a little differently.
+const SHIRTS = [[52, 84, 158], [44, 76, 150], [62, 96, 168], [56, 88, 150]], TROUSERS = [[82, 88, 120], [70, 74, 98], [96, 100, 122]];
 let driverN = 0;
 // Stand a figure upright with its arms hanging at its sides.
 function stand(rd) {
@@ -248,7 +250,9 @@ function stand(rd) {
   }
 }
 async function cngDriver(v, how, side = 1) {
-  const rd = await rider(DRIVERS[driverN++ % DRIVERS.length]);
+  const n = driverN++, rd = await rider(DRIVERS[n % DRIVERS.length]);
+  uniform(rd, SHIRTS[n % SHIRTS.length], TROUSERS[n % TROUSERS.length]);
+  rd.scale.multiplyScalar(0.96 + (n * 7 % 5) * 0.018);
   if (how === 'stand') {
     // On the pavement by the front wheel, facing the road.
     scene.add(rd); const dz = (driverN % 3 - 1) * 1.1; rd.position.set(v.position.x + side * (1.6 + (driverN % 2) * 0.5), 0.2, v.position.z + dz); rd.rotation.y = (side > 0 ? -Math.PI / 2 : Math.PI / 2) + side * (dz > 0 ? 0.7 : -0.5);

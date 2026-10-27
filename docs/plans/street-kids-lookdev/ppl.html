@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { rider } from './common.js';
 import { bones, aim } from './rider.js';
+import { uniform } from './gear.js';
 const q = new URLSearchParams(location.search), names = q.get('n').split(',');
 const W = innerWidth, H = innerHeight;
 const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(W, H); document.body.appendChild(r.domElement);
@@ -16,7 +17,7 @@ const cam = new THREE.PerspectiveCamera(30, W / H, 0.1, 100);
 const sp = 0.9;
 names.forEach((n, i) => document.getElementById('t').insertAdjacentHTML('beforeend', '<div>' + n + '</div>'));
 for (const [i, n] of names.entries()) {
-  const rd = await rider(n); scene.add(rd); rd.position.x = (i - (names.length - 1) / 2) * sp; rd.updateMatrixWorld(true);
+  const rd = await rider(n); if (q.get('uniform')) uniform(rd); scene.add(rd); rd.position.x = (i - (names.length - 1) / 2) * sp; rd.updateMatrixWorld(true);
   if (q.get('stand') !== '0') {
     const b = bones(rd), up = new THREE.Vector3(0, 1, 0), fwd = new THREE.Vector3(0, 0, 1), side = new THREE.Vector3(1, 0, 0);
     const at = o => o.getWorldPosition(new THREE.Vector3());
@@ -28,6 +29,6 @@ for (const [i, n] of names.entries()) {
   if (q.get('ry')) rd.rotation.y = +q.get('ry');
 }
 const span = names.length * sp;
-cam.position.set(0, 1.0, Math.max(span * 1.05, 4.2)); cam.lookAt(0, 0.92, 0);
+cam.position.set(0, 1.0, +(q.get('dist') || Math.max(span * 1.05, 4.2))); cam.lookAt(0, +(q.get('ly') || 0.92), 0);
 r.render(scene, cam); document.title = 'ok';
 </script></body></html>

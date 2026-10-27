@@ -262,19 +262,42 @@ export function ponytail(holder, gltf, tint) {
 }
 
 // Dye a garment: keep its texture's light and shade, change its colour.
-function recolor(m, rgb) {
+// Dye a garment: its brightness (folds and shading) kept, its colour replaced. `plain` blurs
+// a print or stripes away first and softens what's left, for a plain cloth.
+const dyed = new Map();   // one dyed material per garment and colour, shared by everyone wearing it
+function recolor(m, rgb, plain = 0) {
+  const key = m.material.uuid + '|' + rgb + '|' + plain;
+  if (dyed.has(key)) { m.material = dyed.get(key); return; }
   const img = m.material.map.image, W = img.width, H = img.height;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-  const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0);
+  const ctx = cv.getContext('2d');
+  if (plain) ctx.filter = 'blur(' + Math.round(W / 90) + 'px)';
+  ctx.drawImage(img, 0, 0); ctx.filter = 'none';
   const d = ctx.getImageData(0, 0, W, H), p = d.data;
   let sum = 0; for (let i = 0; i < p.length; i += 4) sum += Math.max(p[i], p[i + 1], p[i + 2]);
   const mean = sum / (p.length / 4) || 1;
   for (let i = 0; i < p.length; i += 4) {
-    const k = Math.max(p[i], p[i + 1], p[i + 2]) / mean;
+    let k = Math.max(p[i], p[i + 1], p[i + 2]) / mean;
+    if (plain) k = 1 + (k - 1) * plain;
     p[i] = rgb[0] * k; p[i + 1] = rgb[1] * k; p[i + 2] = rgb[2] * k;
   }
   ctx.putImageData(d, 0, 0);
   const t = new THREE.CanvasTexture(cv); t.flipY = m.material.map.flipY; t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = m.material.map.wrapS; t.wrapT = m.material.map.wrapT; t.channel = m.material.map.channel;
   m.material = m.material.clone(); m.material.map = t; m.material.needsUpdate = true;
+  dyed.set(key, m.material);
+}
+
+// A CNG driver's uniform: a plain blue long-sleeved shirt, grey-blue trousers, dark sandals' colour on the shoes.
+export function uniform(rd, shirt = [52, 84, 158], trousers = [82, 88, 120]) {
+  rd.traverse(m => {
+    if (!m.isMesh || !m.material.map) return;
+    const n = m.material.name || '';
+    if (/outfit_top/i.test(n)) recolor(m, shirt, 0.55);
+    else if (/outfit_bottom/i.test(n)) recolor(m, trousers, 0.5);
+    else if (/outfit_shoes/i.test(n)) recolor(m, [52, 40, 32], 0.6);
+    else return;
+    // Cotton, not satin.
+    m.material.roughness = Math.max(m.material.roughness, 0.85); m.material.metalness = 0;
+  });
 }
