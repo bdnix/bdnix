@@ -15,7 +15,7 @@ const env = await new RGBELoader().loadAsync('/ph/kloofendal_48d_partly_cloudy_p
 scene.add(new THREE.DirectionalLight(0xffffff, 2.5).translateX(2).translateY(4).translateZ(5));
 const cam = new THREE.PerspectiveCamera(30, W / H, 0.1, 100);
 const sp = 0.9;
-names.forEach((n, i) => document.getElementById('t').insertAdjacentHTML('beforeend', '<div>' + n + '</div>'));
+names.forEach((n) => { const d = document.createElement('div'); d.textContent = n; document.getElementById('t').appendChild(d); });
 for (const [i, n] of names.entries()) {
   const rd = await rider(n); if (q.get('uniform')) uniform(rd); scene.add(rd); rd.position.x = (i - (names.length - 1) / 2) * sp; rd.updateMatrixWorld(true);
   if (q.get('walk')) {
