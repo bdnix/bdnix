@@ -48,7 +48,7 @@ test('a new race: the player last on the grid on the race\'s bike, six rivals ah
 
 test('fifteen races, three at each of five levels, each its route and time of day, longer as they go', () => {
   same([1, 3, 4, 7, 10, 13, 15].map(F.levelOf), [1, 1, 2, 3, 4, 5, 5]);
-  same(F.LEVELS.map((l) => l.time), ['night', 'dawn', 'day', 'dusk', 'rush']);
+  same(F.LEVELS.map((l) => l.time), ['dawn', 'night', 'day', 'dusk', 'rush']);
   same(F.LEVELS.map((l) => l.raised), [null, null, 'bridge', 'flyover', 'expressway']);
   assert.ok(F.LEVELS.every((l, i) => !i || l.traffic > F.LEVELS[i - 1].traffic), 'busier as they go');
   same([1, 2, 3, 4, 13, 15].map(F.raceLength), [2000, 2400, 2800, 2300, 3200, 4000]);

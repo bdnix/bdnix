@@ -41,8 +41,8 @@
   // road is (0 to 1) and what of it is raised (a flyover, an expressway or
   // bridges over a lake).
   var LEVELS = [
-    { route: 'old',        time: 'night', traffic: 0.15, people: 0.15, raised: null },
-    { route: 'mirpur',     time: 'dawn',  traffic: 0.35, people: 0.45, raised: null },
+    { route: 'mirpur',     time: 'dawn',  traffic: 0.15, people: 0.15, raised: null },
+    { route: 'old',        time: 'night', traffic: 0.35, people: 0.45, raised: null },
     { route: 'lake',       time: 'day',   traffic: 0.55, people: 1,    raised: 'bridge' },
     { route: 'flyover',    time: 'dusk',  traffic: 0.85, people: 1.6,  raised: 'flyover' },
     { route: 'expressway', time: 'rush',  traffic: 1,    people: 1.8,  raised: 'expressway' }

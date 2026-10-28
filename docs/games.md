@@ -123,16 +123,18 @@ Each wall hides two multi-balls and one of each of the others. The seconds left 
 
 | Action | Keyboard | Touch |
 |---|---|---|
-| Steer | ← → (or A / D) | Drag sideways anywhere, as far as you want to turn |
-| Brake | ↓ (or S) | Flick down and hold |
-| Punch (or swing your weapon) | X (or J) | Tap |
-| Kick | Z (or K) | Flick up |
+| Steer | ← → (or A / D) | Drag sideways anywhere, as far as you want to turn, or (picked on the start card or in the garage) turn the phone like a handlebar |
+| Brake | ↓ (or S) | Hold the **Brake** button (bottom left) |
+| Punch (or swing your weapon) | X (or J) | The **Punch** button (bottom right) |
+| Kick | Z (or K) | The **Kick** button, beside it |
 | Camera: behind the bike or from the rider's seat | V | In the garage |
 | Pause | P / Esc | Tap the score, or leave the page |
 
+On a phone the buttons sit under the thumbs, and a finger anywhere else steers, so one thumb can steer while the other punches. Tilt steering takes straight ahead from however the phone is held when the race starts (an iPhone asks first whether the game may use its motion; refused, it steers by dragging). The first race of a career shows how to steer and, when a rival first comes alongside, how to punch.
+
 A motorbike race through Dhaka, in 3D, against six rivals: Kalu, Bablu, Mintu, Rocky, Tinku and Pinky. The game fills the whole screen, on a computer or a phone, and a phone can be held either way up. Everyone lines up on the grid, you at the back; a countdown (3, 2, 1, Go!) starts the race, and the bike speeds up on its own to its top speed, so the work is steering, braking and fighting. Bends pull a fast bike towards the outside, more on a bike that holds the road less well, so steer into them. Up on the footpath the bike can't go faster than 50 km/h, and the electricity poles and trees standing there throw you off it. So does riding into the back of the traffic: CNG auto-rickshaws, cars, buses and trucks, each driving on at its own pace in its lane, and CNGs waiting at the kerb for fares, their drivers beside them.
 
-Ride up beside a rival to fight. A punch is quick and reaches a short way; a kick reaches further, hits harder and shoves them across the road, but takes longer. The rival in reach shows their name, what they carry and their health at the top of the screen. Some rivals carry a weapon (a stick, a chain or nunchaku), and the keen ones pull alongside to use it on you. Knock a rival off their bike (100 points) and they're out of the race, and their weapon is yours: from then on a punch swings it. A crash drops it. A kick at a CNG beside you shoves it sideways out of its lane, its driver hanging on, and it rolls to a stop at the kerb; the keen rivals do it too. A car, a bus or a truck is too big to move: the kick bounces off.
+Ride up beside a rival to fight. A punch is quick and reaches a short way; a kick reaches further, hits harder and shoves them across the road, but takes longer. The rival in reach shows their name, what they carry and their health at the top of the screen, with an arrow to the side they're on; once they're close enough to hit, the Punch button pulses. A blow that lands flashes the screen and jolts the camera, and a knockout plays out in slow motion for a moment. Some rivals carry a weapon (a stick, a chain or nunchaku), and the keen ones pull alongside to use it on you. Knock a rival off their bike (100 points) and they're out of the race, and their weapon is yours: from then on a punch swings it. A crash drops it. A kick at a CNG beside you shoves it sideways out of its lane, its driver hanging on, and it rolls to a stop at the kerb; the keen rivals do it too. A car, a bus or a truck is too big to move: the kick bounces off.
 
 Your health is the bar at the bottom left. Rivals' blows and crashes take it away (a crash costs 20); when it runs out you're knocked out and the race is over. After a crash you're back on the bike in the road a couple of seconds later, while nothing can hit you. The panel at the top left shows your place (1 of 7 to 7 of 7), the race's points and how far there is to go, and your speed is at the bottom right.
 
@@ -150,15 +152,17 @@ There are fifteen races, three at each of five places and times of day, each lon
 
 | Races | Where | When | Traffic |
 |---|---|---|---|
-| 1 to 3 | Old Dhaka | After midnight, the street lamps lit | Almost none |
-| 4 to 6 | Mirpur Road | Dawn, in the mist | Light |
+| 1 to 3 | Mirpur Road | Dawn, in the mist | Almost none |
+| 4 to 6 | Old Dhaka | After midnight, the street lamps lit | Light |
 | 7 to 9 | Hatirjheel, beside the lake and over its bridges | Midday | Moderate |
 | 10 to 12 | Moghbazar, up over the flyover | Dusk | Heavy |
 | 13 to 15 | The elevated expressway | The morning rush | Jammed |
 
-**Start game** rides the career's next race: the first one open that you haven't yet placed in the top three of. The garage also picks the bike you ride (any you own), your rider (six, three men and three women, told apart by their helmets) and any open race, and has the settings: the camera, and how much the game draws (**Graphics**: high draws shadows and further ahead, low suits a phone; it takes effect the next time the page loads, and starts high on a computer and low on a phone). **Quick race** rides one race on any route and any bike: it scores, and keeps a best, but its points don't go to the career.
+**Start game** rides the career's next race: the first one open that you haven't yet placed in the top three of. The garage also picks the bike you ride (any you own), your rider (six, three men and three women, told apart by their helmets) and any open race, and has the settings: the camera, how to steer on a touchscreen, and how much the game draws (**Graphics**: high draws shadows and further ahead, low suits a weak machine; it takes effect the next time the page loads). Either way the game keeps itself smooth: if frames come slower than 50 a second it draws the picture a little coarser, a step at a time, and at its coarsest leaves out the shadows. Add `?fps` to the address to see the frame rate in the corner. **Quick race** rides one race on any route and any bike: it scores, and keeps a best, but its points don't go to the career.
 
-The city is real-looking, made of 3D artists' models and photographs: plastered concrete buildings with grilled windows, balconies and water tanks on the roofs, shops under Bangla signboards, tiled footpaths behind yellow and black kerbs, concrete poles strung with tangles of cable, mango and rain trees, mosques, people walking on the footpaths, and the sky for the time of day. Every rider wears a full-face helmet, sits on the bike with both hands closed round its grips, and leans into the bends. The view from the rider's seat (V) looks over the handlebars, both hands on the grips. The engines are heard too: your bike's in its own voice, its revs following the speed and dipping at each gear change, the rivals' as they pass, and the street's hum, CNGs' rattle, buses' and trucks' diesels and their horns, busiest at rush hour.
+The city is real-looking, made of 3D artists' models and photographs: plastered concrete buildings with grilled windows, balconies and water tanks on the roofs, shops under Bangla signboards, tiled footpaths behind yellow and black kerbs, concrete poles strung with tangles of cable, mango and rain trees, mosques, people walking on the footpaths, and the sky for the time of day. Every rider wears a full-face helmet, sits on the bike with both hands closed round its grips, and leans into the bends, further the faster they go; the front lifts as a bike pulls away hard. The camera rides low and close behind, widening its view and shuddering as the speed builds. The view from the rider's seat (V) looks over the handlebars, both hands on the grips. The engines are heard too: your bike's in its own voice, its revs following the speed and dipping at each gear change, the rivals' as they pass, the wind past the helmet and the tyres squealing in a hard lean, and the street's hum, CNGs' rattle, buses' and trucks' diesels and their horns, busiest at rush hour.
+
+The start card shows a picture of the street, so it opens at once; a race's city loads when it starts (the loading bar shows how far it's got), the riders and bikes near the camera in full detail and those further off lighter.
 
 The models' and textures' sources are credited in `apps/king-of-streets/models/CREDITS.md` and `apps/king-of-streets/textures/CREDITS.md` (see [Development](development.md#third-party-libraries)).
 

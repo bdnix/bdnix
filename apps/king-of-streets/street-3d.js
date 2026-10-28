@@ -130,6 +130,9 @@
   // colour: for figures only seen from afar (rivals out ahead, people on
   // the footpaths). Done once for each look (`key`) and shared; each copy
   // keeps its own skeleton. Left as it is if its meshes don't share one.
+  // The parts' positions are stored compressed, each part unpacked by its
+  // own skeleton's inverse bind matrices; merged, they're put in the
+  // first part's terms.
   var slims = {};
   function slim(rd, key){
     var meshes = [];
@@ -144,9 +147,11 @@
     var made = slims[key];
     if (!made) {
       var b = { mat: first.material, list: [], rough: 0, metal: 0, n: 0 };
+      var firstInv = first.skeleton.boneInverses[0].clone().invert();
       meshes.forEach(function(m){
         var colour = plainColour(m.material, true) || average(m.material.map || { uuid: 'none', image: null });
-        var g = clean(m.geometry, { start: 0, count: Infinity }, new T.Matrix4(), colour, true);
+        var to = firstInv.clone().multiply(m.skeleton.boneInverses[0]);
+        var g = clean(m.geometry, { start: 0, count: Infinity }, to, colour, true);
         b.list.push(g); b.rough += m.material.roughness; b.metal += m.material.metalness; b.n++;
       });
       made = slims[key] = { geometry: mergeGeometries(b.list, false), material: plainMaterial(b) };
@@ -227,7 +232,7 @@
   // The sky, how much it lights the scene, the sun, the haze, the exposure
   // and whether the street lamps are lit (0 to 1).
   var TIMES = {
-    night: { sky: 'qwantani_night', env: 0.12, bg: 0.1, sun: [0x9fb4ff, 0.18], sunAt: [-20, 40, 30], fog: [0x0d1018, 25, 230], exp: 1.15, lit: 1, clock: '02:00' },
+    night: { sky: 'qwantani_night', env: 0.35, bg: 0.18, sun: [0xb4c4ff, 0.5], sunAt: [-20, 40, 30], fog: [0x1a2030, 30, 230], exp: 1.5, lit: 1, clock: '02:00' },
     dawn: { sky: 'kloofendal_misty_morning', env: 0.75, bg: 1, sun: [0xffc08a, 1.5], sunAt: [-25, 9, 90], fog: [0xd6d3cb, 12, 170], exp: 0.95, lit: 0, clock: '05:30' },
     day: { sky: 'kloofendal_48d_partly_cloudy', env: 0.9, bg: 1, sun: [0xfff1dc, 3.2], sunAt: [-30, 60, -10], fog: [0xcdc6b5, 40, 300], exp: 0.9, lit: 0, clock: '13:10' },
     rush: { sky: 'kloofendal_48d_partly_cloudy', env: 0.85, bg: 1, sun: [0xffeccc, 2.8], sunAt: [-40, 35, 40], fog: [0xc9bea8, 22, 230], exp: 0.92, lit: 0, clock: '09:00' },
@@ -264,8 +269,7 @@
   // People on the footpaths, and how much to darken those who need it.
   var PEOPLE = [{ n: 'p_man_lo' }, { n: 'p_teen_lo' }, { n: 'p_shirt_lo' }, { n: 'd_pattern_lo' }, { n: 'd_striped_lo' }, { n: 'p_old', own: true }, { n: 'c_teew_lo', tone: true }, { n: 'c_hoodiew_lo', tone: true }];
   var TONES = [[0.62, 0.5, 0.42], [0.55, 0.43, 0.36], [0.7, 0.57, 0.48]];
-  var NEAR = 22;          // metres from the camera within which the detailed models are drawn
-  var NEAR_RACER = { high: 45, low: 25 };   // for racers, who are fewer and looked at more
+  var NEAR_RACER = { high: 22, low: 16 };   // metres from the camera within which racers are drawn detailed
 
   // ---------- The view ----------
   // Starts the 3D view on `canvas`. opts: { quality: 'high' or 'low' }.
@@ -278,8 +282,12 @@
     this.mods = mods;
     this.q = opts.quality === 'low' ? 'low' : 'high';
     this.Q = S.QUALITY[this.q];
-    var r = this.renderer = new T.WebGLRenderer({ canvas: canvas, antialias: this.q === 'high', powerPreference: 'high-performance' });
-    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.Q.pixels));
+    var r = this.renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
+    // As sharp as the screen, up to the quality's most; coarser if frames run slow (pace()).
+    this.most = Math.min(window.devicePixelRatio || 1, this.Q.pixels);
+    this.pixels = this.most;
+    this.paced = { from: 0, frames: 0 };
+    r.setPixelRatio(this.pixels);
     r.outputColorSpace = T.SRGBColorSpace;
     r.toneMapping = T.ACESFilmicToneMapping;
     r.shadowMap.enabled = this.Q.shadows;
@@ -298,8 +306,8 @@
   }
 
   // Readies a race: the world (from bdnixStreet.create) and opts
-  // { character: 0 to 5 }. Resolves once everything the first frame needs
-  // has loaded; the detailed models of the others follow.
+  // { character: 0 to 5 }. Resolves once everything the race shows has
+  // loaded, so nothing swaps in once it's under way.
   View.prototype.race = function(w, opts){
     var self = this, L = F.level(w.race), time = TIMES[L.time];
     this.clear();
@@ -311,13 +319,14 @@
     var scene = this.scene = new T.Scene();
     scene.fog = new T.Fog(time.fog[0], time.fog[1], Math.min(time.fog[2], this.Q.ahead));
     var sun = this.sun = new T.DirectionalLight(time.sun[0], time.sun[1]);
-    sun.castShadow = this.Q.shadows;
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.castShadow = this.shadows = this.Q.shadows && this.shadows !== false;
+    var map = matchMedia('(pointer: coarse)').matches ? 1024 : 2048;
+    sun.shadow.mapSize.set(map, map);
     var sc = sun.shadow.camera;
     sc.left = -30; sc.right = 30; sc.top = 40; sc.bottom = -40; sc.near = 1; sc.far = 260;
     sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
     scene.add(sun, sun.target);
-    if (time.lit) scene.add(new T.HemisphereLight(0x2a3346, 0x4a3420, 0.9 * time.lit));
+    if (time.lit) scene.add(new T.HemisphereLight(0x3a4560, 0x5a4428, 1.6 * time.lit));
     this.renderer.toneMappingExposure = time.exp;
 
     var tex = function(name, srgb){
@@ -333,12 +342,17 @@
 
     var rivals = cast(this.me), bikes = {}, needs = [];
     w.rivals.forEach(function(o){ bikes[F.BIKES[o.bike - 1].id] = 1; });
-    var mine = F.BIKES[w.bike - 1].id, myRider = CHARACTERS[this.me].id;
-    for (var b in bikes) needs.push(b + '_lo');
-    CHARACTERS.forEach(function(c){ needs.push(c.id + '_lo'); });
-    needs.push(mine, myRider, 'fullface', 'fullface_lo', 'cng_lo', 'corolla_lo', 'yaris_lo', 'b_viking_lo', 't_al_lo', 't_bd_lo', 'd_striped_lo', 'p_pole2', 'p_shutter', 'x_front_lo', 'x_crates_lo', 'p_ac_lo', 'tr_mango_lo', 'tr_rain_lo', 'q_masjid', 'q_lalbagh', 'bat', 'nunchaku_lo');
+    var mine = F.BIKES[w.bike - 1].id;
+    bikes[mine] = 1;
+    for (var b in bikes) needs.push(b, b + '_lo');
+    rivals.concat([this.me]).forEach(function(i){ needs.push(CHARACTERS[i].id, CHARACTERS[i].id + '_lo'); });
+    needs.push('fullface', 'fullface_lo', 'cng_lo', 'corolla_lo', 'yaris_lo', 'b_viking_lo', 't_al_lo', 't_bd_lo', 'd_striped_lo', 'p_pole2', 'p_shutter', 'x_front_lo', 'x_crates_lo', 'p_ac_lo', 'tr_mango_lo', 'tr_rain_lo', 'q_masjid', 'q_lalbagh', 'bat', 'nunchaku_lo');
     var poses = this.poses || fetch(BASE + 'data/poses.json').then(function(r){ return r.json(); });
-    return Promise.all([sky, font, poses, Promise.all([img('plastered_wall_04_diff'), img('worn_plaster_wall_diff'), img('concrete_pavement_diff')])].concat(needs.map(gltf))).then(function(got){
+    // How much has loaded (0 to 1), for the loading bar.
+    var jobs = [sky, font, poses, Promise.all([img('plastered_wall_04_diff'), img('worn_plaster_wall_diff'), img('concrete_pavement_diff')])].concat(needs.map(gltf)), done = 0;
+    this.progress = 0;
+    jobs.forEach(function(j){ Promise.resolve(j).then(function(){ if (self.w === w) self.progress = ++done / (jobs.length + 1); }, function(){}); });
+    return Promise.all(jobs).then(function(got){
       if (self.w !== w) return;
       self.poses = got[2];
       var hdr = got[0];
@@ -369,22 +383,13 @@
     }).then(function(){
       if (self.w !== w) return;
       self.frame(w, 0);
-      self.more = Object.keys(bikes).concat(rivals.map(function(i){ return CHARACTERS[i].id; }), ['cng', 'corolla', 'yaris', 'b_viking', 't_al', 't_bd', 'd_striped']);
+      self.progress = 1;
     });
-  };
-  // The detailed models of the others, for when they come close: fetched
-  // once the race is on (street.js calls it), not while a card shows.
-  View.prototype.detailed = function(){
-    var self = this, w = this.w;
-    if (!this.more || this.later) return;
-    this.later = Promise.all(this.more.map(gltf)).then(function(){
-      if (self.w === w) self.upgrade();
-    }, function(){});
   };
 
   // ---------- Racers ----------
   // A racer: a bike with its rider, helmet and weapon, as two sets, detailed
-  // (hi) and plain (lo); only the player's starts detailed.
+  // (hi), drawn near the camera, and lighter (lo), drawn further off.
   View.prototype.cast = function(rivals){
     var self = this, w = this.w, jobs = [];
     var all = [{ me: true, bike: F.BIKES[w.bike - 1].id, ch: this.me, helmet: CHARACTERS[this.me].helmet }].concat(w.rivals.map(function(o, i){
@@ -395,8 +400,7 @@
       self.scene.add(g);
       var racer = { i: i, d: d, group: g, sets: {}, roll: 0, yaw: 0, fall: 0, x: 0, weapon: null };
       self.racers.push(racer);
-      jobs.push(self.rig(racer, 'lo'));
-      if (d.me) jobs.push(self.rig(racer, 'hi'));
+      jobs.push(self.rig(racer, 'lo'), self.rig(racer, 'hi'));
     });
     return Promise.all(jobs);
   };
@@ -404,7 +408,7 @@
   View.prototype.rig = function(racer, level){
     var self = this, d = racer.d, ch = CHARACTERS[d.ch], sfx = level === 'lo' ? '_lo' : '';
     return Promise.all([
-      solid(d.bike + sfx, { fix: self.poses[d.bike], hide: /ground/i }),
+      solid(d.bike + sfx, { fix: self.poses[d.bike], hide: /ground/i, keep: true }),
       figure(ch.id + sfx, { len: 1, by: 'height' }),
       solid('fullface' + sfx, { len: 1 }, d.helmet, function(h){ R.paintHelmet(h, d.helmet); })
     ]).then(function(m){
@@ -414,6 +418,8 @@
       if (ch.top) rd.traverse(function(n){ if (n.isMesh && /outfit_top|shirt|top/i.test(n.material.name) && n.material.map) R.recolor(n, ch.top, 0); });
       bike.add(rd);
       R.pose(rd, self.poses[d.bike + ':' + ch.id]);
+      // Further off, a rider is one mesh in plain colours.
+      if (level === 'lo') slim(rd, ch.id + '_lo');
       var b = R.bones(rd);
       R.helmet(b, hm, ch.sex === 'f' ? 0.29 : 0.31, new T.Vector3(0, 0, 1));
       var set = { bike: bike, rider: rd, bones: b, rest: R.rest(b), helmet: hm, weapon: null, held: null };
@@ -425,12 +431,6 @@
       if (level === 'hi' && racer.sets.lo) racer.sets.lo.bike.visible = false;
       racer.group.add(bike);
     });
-  };
-  // Swaps in the detailed models, now loaded, for the others.
-  View.prototype.upgrade = function(){
-    var self = this;
-    this.racers.forEach(function(r){ if (!r.sets.hi) self.rig(r, 'hi'); });
-    this.upgraded = true;
   };
   // Puts a weapon in a rider's right hand, or takes it away.
   View.prototype.arm = function(racer, set, weapon){
@@ -475,7 +475,27 @@
     var at = S.place(this.P, p.z, p.x), t = this.time;
     this.sun.target.position.set(at.x, at.y, at.z);
     this.sun.position.set(at.x + t.sunAt[0], at.y + t.sunAt[1], at.z + t.sunAt[2]);
-    if (G3.draw) this.renderer.render(this.scene, this.camera);
+    if (G3.draw) {
+      this.renderer.render(this.scene, this.camera);
+      if (dt > 0) this.pace();
+    }
+  };
+  // Every two seconds of racing, how long frames took: if they ran slow, the
+  // picture is drawn coarser, and at its coarsest the shadows go.
+  View.prototype.pace = function(){
+    var now = performance.now(), P = this.paced;
+    if (!P.from || now - P.last > 250) { P.from = now; P.frames = 0; }
+    P.last = now;
+    if (++P.frames < 30 || now - P.from < 2000) return;
+    var next = S.sharpness(this.pixels, this.most, (now - P.from) / P.frames);
+    P.from = now; P.frames = 0;
+    if (!next.shadows && this.shadows) this.shadows = this.sun.castShadow = false;
+    if (next.pixels !== this.pixels) {
+      this.pixels = next.pixels;
+      this.renderer.setPixelRatio(next.pixels);
+      var size = this.renderer.getSize(new T.Vector2());
+      this.renderer.setSize(size.x, size.y, false);
+    }
   };
 
   // Builds the chunks of road the camera can see, and lets go of those behind.
@@ -496,19 +516,23 @@
     }
   };
 
-  // One racer: where they are, leaning into their steering, falling when
+  // One racer: where they are, leaning into their steering (further the
+  // faster they go), the front lifting as they pull away hard, falling when
   // they crash, and the move they're making.
   View.prototype.ride = function(racer, o, down, dt){
     if (!racer) return;
     var at = S.place(this.P, o.z, o.x), g = racer.group;
-    var steer = dt > 0 ? (o.x - racer.x) / dt : 0;
-    racer.x = o.x;
+    var steer = dt > 0 ? (o.x - racer.x) / dt : 0, pull = dt > 0 ? (o.speed - (racer.speed || 0)) / dt : 0;
+    racer.x = o.x; racer.speed = o.speed;
     var lean = racer.i === 0 ? o.lean || 0 : Math.max(-1, Math.min(1, steer / 5));
-    racer.roll += (lean * 0.32 - racer.roll) * Math.min(1, dt * 8);
+    racer.roll += (lean * (0.22 + 0.4 * Math.min(1, o.speed / 25)) - racer.roll) * Math.min(1, dt * 7);
+    racer.lift = racer.lift || 0;
+    racer.lift += ((!down && o.speed < 14 && pull > 3 ? Math.min(0.16, pull / 45) : 0) - racer.lift) * Math.min(1, dt * 5);
     racer.fall = down ? Math.min(1, racer.fall + dt * 3) : Math.max(0, racer.fall - dt * 2);
-    g.position.set(at.x, at.y + 0.02, at.z);
+    g.position.set(at.x, at.y + 0.02 + Math.sin(racer.lift) * 0.7, at.z);
     g.rotation.set(0, at.heading - lean * 0.06, 0);
     g.rotateZ(racer.roll + racer.fall * 1.35 * (o.x < 0 ? 1 : -1));
+    g.rotateX(-racer.lift);
     var near = racer.i === 0 || (this.camAt && this.camAt.distanceTo(g.position) < NEAR_RACER[this.q]);
     var hi = racer.sets.hi, lo = racer.sets.lo, set = hi && (near || !lo) ? hi : lo;
     if (hi) hi.bike.visible = set === hi;
@@ -536,31 +560,24 @@
       var at = S.place(self.P, c.z, c.x), s = w.shoved[c.id];
       car.group.position.set(at.x, at.y + 0.02, at.z);
       car.group.rotation.set(0, at.heading + (s ? s.vx * 0.05 : 0), 0);
-      var near = self.camAt && self.camAt.distanceTo(car.group.position) < NEAR;
-      if (car.hi) { car.hi.visible = near; car.lo.visible = !near; }
-      else if (near && self.upgraded && !car.asked) { car.asked = true; self.detail(car); }
     });
     for (var id in this.cars) if (!seen[id]) { this.scene.remove(this.cars[id].group); delete this.cars[id]; }
   };
-  // A vehicle's models: plain now, detailed once loaded and close.
+  // A vehicle: its model (already loaded with the race), and a CNG's driver.
   View.prototype.car = function(c){
     var v = F.traffic(this.w.race)[c.id], kinds = VEHICLES[v.kind], kind = kinds[v.tint % kinds.length];
-    var car = { group: new T.Group(), kind: kind, v: v, lo: null, hi: null };
+    var car = { group: new T.Group(), kind: kind, v: v };
     this.cars[c.id] = car;
     this.scene.add(car.group);
     var self = this;
-    this.vehicle(kind, v, '_lo').then(function(o){ car.lo = o; car.group.add(o); if (car.hi) o.visible = false; });
+    this.vehicle(kind, v).then(function(o){ car.group.add(o); });
     if (v.kind === 'cng') this.driver(car, v);
     void self;
     return car;
   };
-  View.prototype.detail = function(car){
-    var self = this;
-    this.vehicle(car.kind, car.v, '').then(function(o){ if (!self.cars[car.v.id]) return; car.hi = o; car.group.add(o); });
-  };
-  View.prototype.vehicle = function(kind, v, sfx){
-    var self = this, opts = kind.fix ? { fix: this.poses[kind.fix] } : { len: kind.len }, lit = !!(this.time.lit || this.level.traffic >= 1);
-    return solid(kind.name + sfx, opts, (v.kind === 'car' ? v.tint % CAR_PAINT.length : '') + (lit ? 'lit' : ''), function(o){
+  View.prototype.vehicle = function(kind, v){
+    var self = this, opts = kind.fix ? { fix: this.poses[kind.fix], keep: true } : { len: kind.len, keep: true }, lit = !!(this.time.lit || this.level.traffic >= 1);
+    return solid(kind.name + '_lo', opts, (v.kind === 'car' ? v.tint % CAR_PAINT.length : '') + (lit ? 'lit' : ''), function(o){
       o.traverse(function(m){
         if (!m.isMesh) return;
         var n = m.material.name || '';
@@ -687,16 +704,28 @@
       cam.updateProjectionMatrix();
     } else {
       this.clip.forEach(function(c){ c.normal.set(0, 1, 0); c.constant = 1e6; });
-      var c = S.chase(this.P, p.z, p.x, tall), to = new T.Vector3(c.to.x, c.to.y, c.to.z), from = new T.Vector3(c.from.x, c.from.y, c.from.z);
-      if (!this.look || k === 1) { this.look = to.clone(); cam.position.copy(from); }
-      else { cam.position.lerp(from, k); this.look.lerp(to, k); }
+      var fast = p.speed / F.BIKES[w.bike - 1].top;
+      var c = S.chase(this.P, p.z, p.x, tall, fast, size.x / Math.max(1, size.y)), at = S.place(this.P, p.z, p.x), mine = new T.Vector3(at.x, at.y, at.z);
+      // Eased as the bike moves about, not as it goes along: smoothing where
+      // the camera is would leave it further behind the faster the bike goes.
+      var to = new T.Vector3(c.to.x, c.to.y, c.to.z).sub(mine), from = new T.Vector3(c.from.x, c.from.y, c.from.z).sub(mine);
+      if (!this.look || k === 1) { this.look = to.clone(); this.seat = from.clone(); cam.fov = c.fov; }
+      else { this.seat.lerp(from, k); this.look.lerp(to, k); cam.fov += (c.fov - cam.fov) * Math.min(1, dt * 3); }
+      // A shudder flat out, and a jolt when the player is hit or crashes.
+      this.jolted = Math.max(0, (this.jolted || 0) - dt * 2.5);
+      var shake = 0.01 * fast * fast + 0.12 * this.jolted * this.jolted, t = this.clock;
+      cam.position.set(mine.x + this.seat.x + Math.sin(t * 41) * shake, mine.y + this.seat.y + Math.sin(t * 33 + 1) * shake, mine.z + this.seat.z);
       cam.near = 0.1;
-      cam.fov = tall ? 70 : 58;
-      cam.lookAt(this.look);
+      cam.up.set(0, 1, 0);
+      cam.lookAt(this.look.clone().add(mine));
+      // The view leans a little with the bike.
+      if (this.racers[0]) cam.rotateZ(-this.racers[0].roll * 0.3);
       cam.updateProjectionMatrix();
     }
     this.camAt = cam.position;
   };
+  // Shakes the chase camera: `amount` 0 to 1.
+  View.prototype.jolt = function(amount){ this.jolted = Math.max(this.jolted || 0, amount); };
   View.prototype.resize = function(w, h){
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
@@ -710,7 +739,7 @@
     return {
       chunks: count(this.chunks), racers: this.racers.filter(function(r){ return r.sets.lo || r.sets.hi; }).length,
       cars: count(this.cars), people: count(this.walkers), calls: this.renderer.info.render.calls, triangles: this.renderer.info.render.triangles,
-      mode: this.mode, quality: this.q
+      mode: this.mode, quality: this.q, pixels: this.pixels, shadows: !!this.shadows
     };
   };
 
@@ -718,7 +747,7 @@
   View.prototype.clear = function(){
     for (var c in this.chunks) this.chunks[c].dispose();
     this.chunks = {}; this.racers = []; this.cars = {}; this.walkers = {}; this.look = null; this.clock = 0;
-    this.scene = null; this.w = null; this.upgraded = false; this.more = null; this.later = null;
+    this.scene = null; this.w = null;
   };
 
   // `current`: the view last started. `draw`: whether frames are drawn. Everything else about them (the road

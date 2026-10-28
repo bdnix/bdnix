@@ -34,13 +34,18 @@
         <div><span class="label">To go</span><b id="togo">–</b></div>
       </section>
       <div class="hud" id="hud" hidden>
-        <div class="foe panel" id="foe" hidden><span id="foeName"></span><span class="bar-track"><i id="foeHealth"></i></span></div>
+        <div class="foe panel" id="foe" hidden><b class="side" id="foeSide" aria-hidden="true"></b><span id="foeName"></span><span class="bar-track"><i id="foeHealth"></i></span><span class="hint only-keys"><kbd>X</kbd> punch · <kbd>Z</kbd> kick</span></div>
         <div class="me panel"><span class="label">Health</span><span class="bar-track"><i id="health"></i></span><span class="weapon" id="weapon" hidden></span></div>
         <div class="speed panel"><b id="speed">0</b><span class="label">km/h</span></div>
         <p class="count" id="count" aria-live="polite"></p>
         <p class="msg" id="msg" aria-live="polite"></p>
+        <div class="pads" id="pads">
+          <button type="button" class="pad brake" id="brakeBtn">Brake</button>
+          <button type="button" class="pad kick" id="kickBtn">Kick</button>
+          <button type="button" class="pad punch" id="punchBtn">Punch</button>
+        </div>
       </div>
-      <p class="loading" id="loading" hidden><i></i><span>Loading the city…</span></p>
+      <p class="loading" id="loading" hidden><i></i><span>Loading the city…</span><b id="loadPct"></b></p>
 
       <div id="overlay" class="overlay">
         <p class="label" id="ovKicker">bdnix arcade</p>
@@ -54,11 +59,15 @@
           <button type="button" id="quickBtn" class="btn btn-ghost">Quick race</button>
         </div>
         <p class="keys only-keys"><kbd>←</kbd><kbd>→</kbd> steer · <kbd>↓</kbd> brake · <kbd>X</kbd> punch · <kbd>Z</kbd> kick · <kbd>V</kbd> view · <kbd>P</kbd> pause</p>
+        <div class="steer-pick only-touch" role="radiogroup" aria-label="Steering" id="steerPick">
+          <button type="button" role="radio" aria-checked="true" data-steer="drag">Drag to steer</button>
+          <button type="button" role="radio" aria-checked="false" data-steer="tilt">Tilt to steer</button>
+        </div>
         <ul class="gestures" aria-label="Touch controls">
-          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg><b>Steer</b><span>drag</span></li>
-          <li><i class="tap"></i><b>Punch</b><span>tap</span></li>
-          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V5M6 11l6-6 6 6"/></svg><b>Kick</b><span>flick</span></li>
-          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v16M6 13l6 6 6-6"/></svg><b>Brake</b><span>flick</span></li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg><b>Steer</b><span id="steerHow">drag</span></li>
+          <li><i class="tap"></i><b>Punch</b><span>button</span></li>
+          <li><i class="tap"></i><b>Kick</b><span>button</span></li>
+          <li><i class="tap"></i><b>Brake</b><span>button</span></li>
         </ul>
         <p class="keys only-touch">Tap the score to pause.</p>
         <p class="credit">Inspired by Road Rash, created by Electronic Arts in 1991. Road Rash is a trademark of its owner; bdnix isn’t affiliated with or endorsed by them.</p>
@@ -77,6 +86,7 @@
         <h2>Settings</h2>
         <div class="ov-actions">
           <button type="button" id="viewBtn" class="btn btn-ghost">Camera: behind</button>
+          <button type="button" id="steerBtn" class="btn btn-ghost only-touch">Steering: drag</button>
           <button type="button" id="qualityBtn" class="btn btn-ghost">Graphics: high</button>
         </div>
         <div class="ov-actions">

@@ -28,6 +28,10 @@ test('in Bangla: the garage, a quick race, the race and its result', async ({ pa
   await expect(page.locator('#garagePoints')).toHaveText('৫০০০ পয়েন্ট');
   await expect(page.locator('.bikes li').nth(2)).toContainText('সর্বোচ্চ গতি ১৩৫ কিমি/ঘণ্টা');
   await page.locator('#viewBtn').click();
+  if (await page.locator('#steerBtn').isVisible()) {
+    await page.locator('#steerBtn').click();
+    await expect(page.locator('#steerBtn')).toHaveText('স্টিয়ারিং: কাত করে');
+  }
   await expectTranslated(page, 'bn');
   await page.getByRole('button', { name: 'হয়ে গেছে' }).click();
   await page.getByRole('button', { name: 'ঝটপট রেস' }).click();
@@ -54,7 +58,7 @@ test('in Bangla: a knockout, a weapon taken and the race won', async ({ page }) 
   await page.keyboard.press('KeyX');
   await page.clock.runFor(400);
   await expect(page.locator('#msg')).toHaveText('বাবলু পড়ে গেছে! আপনি লাঠি কেড়ে নিলেন।');
-  await page.clock.runFor(4500);
+  await page.clock.runFor(5500);
   await expect(page.locator('#ovTitle')).toHaveText('১ম স্থান');
   await expectTranslated(page, 'bn');
 });

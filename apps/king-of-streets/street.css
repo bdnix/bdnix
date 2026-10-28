@@ -4,8 +4,9 @@
 body.street{background:#05060a}
 .street .bar{position:fixed;top:0;left:0;right:0;z-index:5;padding:10px max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left));background:linear-gradient(rgba(5,6,10,.55),rgba(5,6,10,0))}
 .street .game{position:fixed;inset:0;z-index:1;cursor:default;touch-action:none}
-.street .board-wrap{position:absolute;inset:0;line-height:1.45}
-.street #board{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:0;box-shadow:none;background:#0b0e14}
+/* Before a race: a picture of the street, not the city itself, so the card opens at once. */
+.street .board-wrap{position:absolute;inset:0;line-height:1.45;background:#0b0e14 url("/assets/street/textures/card.webp") center/cover no-repeat}
+.street #board{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:0;box-shadow:none}
 
 /* The score panel: tapping it pauses. */
 .street .stats{
@@ -32,12 +33,59 @@ body.street{background:#05060a}
 .hud .count,.hud .msg{position:absolute;left:0;right:0;margin:0;text-align:center;text-shadow:0 2px 12px rgba(0,0,0,.7)}
 .hud .count{top:30%;font:800 clamp(64px,14vw,120px)/1 var(--sans,inherit);color:#facc15}
 .hud .msg{top:22%;font:800 clamp(22px,4.4vw,36px)/1.2 var(--sans,inherit);padding:0 16px}
+/* The rival in reach: which side they're on, and (with keys) how to hit them. */
+.hud .foe .side{position:absolute;top:50%;transform:translateY(-50%);font-size:22px;color:#ff7a5c}
+.hud .foe .side.left{left:-26px}
+.hud .foe .side.left::before{content:"◀"}
+.hud .foe .side.right{right:-26px}
+.hud .foe .side.right::before{content:"▶"}
+.hud .foe .hint{display:block;margin-top:5px;font:600 11px/1 var(--mono);color:var(--muted)}
+.hud .foe kbd{display:inline-block;min-width:18px;padding:1px 4px;border:1px solid rgba(255,255,255,.3);border-bottom-width:2px;border-radius:4px;color:var(--fg)}
+
+/* On a touchscreen: the buttons, under the thumbs. Brake on the left (the
+   other thumb steers anywhere on the screen, or the phone is tilted),
+   punch and kick on the right. */
+.pads{display:none}
+@media (pointer:coarse){
+  .pads{display:block}
+  .pad{
+    position:absolute;z-index:3;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+    display:grid;place-items:center;border-radius:50%;padding:0;
+    font:800 13px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#fff;
+    border:2px solid rgba(255,255,255,.55);background:rgba(10,14,22,.45);
+    box-shadow:0 2px 14px rgba(0,0,0,.35);
+  }
+  .pad.down{background:rgba(255,255,255,.3)}
+  .pad.punch{width:92px;height:92px;right:max(18px,env(safe-area-inset-right));bottom:calc(84px + env(safe-area-inset-bottom));border-color:#ff7a5c}
+  .pad.kick{width:70px;height:70px;right:calc(max(18px,env(safe-area-inset-right)) + 104px);bottom:calc(70px + env(safe-area-inset-bottom));border-color:#facc15}
+  .pad.brake{width:70px;height:70px;left:max(18px,env(safe-area-inset-left));bottom:calc(84px + env(safe-area-inset-bottom))}
+  /* A rival in reach: the punch button calls for a press. */
+  .pad.ready{animation:ready .7s ease-in-out infinite alternate;background:rgba(255,90,60,.45)}
+  .hud .me{bottom:calc(14px + env(safe-area-inset-bottom))}
+}
+@keyframes ready{to{transform:scale(1.1);box-shadow:0 0 0 10px rgba(255,90,60,.25)}}
+@media (prefers-reduced-motion:reduce){.pad.ready{animation:none}}
+
+/* How to steer by touch: drag or tilt. */
+.steer-pick{margin:4px 0 0}
+.steer-pick button{
+  min-height:36px;margin:0 3px;padding:6px 14px;border-radius:10px;
+  border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:var(--fg);font:inherit;font-size:13px;cursor:pointer;
+}
+
+/* ?fps: the frame rate, in the corner. */
+.fps{position:absolute;z-index:6;right:max(8px,env(safe-area-inset-right));top:50px;margin:0;padding:3px 8px;border-radius:6px;background:rgba(0,0,0,.6);color:#9effa0;font:600 11px/1.3 var(--mono);pointer-events:none}
+
+/* Hit: the screen flashes white. */
+.game.struck::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:rgba(255,255,255,.22);animation:hurt .18s ease-out forwards}
+
 /* Hurt: the screen's edges flash red. */
 .game.hurt::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;box-shadow:inset 0 0 120px 30px rgba(255,40,40,.55);animation:hurt .4s ease-out forwards}
 @keyframes hurt{to{opacity:0}}
 
 .loading{position:absolute;left:50%;bottom:22%;z-index:2;transform:translateX(-50%);display:flex;align-items:center;gap:10px;margin:0;padding:10px 16px;border-radius:999px;background:rgba(10,14,22,.72);color:var(--muted);font-size:14px}
 .loading[hidden]{display:none}
+.loading b{min-width:3.2em;font:600 14px/1 var(--mono);color:var(--fg);text-align:right}
 .loading i{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.2);border-top-color:var(--cyan);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 

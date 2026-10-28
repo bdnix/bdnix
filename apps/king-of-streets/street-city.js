@@ -523,7 +523,9 @@
       group.add(sp);
     });
     B.meshes(group, q !== 'low');
-    for (var name in inst) if (inst[name].length) instance(group, MODELS[name], inst[name], q !== 'low');
+    // The shops' fronts and the air conditioners are small and many: they
+    // take shadows, but cast none.
+    for (var name in inst) if (inst[name].length) instance(group, MODELS[name], inst[name], q !== 'low', !/^(crates|front|ac)$/.test(name));
     return { group: group, lamps: lamps, dispose: function(){ dispose(group); } };
   }
   // Lane lines: dashes between the lanes, solid lines along the edges.
@@ -554,11 +556,11 @@
     place(kind ? 'lalbagh' : 'masjid', new T.Matrix4().multiplyMatrices(fm, new T.Matrix4().makeTranslation(w / 2, 0, -12)));
   }
   // One instanced mesh for each part of a model, at each of `matrices`.
-  function instance(group, list, matrices, shadows){
+  function instance(group, list, matrices, shadows, cast){
     list.forEach(function(p){
       var m = new T.InstancedMesh(p.geometry, p.material, matrices.length);
       matrices.forEach(function(x, i){ m.setMatrixAt(i, x); });
-      m.castShadow = shadows; m.receiveShadow = shadows;
+      m.castShadow = shadows && cast; m.receiveShadow = shadows;
       m.computeBoundingSphere();
       group.add(m);
     });

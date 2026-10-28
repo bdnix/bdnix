@@ -64,13 +64,21 @@
   }
 
   // ---------- The camera ----------
-  // Where the chase camera sits for a rider at (z, x) and what it looks at:
-  // behind and above them, along the road, so it follows the bends. A tall
-  // screen sits it closer and higher, so the rider fills the narrow view.
-  function chase(P, z, x, tall){
-    var back = tall ? 3.6 : 4.4, up = tall ? 2.1 : 1.9, ahead = 10;
-    var from = place(P, z - back, x * 0.85), to = place(P, z + ahead, x * 0.6);
-    return { from: { x: from.x, y: from.y + up, z: from.z }, to: { x: to.x, y: to.y + 0.9, z: to.z } };
+  // Where the chase camera sits for a rider at (z, x) and what it looks at,
+  // and how wide it sees (degrees, up and down): low behind them and close,
+  // looking along the road so it follows the bends. `fast` (0 standing to 1
+  // flat out) draws it back a little and widens the view, so speed shows. A
+  // tall screen sits it closer and higher, so the rider fills the narrow view;
+  // a very wide one (`aspect`, width over height: a phone on its side) sees
+  // no more than 96 degrees across (106 flat out), so the bike isn't lost
+  // in the middle of it.
+  function chase(P, z, x, tall, fast, aspect){
+    fast = Math.max(0, Math.min(1, fast || 0));
+    var back = (tall ? 2.9 : 3.3) + fast * 0.5, up = tall ? 1.55 : 1.4, ahead = 12;
+    var from = place(P, z - back, x * 0.9), to = place(P, z + ahead, x * 0.7);
+    var fov = (tall ? 70 : 56) + fast * (tall ? 10 : 16), across = (96 + 10 * fast) * Math.PI / 360;
+    if (aspect) fov = Math.min(fov, Math.atan(Math.tan(across) / aspect) * 360 / Math.PI);
+    return { from: { x: from.x, y: from.y + up, z: from.z }, to: { x: to.x, y: to.y + 0.7, z: to.z }, fov: fov };
   }
 
   // The rider's own view, from inside the helmet: in the bike's frame (x to
@@ -149,20 +157,62 @@
   }
 
   // ---------- Graphics quality ----------
-  // How much to draw: 'high' on a computer with a good screen, 'low' on a
-  // phone or a weak machine. Shadows, the people on the footpaths, how far
-  // ahead the road is built and how sharp the picture is follow from it.
+  // How much to draw: 'high' unless the machine says it's weak, or the
+  // player picks 'low'. Shadows, the people on the footpaths, how far ahead
+  // the road is built and the sharpest the picture is drawn (pixels for
+  // each of the screen's points) follow from it.
   var QUALITY = {
-    high: { ahead: 320, behind: 40, pixels: 1.5, shadows: true, people: 1, detail: 30 },
-    low: { ahead: 200, behind: 25, pixels: 1, shadows: false, people: 0.4, detail: 14 }
+    high: { ahead: 300, behind: 40, pixels: 2, shadows: true, people: 1 },
+    low: { ahead: 200, behind: 25, pixels: 1.5, shadows: false, people: 0.5 }
   };
   function quality(o){
-    var touch = !!o.touch, cores = o.cores || 4, memory = o.memory || 4;
-    return touch || cores < 4 || memory < 4 ? 'low' : 'high';
+    var cores = o.cores || 4, memory = o.memory || 4;
+    return cores < 4 || memory < 4 ? 'low' : 'high';
+  }
+
+  // Keeping the game smooth: given the pixels drawn for each of the screen's
+  // points now, the most it may be, and how long frames took over the last
+  // couple of seconds (ms, on average), the sharpness to draw at next. Slower
+  // than 50 frames a second, it's drawn a step coarser, down to 0.75 (or the
+  // most, if that's less); it never sharpens again, so it doesn't swing back
+  // and forth. `shadows` says whether to keep drawing shadows: only while
+  // it can still go coarser, or the frames are quick enough.
+  var SLOW = 20;
+  function sharpness(now, most, ms){
+    var least = Math.min(most, 0.75);
+    if (ms <= SLOW) return { pixels: now, shadows: true };
+    var next = Math.max(least, Math.round(now * 0.85 * 100) / 100);
+    return { pixels: next, shadows: next < now };
+  }
+
+  // ---------- Steering by tilting the phone ----------
+  // The phone held like a handlebar, turned to the right to steer right.
+  // How far it's turned (radians, positive to the right), from how the
+  // phone says it's tilted (deviceorientation's beta and gamma, degrees),
+  // seen on the screen as it's shown (`angle`: 0 upright, 90 turned on its
+  // left side, 180, 270). The way up, in the phone's own x (to the right of
+  // its screen held upright), y (to its top) and z (out of the screen),
+  // follows from beta and gamma alone, whichever way it's held.
+  function turned(beta, gamma, angle){
+    var b = beta * Math.PI / 180, g = gamma * Math.PI / 180, a = (angle || 0) * Math.PI / 180;
+    var ux = -Math.sin(g) * Math.cos(b), uy = Math.sin(b);
+    var sx = ux * Math.cos(a) - uy * Math.sin(a), sy = ux * Math.sin(a) + uy * Math.cos(a);
+    return -Math.atan2(sx, sy);
+  }
+  // The steering for a phone turned `by` radians, against how it was held
+  // when the race started (`from`): nothing within 3 degrees, full lock at
+  // 25.
+  var DEAD = 3 * Math.PI / 180, LOCK = 25 * Math.PI / 180;
+  function tilt(by, from){
+    var d = by - (from || 0);
+    if (d > Math.PI) d -= 2 * Math.PI;
+    if (d < -Math.PI) d += 2 * Math.PI;
+    if (Math.abs(d) < DEAD) return 0;
+    return Math.max(-1, Math.min(1, (d - (d > 0 ? DEAD : -DEAD)) / (LOCK - DEAD)));
   }
 
   window.bdnixStreetScene = {
     TURN: TURN, MAX_TURN: MAX_TURN, CHUNK: CHUNK, ENGINES: ENGINES, QUALITY: QUALITY,
-    path: path, place: place, chunks: chunks, chase: chase, cockpit: cockpit, engine: engine, heard: heard, quality: quality
+    path: path, place: place, chunks: chunks, chase: chase, cockpit: cockpit, engine: engine, heard: heard, quality: quality, sharpness: sharpness, turned: turned, tilt: tilt
   };
 })();

@@ -11,4 +11,4 @@ noDrawing(test);
 // that takes longer than the usual 30 seconds a test may.
 test.setTimeout(90_000);
 checkPage('/king-of-streets/', { languages: false, schema: 'WebApplication', category: 'GameApplication', game: true, backdrop: false });
-checkGame('/king-of-streets/', { languages: false, upright: false, credit: ['Road Rash', 'Electronic Arts'], gestures: [['Steer', 'drag'], ['Punch', 'tap'], ['Kick', 'flick'], ['Brake', 'flick']] });
+checkGame('/king-of-streets/', { languages: false, upright: false, credit: ['Road Rash', 'Electronic Arts'], gestures: [['Steer', 'drag'], ['Punch', 'button'], ['Kick', 'button'], ['Brake', 'button']] });

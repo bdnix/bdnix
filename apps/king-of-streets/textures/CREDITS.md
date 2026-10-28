@@ -4,3 +4,5 @@ The photo textures and skies are from [Poly Haven](https://polyhaven.com), under
 
 - Textures: Asphalt 02, Concrete Pavement, Plastered Wall 04, Worn Plaster Wall, White Plaster 02, Concrete Wall 006 and Concrete Tiles.
 - Skies (`sky/`): Qwantani Night, Kloofendal Misty Morning, Kloofendal 48d Partly Cloudy and Qwantani Dusk 2, all "pure sky".
+
+`card.webp`, the picture behind the start card, is a frame of the game itself, drawn from the models above and in `../models/`.

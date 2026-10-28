@@ -57,14 +57,25 @@ test('chunks: those the camera sees, from the one before the start to the road�
   assert.equal(S.chunks(P, P.n * F.SEG, 500, 10).at(-1), last);
 });
 
-test('the chase camera rides behind and above the rider, looking up the road', () => {
+test('the chase camera rides low behind the rider, looking up the road, wider as it speeds', () => {
   const P = S.path(1), wide = S.chase(P, 100, 2, false), tall = S.chase(P, 100, 2, true);
   assert.ok(wide.from.z < 100 && wide.to.z > 100);
-  assert.ok(wide.from.y > 1.5 && wide.to.y < wide.from.y);
+  assert.ok(wide.from.y > 1 && wide.from.y < 1.8 && wide.to.y < wide.from.y, 'low, looking a little down');
   assert.ok(tall.from.z > wide.from.z, 'closer on a tall screen');
   assert.ok(tall.from.y > wide.from.y, 'and higher');
+  assert.ok(tall.fov > wide.fov, 'and wider');
   // x 2 is to the rider's right: the map's -x.
   assert.ok(wide.from.x < 0);
+  const fast = S.chase(P, 100, 2, false, 1);
+  assert.ok(fast.fov > wide.fov + 10 && fast.from.z < wide.from.z, 'flat out: wider, drawn back');
+  assert.deepEqual({ ...S.chase(P, 100, 2, false, 3) }, { ...fast }, 'no faster than flat out');
+  // A phone on its side: no more than 96 degrees across, so the bike stays big.
+  const across = (c, aspect) => 2 * Math.atan(Math.tan(c.fov * Math.PI / 360) * aspect) * 180 / Math.PI;
+  const side = S.chase(P, 100, 2, false, 0, 852 / 393);
+  near(across(side, 852 / 393), 96, 1e-6);
+  assert.ok(side.fov < wide.fov);
+  near(across(S.chase(P, 100, 2, false, 1, 852 / 393), 852 / 393), 106, 1e-6, 'flat out, a little wider');
+  assert.equal(S.chase(P, 100, 2, false, 0, 16 / 9).fov, wide.fov, 'a computer’s screen: as it was');
 });
 
 test('the engine: idle when stopped, revs rising with speed, and a dip at each gear change', () => {
@@ -105,13 +116,26 @@ test('heard: louder near, panned to its side, higher closing in and lower going 
   assert.equal(S.heard(0, 0, 0, 0, 0, 10, 10).pan, 0, 'right on top of the listener: the middle');
 });
 
-test('quality: low on a phone or a weak machine, high otherwise', () => {
-  assert.equal(S.quality({ touch: true, cores: 8, memory: 8 }), 'low');
+test('quality: low on a weak machine, high otherwise, phones included', () => {
+  assert.equal(S.quality({ touch: true, cores: 8, memory: 8 }), 'high');
   assert.equal(S.quality({ cores: 2, memory: 8 }), 'low');
   assert.equal(S.quality({ cores: 8, memory: 2 }), 'low');
   assert.equal(S.quality({ cores: 8, memory: 8 }), 'high');
   assert.equal(S.quality({}), 'high', 'unknown counts as enough');
   assert.ok(S.QUALITY.low.ahead < S.QUALITY.high.ahead && !S.QUALITY.low.shadows && S.QUALITY.high.shadows);
+  assert.ok(S.QUALITY.high.pixels >= 2, 'sharp on a phone’s screen');
+});
+
+test('sharpness: kept while frames are quick, coarser when slow, shadows last to go', () => {
+  assert.deepEqual({ ...S.sharpness(2, 2, 16.7) }, { pixels: 2, shadows: true }, 'smooth: as it is');
+  assert.deepEqual({ ...S.sharpness(2, 2, 20) }, { pixels: 2, shadows: true }, '50 a second is smooth enough');
+  assert.deepEqual({ ...S.sharpness(2, 2, 30) }, { pixels: 1.7, shadows: true }, 'slow: a step coarser');
+  assert.deepEqual({ ...S.sharpness(0.8, 2, 30) }, { pixels: 0.75, shadows: true });
+  assert.deepEqual({ ...S.sharpness(0.75, 2, 30) }, { pixels: 0.75, shadows: false }, 'as coarse as it goes: the shadows go');
+  assert.deepEqual({ ...S.sharpness(0.6, 0.6, 30) }, { pixels: 0.6, shadows: false }, 'never below a screen’s own least');
+  let px = 2;
+  for (let i = 0; i < 20; i++) px = S.sharpness(px, 2, 40).pixels;
+  assert.equal(px, 0.75);
 });
 
 test('the rider’s view: just above the head, both hands in view, wider or higher only as it needs', () => {
@@ -131,4 +155,36 @@ test('the rider’s view: just above the head, both hands in view, wider or high
   const never = S.cockpit(head, [{ x: 5, y: 0, z: 0 }, { x: -5, y: 0, z: 0 }], 1);
   assert.equal(never.fov, 86);
   near(never.eye.z, head.z - 0.02 - 0.22);
+});
+
+test('tilt: the phone turned like a handlebar steers, held upright or sideways', () => {
+  const deg = Math.PI / 180;
+  // Upright (beta 90), screen facing the rider: straight ahead.
+  near(S.turned(90, 0, 0), 0, 1e-9);
+  // Leaning back from upright doesn't steer.
+  near(S.turned(50, 0, 0), 0, 1e-9);
+  // Turned 20 degrees to the right, upright and leaning back: its right side drops.
+  const right = (b, turn) => {
+    // beta and gamma of a phone leaning back to `b` from flat, then turned `turn` degrees about its screen.
+    const t = turn * deg, bb = b * deg, ux = -Math.sin(t) * Math.sin(bb), uy = Math.cos(t) * Math.sin(bb), uz = Math.cos(bb);
+    return [Math.atan2(uy, Math.hypot(ux, uz)) / deg, Math.atan2(-ux, uz) / deg];
+  };
+  for (const back of [90, 60, 40]) {
+    const [b, g] = right(back, 20);
+    near(S.turned(b, g, 0), 20 * deg, 1e-6, 'upright, leaning back ' + back);
+  }
+  // Sideways, turned on its left side (screen angle 90): its top is to the left, so
+  // turning it right lifts its top: gamma and beta swap roles.
+  near(S.turned(0, -90, 90), 0, 1e-9, 'sideways, straight');
+  near(S.turned(20, -90, 90), 20 * deg, 1e-6, 'sideways, turned right');
+  near(S.turned(-20, -90, 90), -20 * deg, 1e-6, 'sideways, turned left');
+  near(S.turned(-20, 90, 270), 20 * deg, 1e-6, 'the other way round, turned right');
+  // The steering: none in the dead zone, full lock at 25 degrees, against where it was held.
+  assert.equal(S.tilt(2 * deg), 0);
+  near(S.tilt(25 * deg), 1, 1e-9);
+  near(S.tilt(-40 * deg), -1, 1e-9);
+  near(S.tilt(14 * deg), 0.5, 1e-9);
+  near(S.tilt(24 * deg, 10 * deg), 0.5, 1e-9, 'from where it was held');
+  near(S.tilt(-170 * deg, 170 * deg), 17 / 22, 1e-9, '20 degrees right, across the half turn');
+  near(S.tilt(170 * deg, -170 * deg), -17 / 22, 1e-9);
 });

@@ -27,7 +27,13 @@ function lonely({ race = 1, bike, z = 300, speed = 20, x = 0, health = 100, riva
 
 test('a career starts on the scooter: the countdown, then the race', async ({ page }) => {
   await listen(page);
+  const card = page.waitForResponse((r) => r.url().endsWith('/assets/street/textures/card.webp'));
   await openGame(page, URL);
+  // The start card shows a picture of the street at once: no city is built
+  // until the race starts.
+  expect((await card).status()).toBe(200);
+  await until(page, () => window.bdnixStreet3d.current);
+  expect(await page.evaluate(() => window.bdnixStreet3d.current.stats().chunks)).toBe(0);
   await until(page, () => document.getElementById('ovCareer').textContent.length > 0);
   await expect(page.locator('#ovCareer')).toHaveText('Race 1 of 15 · 0 points · Scooter');
   await startRace(page);
@@ -41,7 +47,10 @@ test('a career starts on the scooter: the countdown, then the race', async ({ pa
   await page.clock.runFor(2000);
   await expect(page.locator('#msg')).toHaveText('Go!');
   expect(await heard(page)).toEqual(['beep', 'beep', 'go']);
-  await page.clock.runFor(4000);
+  // The first race shows how to steer.
+  await page.clock.runFor(1500);
+  await expect(page.locator('#msg')).toHaveText(/^(Steer with ← and →|Drag anywhere to steer)$/);
+  await page.clock.runFor(2500);
   // Off the line: the scooter tops out at 90 km/h.
   expect(+(await text(page, 'speed'))).toBeGreaterThan(50);
   expect(+(await text(page, 'speed'))).toBeLessThanOrEqual(90);
@@ -52,7 +61,18 @@ test('a career starts on the scooter: the countdown, then the race', async ({ pa
   expect(engine.running).toBe(true);
   expect(engine.hz).toBeGreaterThan(30);
   expect(engine.gain).toBeGreaterThan(0.05);
+  // And the wind, at speed.
+  expect(engine.wind).toBeGreaterThan(0.03);
   expect(await soundProblems(page)).toEqual([]);
+});
+
+test('with ?fps in the address, the frame rate shows in the corner', async ({ page }) => {
+  await openGame(page, URL + '?fps');
+  await page.clock.runFor(1100);
+  await expect(page.locator('.fps')).toHaveText(/^\d+ fps$/);
+  await startRace(page, true);
+  await page.clock.runFor(1100);
+  await expect(page.locator('.fps')).toHaveText(/^\d+ fps · [\d.]+× · \d+ calls · \d+k tris$/);
 });
 
 test('steering moves the bike across the road, and braking slows it', async ({ page }) => {
@@ -83,13 +103,21 @@ test('a punch lands on the rival beside, a knockout scores, and their weapon is 
   await resume(page);
   await expect(page.locator('#foe')).toBeVisible();
   await expect(page.locator('#foeName')).toHaveText('Bablu · Stick');
+  // He's on the right, in reach: the punch button calls for a press, and the
+  // first race says how.
+  await page.clock.runFor(50);
+  await expect(page.locator('#foeSide')).toHaveClass('side right');
+  await expect(page.locator('#punchBtn')).toHaveClass(/ready/);
+  await expect(page.locator('#msg')).toHaveText(/^A rival beside you: (press X to punch|tap Punch)!$/);
   await page.keyboard.press('KeyX');
   await page.clock.runFor(400);
   await expect(page.locator('#msg')).toHaveText('Bablu is down! You took the Stick.');
+  await expect(page.locator('#punchBtn')).not.toHaveClass(/ready/);
   await expect(page.locator('#score')).toHaveText('100');
   await expect(page.locator('#weapon')).toHaveText('Stick');
   expect(await heard(page)).toEqual(expect.arrayContaining(['swing', 'punch', 'ko']));
-  // Now a punch swings the stick.
+  // The knockout plays out slowly; then a punch swings the stick.
+  await page.clock.runFor(1500);
   await page.keyboard.press('KeyJ');
   await page.clock.runFor(100);
   const w = await race(page);
@@ -167,7 +195,7 @@ test('finishing in the top three wins points for the career and opens the next r
   await page.clock.runFor(3200);
   await expect(page.locator('#ovTitle')).toHaveText('1st place');
   await expect(page.locator('#ovText')).toHaveText('You won 1000 points.');
-  await expect(page.locator('#ovKicker')).toHaveText('Race 1 · Old Dhaka after midnight');
+  await expect(page.locator('#ovKicker')).toHaveText('Race 1 · Mirpur Road at dawn');
   await expect(page.locator('#ovCareer')).toHaveText('Race 2 of 15 · 1000 points · Scooter');
   await expect(page.locator('#startBtn')).toHaveText('Next race');
   expect(await heard(page)).toEqual(expect.arrayContaining(['finish', 'best']));
@@ -240,7 +268,7 @@ test('a quick race: any route on any bike, scored but not for the career', async
   await openGame(page, URL);
   await page.getByRole('button', { name: 'Quick race' }).click();
   const quick = page.locator('#quick');
-  await expect(quick.getByRole('radio', { name: 'Old Dhaka after midnight' })).toHaveAttribute('aria-checked', 'true');
+  await expect(quick.getByRole('radio', { name: 'Mirpur Road at dawn' })).toHaveAttribute('aria-checked', 'true');
   await quick.getByRole('radio', { name: 'The expressway in the morning rush' }).click();
   await quick.getByRole('radio', { name: 'Hyper 1000' }).click();
   await expect(quick.getByRole('radio', { name: 'Hyper 1000' })).toHaveAttribute('aria-checked', 'true');
@@ -351,40 +379,85 @@ test('muting silences the engines, and pausing stops them', async ({ page }) => 
   expect((await page.evaluate(() => window.bdnixStreetAudio.state())).running).toBe(true);
 });
 
-test('by touch: drag to steer, tap to punch, flick up to kick, flick down to brake', async ({ page }) => {
-  await seed(page, lonely, { rivals: { 2: { dz: 0.3, dx: -2 } } });
+test('by touch: a finger anywhere steers while the buttons punch, kick and brake', async ({ page }) => {
+  await listen(page);
+  await seed(page, lonely, { z: 40, rivals: { 2: { dz: 0.3, dx: -2 } } });
   await resume(page);
-  const board = page.locator('#game');
-  const touch = (type, x, y) => board.dispatchEvent(type, { pointerType: 'touch', isPrimary: true, pointerId: 1, clientX: x, clientY: y, button: 0 });
-  await touch('pointerdown', 200, 300);
-  await touch('pointermove', 260, 300);
+  const finger = (target, type, id, x, y) => page.locator(target).dispatchEvent(type, { pointerType: 'touch', isPrimary: id === 1, pointerId: id, clientX: x, clientY: y, button: 0 });
+  // One finger drags right and stays down while another punches: both at once.
+  await finger('#game', 'pointerdown', 1, 200, 300);
+  await finger('#game', 'pointermove', 1, 260, 300);
+  await page.clock.runFor(100);
+  await finger('#punchBtn', 'pointerdown', 2, 0, 0);
+  await finger('#punchBtn', 'pointerup', 2, 0, 0);
   await page.clock.runFor(400);
-  await touch('pointerup', 260, 300);
+  await finger('#game', 'pointerup', 1, 260, 300);
+  expect(await heard(page)).toContain('swing');
   let w = await race(page);
-  expect(w.player.x).toBeGreaterThan(1);
-  // A tap: a punch.
-  await touch('pointerdown', 200, 300);
-  await touch('pointerup', 200, 300);
-  await page.clock.runFor(50);
-  w = await race(page);
-  expect(w.player.attack && w.player.attack.move).toBe('punch');
+  expect(w.player.x).toBeGreaterThan(2.5);
   await page.clock.runFor(500);
-  // A flick up: a kick.
-  await touch('pointerdown', 200, 300);
-  await touch('pointermove', 200, 240);
-  await touch('pointerup', 200, 240);
+  // The kick button.
+  await finger('#kickBtn', 'pointerdown', 3, 0, 0);
+  await finger('#kickBtn', 'pointerup', 3, 0, 0);
   await page.clock.runFor(50);
   w = await race(page);
   expect(w.player.attack && w.player.attack.move).toBe('kick');
   await page.clock.runFor(600);
-  // A flick down: the brakes, until the finger lifts.
+  // The brake, held: slower, until it's let go.
   const before = (await race(page)).player.speed;
-  await touch('pointerdown', 200, 300);
-  await touch('pointermove', 200, 360);
+  await finger('#brakeBtn', 'pointerdown', 4, 0, 0);
+  await expect(page.locator('#brakeBtn')).toHaveClass(/down/);
   await page.clock.runFor(400);
-  await touch('pointerup', 200, 360);
+  await finger('#brakeBtn', 'pointerup', 4, 0, 0);
+  await expect(page.locator('#brakeBtn')).not.toHaveClass(/down/);
   w = await race(page);
   expect(w.player.speed).toBeLessThan(before - 5);
+  await page.clock.runFor(1000);
+  expect((await race(page)).player.speed).toBeGreaterThan(w.player.speed);
+});
+
+// beta and gamma for a phone leant back `back` degrees from flat and turned
+// `turn` degrees to the right about its screen, held upright.
+function held(back, turn){
+  const r = Math.PI / 180, t = turn * r, b = back * r, ux = -Math.sin(t) * Math.sin(b), uy = Math.cos(t) * Math.sin(b), uz = Math.cos(b);
+  return { beta: Math.atan2(uy, Math.hypot(ux, uz)) / r, gamma: Math.atan2(-ux, uz) / r };
+}
+test('by tilting: the phone turned like a handlebar steers, from however it was held', async ({ page }) => {
+  await seed(page, lonely, { z: 40 }, { career: { points: 0, owned: [1], done: [1], steer: 'tilt' } });
+  const tilt = (o) => page.evaluate((o) => window.dispatchEvent(new DeviceOrientationEvent('deviceorientation', o)), o);
+  // Held leaning back and a little turned: that's straight ahead.
+  await tilt(held(55, 8));
+  await resume(page);
+  await page.clock.runFor(500);
+  let w = await race(page);
+  expect(Math.abs(w.player.x)).toBeLessThan(0.05);
+  // Turned right from there: the bike goes right.
+  await tilt(held(55, 28));
+  await page.clock.runFor(500);
+  w = await race(page);
+  expect(w.player.x).toBeGreaterThan(1);
+  // And left.
+  await tilt(held(55, -12));
+  await page.clock.runFor(1000);
+  expect((await race(page)).player.x).toBeLessThan(w.player.x - 1);
+});
+
+test('steering by drag or tilt is picked on the start card and in the garage, and kept', async ({ page, isMobile }) => {
+  await openGame(page, URL);
+  const pick = page.getByRole('radiogroup', { name: 'Steering' });
+  // With a mouse there's nothing to pick.
+  if (!isMobile) return expect(pick).toBeHidden();
+  await expect(pick.getByRole('radio', { name: 'Drag to steer' })).toHaveAttribute('aria-checked', 'true');
+  await pick.getByRole('radio', { name: 'Tilt to steer' }).click();
+  await expect(pick.getByRole('radio', { name: 'Tilt to steer' })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('#steerHow')).toHaveText('tilt');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_kingofstreets_career')).steer)).toBe('tilt');
+  await page.getByRole('button', { name: 'Garage' }).click();
+  await expect(page.locator('#steerBtn')).toHaveText('Steering: tilt');
+  await page.locator('#steerBtn').click();
+  await expect(page.locator('#steerBtn')).toHaveText('Steering: drag');
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(pick.getByRole('radio', { name: 'Drag to steer' })).toHaveAttribute('aria-checked', 'true');
 });
 
 test('without 3D graphics it says so, and offers nothing to start', async ({ page }) => {

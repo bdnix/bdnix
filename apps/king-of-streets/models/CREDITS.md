@@ -1,6 +1,6 @@
 # King of Streets models
 
-Every model here is a 3D artist’s work from [Sketchfab](https://sketchfab.com), under the [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/) licence. They have been changed: simplified, their textures shrunk and compressed (meshoptimizer, WebP), and a lower-detail copy of each made for drawing at a distance (`*_lo.glb`). The game also changes them as it runs: it repaints some clothes and cars, and poses the riders.
+Every model here is a 3D artist’s work from [Sketchfab](https://sketchfab.com), under the [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/) licence. They have been changed: simplified, their textures shrunk and compressed (meshoptimizer, WebP), the riders without the hair and faces their helmets hide, and a lower-detail copy of each made for drawing at a distance (`*_lo.glb`; the traffic ships only that one). The game also changes them as it runs: it repaints some clothes and cars, and poses the riders.
 
 | Model | By | Used for |
 |---|---|---|

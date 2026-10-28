@@ -3,7 +3,8 @@
 // bike's voice; the rivals' are heard as they pass, nearer louder, panned
 // to their side and higher as they close in; and around it all the street:
 // the hum of traffic, CNGs' two-stroke rattle, buses' and trucks' diesels
-// and Dhaka's horns, busier at rush hour, quiet after midnight. Muted with
+// and Dhaka's horns, busier at rush hour, quiet after midnight; the wind
+// rising with speed, and the tyres squealing in a hard lean. Muted with
 // everything else (the mute button, M). bdnixStreetScene works out the
 // revs (engine()) and how a sound is heard (heard()).
 (function(){
@@ -22,16 +23,27 @@
     sound.onChange(function(muted){ out.gain.setTargetAtTime(muted ? 0 : 1, ctx.currentTime, 0.02); });
     return ctx;
   }
-  var noiseBuf = null;
-  function noise(c){
-    if (!noiseBuf) {
-      noiseBuf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
-      var d = noiseBuf.getChannelData(0), last = 0;
-      // Brown-ish: rumble rather than hiss.
-      for (var i = 0; i < d.length; i++) { last = (last + 0.04 * (Math.random() * 2 - 1)) / 1.04; d[i] = last * 3.5; }
+  // Phones only play sound that a press started: the start button calls
+  // this, so the engines can start once the city has loaded.
+  function unlock(){
+    var c = context();
+    if (c && c.state === 'suspended' && c.resume) c.resume();
+  }
+  var noiseBufs = {};
+  // Looped noise: brown-ish (rumble) or, `white`, a hiss.
+  function noise(c, white){
+    var key = white ? 'white' : 'brown', buf = noiseBufs[key];
+    if (!buf) {
+      buf = noiseBufs[key] = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
+      var d = buf.getChannelData(0), last = 0;
+      for (var i = 0; i < d.length; i++) {
+        var r = Math.random() * 2 - 1;
+        if (white) d[i] = r * 0.5;
+        else { last = (last + 0.04 * r) / 1.04; d[i] = last * 3.5; }
+      }
     }
     var n = c.createBufferSource();
-    n.buffer = noiseBuf;
+    n.buffer = buf;
     n.loop = true;
     return n;
   }
@@ -96,12 +108,20 @@
     this.dieselFilter = c.createBiquadFilter(); this.dieselFilter.type = 'lowpass'; this.dieselFilter.frequency.value = 220;
     this.dieselLevel = gain(c, 0); this.dieselPan = c.createStereoPanner();
     this.diesel.connect(this.dieselFilter).connect(this.dieselLevel).connect(this.dieselPan).connect(dest);
-    this.hum.start(); this.cng.start(); this.diesel.start();
+    // The rider's own: wind past the helmet, and the tyres in a hard lean.
+    this.wind = noise(c, true);
+    this.windFilter = c.createBiquadFilter(); this.windFilter.type = 'bandpass'; this.windFilter.frequency.value = 900; this.windFilter.Q.value = 0.6;
+    this.windLevel = gain(c, 0);
+    this.wind.connect(this.windFilter).connect(this.windLevel).connect(dest);
+    this.tyre = osc(c, 'triangle'); this.tyre.frequency.value = 1150;
+    this.tyreLevel = gain(c, 0);
+    this.tyre.connect(this.tyreLevel).connect(dest);
+    this.hum.start(); this.cng.start(); this.diesel.start(); this.wind.start(); this.tyre.start();
   }
   Street.prototype.stop = function(){
     var t = ctx.currentTime;
-    [this.humLevel, this.cngLevel, this.dieselLevel].forEach(function(g){ g.gain.setTargetAtTime(0, t, 0.05); });
-    [this.hum, this.cng, this.diesel].forEach(function(n){ try { n.stop(t + 0.3); } catch (e) {} });
+    [this.humLevel, this.cngLevel, this.dieselLevel, this.windLevel, this.tyreLevel].forEach(function(g){ g.gain.setTargetAtTime(0, t, 0.05); });
+    [this.hum, this.cng, this.diesel, this.wind, this.tyre].forEach(function(n){ try { n.stop(t + 0.3); } catch (e) {} });
   };
 
   // A horn: two quick blasts of two notes, from where the vehicle is.
@@ -152,7 +172,8 @@
     me = null; rivals = []; street = null; on = false;
     shown.running = false; shown.hz = 0; shown.gain = 0; shown.rivals = 0;
   }
-  // Each frame: f = { speed, throttle (0 to 1), listener: { x, z, heading,
+  // Each frame: f = { speed, throttle (0 to 1), fast (0 to 1, of the bike's
+  // top speed), lean (-1 to 1), listener: { x, z, heading,
   // speed }, rivals: [{ x, z, speed, down }], cars: [{ kind, x, z, speed }],
   // busy (the level's traffic, 0 to 1), night, time (seconds) }, positions
   // on the map. A rival down or a racer off their bike is silent.
@@ -178,6 +199,12 @@
       if (k && (!near[k] || h.gain > near[k].gain)) near[k] = h;
     });
     street.humLevel.gain.setTargetAtTime(0.01 + 0.05 * f.busy, t, 0.3);
+    var fast = f.off ? 0 : f.fast || 0, squeal = Math.max(0, Math.abs(f.lean || 0) * fast - 0.55);
+    street.windLevel.gain.setTargetAtTime(0.11 * fast * fast, t, 0.2);
+    street.windFilter.frequency.setTargetAtTime(600 + 900 * fast, t, 0.2);
+    street.tyreLevel.gain.setTargetAtTime(0.05 * Math.min(1, squeal * 3), t, 0.08);
+    street.tyre.frequency.setTargetAtTime(1100 + 120 * Math.sin(f.time * 23), t, 0.02);
+    shown.wind = 0.11 * fast * fast; shown.squeal = squeal > 0;
     street.cngLevel.gain.setTargetAtTime(near.cng ? 0.05 * near.cng.gain : 0, t, 0.1);
     if (near.cng) { street.cngPan.pan.setTargetAtTime(near.cng.pan, t, 0.1); street.cng.frequency.setTargetAtTime(95 * near.cng.pitch, t, 0.1); }
     street.dieselLevel.gain.setTargetAtTime(near.diesel ? 0.09 * near.diesel.gain : 0, t, 0.1);
@@ -195,8 +222,8 @@
   // engine's note and loudness, how many rivals can be heard and how many
   // horns have sounded.
   function state(){
-    return { running: shown.running, hz: shown.hz, gain: shown.gain, rivals: shown.rivals, horns: shown.horns, muted: sound.isMuted() };
+    return { running: shown.running, hz: shown.hz, gain: shown.gain, rivals: shown.rivals, horns: shown.horns, wind: shown.wind || 0, squeal: !!shown.squeal, muted: sound.isMuted() };
   }
 
-  window.bdnixStreetAudio = { start: start, stop: stop, update: update, state: state };
+  window.bdnixStreetAudio = { unlock: unlock, start: start, stop: stop, update: update, state: state };
 })();

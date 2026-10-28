@@ -243,6 +243,33 @@ The game is built on the approved look, in `apps/king-of-streets/`:
 - Tests draw no frames (the test browser draws in software, seconds a frame): `test/street.mjs` turns `bdnixStreet3d.draw` off; `test/graphics.spec.mjs` draws one small frame per route.
 - Not done yet: mirrors and a working dashboard in the rider's view; crashes are a lean-over fall, not a tumble.
 
+## Owner's verdict on the first build, and the rework (twenty-sixth round)
+
+The owner played the preview on an iPhone 15 Pro: "extremely slow, doesn't properly load, extremely dark", "no sounds" (then sound after a long load), "I don't even know how to beat up opponents… which buttons", "not smooth… pixelated graphics", "doesn't feel like a motorcycle game", and the UI tests at 32 to 45 minutes are not acceptable. They want both ways to steer on a phone, tilting and dragging, picked by the player. Nothing goes to master until it's worthwhile.
+
+What was wrong, measured:
+
+- The start card loaded a whole race's city behind it: 13.6 MB and a city built before it could be used; a race fetched about 30 MB.
+- A frame drew 3.7 to 3.9 million triangles in about 900 draw calls: detailed riders up to 81,000 triangles and bikes up to 149,000, all racers drawn detailed, and shopfront scans (9,000 triangles each, instanced by the dozen) casting shadows.
+- Phones were set to "low" graphics, drawn at one pixel per screen point: on a 3× iPhone screen, a third of its resolution.
+- People on the footpaths drew as big blobs: merging a figure's parts used the first part's unpacking (the positions are stored compressed, each part unpacked by its own skeleton's inverse bind matrices) for all of them.
+- The chase camera was eased along the road, so it fell further behind the faster the bike went: about 5 m extra at 115 km/h, the bike small in the distance. On a phone on its side it also saw about 112 degrees across.
+- The first career race was after midnight, lit almost to black (the start card showed it too).
+- The engines started after the city loaded, not on a press, and iPhones keep such sound off.
+- Fighting was a tap and a flick anywhere, explained only on the start card.
+
+What changed:
+
+- Models: detailed riders 14,000 to 16,500 triangles, bikes 20,000 to 36,000 (`tools/mid.mjs` in the lookdev folder, simplifying each part by the same share, never past a small error); riders without the hair, eyes and teeth the helmet hides (`tools/strip.mjs`); traffic one textured model each (the `*_lo.glb`, no swap to a detailed one up close); shopfront scans, crates, trees and poles 4 to 7 times lighter, the scans casting no shadows; textures WebP at quality 72, at most 512 px (1,024 for the bikes). Models 31 MB → 13 MB; a race fetches about 13.6 MB.
+- Everything a race shows loads before its countdown (no pop-in); detailed racers within 22 m of the camera, one-mesh riders beyond. A frame draws 0.7 to 1 million triangles.
+- The picture is drawn at up to 2 pixels per point ("high", now the default everywhere unless the machine says it's weak), coarser a step at a time if frames come slower than 50 a second, and then without shadows (`sharpness()`). `?fps` shows the frame rate.
+- The start card is a picture (`textures/card.webp`, a frame of the game); the city loads when the race starts, with a percentage.
+- Levels 1 and 2 swapped: the career starts on Mirpur Road at dawn; Old Dhaka after midnight comes second, lit much brighter. The graphics spec fails any route drawn darker than 70 of 255 on average (the old night measured 38.6).
+- Camera: lower and closer, eased only as the bike moves across the road, wider and shuddering with speed, leaning with the bike, no more than 96 degrees across on a wide screen; the bike leans further at speed and lifts its front pulling away hard; a hit jolts the camera and flashes the screen, a knockout plays in slow motion.
+- Sound starts on the start button's press; wind rises with speed, tyres squeal in a hard lean.
+- Touch: Punch, Kick and Brake buttons under the thumbs; a finger anywhere else steers (multi-touch); or tilt steering (deviceorientation, turned like a handlebar, straight ahead taken from how it's held when the race starts; `turned()` and `tilt()`), picked on the start card or in the garage. When a rival is in reach the Punch button pulses and an arrow shows their side; the first race says how to steer and to punch.
+- Tests: no city for the start card, seeded races made on a page with only the rules, route drawings with graphics low (shadows drawn once, on the bridge). Under CI conditions the game's specs take about 1,080 test-seconds, down from 1,600.
+
 ## What's on the branch
 
 - `apps/street-kids/`: `module.json` (title, description, card, icon), `index.html`, `street-core.js` (the rules, keep), `street.js` (the rejected 2D drawing, to be replaced), `street.css`, `lang/bn.json` (Bangla, not yet reviewed by the owner), and `test/` (logic, behaviour, page and i18n targets, all passing against the 2D version).

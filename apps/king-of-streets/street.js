@@ -14,7 +14,7 @@
 
   var PLACES = ['1st place', '2nd place', '3rd place', '4th place', '5th place', '6th place', '7th place'];
   var WEAPON_NAMES = { stick: 'Stick', chain: 'Chain', nunchaku: 'Nunchaku' };
-  var ROUTES = ['Old Dhaka after midnight', 'Mirpur Road at dawn', 'Hatirjheel at midday', 'Moghbazar flyover at dusk', 'The expressway in the morning rush'];
+  var ROUTES = ['Mirpur Road at dawn', 'Old Dhaka after midnight', 'Hatirjheel at midday', 'Moghbazar flyover at dusk', 'The expressway in the morning rush'];
   var RIDERS = ['Black helmet', 'Red helmet', 'Gold helmet', 'White helmet', 'Teal helmet', 'Orange helmet'];
   var SWATCHES = ['#1a1a1c', '#9c1418', '#d9a514', '#e8e8ea', '#18a0a8', '#e0601a'];
 
@@ -24,7 +24,8 @@
   var startBtn = $('startBtn'), newBtn = $('newBtn'), garageBtn = $('garageBtn'), quickBtn = $('quickBtn');
   var hud = $('hud'), loadingEl = $('loading');
   var el = { place: $('place'), score: $('score'), togo: $('togo'), speed: $('speed'), health: $('health'), weapon: $('weapon'),
-    foe: $('foe'), foeName: $('foeName'), foeHealth: $('foeHealth'), count: $('count'), msg: $('msg') };
+    foe: $('foe'), foeName: $('foeName'), foeHealth: $('foeHealth'), foeSide: $('foeSide'), count: $('count'), msg: $('msg'),
+    punch: $('punchBtn'), kick: $('kickBtn'), brake: $('brakeBtn') };
 
   // This game's sounds, beside the ones every game shares (sound.js).
   var tone = sound.tone, notes = sound.notes;
@@ -49,7 +50,7 @@
   // ---------- The career ----------
   // Points, bikes owned and races placed in (street-core.js), and the
   // player's choices: their rider, the bike they ride, the race they're on,
-  // the camera and how much to draw.
+  // the camera, how they steer on a touchscreen and how much to draw.
   function careerFrom(s){
     var c = F.careerFrom(s), ok = function(n, lo, hi){ return typeof n === 'number' && n === Math.floor(n) && n >= lo && n <= hi; };
     s = s || {};
@@ -57,6 +58,7 @@
     c.ride = ok(s.ride, 1, F.BIKES.length) && c.owned.indexOf(s.ride) >= 0 ? s.ride : F.best(c);
     c.race = ok(s.race, 1, F.LEVELS.length * F.RACES) && F.open(c, s.race) ? s.race : nextRace(c);
     c.view = s.view === 'rider' ? 'rider' : 'chase';
+    c.steer = s.steer === 'tilt' ? 'tilt' : 'drag';
     c.quality = s.quality === 'low' || s.quality === 'high' ? s.quality : S.quality({ touch: matchMedia('(pointer:coarse)').matches, cores: navigator.hardwareConcurrency, memory: navigator.deviceMemory });
     return c;
   }
@@ -86,6 +88,8 @@
   var state = 'idle', pausedFrom = null, stateTime = 0;
   var mode = 'career', quickPick = { level: 1, bike: 1 };
   var world = null, carry = 0, msgTime = 0, stale = true, banked = false;
+  var slow = 0, tips = null;     // slow motion after a knockout; the first race's tips still to show
+  var touch = matchMedia('(pointer: coarse)').matches;
   var view = null, staged = null, failed = false;
 
   function setState(s){ state = s; stateTime = 0; stale = true; }
@@ -95,8 +99,9 @@
   function careerWorld(){ return F.create(career.race, career.ride); }
   function quickWorld(){ return F.create((quickPick.level - 1) * F.RACES + 1, quickPick.bike); }
 
-  // Builds the race's city behind whatever's showing. A race shows once
-  // it's staged.
+  // Builds the race's city, once the race is started (or picked up from a
+  // save): the start card shows a picture instead, so it opens at once. A
+  // race shows once it's staged.
   function stage(w){
     if (!view) return;
     staged = null;
@@ -107,7 +112,9 @@
   }
   // Starts a race: the countdown once its city is ready.
   function go(w){
-    world = w; carry = 0; banked = false; msgTime = 0;
+    world = w; carry = 0; banked = false; msgTime = 0; slow = 0;
+    // The first race of a career shows how to steer and fight.
+    tips = mode === 'career' && !career.done.length && !w.time ? { steer: true, fight: true } : null;
     // Nothing of the last race shows while this one's city loads.
     hud.hidden = true;
     el.count.textContent = '';
@@ -134,12 +141,13 @@
     if (msgTime > 0 && (msgTime -= dt) <= 0) el.msg.textContent = '';
     if (state === 'loading') {
       loadingEl.hidden = staged === world || failed;
+      put('load', $('loadPct'), view && view.progress ? Lang.num(Math.floor(view.progress * 100)) + '%' : '');
       if (staged === world) {
         // A race picked up part way carries on; a new one counts down.
         setState(world.time ? 'playing' : 'ready');
         hud.hidden = false;
+        level();
         if (!world.time) sound.play('start');
-        view.detailed();
         A.start(F.BIKES[world.bike - 1].id, world.rivals.map(function(o){ return F.BIKES[o.bike - 1].id; }));
       }
       return;
@@ -149,9 +157,16 @@
       var before = Math.ceil(READY_TIME - (stateTime - dt)), now = Math.ceil(READY_TIME - stateTime);
       if (stateTime - dt <= 0 || now < before) sound.play(now > 0 ? 'beep' : 'go');
       el.count.textContent = now > 0 ? Lang.num(now) : '';
-      if (stateTime >= READY_TIME) { setState('playing'); say('Go!', 0.8); }
+      if (stateTime >= READY_TIME) {
+        setState('playing'); say('Go!', 0.8);
+        level();
+      }
       audio();
       return;
+    }
+    if (tips && tips.steer && state === 'playing' && stateTime > 1) {
+      tips.steer = false;
+      say(!touch ? 'Steer with ← and →' : career.steer === 'tilt' ? 'Turn the phone to steer' : 'Drag anywhere to steer', 2.5);
     }
     world.input.steer = state === 'playing' ? steering() : 0;
     world.input.brake = state === 'playing' && braking();
@@ -202,8 +217,6 @@
     overlay.hidden = false;
     startBtn.focus();
     persist();
-    // The next race's city, behind the card.
-    if (mode === 'career') { world = careerWorld(); stage(world); }
   }
   function summary(){
     return Lang.t('Race {race} of {races} · {points} points · {bike}', { race: career.race, races: F.LEVELS.length * F.RACES, points: career.points, bike: Lang.t(F.BIKES[career.ride - 1].name) });
@@ -214,17 +227,18 @@
   function happen(e){
     var o = e.rival === undefined ? null : world.rivals[e.rival];
     if (e.type === 'swing') sound.play('swing');
-    if (e.type === 'hit') sound.play(e.move === 'punch' ? 'punch' : e.move === 'kick' ? 'kick' : 'whack');
+    if (e.type === 'hit') { sound.play(e.move === 'punch' ? 'punch' : e.move === 'kick' ? 'kick' : 'whack'); strike(0.35); }
     if (e.type === 'ko') {
       sound.play('ko');
+      slow = 0.8;
       say(e.weapon ? Lang.t('{name} is down! You took the {weapon}.', { name: Lang.t(o.name), weapon: Lang.t(WEAPON_NAMES[e.weapon]) }) : Lang.t('{name} is down!', { name: Lang.t(o.name) }));
     }
-    if (e.type === 'hurt') { sound.play('hurt'); flash(); }
+    if (e.type === 'hurt') { sound.play('hurt'); flash(); if (view) view.jolt(0.6); }
     if (e.type === 'bump') sound.play('bump');
-    if (e.type === 'shove') { sound.play('shove'); say('Out of the way!', 1); }
+    if (e.type === 'shove') { sound.play('shove'); say('Out of the way!', 1); strike(0.3); }
     if (e.type === 'clang') { sound.play('clang'); say('Too big to move.', 1); }
     if (e.type === 'scrape') sound.play('scrape');
-    if (e.type === 'crash') { sound.play('crash'); flash(); say('Crash!'); }
+    if (e.type === 'crash') { sound.play('crash'); flash(); say('Crash!'); if (view) view.jolt(1); }
     if (e.type === 'out') say('Knocked out!');
     if (e.type === 'finish') { sound.play('finish'); say(PLACES[e.place - 1], FINISH_TIME); }
   }
@@ -232,6 +246,13 @@
     gameEl.classList.remove('hurt');
     void gameEl.offsetWidth;
     gameEl.classList.add('hurt');
+  }
+  // A blow landed: a white flash, and the camera jolts.
+  function strike(amount){
+    gameEl.classList.remove('struck');
+    void gameEl.offsetWidth;
+    gameEl.classList.add('struck');
+    if (view) view.jolt(amount);
   }
 
   // ---------- The heads-up display ----------
@@ -255,6 +276,14 @@
       if (dx + Math.abs(dz) / 10 < d) { d = dx + Math.abs(dz) / 10; foe = o; }
     });
     el.foe.hidden = !foe;
+    // In reach of what the player's holding: the punch button calls for a press.
+    var reach = foe && Math.abs(foe.x - p.x) <= F.MOVES[p.weapon || 'punch'].reach;
+    el.punch.classList.toggle('ready', !!reach && state === 'playing');
+    el.foeSide.className = 'side ' + (foe ? (foe.x > p.x ? 'right' : 'left') : '');
+    if (reach && tips && tips.fight && state === 'playing') {
+      tips.fight = false;
+      say(touch ? 'A rival beside you: tap Punch!' : 'A rival beside you: press X to punch!', 2.5);
+    }
     if (foe) {
       put('foe', el.foeName, foe.weapon ? Lang.t('{name} · {weapon}', { name: Lang.t(foe.name), weapon: Lang.t(WEAPON_NAMES[foe.weapon]) }) : Lang.t(foe.name));
       el.foeHealth.style.width = Math.round(foe.health / foe.max * 100) + '%';
@@ -267,6 +296,7 @@
     var P = view.P, p = world.player, at = S.place(P, p.z, p.x);
     A.update({
       speed: p.speed, throttle: state === 'playing' && !world.input.brake ? 1 : 0, off: p.crash > 0 || !!world.over,
+      fast: p.speed / F.BIKES[world.bike - 1].top, lean: p.lean,
       listener: { x: at.x, z: at.z, heading: at.heading, speed: p.speed },
       rivals: world.rivals.map(function(o){ var a = S.place(P, o.z, o.x); return { x: a.x, z: a.z, speed: o.speed, down: o.down > 0 }; }),
       cars: F.nearby(world, p.z, 60).map(function(c){ var a = S.place(P, c.z, c.x); return { kind: c.kind, x: a.x, z: a.z, speed: c.speed }; }),
@@ -285,7 +315,7 @@
       stale = true;
     } else if (running()) {
       pausedFrom = state; state = 'paused';
-      held = {}; press = null;
+      held = {}; press = null; padBrake = null;
       A.stop();
       ovKicker.textContent = Lang.t('Race {n}', { n: world.race }) + ' · ' + Lang.t(ROUTES[world.level - 1]);
       ovTitle.textContent = 'Paused';
@@ -301,6 +331,7 @@
   }
   // Back on: the engines start again.
   function resumeSound(){
+    level();
     if (state === 'ready' || state === 'playing' || state === 'finishing') A.start(F.BIKES[world.bike - 1].id, world.rivals.map(function(o){ return F.BIKES[o.bike - 1].id; }));
   }
 
@@ -320,6 +351,8 @@
     // A career race is one the career has opened, on a bike it owns.
     if (s.mode === 'career' && (!F.open(career, w.race) || career.owned.indexOf(w.bike) < 0)) return false;
     mode = s.mode; world = w; carry = s.carry; career.rider = s.rider;
+    // Picked up in the first race of a career: how to fight is still to show.
+    tips = mode === 'career' && !career.done.length ? { steer: false, fight: true } : null;
     state = 'playing'; stateTime = 0;
     togglePause();
     ovText.textContent = 'Picked up where you left off.';
@@ -337,16 +370,19 @@
     var s = 0;
     for (var k in held) if (STEER_KEYS[k]) s += STEER_KEYS[k];
     if (press && press.steer) s += press.steer;
+    if (career.steer === 'tilt' && phone.at !== null) s += S.tilt(phone.at, phone.from);
     return Math.max(-1, Math.min(1, s));
   }
   function braking(){
     for (var k in held) if (BRAKE_KEYS[k]) return true;
-    return !!(press && press.brake);
+    return padBrake !== null;
   }
   function hit(move){
     if (state === 'playing') F.attack(world, move);
   }
   function startOrResume(){
+    A.unlock();
+    if (career.steer === 'tilt') askTilt();
     if (state === 'paused') { togglePause(); if (state !== 'loading') resumeSound(); }
     else if (state === 'idle' || state === 'result') { if (mode === 'quick' && state === 'result') go(quickWorld()); else startGame(); }
   }
@@ -383,33 +419,79 @@
     if (running()) togglePause();
   });
 
-  // A finger anywhere on the game plays. Dragging sideways steers, as far
-  // as the finger goes from where it touched down; a tap punches, a flick
-  // up kicks, and a flick down brakes until the finger lifts.
-  var press = null;
+  // On a touchscreen: a finger anywhere but the buttons steers, dragged
+  // sideways as far as it goes from where it touched down (another finger
+  // can punch meanwhile); and the buttons punch, kick and, held, brake.
+  var press = null, padBrake = null;
   gameEl.addEventListener('pointerdown', function(e){
-    if ((press && !e.isPrimary) || e.target.closest('.stats') || e.target.closest('.overlay') || !running() || e.button > 0) return;
+    if (press || e.target.closest('.stats') || e.target.closest('.overlay') || e.target.closest('.pad') || !running() || e.button > 0) return;
     e.preventDefault();
-    press = { id: e.pointerId, x: e.clientX, y: e.clientY, at: performance.now(), moved: false, steer: 0, brake: false, kicked: false };
+    press = { id: e.pointerId, x: e.clientX, steer: 0 };
   });
   gameEl.addEventListener('pointermove', function(e){
     if (!press || e.pointerId !== press.id) return;
-    var dx = e.clientX - press.x, dy = e.clientY - press.y;
-    if (Math.max(Math.abs(dx), Math.abs(dy)) > 12) press.moved = true;
-    if (Math.abs(dy) > 36 && Math.abs(dy) > Math.abs(dx) * 1.5) {
-      if (dy < 0 && !press.kicked) { press.kicked = true; hit('kick'); }
-      if (dy > 0) press.brake = true;
-    }
+    var dx = e.clientX - press.x;
     press.steer = Math.abs(dx) < 8 ? 0 : Math.max(-1, Math.min(1, (dx - (dx > 0 ? 8 : -8)) / 50));
   });
   function lift(e){
-    if (!press || e.pointerId !== press.id) return;
-    if (!press.moved && performance.now() - press.at < 350) hit('punch');
-    press = null;
+    if (press && e.pointerId === press.id) press = null;
+    if (padBrake === e.pointerId) { padBrake = null; el.brake.classList.remove('down'); }
   }
   document.addEventListener('pointerup', lift);
-  document.addEventListener('pointercancel', function(e){ if (press && e.pointerId === press.id) press = null; });
+  document.addEventListener('pointercancel', lift);
   gameEl.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  function pad(button, down){
+    button.addEventListener('pointerdown', function(e){
+      e.preventDefault();
+      A.unlock();
+      if (running()) down(e);
+    });
+    // A press on a button is handled as it lands; its click would come late.
+    button.addEventListener('click', function(e){ e.preventDefault(); });
+  }
+  pad(el.punch, function(){ hit('punch'); });
+  pad(el.kick, function(){ hit('kick'); });
+  pad(el.brake, function(e){ padBrake = e.pointerId; el.brake.classList.add('down'); });
+
+  // Steering by turning the phone like a handlebar: how it's turned now, and
+  // how it was held when the race started (or carried on), which counts as
+  // straight ahead.
+  var phone = { at: null, from: 0 };
+  window.addEventListener('deviceorientation', function(e){
+    if (e.beta === null || e.gamma === null) return;
+    var angle = screen.orientation ? screen.orientation.angle : window.orientation || 0;
+    phone.at = S.turned(e.beta, e.gamma, angle);
+  });
+  function level(){ if (phone.at !== null) phone.from = phone.at; }
+  // iPhones only report how they're turned once the player allows it, asked
+  // on a press. Refused, steering goes back to dragging (which works either
+  // way: a finger on the screen steers too).
+  function askTilt(){
+    var D = window.DeviceOrientationEvent;
+    if (!D || typeof D.requestPermission !== 'function') return;
+    D.requestPermission().then(function(answer){ if (answer === 'denied') setSteer('drag'); }, function(){});
+  }
+  function setSteer(how){
+    career.steer = how;
+    keepCareer();
+    showSteer();
+  }
+  function showSteer(){
+    [].forEach.call($('steerPick').querySelectorAll('[role=radio]'), function(b){ b.setAttribute('aria-checked', b.getAttribute('data-steer') === career.steer ? 'true' : 'false'); });
+    $('steerHow').textContent = career.steer === 'tilt' ? 'tilt' : 'drag';
+    $('steerBtn').textContent = career.steer === 'tilt' ? 'Steering: tilt' : 'Steering: drag';
+  }
+  [].forEach.call($('steerPick').querySelectorAll('[role=radio]'), function(b){
+    b.addEventListener('click', function(){
+      setSteer(b.getAttribute('data-steer'));
+      if (career.steer === 'tilt') askTilt();
+    });
+  });
+  $('steerBtn').addEventListener('click', function(){
+    setSteer(career.steer === 'tilt' ? 'drag' : 'tilt');
+    if (career.steer === 'tilt') askTilt();
+  });
+  showSteer();
 
   startBtn.addEventListener('click', startOrResume);
   // From the pause screen: the race again from the grid.
@@ -519,8 +601,7 @@
     overlay.hidden = false;
     hud.hidden = true;
     var w = careerWorld();
-    if (!world || world.race !== w.race || world.bike !== w.bike || world.time) { world = w; stage(w); }
-    else if (staged !== world) stage(world);
+    if (!world || world.race !== w.race || world.bike !== w.bike || world.time) world = w;
     updateHud();
     stale = true;
   }
@@ -530,10 +611,24 @@
     if (view) view.resize(board.clientWidth || window.innerWidth, board.clientHeight || window.innerHeight);
     stale = true;
   }
+  // With ?fps in the address: frames a second, and how sharp the picture
+  // is drawn, in the corner, for checking how smoothly a phone plays.
+  var meter = /[?&]fps\b/.test(location.search) ? document.createElement('p') : null, ticks = 0, since = 0;
+  if (meter) { meter.className = 'fps'; meter.setAttribute('translate', 'no'); gameEl.appendChild(meter); }
+  function count(now){
+    ticks++;
+    if (now - since < 1000) return;
+    var st = view && view.scene ? view.stats() : null;
+    meter.textContent = Math.round(ticks * 1000 / (now - since)) + ' fps' + (st ? ' · ' + st.pixels + '× · ' + st.calls + ' calls · ' + Math.round(st.triangles / 1000) + 'k tris' : '');
+    ticks = 0; since = now;
+  }
   var last = performance.now();
   function loop(now){
+    if (meter) count(now);
     var dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
     last = now;
+    // A knockout plays out slowly for a moment.
+    if (slow > 0) { slow -= dt; dt *= 0.35; }
     update(dt);
     // The scene is drawn while anything moves; under a card it's drawn once.
     var moving = state === 'ready' || state === 'playing' || state === 'finishing' || state === 'down';
@@ -566,7 +661,8 @@
   else G.start(board, { quality: career.quality }).then(function(v){
     view = v;
     size();
-    stage(world);
+    // A race picked up from a save, or one started already: its city now.
+    if (state !== 'idle') stage(world);
   }, fail);
   requestAnimationFrame(loop);
 })();
