@@ -55,6 +55,8 @@ const TRADEMARKS = /tetris|pac-?man|flappy|crossy|blockade|breakout|road ?rash/i
 //   noindex   kept out of search engines (no minimum description length)
 //   footer    has the site's footer
 //   game      a game: asks for the phone upright (see checks-game.mjs)
+//   backdrop  false for a page its own picture fills (King of Streets),
+//             which has no falling-block backdrop behind it
 //   languages false for a module's page, whose own i18n target calls
 //             checkPageLanguages(url) instead, so its English and its
 //             translations are tested apart
@@ -176,7 +178,8 @@ export function checkPage(url, opts = {}){
       expect(c.role, `#${c.id} role`).toBe('img');
       expect(c.label, `#${c.id} label`).toBeTruthy();
     }
-    await expect(page.locator('canvas#bg')).toHaveAttribute('aria-hidden', 'true');
+    if (opts.backdrop === false) await expect(page.locator('canvas#bg')).toHaveCount(0);
+    else await expect(page.locator('canvas#bg')).toHaveAttribute('aria-hidden', 'true');
     // Outside a form a button without a type still works, but saying so keeps
     // one from submitting anything if it ever ends up inside one.
     await expect(page.locator('button:not([type])')).toHaveCount(0);

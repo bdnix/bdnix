@@ -6,24 +6,30 @@
     "index.html": "/king-of-streets/index.html",
     "street.js": "/assets/js/street.js",
     "street-core.js": "/assets/js/street-core.js",
+    "street-scene-core.js": "/assets/js/street-scene-core.js",
+    "street-rider.js": "/assets/js/street-rider.js",
+    "street-city.js": "/assets/js/street-city.js",
+    "street-3d.js": "/assets/js/street-3d.js",
+    "street-engine.js": "/assets/js/street-engine.js",
     "street.css": "/assets/css/street.css",
-    "vendor/": "/assets/vendor/"
+    "vendor/": "/assets/vendor/",
+    "models/": "/assets/street/models/",
+    "textures/": "/assets/street/textures/",
+    "data/": "/assets/street/data/"
   },
   "uses": [
     "analytics",
-    "backdrop",
     "base",
     "game-shell",
     "gestures",
     "gamesave",
     "icon-btn",
     "lang",
-    "sound",
-    "upright"
+    "sound"
   ],
   "page": {
     "title": "King of Streets — Play free in your browser | bdnix",
-    "description": "Play King of Streets free in your browser: race motorbikes through the city, punch, kick and swing a chain at your rivals, and finish in the top three to ride on. Beat your best, nothing to install.",
+    "description": "Play King of Streets free in your browser: race motorbikes through Dhaka in 3D, fight your rivals, kick CNGs aside and win points to buy faster bikes.",
     "schema": "WebApplication",
     "category": "GameApplication"
   },

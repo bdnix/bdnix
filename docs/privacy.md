@@ -28,6 +28,7 @@ In `localStorage`:
 | `bdnix_sound` | Whether game sounds are on (`on`) or muted (`off`) |
 | `bdnix_watermark_v1` | Watermark tool settings |
 | `bdnix_learn_chess` | Which Learn Chess lines are learned or mastered |
+| `bdnix_kingofstreets_career` | King of Streets' career: its points, the bikes bought, the races placed in, and the rider, bike, race, camera and graphics picked |
 | `bdnix_analytics` | Analytics consent choice |
 | `bdnix_lang` | The language the visitor picked |
 

@@ -229,6 +229,20 @@ AGENTS.md has rules every game follows. A full-screen 3D game changes how some o
 - **A big library** (three.js, and any loaders) is **vendored in the module** with its licence and fetched on first need. The models and textures are vendored too. Nothing loads from a CDN or any site but bdnix.com.
 - **Page weight:** keep the models light enough for a phone browser. Simplify heavy meshes, compress textures, and load assets progressively.
 
+## Built (twenty-fifth round)
+
+The game is built on the approved look, in `apps/king-of-streets/`:
+
+- `street-core.js`: the rules (unchanged since the twenty-fourth round). `street-scene-core.js`: the road laid out in 3D (its bends turning it, never doubling back), the chunks to build, the chase camera, the rider's view framing both hands, the engines' revs and gears and how a sound is heard (unit tested in `test/scene.test.mjs`).
+- `street-3d.js`: three.js, the sky and light for each time of day, the city streamed a chunk (60 m) at a time, the racers, traffic (CNGs with uniformed drivers, standing by the parked ones), people walking, the chase camera and the rider's view. Models far off are plain (`*_lo.glb`) and merged into a few draw calls; near ones detailed.
+- `street-city.js`: the buildings, shops, signboards, footpaths, kerbs, poles and cables, trees, mosques, the lake, and the bridges, flyover and expressway.
+- `street-rider.js`: the riders put into the poses baked for each bike (`data/poses.json`, from the lookdev's `rider.js` grip fitting, run once by `docs/plans/street-kids-lookdev/` with the shipped models), helmets, punches, kicks and swings.
+- `street-engine.js`: engine and traffic sound (Web Audio), muted with everything else.
+- `street.js`: the start card, the garage (bikes, rider, race, camera, graphics), quick race, the HUD, controls, pausing and saving (`bdnix_kingofstreets_save`; the career in `bdnix_kingofstreets_career`).
+- Assets: `models/` (CC BY, credited in `models/CREDITS.md`), `textures/` (CC0), published at `/assets/street/`. About 38 MB in all; a race loads only what it shows, the plain models first.
+- Tests draw no frames (the test browser draws in software, seconds a frame): `test/street.mjs` turns `bdnixStreet3d.draw` off; `test/graphics.spec.mjs` draws one small frame per route.
+- Not done yet: mirrors and a working dashboard in the rider's view; crashes are a lean-over fall, not a tumble.
+
 ## What's on the branch
 
 - `apps/street-kids/`: `module.json` (title, description, card, icon), `index.html`, `street-core.js` (the rules, keep), `street.js` (the rejected 2D drawing, to be replaced), `street.css`, `lang/bn.json` (Bangla, not yet reviewed by the owner), and `test/` (logic, behaviour, page and i18n targets, all passing against the 2D version).

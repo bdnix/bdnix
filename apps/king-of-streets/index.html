@@ -15,9 +15,7 @@
   <link rel="stylesheet" href="/assets/css/street.css">
   <script src="/assets/js/analytics.js"></script>
 </head>
-<body class="play">
-  <canvas id="bg" data-alpha="0.12" aria-hidden="true"></canvas>
-
+<body class="play street">
   <header class="bar">
     <a class="wordmark" href="/" aria-label="Back to bdnix"><b>bdnix</b><span translate="no">/ king of streets</span></a>
     <div class="bar-actions">
@@ -27,22 +25,35 @@
   </header>
 
   <main class="game" id="game">
-    <section class="panel box stats">
-      <div><span class="label">Score</span><b id="score">0</b></div>
-      <div><span class="label">Best</span><b id="best">0</b></div>
-    </section>
-
     <div class="board-wrap">
       <canvas id="board" role="img" aria-label="King of Streets race"></canvas>
+
+      <section class="panel box stats" aria-label="Race">
+        <div><span class="label">Place</span><b id="place">–</b></div>
+        <div><span class="label">Points</span><b id="score">0</b></div>
+        <div><span class="label">To go</span><b id="togo">–</b></div>
+      </section>
+      <div class="hud" id="hud" hidden>
+        <div class="foe panel" id="foe" hidden><span id="foeName"></span><span class="bar-track"><i id="foeHealth"></i></span></div>
+        <div class="me panel"><span class="label">Health</span><span class="bar-track"><i id="health"></i></span><span class="weapon" id="weapon" hidden></span></div>
+        <div class="speed panel"><b id="speed">0</b><span class="label">km/h</span></div>
+        <p class="count" id="count" aria-live="polite"></p>
+        <p class="msg" id="msg" aria-live="polite"></p>
+      </div>
+      <p class="loading" id="loading" hidden><i></i><span>Loading the city…</span></p>
+
       <div id="overlay" class="overlay">
         <p class="label" id="ovKicker">bdnix arcade</p>
         <h1 id="ovTitle">King of Streets</h1>
-        <p id="ovText">Race through the city. Punch and kick your rivals off their bikes, and finish in the top three to ride on.</p>
+        <p id="ovText">Race motorbikes through Dhaka. Punch, kick and swing at your rivals, kick CNGs out of your way, and win points to buy faster bikes.</p>
+        <p class="career" id="ovCareer"></p>
         <div class="ov-actions">
           <button type="button" id="startBtn" class="btn btn-primary">Start game</button>
           <button type="button" id="newBtn" class="btn btn-ghost" hidden>New game</button>
+          <button type="button" id="garageBtn" class="btn btn-ghost">Garage</button>
+          <button type="button" id="quickBtn" class="btn btn-ghost">Quick race</button>
         </div>
-        <p class="keys only-keys"><kbd>←</kbd><kbd>→</kbd> steer · <kbd>↓</kbd> brake · <kbd>X</kbd> punch · <kbd>Z</kbd> kick · <kbd>P</kbd> pause</p>
+        <p class="keys only-keys"><kbd>←</kbd><kbd>→</kbd> steer · <kbd>↓</kbd> brake · <kbd>X</kbd> punch · <kbd>Z</kbd> kick · <kbd>V</kbd> view · <kbd>P</kbd> pause</p>
         <ul class="gestures" aria-label="Touch controls">
           <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg><b>Steer</b><span>drag</span></li>
           <li><i class="tap"></i><b>Punch</b><span>tap</span></li>
@@ -52,14 +63,51 @@
         <p class="keys only-touch">Tap the score to pause.</p>
         <p class="credit">Inspired by Road Rash, created by Electronic Arts in 1991. Road Rash is a trademark of its owner; bdnix isn’t affiliated with or endorsed by them.</p>
       </div>
+
+      <div id="garage" class="overlay sheet" hidden>
+        <p class="label">Career</p>
+        <h1>Garage</h1>
+        <p id="garagePoints"></p>
+        <h2>Your bike</h2>
+        <ul class="bikes" id="bikes"></ul>
+        <h2>Your rider</h2>
+        <div class="riders" id="riders" role="radiogroup" aria-label="Rider"></div>
+        <h2>Race</h2>
+        <div class="races" id="races" role="radiogroup" aria-label="Race"></div>
+        <h2>Settings</h2>
+        <div class="ov-actions">
+          <button type="button" id="viewBtn" class="btn btn-ghost">Camera: behind</button>
+          <button type="button" id="qualityBtn" class="btn btn-ghost">Graphics: high</button>
+        </div>
+        <div class="ov-actions">
+          <button type="button" id="garageDone" class="btn btn-primary">Done</button>
+        </div>
+      </div>
+
+      <div id="quick" class="overlay sheet" hidden>
+        <p class="label">One race, any bike</p>
+        <h1>Quick race</h1>
+        <h2>Where and when</h2>
+        <div class="routes" id="routes" role="radiogroup" aria-label="Route"></div>
+        <h2>Bike</h2>
+        <div class="picks" id="quickBikes" role="radiogroup" aria-label="Bike"></div>
+        <p>A quick race scores, but its points don’t go to your career.</p>
+        <div class="ov-actions">
+          <button type="button" id="quickGo" class="btn btn-primary">Race</button>
+          <button type="button" id="quickBack" class="btn btn-ghost">Back</button>
+        </div>
+      </div>
     </div>
   </main>
 
-  <script src="/assets/js/blocks.js"></script>
   <script src="/assets/js/gamesave.js"></script>
   <script src="/assets/js/sound.js"></script>
-  <script src="/assets/js/upright.js"></script>
   <script src="/assets/js/street-core.js"></script>
+  <script src="/assets/js/street-scene-core.js"></script>
+  <script src="/assets/js/street-rider.js"></script>
+  <script src="/assets/js/street-city.js"></script>
+  <script src="/assets/js/street-3d.js"></script>
+  <script src="/assets/js/street-engine.js"></script>
   <script src="/assets/js/street.js"></script>
 </body>
 </html>

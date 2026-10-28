@@ -15,6 +15,8 @@ const touch = (page) => page.evaluate(() => matchMedia('(pointer:coarse)').match
 //             with on a phone ([['Move', 'drag'], ['Rotate', 'tap']]), in order
 //   languages false for a module's game, whose own i18n target calls
 //             checkGameLanguages(url) instead
+//   upright   false for a game that may be played with a phone sideways
+//             (AGENTS.md): it's checked to fill the screen either way instead
 export function checkGame(url, opts = {}){
   // The top bar has the mute button and the language switch, and no pause
   // button: P or Esc pauses, and so does leaving the page, which then shows
@@ -66,7 +68,7 @@ export function checkGame(url, opts = {}){
   // Turned sideways, a phone gets a note asking for it to be turned back, and
   // the game pauses. A mouse and keyboard screen is never covered, however
   // short the window: the game carries on, laid out beside its board.
-  test(`${url}: turning a phone sideways pauses the game and asks for it upright`, async ({ page }) => {
+  if (opts.upright !== false) test(`${url}: turning a phone sideways pauses the game and asks for it upright`, async ({ page }) => {
     const note = page.locator('.upright');
     await openGame(page, url);
     const upright = page.viewportSize();
@@ -110,6 +112,22 @@ export function checkGame(url, opts = {}){
     }
   });
 
+  // A game played either way up: turned sideways, nothing covers it, it
+  // carries on, and it fills the screen.
+  if (opts.upright === false) test(`${url}: turned sideways, the game carries on and fills the screen`, async ({ page }) => {
+    await openGame(page, url);
+    await page.getByRole('button', { name: 'Start game' }).click();
+    await expect(page.locator('#overlay')).toBeHidden();
+    await page.clock.runFor(300);
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.clock.runFor(300);
+    await expect(page.locator('.upright')).toHaveCount(0);
+    await expect(page.locator('#overlay')).toBeHidden();
+    const board = await page.locator('#board').boundingBox();
+    expect(board).toEqual({ x: 0, y: 0, width: 844, height: 390 });
+    await expectNoSideScroll(page);
+  });
+
   // On a phone with the browser's bars showing (360 × 640), the start card
   // fits whole: nothing on it is cut off, off screen or left for scrolling.
   test(`${url}: on a small phone the start card fits whole`, async ({ page }) => {
@@ -129,7 +147,7 @@ export function checkGame(url, opts = {}){
     await expectNoSideScroll(page);
   });
 
-  if (opts.languages !== false) checkGameLanguages(url);
+  if (opts.languages !== false) checkGameLanguages(url, opts);
 
   if (opts.credit) {
     const [name, creator] = opts.credit;
@@ -148,8 +166,8 @@ export function checkGame(url, opts = {}){
 
 // The game in the site's other languages: the switch in the top bar, and
 // playing it in each. Part of checkGame(), unless a module's game tests its
-// languages on their own.
-export function checkGameLanguages(url){
+// languages on their own. opts: { upright: false } as for checkGame().
+export function checkGameLanguages(url, opts = {}){
   // The switch in the top bar shows the game in another language.
   test(`${url}: the language switch in the top bar shows the game in Bangla`, async ({ page }) => {
     await openGame(page, url);
@@ -177,7 +195,7 @@ export function checkGameLanguages(url){
         await expect(page.locator('#ovTitle')).not.toHaveText('Paused');
       }
       await expectTranslated(page, code);
-      if (await touch(page)) {
+      if (opts.upright !== false && await touch(page)) {
         await page.setViewportSize({ width: 844, height: 390 });
         await expect(page.locator('.upright')).toBeVisible();
         await expect(page.locator('.upright')).not.toContainText('Turn your phone upright');

@@ -127,17 +127,40 @@ Each wall hides two multi-balls and one of each of the others. The seconds left 
 | Brake | ↓ (or S) | Flick down and hold |
 | Punch (or swing your weapon) | X (or J) | Tap |
 | Kick | Z (or K) | Flick up |
+| Camera: behind the bike or from the rider's seat | V | In the garage |
 | Pause | P / Esc | Tap the score, or leave the page |
 
-A motorbike race through a city at dusk, against six rivals: Kalu, Bablu, Mintu, Rocky, Tinku and Pinky. Everyone lines up on the grid, you at the back; a countdown (3, 2, 1, Go!) starts the race, and the bike speeds up on its own to its top speed (216 km/h in the first race, a little more in each after), so the work is steering, braking and fighting. Bends pull a fast bike towards the outside, so steer into them. Off the tarmac, on the kerb, the bike can't go faster than 79 km/h, and the lamp posts, palms and trees standing there throw you off it. So does riding into the back of the traffic: rickshaws, green CNG auto-rickshaws, painted trucks, buses and cars, each driving on at its own pace in its lane.
+A motorbike race through Dhaka, in 3D, against six rivals: Kalu, Bablu, Mintu, Rocky, Tinku and Pinky. The game fills the whole screen, on a computer or a phone, and a phone can be held either way up. Everyone lines up on the grid, you at the back; a countdown (3, 2, 1, Go!) starts the race, and the bike speeds up on its own to its top speed, so the work is steering, braking and fighting. Bends pull a fast bike towards the outside, more on a bike that holds the road less well, so steer into them. Up on the footpath the bike can't go faster than 50 km/h, and the electricity poles and trees standing there throw you off it. So does riding into the back of the traffic: CNG auto-rickshaws, cars, buses and trucks, each driving on at its own pace in its lane, and CNGs waiting at the kerb for fares, their drivers beside them.
 
-Ride up beside a rival to fight. A punch is quick and reaches a short way; a kick reaches further, hits harder and shoves them across the road, but takes longer. A rival close enough to hit shows their name and health above them. Some rivals carry a weapon (a stick, a chain or nunchaku), and the keen ones pull alongside to use it on you. Knock a rival off their bike (100 points) and they're out of the race, and their weapon is yours: from then on a punch swings it, harder than a kick. A crash drops it.
+Ride up beside a rival to fight. A punch is quick and reaches a short way; a kick reaches further, hits harder and shoves them across the road, but takes longer. The rival in reach shows their name, what they carry and their health at the top of the screen. Some rivals carry a weapon (a stick, a chain or nunchaku), and the keen ones pull alongside to use it on you. Knock a rival off their bike (100 points) and they're out of the race, and their weapon is yours: from then on a punch swings it. A crash drops it. A kick at a CNG beside you shoves it sideways out of its lane, its driver hanging on, and it rolls to a stop at the kerb; the keen rivals do it too. A car, a bus or a truck is too big to move: the kick bounces off.
 
-Your health is the bar under your place in the race. Rivals' blows and crashes take it away (a crash costs 20); when it runs out you're knocked out and the game is over. After a crash you're back on the bike in the road a couple of seconds later, blinking while nothing can hit you. The top of the board shows how far along the race everyone is, your place (1 of 7 to 7 of 7) and your speed.
+Your health is the bar at the bottom left. Rivals' blows and crashes take it away (a crash costs 20); when it runs out you're knocked out and the race is over. After a crash you're back on the bike in the road a couple of seconds later, while nothing can hit you. The panel at the top left shows your place (1 of 7 to 7 of 7), the race's points and how far there is to go, and your speed is at the bottom right.
 
-Finish in the top three to go on: first, second and third score 1000, 600 and 300 points, times the race's number. Each race is longer than the last (2.4 km, then 300 m more each time, up to 4 km), with busier traffic, tougher and faster rivals, and the weapons in other hands; your health is full again at the start of each. Finishing fourth or lower ends the game. The road, its bends, hills and traffic, and who rides in each race are the same every time, so a race can be learnt.
+**The career.** It starts on the scooter with no points. Finishing first, second or third wins 1,000, 600 or 300 points, each knockout 100 more, and winning on a bike slower than the race's own 1,000 more; a race that ends in a knockout keeps the points won in it. Points buy faster bikes in the **Garage**, and a bike is kept once bought:
 
-The city is drawn as you ride: the setting sun behind a skyline of towers, domes and minarets that turns as the road bends, lit windows, shops with striped awnings, billboards and street lamps casting pools of light, the road rising and falling over hills and fading into the haze.
+| Bike | Top speed | Price | Opens |
+|---|---|---|---|
+| Scooter | 90 km/h | free | Races 1 to 3 |
+| 125 | 115 km/h | 1,500 | Races 4 to 6 |
+| Street 135 | 135 km/h | 4,000 | Races 7 to 9 |
+| Sport 600 | 180 km/h | 10,000 | Races 10 to 12 |
+| Hyper 1000 | 230 km/h | 22,500 | Races 13 to 15 |
+
+There are fifteen races, three at each of five places and times of day, each longer than the last (from 2 km), and busier:
+
+| Races | Where | When | Traffic |
+|---|---|---|---|
+| 1 to 3 | Old Dhaka | After midnight, the street lamps lit | Almost none |
+| 4 to 6 | Mirpur Road | Dawn, in the mist | Light |
+| 7 to 9 | Hatirjheel, beside the lake and over its bridges | Midday | Moderate |
+| 10 to 12 | Moghbazar, up over the flyover | Dusk | Heavy |
+| 13 to 15 | The elevated expressway | The morning rush | Jammed |
+
+**Start game** rides the career's next race: the first one open that you haven't yet placed in the top three of. The garage also picks the bike you ride (any you own), your rider (six, three men and three women, told apart by their helmets) and any open race, and has the settings: the camera, and how much the game draws (**Graphics**: high draws shadows and further ahead, low suits a phone; it takes effect the next time the page loads, and starts high on a computer and low on a phone). **Quick race** rides one race on any route and any bike: it scores, and keeps a best, but its points don't go to the career.
+
+The city is real-looking, made of 3D artists' models and photographs: plastered concrete buildings with grilled windows, balconies and water tanks on the roofs, shops under Bangla signboards, tiled footpaths behind yellow and black kerbs, concrete poles strung with tangles of cable, mango and rain trees, mosques, people walking on the footpaths, and the sky for the time of day. Every rider wears a full-face helmet, sits on the bike with both hands closed round its grips, and leans into the bends. The view from the rider's seat (V) looks over the handlebars, both hands on the grips. The engines are heard too: your bike's in its own voice, its revs following the speed and dipping at each gear change, the rivals' as they pass, and the street's hum, CNGs' rattle, buses' and trucks' diesels and their horns, busiest at rush hour.
+
+The models' and textures' sources are credited in `apps/king-of-streets/models/CREDITS.md` and `apps/king-of-streets/textures/CREDITS.md` (see [Development](development.md#third-party-libraries)).
 
 ## Chess
 
@@ -189,7 +212,7 @@ The sounds are made in the browser with the Web Audio API, so there are no audio
 
 Each game keeps its best score in the browser's `localStorage`, and the [profile page](privacy.md#profile) shows them all.
 
-A game in progress is saved whenever it pauses and when the page is reloaded, closed or left. Returning to the page, even days later, shows the game paused exactly where it was, with the message "Picked up where you left off.": **Resume** carries on and **New game** starts over. The save is removed when the game ends. Flap only keeps a round once the bird has flapped, Road Hop once the chicken has hopped, Snake once the snake has started moving, Brick Bounce once the first ball has been launched, King of Streets once the first race has started (a race won saves as the start of the next), and Chess once the first move has been played.
+A game in progress is saved whenever it pauses and when the page is reloaded, closed or left. Returning to the page, even days later, shows the game paused exactly where it was, with the message "Picked up where you left off.": **Resume** carries on and **New game** starts over. The save is removed when the game ends. Flap only keeps a round once the bird has flapped, Road Hop once the chicken has hopped, Snake once the snake has started moving, Brick Bounce once the first ball has been launched, King of Streets once a race has got under way (a race that's over isn't kept; its points are already in the career), and Chess once the first move has been played.
 
 Clearing the browser's site data removes saved games and best scores. See [Privacy and data](privacy.md) for the storage keys.
 

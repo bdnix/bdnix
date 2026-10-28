@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-const loader = new GLTFLoader();
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 const cache = {};
 // Bikes: front to +z, length in metres, junk to drop, where the rider sits.
 export const BIKES = {
@@ -27,7 +28,7 @@ export const CHARACTERS = [
 ];
 export async function hairModel() { return glb('ponytail'); }
 export async function glb(name) {
-  if (!cache[name]) cache[name] = loader.loadAsync('/models/' + name + '.glb');
+  if (!cache[name]) cache[name] = loader.loadAsync((globalThis.MODEL_DIR || '/models/') + name + '.glb');
   return cache[name];
 }
 function place(o, hide, len, ry, byHeight, byWidth) {

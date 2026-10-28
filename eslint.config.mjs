@@ -5,7 +5,7 @@ import js from '@eslint/js';
 import globals from 'globals';
 
 export default [
-  { ignores: ['**/vendor/**', 'assets/lang/*.js', 'coverage/**', 'test-results/**', 'playwright-report/**', '.test-cache/**', '_site/**'] },
+  { ignores: ['**/vendor/**', 'assets/lang/*.js', 'coverage/**', 'test-results/**', 'playwright-report/**', '.test-cache/**', '_site/**', 'docs/plans/street-kids-lookdev/**'] },
   js.configs.recommended,
   {
     files: ['apps/*/*.js', 'shared/*/*.js', 'site/*/*.js'],

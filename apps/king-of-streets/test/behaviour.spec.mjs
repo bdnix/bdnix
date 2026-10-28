@@ -1,438 +1,385 @@
 import { test, expect } from '../../../tests/ui/fixtures.mjs';
-import { openGame, press, inkOn, tap, listen, heard, soundProblems } from '../../../tests/ui/games.mjs';
+import { openGame, listen, heard, soundProblems } from '../../../tests/ui/games.mjs';
+import { URL, noDrawing, until, startRace, seed, resume, race } from './street.mjs';
 
-// The race as saved: pausing saves it, and resuming carries on at the same
-// moment, since time only moves when a test runs the clock.
-async function peek(page){
-  await press(page, 'KeyP');
-  const s = await page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_kingofstreets_save') || 'null'));
-  await press(page, 'KeyP');
-  return s && s.data;
-}
-const stored = (page) => page.evaluate(() => localStorage.getItem('bdnix_kingofstreets_save'));
+// King of Streets as it's played: the career from the start card, riding,
+// fighting, kicking CNGs aside, crashing, finishing, the garage, a quick
+// race, the camera, the engines and saving. See street.mjs for why nothing
+// is drawn.
+noDrawing(test);
 
-// Loads the page with a race saved as `data`. Only once: a later reload
-// finds whatever the game saved, as a visitor's would. (Each call's script
-// runs on every load after it, so each saves only if it's the newest.)
-let seeds = 0;
-async function openSaved(page, data){
-  await page.addInitScript(([d, n]) => {
-    if (n <= (+sessionStorage.getItem('seeded') || 0)) return;
-    sessionStorage.setItem('seeded', n);
-    localStorage.setItem('bdnix_kingofstreets_save', JSON.stringify({ v: 1, data: d }));
-  }, [data, ++seeds]);
-  await page.reload();
-}
-// A race in progress, made with the page's own rules (street-core.js):
-// race `race`, late enough that the traffic has driven on far ahead, with
-// the player riding at 30 m/s and every rival stopped at the start. `set`
-// changes it, given the world: (w, F) => { ... }.
-function race(page, set = '', race = 1){
-  return page.evaluate(([set, race]) => {
-    const F = window.bdnixStreet, w = F.create(race);
-    w.time = 3000;
-    Object.assign(w.player, { z: 200, speed: 30 });
-    w.rivals.forEach((o) => { o.z = 0; o.speed = 0; o.cool = 5; });
-    if (set) new Function('w', 'F', set)(w, F);
-    return { state: 'playing', carry: 0, world: F.snapshot(w) };
-  }, [set, race]);
-}
-// Opens a saved race and resumes it.
-async function ride(page, set, n){
-  await openSaved(page, await race(page, set, n));
-  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
-  await page.locator('#startBtn').click();
-  await expect(page.locator('#overlay')).toBeHidden();
-}
-// Waits (on the frozen clock) for the overlay to show.
-async function waitForOverlay(page, ms = 20000){
-  const overlay = page.locator('#overlay');
-  for (let t = 0; t < ms && !(await overlay.isVisible()); t += 250) await page.clock.runFor(250);
-  await expect(overlay).toBeVisible();
-}
-// Holds a key down for `ms` of the game's time.
-async function hold(page, key, ms){
-  await page.keyboard.down(key);
-  await page.clock.runFor(ms);
-  await page.keyboard.up(key);
-}
-// Rival `i` alongside the player, `dz` metres ahead and `dx` across, keeping
-// pace, with `extra` set too (cool: 0 to fight back straight away).
-const alongside = (i, dz, dx, extra = '') => `Object.assign(w.rivals[${i}], { z: w.player.z + ${dz}, x: w.player.x + ${dx}, speed: 30, top: 30 }, { ${extra} });`;
-
-// A digest of what's drawn on the board.
-function drawn(page){
-  return page.locator('#board').evaluate((c) => {
-    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-    let h = 0;
-    for (let i = 0; i < d.length; i += 97) h = (h * 31 + d[i]) | 0;
-    return h;
+const text = (page, id) => page.locator('#' + id).textContent();
+// A race with the player `z` metres in at `speed`, everyone else stopped at
+// the start (unless brought alongside), late enough that the traffic has
+// gone on ahead.
+function lonely({ race = 1, bike, z = 300, speed = 20, x = 0, health = 100, rivals = {} }){
+  const F = window.bdnixStreet, w = F.create(race, bike);
+  w.time = 3000;
+  Object.assign(w.player, { z, speed, x, health });
+  w.rivals.forEach((o, i) => {
+    Object.assign(o, { z: 5, x: o.x, speed: 0, top: 0, cool: 5 }, rivals[i] ? { z: z + rivals[i].dz, x: x + rivals[i].dx, speed, top: speed, health: rivals[i].health || o.health } : {});
   });
+  return F.snapshot(w);
 }
 
-test.beforeEach(async ({ page }) => {
-  await openGame(page, '/king-of-streets/');
-  await expect(page.locator('#ovTitle')).toHaveText('King of Streets');
-  await page.clock.runFor(100);
-});
-
-test('a countdown, then the race: the bike speeds up along the road', async ({ page }) => {
-  await page.getByRole('button', { name: 'Start game' }).click();
+test('a career starts on the scooter: the countdown, then the race', async ({ page }) => {
+  await listen(page);
+  await openGame(page, URL);
+  await until(page, () => document.getElementById('ovCareer').textContent.length > 0);
+  await expect(page.locator('#ovCareer')).toHaveText('Race 1 of 15 · 0 points · Scooter');
+  await startRace(page);
   await expect(page.locator('#overlay')).toBeHidden();
+  await expect(page.locator('#hud')).toBeVisible();
+  await expect(page.locator('#place')).toHaveText('7/7');
+  await expect(page.locator('#togo')).toHaveText('2.0 km');
+  expect(await heard(page)).toEqual(['start', 'beep']);
+  await page.clock.runFor(1000);
+  await expect(page.locator('#count')).toHaveText('2');
   await page.clock.runFor(2000);
-  expect(await peek(page)).toBeNull();                 // nothing to keep on the grid
-  await page.clock.runFor(1200);
-  const s = await peek(page);
-  expect(s.state).toBe('playing');
-  expect(s.world.race).toBe(1);
-  expect(s.world.player.z).toBeGreaterThan(0);
-  expect(s.world.rivals.every((o) => o.z > 0 && o.speed > 0)).toBe(true);
+  await expect(page.locator('#msg')).toHaveText('Go!');
+  expect(await heard(page)).toEqual(['beep', 'beep', 'go']);
+  await page.clock.runFor(4000);
+  // Off the line: the scooter tops out at 90 km/h.
+  expect(+(await text(page, 'speed'))).toBeGreaterThan(50);
+  expect(+(await text(page, 'speed'))).toBeLessThanOrEqual(90);
   await page.clock.runFor(3000);
-  const later = await peek(page);
-  expect(later.world.player.speed).toBeGreaterThan(s.world.player.speed);
-  expect(later.world.player.z).toBeGreaterThan(s.world.player.z + 50);
-  await expect(page.locator('#score')).toHaveText('0');
+  await expect(page.locator('#togo')).toHaveText(/^1\.[0-9] km$/);
+  // The engine runs, its note following the revs.
+  const engine = await page.evaluate(() => window.bdnixStreetAudio.state());
+  expect(engine.running).toBe(true);
+  expect(engine.hz).toBeGreaterThan(30);
+  expect(engine.gain).toBeGreaterThan(0.05);
+  expect(await soundProblems(page)).toEqual([]);
 });
 
-test('the race is drawn on the board, moving, and still while paused', async ({ page }) => {
-  expect(await inkOn(page, '#board')).toBeGreaterThan(1000);   // the grid, under the start screen
-  await expect(page.locator('#board')).toHaveAttribute('aria-label', 'King of Streets race');
-  await ride(page);
-  const a = await drawn(page);
-  await page.clock.runFor(200);
-  const b = await drawn(page);
-  expect(b).not.toBe(a);
-  await press(page, 'KeyP');
-  await page.clock.runFor(100);
-  const c = await drawn(page);
+test('steering moves the bike across the road, and braking slows it', async ({ page }) => {
+  await seed(page, lonely, {});
+  await resume(page);
+  await page.keyboard.down('ArrowRight');
+  await page.clock.runFor(500);
+  await page.keyboard.up('ArrowRight');
+  let w = await race(page);
+  expect(w.player.x).toBeGreaterThan(1.5);
+  await page.keyboard.down('KeyA');
   await page.clock.runFor(1000);
-  expect(await drawn(page)).toBe(c);
+  await page.keyboard.up('KeyA');
+  w = await race(page);
+  expect(w.player.x).toBeLessThan(-1.5);
+  const before = w.player.speed;
+  await page.keyboard.down('ArrowDown');
+  await page.clock.runFor(500);
+  await page.keyboard.up('ArrowDown');
+  w = await race(page);
+  expect(w.player.speed).toBeLessThan(before - 8);
 });
 
-test('the board is upright on a phone held upright, and wide on a wide screen', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.clock.runFor(100);
-  let box = await page.locator('#board').boundingBox();
-  expect(box.height).toBeGreaterThan(box.width * 1.4);
-  expect(box.width).toBeGreaterThan(330);
-  await page.setViewportSize({ width: 1280, height: 720 });
-  await page.clock.runFor(100);
-  box = await page.locator('#board').boundingBox();
-  expect(box.width).toBeGreaterThan(box.height * 1.3);
-});
-
-test('the arrow keys steer and brake', async ({ page }) => {
-  await ride(page);
-  let s = await peek(page);
-  await hold(page, 'ArrowRight', 300);
-  let now = await peek(page);
-  expect(now.world.player.x).toBeGreaterThan(s.world.player.x + 0.3);
-  await hold(page, 'KeyA', 300);                        // and A and D
-  s = now; now = await peek(page);
-  expect(now.world.player.x).toBeLessThan(s.world.player.x - 0.3);
-  const fast = now.world.player.speed;
-  await hold(page, 'ArrowDown', 500);
-  now = await peek(page);
-  expect(now.world.player.speed).toBeLessThan(fast - 10);
-  // Let go, it speeds up again.
-  await page.clock.runFor(1000);
-  expect((await peek(page)).world.player.speed).toBeGreaterThan(now.world.player.speed);
-});
-
-test('X punches and Z kicks a rival alongside', async ({ page }) => {
-  await ride(page, alongside(0, 0.5, 0.2));
-  await press(page, 'KeyX');
+test('a punch lands on the rival beside, a knockout scores, and their weapon is yours', async ({ page }) => {
+  await listen(page);
+  // Bablu rides with a stick in race 1; one punch is all he has left.
+  await seed(page, lonely, { rivals: { 1: { dz: 0.5, dx: 1.2, health: 10 } } });
+  await resume(page);
+  await expect(page.locator('#foe')).toBeVisible();
+  await expect(page.locator('#foeName')).toHaveText('Bablu · Stick');
+  await page.keyboard.press('KeyX');
   await page.clock.runFor(400);
-  let o = (await peek(page)).world.rivals[0];
-  expect(o.health).toBe(40 - 10);
-  await press(page, 'KeyZ');
-  await page.clock.runFor(700);
-  o = (await peek(page)).world.rivals[0];
-  expect(o.health).toBe(40 - 10 - 15);
-  // J and K punch and kick too.
-  await press(page, 'KeyJ');
-  expect((await peek(page)).world.player.attack.move).toBe('punch');
-  await page.clock.runFor(400);
-  await press(page, 'KeyK');
-  expect((await peek(page)).world.player.attack.move).toBe('kick');
-});
-
-test('knocking a rival off scores and takes their weapon, and it swings for a punch', async ({ page }) => {
-  await ride(page, alongside(1, 0.5, 0.2, 'health: 5') + alongside(2, 1, -0.3));   // Bablu has the stick
-  await press(page, 'KeyX');
-  await page.clock.runFor(200);
+  await expect(page.locator('#msg')).toHaveText('Bablu is down! You took the Stick.');
   await expect(page.locator('#score')).toHaveText('100');
-  await expect(page.locator('#best')).toHaveText('100');
-  let s = await peek(page);
-  expect(s.world.rivals[1].down).toBeGreaterThan(0);
-  expect(s.world.rivals[1].weapon).toBeNull();
-  expect(s.world.player.weapon).toBe('stick');
-  await page.clock.runFor(300);
-  await press(page, 'KeyX');
-  s = await peek(page);
-  expect(s.world.player.attack.move).toBe('stick');
-  await page.clock.runFor(500);
-  expect((await peek(page)).world.rivals[2].health).toBe(40 - 20);
+  await expect(page.locator('#weapon')).toHaveText('Stick');
+  expect(await heard(page)).toEqual(expect.arrayContaining(['swing', 'punch', 'ko']));
+  // Now a punch swings the stick.
+  await page.keyboard.press('KeyJ');
+  await page.clock.runFor(100);
+  const w = await race(page);
+  expect(w.player.attack.move).toBe('stick');
 });
 
-test('rivals hit back', async ({ page }) => {
-  await ride(page, alongside(4, 0.5, 0.3, 'cool: 0'));  // Tinku, with the chain
-  await page.clock.runFor(500);
-  expect((await peek(page)).world.player.health).toBe(100 - 12);
+test('a kick shoves a CNG out of the way', async ({ page }) => {
+  await listen(page);
+  await seed(page, () => {
+    const F = window.bdnixStreet, w = F.create(1);
+    // The first CNG and the first car on the road, each with the player just beside it.
+    const cars = F.traffic(1).filter((v) => !v.parked), cng = cars.find((v) => v.kind === 'cng');
+    w.time = 20;
+    const at = F.at(cng, w.time);
+    Object.assign(w.player, { z: at, x: cng.x + (cng.x > 0 ? -2.2 : 2.2), speed: cng.speed });
+    w.rivals.forEach((o) => Object.assign(o, { z: 5, speed: 0, top: 0 }));
+    return F.snapshot(w);
+  });
+  await resume(page);
+  await page.keyboard.press('KeyZ');
+  await page.clock.runFor(400);
+  await expect(page.locator('#msg')).toHaveText('Out of the way!');
+  expect(await heard(page)).toEqual(expect.arrayContaining(['swing', 'shove']));
+  const w = await race(page);
+  expect(Object.keys(w.shoved)).toHaveLength(1);
 });
 
-test('riding into the back of traffic knocks you off, and you get back on', async ({ page }) => {
-  await ride(page, 'const car = F.traffic(1)[0]; w.time = 0; Object.assign(w.player, { z: car.z0 - 1.5, x: car.x, speed: 50, weapon: "chain" });');
-  await page.clock.runFor(50);
-  let s = await peek(page);
-  expect(s.world.player.crash).toBeGreaterThan(2);
-  expect(s.world.player.health).toBe(80);
-  expect(s.world.player.weapon).toBeNull();
-  await press(page, 'KeyX');                            // no fighting from the tarmac
-  expect((await peek(page)).world.player.attack).toBeNull();
+test('a kick at a car bounces off: it’s too big to move', async ({ page }) => {
+  await listen(page);
+  await seed(page, () => {
+    const F = window.bdnixStreet, w = F.create(1);
+    const car = F.traffic(1).find((v) => !v.parked && v.kind !== 'cng');
+    w.time = 20;
+    Object.assign(w.player, { z: F.at(car, w.time), x: car.x + (car.x > 0 ? -2.4 : 2.4), speed: car.speed });
+    w.rivals.forEach((o) => Object.assign(o, { z: 5, speed: 0, top: 0 }));
+    return F.snapshot(w);
+  });
+  await resume(page);
+  await page.keyboard.press('KeyZ');
+  await page.clock.runFor(400);
+  await expect(page.locator('#msg')).toHaveText('Too big to move.');
+  expect(await heard(page)).toContain('clang');
+  expect(Object.keys((await race(page)).shoved)).toHaveLength(0);
+});
+
+test('riding into the back of a bus crashes, and hurts', async ({ page }) => {
+  await listen(page);
+  await seed(page, () => {
+    const F = window.bdnixStreet, w = F.create(1);
+    const bus = F.traffic(1).find((v) => !v.parked && v.kind === 'bus');
+    w.time = 20;
+    Object.assign(w.player, { z: F.at(bus, w.time) - bus.len / 2 - 4, x: bus.x, speed: 25 });
+    w.rivals.forEach((o) => Object.assign(o, { z: 5, speed: 0, top: 0 }));
+    return F.snapshot(w);
+  });
+  await resume(page);
+  await page.clock.runFor(800);
+  await expect(page.locator('#msg')).toHaveText('Crash!');
+  expect(await heard(page)).toContain('crash');
+  const w = await race(page);
+  expect(w.player.health).toBe(80);
+  expect(w.player.crash).toBeGreaterThan(0);
+});
+
+test('finishing in the top three wins points for the career and opens the next race', async ({ page }) => {
+  await listen(page);
+  await seed(page, lonely, { z: 1985, speed: 25 });
+  await resume(page);
+  await page.clock.runFor(1500);
+  await expect(page.locator('#msg')).toHaveText('1st place');
+  // The save is gone as soon as the race is decided; the career has the points.
+  expect(await page.evaluate(() => localStorage.getItem('bdnix_kingofstreets_save'))).toBeNull();
+  const career = await page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_kingofstreets_career')));
+  expect(career).toMatchObject({ points: 1000, owned: [1], done: [1], race: 2 });
+  await page.clock.runFor(3200);
+  await expect(page.locator('#ovTitle')).toHaveText('1st place');
+  await expect(page.locator('#ovText')).toHaveText('You won 1000 points.');
+  await expect(page.locator('#ovKicker')).toHaveText('Race 1 · Old Dhaka after midnight');
+  await expect(page.locator('#ovCareer')).toHaveText('Race 2 of 15 · 1000 points · Scooter');
+  await expect(page.locator('#startBtn')).toHaveText('Next race');
+  expect(await heard(page)).toEqual(expect.arrayContaining(['finish', 'best']));
+  expect(await page.evaluate(() => localStorage.getItem('bdnix_kingofstreets_best'))).toBe('1000');
+  expect((await page.evaluate(() => window.bdnixStreetAudio.state())).running).toBe(false);
+  // The next race is on.
+  await startRace(page);
+  await expect(page.locator('#togo')).toHaveText('2.4 km');
+});
+
+test('knocked out: the race ends, and its points are kept', async ({ page }) => {
+  await listen(page);
+  await seed(page, () => {
+    const F = window.bdnixStreet, w = F.create(1);
+    const bus = F.traffic(1).find((v) => !v.parked && v.kind === 'bus');
+    w.time = 20; w.score = 100;
+    Object.assign(w.player, { z: F.at(bus, w.time) - bus.len / 2 - 4, x: bus.x, speed: 25, health: 15 });
+    w.rivals.forEach((o) => Object.assign(o, { z: 5, speed: 0, top: 0 }));
+    w.rivals[0].health = 0; w.rivals[0].down = 1;
+    return F.snapshot(w);
+  });
+  await resume(page);
+  await page.clock.runFor(800);
+  await expect(page.locator('#msg')).toHaveText('Knocked out!');
   await page.clock.runFor(2500);
-  s = await peek(page);
-  expect(s.world.player.crash).toBe(0);
-  expect(s.world.player.speed).toBeGreaterThan(0);
+  await expect(page.locator('#ovTitle')).toHaveText('Knocked out');
+  await expect(page.locator('#ovText')).toHaveText('You keep 100 points from the race.');
+  await expect(page.locator('#startBtn')).toHaveText('Try again');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_kingofstreets_career')).points)).toBe(100);
 });
 
-test('out of health is a knockout: game over', async ({ page }) => {
-  await page.evaluate(() => localStorage.setItem('bdnix_kingofstreets_best', '400'));
-  await ride(page, 'w.player.health = 3; w.score = 200;' + alongside(0, 0.5, 0.2, 'cool: 0'));
-  await waitForOverlay(page);
-  await expect(page.locator('#ovTitle')).toHaveText('Game over');
-  await expect(page.locator('#ovKicker')).toHaveText('Knocked out cold.');
-  await expect(page.locator('#ovText')).toHaveText('Score 200 · Best 400');
-  expect(await stored(page)).toBeNull();                // nothing left to resume
-  await expect(page.locator('#newBtn')).toBeHidden();
-  await page.getByRole('button', { name: 'Play again' }).click();
-  await expect(page.locator('#overlay')).toBeHidden();
-  await expect(page.locator('#score')).toHaveText('0');
-  await expect(page.locator('#best')).toHaveText('400');
+test('the garage: buy a bike with points and ride it, pick a rider and a race', async ({ page }) => {
+  await listen(page);
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('bdnix_kingofstreets_career')) localStorage.setItem('bdnix_kingofstreets_career', JSON.stringify({ points: 2000, owned: [1], done: [1, 2] }));
+  });
+  await openGame(page, URL);
+  await expect(page.locator('#ovCareer')).toHaveText('Race 3 of 15 · 2000 points · Scooter');
+  await page.getByRole('button', { name: 'Garage' }).click();
+  const garage = page.locator('#garage');
+  await expect(garage.locator('#garagePoints')).toHaveText('2000 points');
+  const bikes = garage.locator('.bikes li');
+  await expect(bikes).toHaveCount(5);
+  await expect(bikes.nth(0).getByRole('button')).toHaveText('Riding');
+  await expect(bikes.nth(1)).toContainText('Top speed 115 km/h');
+  await expect(bikes.nth(2).getByRole('button', { name: 'Buy for 4000' })).toBeDisabled();
+  // Level 2's races open with the 125.
+  await expect(garage.getByRole('radio', { name: '4', exact: true })).toBeDisabled();
+  await bikes.nth(1).getByRole('button', { name: 'Buy for 1500' }).click();
+  expect(await heard(page)).toContain('buy');
+  await expect(garage.locator('#garagePoints')).toHaveText('500 points');
+  await expect(bikes.nth(1).getByRole('button')).toHaveText('Riding');
+  // Race 3 is still the next not placed in; 4 is open now.
+  await expect(garage.getByRole('radio', { name: '3', exact: true })).toHaveAttribute('aria-checked', 'true');
+  await expect(garage.getByRole('radio', { name: '4', exact: true })).toBeEnabled();
+  // Back on the scooter, for race 2 again, as the teal helmet.
+  await bikes.nth(0).getByRole('button', { name: 'Ride' }).click();
+  await garage.getByRole('radio', { name: /^2( ✓)?$/ }).click();
+  await garage.getByRole('radio', { name: 'Teal helmet' }).click();
+  await expect(garage.getByRole('radio', { name: 'Teal helmet' })).toHaveAttribute('aria-checked', 'true');
+  await expect(garage.locator('.races .done')).toHaveCount(2);
+  await garage.getByRole('button', { name: 'Done' }).click();
+  await expect(page.locator('#ovCareer')).toHaveText('Race 2 of 15 · 500 points · Scooter');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_kingofstreets_career')))).toMatchObject({ points: 500, owned: [1, 2], ride: 1, race: 2, rider: 4 });
+  await startRace(page);
+  await expect(page.locator('#togo')).toHaveText('2.4 km');
 });
 
-test('finishing in the top three scores, and the next race starts', async ({ page }) => {
-  await ride(page, 'w.player.z = w.length - 20; w.player.speed = 50; w.score = 100;' +
-    'Object.assign(w.rivals[3], { z: w.length + 5, place: 1, speed: 40 }); w.finished = 1;');
+test('a quick race: any route on any bike, scored but not for the career', async ({ page }) => {
+  await openGame(page, URL);
+  await page.getByRole('button', { name: 'Quick race' }).click();
+  const quick = page.locator('#quick');
+  await expect(quick.getByRole('radio', { name: 'Old Dhaka after midnight' })).toHaveAttribute('aria-checked', 'true');
+  await quick.getByRole('radio', { name: 'The expressway in the morning rush' }).click();
+  await quick.getByRole('radio', { name: 'Hyper 1000' }).click();
+  await expect(quick.getByRole('radio', { name: 'Hyper 1000' })).toHaveAttribute('aria-checked', 'true');
+  // Back to the start card, and in again.
+  await quick.getByRole('button', { name: 'Back' }).click();
+  await expect(page.locator('#ovTitle')).toHaveText('King of Streets');
+  await page.getByRole('button', { name: 'Quick race' }).click();
+  await quick.getByRole('button', { name: 'Race' }).click();
+  await until(page, () => /^[3৩]$/.test(document.getElementById('count').textContent));
+  // Race 13, on the expressway: 3.2 km.
+  await expect(page.locator('#togo')).toHaveText('3.2 km');
+  await page.clock.runFor(5000);
+  const w = await race(page);
+  expect(w).toMatchObject({ race: 13, bike: 5 });
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_kingofstreets_save')).data.mode);
+  expect(saved).toBe('quick');
+});
+
+test('a quick race’s result doesn’t touch the career, and races again', async ({ page }) => {
+  await seed(page, lonely, { z: 1985, speed: 25 }, { mode: 'quick' });
+  await resume(page);
+  await page.clock.runFor(4800);
+  await expect(page.locator('#ovTitle')).toHaveText('1st place');
+  await expect(page.locator('#ovText')).toHaveText('Score 1000 · Best 1000');
+  await expect(page.locator('#startBtn')).toHaveText('Race again');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_kingofstreets_career')))).toBeNull();
+  await startRace(page);
+  await expect(page.locator('#togo')).toHaveText('2.0 km');
+});
+
+test('a race picked up after a reload comes back paused where it was', async ({ page }) => {
+  await seed(page, lonely, { z: 600 });
+  await expect(page.locator('#ovTitle')).toHaveText('Paused');
+  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
+  await expect(page.locator('#togo')).toHaveText('1.4 km');
+  await resume(page);
   await page.clock.runFor(1000);
-  await expect(page.locator('#score')).toHaveText('700');   // 100, and 600 for second
-  // A race just won saves as the start of the next.
-  let s = await peek(page);
-  expect([s.state, s.world.race, s.world.time, s.world.score, s.world.player.z]).toEqual(['ready', 2, 0, 700, 0]);
+  const w = await race(page);
+  expect(w.player.z).toBeGreaterThan(615);
+  // Reloaded mid-race, it's still there, and New game starts it over.
   await page.reload();
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
-  await expect(page.locator('#ovKicker')).toHaveText('Race 2');
-  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
-  await expect(page.locator('#score')).toHaveText('700');
+  const again = await page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_kingofstreets_save')).data.world.player.z);
+  expect(again).toBeCloseTo(w.player.z, 0);
+  await page.locator('#newBtn').click();
+  await until(page, () => /^[3৩]$/.test(document.getElementById('count').textContent));
+  await expect(page.locator('#togo')).toHaveText('2.0 km');
+});
+
+test('a save that makes no sense is thrown away', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('bdnix_kingofstreets_save', JSON.stringify({ v: 1, data: { mode: 'career', rider: 0, carry: 0, world: { race: 99 } } })));
+  await openGame(page, URL);
+  await expect(page.locator('#ovTitle')).toHaveText('King of Streets');
+  expect(await page.evaluate(() => localStorage.getItem('bdnix_kingofstreets_save'))).toBeNull();
+});
+
+test('a career race on a bike the career doesn’t own isn’t picked up', async ({ page }) => {
+  await seed(page, lonely, { race: 13, bike: 5 });
+  await expect(page.locator('#ovTitle')).toHaveText('King of Streets');
+});
+
+test('V switches to the rider’s own view and back, and the garage keeps it', async ({ page }) => {
+  await openGame(page, URL);
+  await startRace(page, true);
+  const mode = () => page.evaluate(() => window.bdnixStreet3d.current.stats().mode);
+  expect(await mode()).toBe('chase');
+  await page.keyboard.press('KeyV');
+  await page.clock.runFor(200);
+  expect(await mode()).toBe('rider');
+  await page.keyboard.press('KeyP');
+  await page.reload();
+  await expect(page.locator('#ovTitle')).toHaveText('Paused');
+  await page.locator('#newBtn').click();
+  await page.keyboard.press('KeyP');
+  await page.getByRole('button', { name: 'New game' }).click();
+  await until(page, () => window.bdnixStreet3d.current && window.bdnixStreet3d.current.stats().mode === 'rider');
+  await page.keyboard.press('KeyP');
+  await page.goto(URL);
+  await page.getByRole('button', { name: 'Garage' }).click();
+  await expect(page.locator('#viewBtn')).toHaveText('Camera: rider');
+  await page.locator('#viewBtn').click();
+  await expect(page.locator('#viewBtn')).toHaveText('Camera: behind');
+  await page.locator('#qualityBtn').click();
+  const q = await page.locator('#qualityBtn').textContent();
+  expect(['Graphics: low', 'Graphics: high']).toContain(q);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_kingofstreets_career')).view)).toBe('chase');
+});
+
+test('muting silences the engines, and pausing stops them', async ({ page }) => {
+  await openGame(page, URL);
+  await startRace(page, true);
+  await page.keyboard.press('KeyM');
+  expect(await page.evaluate(() => window.bdnixStreetAudio.state())).toMatchObject({ running: true, muted: true });
+  await page.keyboard.press('KeyP');
+  expect((await page.evaluate(() => window.bdnixStreetAudio.state())).running).toBe(false);
   await page.locator('#startBtn').click();
-  await page.clock.runFor(4000);
-  s = await peek(page);
-  expect([s.state, s.world.race, s.world.player.health]).toEqual(['playing', 2, 100]);
-  expect(s.world.player.z).toBeGreaterThan(0);
+  expect((await page.evaluate(() => window.bdnixStreetAudio.state())).running).toBe(true);
 });
 
-test('without a reload, the next race follows the result', async ({ page }) => {
-  await ride(page, 'w.player.z = w.length - 20; w.player.speed = 50;');
-  await page.clock.runFor(1000);
-  await expect(page.locator('#score')).toHaveText('1000');
-  await page.clock.runFor(4000);
-  let s = await peek(page);
-  expect([s.state, s.world.race]).toEqual(['ready', 2]);
-  await page.clock.runFor(3500);
-  s = await peek(page);
-  expect([s.state, s.world.race]).toEqual(['playing', 2]);
-});
-
-test('finishing fourth ends the game', async ({ page }) => {
-  await ride(page, 'w.player.z = w.length - 20; w.player.speed = 50; w.score = 300;' +
-    '[0, 1, 2].forEach((i) => Object.assign(w.rivals[i], { z: w.length + 5 + i, place: i + 1, speed: 40 })); w.finished = 3;');
-  await waitForOverlay(page);
-  await expect(page.locator('#ovTitle')).toHaveText('Game over');
-  await expect(page.locator('#ovKicker')).toHaveText('4th place: not in the top three.');
-  await expect(page.locator('#ovText')).toHaveText('Score 300 — new best!');
-  expect(await page.evaluate(() => localStorage.getItem('bdnix_kingofstreets_best'))).toBe('300');
-  expect(await stored(page)).toBeNull();
-});
-
-test('on a phone: drag to steer, tap to punch, flick up to kick, flick down to brake', async ({ page }) => {
-  await ride(page, alongside(0, 0.5, 0.2));
-  const game = page.locator('#game');
-  const touch = (type, x, y, id = 1) => game.dispatchEvent(type, { pointerType: 'touch', pointerId: id, isPrimary: id === 1, clientX: x, clientY: y });
-  // A tap punches.
-  await touch('pointerdown', 200, 400);
-  await touch('pointerup', 200, 400);
-  let s = await peek(page);
-  expect(s.world.player.attack.move).toBe('punch');
+test('by touch: drag to steer, tap to punch, flick up to kick, flick down to brake', async ({ page }) => {
+  await seed(page, lonely, { rivals: { 2: { dz: 0.3, dx: -2 } } });
+  await resume(page);
+  const board = page.locator('#game');
+  const touch = (type, x, y) => board.dispatchEvent(type, { pointerType: 'touch', isPrimary: true, pointerId: 1, clientX: x, clientY: y, button: 0 });
+  await touch('pointerdown', 200, 300);
+  await touch('pointermove', 260, 300);
   await page.clock.runFor(400);
-  expect((await peek(page)).world.rivals[0].health).toBe(30);
-  // A drag steers, as far as it goes: here to the left, away from Kalu.
-  s = await peek(page);
-  await touch('pointerdown', 200, 400);
-  await touch('pointermove', 140, 404);
-  await page.clock.runFor(300);
-  let now = await peek(page);
-  expect(now.world.player.x).toBeLessThan(s.world.player.x - 0.3);
-  expect(now.world.player.attack).toBeNull();           // lifting after a drag isn't a tap
-  await touch('pointermove', 200, 404);                 // back to the middle: straight on
-  await touch('pointerup', 200, 404);
-  // A flick up kicks.
-  await page.clock.runFor(1000);
-  await touch('pointerdown', 200, 400);
-  await touch('pointermove', 202, 340);
-  expect((await peek(page)).world.player.attack.move).toBe('kick');
-  await touch('pointerup', 202, 340);
-  // A flick down brakes until the finger lifts.
-  await page.clock.runFor(1000);
-  s = await peek(page);
+  await touch('pointerup', 260, 300);
+  let w = await race(page);
+  expect(w.player.x).toBeGreaterThan(1);
+  // A tap: a punch.
+  await touch('pointerdown', 200, 300);
+  await touch('pointerup', 200, 300);
+  await page.clock.runFor(50);
+  w = await race(page);
+  expect(w.player.attack && w.player.attack.move).toBe('punch');
+  await page.clock.runFor(500);
+  // A flick up: a kick.
+  await touch('pointerdown', 200, 300);
+  await touch('pointermove', 200, 240);
+  await touch('pointerup', 200, 240);
+  await page.clock.runFor(50);
+  w = await race(page);
+  expect(w.player.attack && w.player.attack.move).toBe('kick');
+  await page.clock.runFor(600);
+  // A flick down: the brakes, until the finger lifts.
+  const before = (await race(page)).player.speed;
   await touch('pointerdown', 200, 300);
   await touch('pointermove', 200, 360);
-  await page.clock.runFor(500);
-  now = await peek(page);
-  expect(now.world.player.speed).toBeLessThan(s.world.player.speed - 10);
-  await touch('pointerup', 200, 360);
-  await page.clock.runFor(500);
-  expect((await peek(page)).world.player.speed).toBeGreaterThan(now.world.player.speed);
-  // Only the first finger plays.
-  s = await peek(page);
-  await touch('pointerdown', 200, 400);
-  await touch('pointerdown', 300, 400, 2);
-  await touch('pointermove', 360, 400, 2);
-  await page.clock.runFor(300);
-  expect(Math.abs((await peek(page)).world.player.x - s.world.player.x)).toBeLessThan(0.2);
-  await touch('pointerup', 360, 400, 2);
-  await touch('pointercancel', 200, 400);
-  // A touch on the score is for pausing, not playing.
-  await tap(page.locator('.stats'));
-  expect((await peek(page)).world.player.attack).toBeNull();
-});
-
-test('pausing stops the race, and it resumes where it was', async ({ page }) => {
-  await ride(page);
-  await page.clock.runFor(500);
-  await press(page, 'KeyP');
-  await expect(page.locator('#ovTitle')).toHaveText('Paused');
-  await expect(page.locator('#ovKicker')).toHaveText('Race 1');
-  await expect(page.locator('#startBtn')).toHaveText('Resume');
-  const before = await stored(page);
-  await page.clock.runFor(3000);
-  await press(page, 'KeyX');                            // keys do nothing while paused
-  await hold(page, 'ArrowLeft', 300);
-  await press(page, 'KeyP');
-  await press(page, 'KeyP');
-  expect(await stored(page)).toBe(before);
-  await press(page, 'Space');                           // Space resumes...
-  await expect(page.locator('#overlay')).toBeHidden();
-  await page.clock.runFor(300);
-  expect((await peek(page)).world.player.z).toBeGreaterThan(JSON.parse(before).data.world.player.z);   // ...and on it goes
-});
-
-test('a saved best score shows on load', async ({ page }) => {
-  await page.evaluate(() => localStorage.setItem('bdnix_kingofstreets_best', '3100'));
-  await page.reload();
-  await expect(page.locator('#best')).toHaveText('3100');
-});
-
-test('a reload keeps the race, paused where it was', async ({ page }) => {
-  await page.getByRole('button', { name: 'Start game' }).click();
-  await page.clock.runFor(6000);
-  await hold(page, 'ArrowRight', 100);
-  const s = await peek(page);
-  await page.reload();
-  await expect(page.locator('#ovTitle')).toHaveText('Paused');
-  await expect(page.locator('#ovText')).toHaveText('Picked up where you left off.');
-  await page.clock.runFor(3000);
-  await page.locator('#startBtn').click();              // Resume
-  await expect(page.locator('#overlay')).toBeHidden();
-  expect(await peek(page)).toEqual(s);                  // on the same spot
-  await page.clock.runFor(1000);
-  expect((await peek(page)).world.player.z).toBeGreaterThan(s.world.player.z + 20);
-});
-
-test('New game from the pause screen starts over, and before the first race starts there is nothing to keep', async ({ page }) => {
-  await page.getByRole('button', { name: 'Start game' }).click();
-  await page.reload();
-  await expect(page.locator('#ovTitle')).toHaveText('King of Streets');
-  await page.getByRole('button', { name: 'Start game' }).click();
-  await page.clock.runFor(5000);
-  await press(page, 'KeyP');
-  await page.getByRole('button', { name: 'New game' }).click();
-  await expect(page.locator('#overlay')).toBeHidden();
-  await expect(page.locator('#score')).toHaveText('0');
-  await page.reload();
-  await expect(page.locator('#ovTitle')).toHaveText('King of Streets');
-  expect(await stored(page)).toBeNull();
-});
-
-test('saves that do not make sense are thrown away', async ({ page }) => {
-  const good = await race(page);
-  const grid = await page.evaluate(() => ({ state: 'ready', carry: 0, world: window.bdnixStreet.snapshot(window.bdnixStreet.create(2)) }));
-  for (const bad of [
-    { world: good.world },                                                     // missing most fields
-    { ...good, state: 'over' },
-    { ...good, carry: -1 },
-    { ...good, carry: 0.5 },                                                   // more than a step
-    { ...good, world: null },
-    { ...good, world: { ...good.world, race: 0 } },
-    { ...good, world: { ...good.world, player: { ...good.world.player, health: 0 } } },     // already out
-    { ...good, world: { ...good.world, rivals: good.world.rivals.slice(1) } },             // a rival missing
-    { ...good, state: 'ready' },                                               // on the grid, but already riding
-    { ...grid, world: { ...grid.world, race: 1 } }                             // the first race's grid isn't kept
-  ]) {
-    await openSaved(page, bad);
-    await expect(page.locator('#ovTitle'), JSON.stringify(bad).slice(0, 80)).toHaveText('King of Streets');
-    expect(await stored(page)).toBeNull();
-  }
-  await openSaved(page, grid);                                                // and good ones are kept
-  await expect(page.locator('#ovTitle')).toHaveText('Paused');
-  await openSaved(page, good);
-  await expect(page.locator('#ovTitle')).toHaveText('Paused');
-});
-
-test('the countdown, blows, knockouts, crashes and the finish each have a sound', async ({ page }) => {
-  await listen(page);
-  await page.reload();
-  await page.getByRole('button', { name: 'Start game' }).click();
-  await page.clock.runFor(3200);
-  expect(await heard(page)).toEqual(['start', 'beep', 'beep', 'beep', 'go']);
-
-  await ride(page, alongside(0, 0.5, 0.2, 'health: 25') + alongside(4, 0.5, 0.3, 'cool: 0'));
-  await press(page, 'KeyJ');                            // a punch: 15 left, and Tinku's chain
-  await page.clock.runFor(300);
-  expect(await heard(page)).toEqual(['swing', 'punch', 'hurt']);
-  await ride(page, alongside(0, 0.5, 0.2, 'health: 15'));
-  await press(page, 'KeyK');                            // a kick knocks Kalu off
-  await page.clock.runFor(600);
-  expect(await heard(page)).toEqual(['swing', 'kick', 'ko']);
-
-  await ride(page, alongside(1, 0.5, 0.2, 'health: 5') + alongside(2, 1, -0.3));
-  await press(page, 'KeyX');                            // Bablu's stick...
-  await page.clock.runFor(600);
-  await press(page, 'KeyX');                            // ...on Mintu
   await page.clock.runFor(400);
-  expect(await heard(page)).toEqual(['swing', 'punch', 'ko', 'swing', 'whack']);
-
-  await ride(page, alongside(0, 0.5, 0.05));
-  await page.clock.runFor(50);
-  expect(await heard(page)).toContain('bump');
-
-  await ride(page, 'const car = F.traffic(1)[0]; w.time = 0; Object.assign(w.player, { z: car.z0 - 1.5, x: car.x, speed: 50 });');
-  await page.clock.runFor(50);
-  expect(await heard(page)).toEqual(['crash']);
-
-  await ride(page, 'w.player.z = w.length - 10; w.player.speed = 50;');
-  await page.clock.runFor(500);
-  expect(await heard(page)).toEqual(['finish']);
-
-  await ride(page, 'w.player.z = w.length - 10; w.player.speed = 50; w.score = 50;' +
-    '[0, 1, 2].forEach((i) => Object.assign(w.rivals[i], { z: w.length + 5 + i, place: i + 1, speed: 40 })); w.finished = 3;');
-  await waitForOverlay(page);
-  expect(await heard(page)).toEqual(['best']);
-  await ride(page, 'w.player.z = w.length - 10; w.player.speed = 50;' +
-    '[0, 1, 2].forEach((i) => Object.assign(w.rivals[i], { z: w.length + 5 + i, place: i + 1, speed: 40 })); w.finished = 3;');
-  await waitForOverlay(page);
-  expect(await heard(page)).toEqual(['over']);
+  await touch('pointerup', 200, 360);
+  w = await race(page);
+  expect(w.player.speed).toBeLessThan(before - 5);
 });
 
-test('its sounds are well formed and loud enough', async ({ page }) => {
-  expect(await soundProblems(page)).toEqual([]);
+test('without 3D graphics it says so, and offers nothing to start', async ({ page }) => {
+  await page.addInitScript(() => {
+    const get = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function(kind, o){ return kind === 'webgl2' ? null : get.call(this, kind, o); };
+  });
+  await openGame(page, URL);
+  await expect(page.locator('#ovText')).toHaveText('This game needs 3D graphics (WebGL 2), which this browser can’t show.');
+  await expect(page.locator('#startBtn')).toBeDisabled();
+  await expect(page.locator('#garageBtn')).toBeDisabled();
 });

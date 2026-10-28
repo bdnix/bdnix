@@ -1,49 +1,76 @@
-/* King of Streets layout. Shared pieces live in base.css and game.css. */
-.game{
-  position:relative;z-index:1;
-  flex:1;min-height:0;
-  display:grid;
-  grid-template-columns:128px auto 128px;
-  grid-template-areas:"stats board .";
-  justify-content:center;align-content:start;
-  gap:14px;
-  padding:4px clamp(16px,4vw,32px) 24px;
-  cursor:pointer;
-}
-.stats{grid-area:stats;align-self:start;cursor:default}
-.board-wrap{grid-area:board}
-.overlay{cursor:default}
+/* King of Streets: the race fills the whole screen, on a computer or a
+   phone, upright or sideways; the top bar, the score and the rest of the
+   heads-up display sit over it. Shared pieces live in base.css and game.css. */
+body.street{background:#05060a}
+.street .bar{position:fixed;top:0;left:0;right:0;z-index:5;padding:10px max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left));background:linear-gradient(rgba(5,6,10,.55),rgba(5,6,10,0))}
+.street .game{position:fixed;inset:0;z-index:1;cursor:default;touch-action:none}
+.street .board-wrap{position:absolute;inset:0;line-height:1.45}
+.street #board{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:0;box-shadow:none;background:#0b0e14}
 
-/* ---- Phones & tablets ---- */
+/* The score panel: tapping it pauses. */
+.street .stats{
+  position:absolute;z-index:2;left:max(12px,env(safe-area-inset-left));top:58px;
+  grid-template-columns:repeat(3,auto);gap:14px;padding:8px 14px;cursor:pointer;
+  background:rgba(10,14,22,.62);
+}
+.street .stats b{font-size:18px}
+
+/* The heads-up display. */
+.hud{position:absolute;inset:0;z-index:2;pointer-events:none;color:var(--fg)}
+.hud[hidden]{display:none}
+.hud .panel{position:absolute;padding:8px 12px;border-radius:12px;background:rgba(10,14,22,.62);border:1px solid rgba(255,255,255,.12)}
+.bar-track{display:block;height:8px;margin-top:5px;border-radius:4px;background:rgba(255,255,255,.18);overflow:hidden}
+.bar-track i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#3ddc84,#a6f07a);transition:width .2s}
+.hud .me{left:max(12px,env(safe-area-inset-left));bottom:calc(14px + env(safe-area-inset-bottom));width:min(42vw,240px)}
+.hud .weapon{display:inline-block;margin-top:6px;font:600 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#facc15}
+.hud .weapon[hidden]{display:none}
+.hud .foe{left:50%;top:58px;transform:translateX(-50%);min-width:160px;text-align:center;font-weight:600}
+.hud .foe[hidden]{display:none}
+.hud .foe .bar-track i{background:linear-gradient(90deg,#ff5a4e,#ff9a6b)}
+.hud .speed{right:max(12px,env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));text-align:right}
+.hud .speed b{display:block;font:700 30px/1 var(--mono);font-variant-numeric:tabular-nums}
+.hud .count,.hud .msg{position:absolute;left:0;right:0;margin:0;text-align:center;text-shadow:0 2px 12px rgba(0,0,0,.7)}
+.hud .count{top:30%;font:800 clamp(64px,14vw,120px)/1 var(--sans,inherit);color:#facc15}
+.hud .msg{top:22%;font:800 clamp(22px,4.4vw,36px)/1.2 var(--sans,inherit);padding:0 16px}
+/* Hurt: the screen's edges flash red. */
+.game.hurt::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;box-shadow:inset 0 0 120px 30px rgba(255,40,40,.55);animation:hurt .4s ease-out forwards}
+@keyframes hurt{to{opacity:0}}
+
+.loading{position:absolute;left:50%;bottom:22%;z-index:2;transform:translateX(-50%);display:flex;align-items:center;gap:10px;margin:0;padding:10px 16px;border-radius:999px;background:rgba(10,14,22,.72);color:var(--muted);font-size:14px}
+.loading[hidden]{display:none}
+.loading i{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.2);border-top-color:var(--cyan);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* The cards: over the race, which shows through. */
+.street .overlay{z-index:4;border-radius:0;background:rgba(8,10,18,.68);padding-top:64px}
+.street .overlay .career{color:var(--fg);font-weight:600}
+.street .overlay .career:empty{display:none}
+.sheet{justify-content:flex-start;gap:10px}
+.sheet h2{margin:10px 0 0;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.bikes{display:grid;gap:6px;width:min(100%,460px);margin:0;padding:0;list-style:none}
+.bikes li{display:grid;grid-template-columns:1fr auto;grid-template-areas:"name btn" "info btn";align-items:center;gap:0 12px;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.05);text-align:left}
+.bikes b{grid-area:name}
+.bikes span{grid-area:info;font-size:12px;color:var(--muted)}
+.bikes .btn{grid-area:btn;margin:0;padding:8px 14px}
+.riders,.races,.routes,.picks{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:520px}
+.riders button,.races button,.routes button,.picks button{
+  display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:6px 12px;border-radius:10px;
+  border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:var(--fg);font:inherit;font-size:13px;cursor:pointer;
+}
+.races button{min-width:40px;justify-content:center}
+.riders i{width:14px;height:14px;border-radius:50%;border:1px solid rgba(255,255,255,.4)}
+[role=radio][aria-checked=true]{border-color:var(--cyan);background:rgba(34,211,238,.16)}
+.races .done::after{content:"✓";margin-left:4px;color:#4ade80}
+.riders button:disabled,.races button:disabled{opacity:.35;cursor:default}
+
 @media (max-width:700px),(pointer:coarse){
-  .game{
-    grid-template-columns:1fr;
-    grid-template-rows:auto 1fr;
-    grid-template-areas:"stats" "board";
-    justify-content:stretch;justify-items:center;
-    gap:8px;
-    padding:0 16px calc(12px + env(safe-area-inset-bottom));
-  }
-  .stats{justify-self:stretch;grid-template-columns:repeat(2,1fr);gap:4px;padding:8px 6px}
-  .stats div{justify-content:space-between}
-  .board-wrap{align-self:center}
+  .street .stats{top:54px;grid-template-columns:repeat(3,auto);gap:10px;padding:6px 10px}
+  .street .stats b{font-size:14px}
+  .hud .foe{top:104px}
+  .hud .speed b{font-size:24px}
+  .street .overlay{padding-top:58px}
 }
-
-/* ---- Phones held sideways: scores beside the board ---- */
 @media (orientation:landscape) and (max-height:520px){
-  body.play{
-    display:grid;
-    grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
-    grid-template-rows:auto auto 1fr;
-    grid-template-areas:
-      "bar   board ."
-      "stats board ."
-      ".     board .";
-    gap:8px;
-    padding:8px max(16px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
-  }
-  body.play > .game{display:contents}
-  .bar{grid-area:bar;padding:0}
-  .board-wrap{grid-area:board;align-self:center}
-  .stats{grid-template-columns:repeat(2,1fr);gap:8px}
+  .street .stats{top:48px}
+  .hud .foe{top:48px}
 }
