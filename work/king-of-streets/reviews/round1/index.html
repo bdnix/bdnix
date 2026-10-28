@@ -1,0 +1,189 @@
+<title>King of Streets Bikes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column of item cards, each a picture stage, a strip of other views, a live 3D viewer, facts and notes. */
+:root{--bg:#eceef0;--surface:#fff;--surface2:#e2e5e9;--fg:#15191d;--muted:#5a6570;--line:#cfd5db;--accent:#c4410f;--accent-fg:#fff;--ok:#1d7a46;--warn:#9a5b00;
+--display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;--body:"Barlow",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1316;--surface:#181e23;--surface2:#222a31;--fg:#e8ecef;--muted:#94a1ac;--line:#2d373f;--accent:#ff8a4d;--accent-fg:#1a0d05;--ok:#5bd08b;--warn:#f0b34a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1316;--surface:#181e23;--surface2:#222a31;--fg:#e8ecef;--muted:#94a1ac;--line:#2d373f;--accent:#ff8a4d;--accent-fg:#1a0d05;--ok:#5bd08b;--warn:#f0b34a;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.1}
+h1{font-size:2.2rem;letter-spacing:.01em}
+.eyebrow{font-family:var(--mono);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.intro{display:flex;flex-direction:column;gap:8px}
+.intro p{margin:0;max-width:62ch}
+.how{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:.95rem}
+.how b{font-family:var(--mono);font-weight:500}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ch{display:flex;gap:12px;align-items:flex-start}
+.ch>div{flex:1;min-width:0}
+.idtag{font-family:var(--display);font-weight:700;font-size:1.5rem;line-height:1;background:var(--accent);color:var(--accent-fg);padding:6px 9px;border-radius:6px}
+h2{font-size:1.45rem}
+.req{margin:2px 0 0;color:var(--muted);font-size:.95rem}
+.status{font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--warn);border:1px solid currentColor;border-radius:99px;padding:2px 8px;white-space:nowrap}
+.stage{margin:0;position:relative;background:var(--surface2);border-radius:8px;overflow:hidden;aspect-ratio:786/540}
+.stage img.big,.stage canvas{display:block;width:100%;height:100%;object-fit:cover}
+.stage canvas{touch-action:none;cursor:grab}
+.cap{position:absolute;left:8px;bottom:8px;font-family:var(--mono);font-size:.7rem;background:rgba(0,0,0,.6);color:#fff;padding:2px 7px;border-radius:4px}
+.strip{list-style:none;margin:0;padding:0;display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.strip li{flex:0 0 auto;scroll-snap-align:start;height:84px}
+.strip .phone{height:84px}
+.th{all:unset;display:block;height:100%;cursor:pointer;border-radius:6px;overflow:hidden;outline-offset:2px;border:2px solid transparent}
+.th[aria-current="true"]{border-color:var(--accent)}
+.th:focus-visible{outline:2px solid var(--accent)}
+.th img{height:100%;width:auto;display:block;max-width:none}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:600 .95rem var(--body);border:0;border-radius:8px;padding:10px 14px;background:var(--accent);color:var(--accent-fg);cursor:pointer;min-height:44px}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.btn[aria-pressed="true"]{background:var(--surface2)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.live-msg{margin:0;font-size:.9rem;color:var(--warn)}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0}
+.facts div{background:var(--surface2);border-radius:8px;padding:8px 10px;min-width:0}
+.facts dt{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.facts dd{margin:2px 0 0;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.95rem}
+.facts small{color:var(--muted);font-size:.72rem;display:block}
+h3{font-size:1rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.did{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:4px}
+.note{margin:0;padding:10px 12px;border-left:3px solid var(--warn);background:var(--surface2);border-radius:0 8px 8px 0;font-size:.93rem}
+.credit{margin:0;font-size:.8rem;color:var(--muted)}
+a{color:var(--accent)}
+@media (max-width:420px){.facts{grid-template-columns:1fr 1fr 1fr}.facts dd{font-size:.85rem}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+<div class="wrap">
+<header class="intro"><span class="eyebrow">King of Streets · Phase 1 · Round 1 of 7</span><h1>The five bikes</h1>
+<p>Each bike below is the exact file the game will load, drawn with the game's own settings in plain daylight. Rider, helmet and weapons come in later rounds.</p></header>
+<div class="how"><b>Reply in the chat:</b> "approved", or the IDs that need work and what is wrong. Tap a small picture to enlarge it. "Spin it here" loads the real file on your phone and lets you turn the bike with your finger.</div>
+<article class="card" id="A1" data-id="A1">
+<header class="ch"><span class="idtag">A1</span><div><h2>Level 1: Scooter</h2><p class="req">The weakest bike; the player starts on it.</p></div><span class="status">to review</span></header>
+<figure class="stage"><img class="big" src="img/A1_side.jpg" alt="Scooter, side" width="786" height="540"><canvas class="live" hidden role="img" aria-label="Scooter, drag to turn it"></canvas><figcaption class="cap">Side</figcaption></figure>
+<ul class="strip" aria-label="Other views"><li><button type="button" class="th" data-big="img/A1_side.jpg" data-cap="Side" aria-label="Side"><img src="img/A1_side.jpg" alt="Scooter, Side" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A1_front34.jpg" data-cap="Front three-quarter" aria-label="Front three-quarter"><img src="img/A1_front34.jpg" alt="Scooter, Front three-quarter" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A1_rear34.jpg" data-cap="Rear three-quarter" aria-label="Rear three-quarter"><img src="img/A1_rear34.jpg" alt="Scooter, Rear three-quarter" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A1_rear.jpg" data-cap="Rear" aria-label="Rear"><img src="img/A1_rear.jpg" alt="Scooter, Rear" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A1_close.jpg" data-cap="Close up" aria-label="Close up"><img src="img/A1_close.jpg" alt="Scooter, Close up" loading="lazy" width="786" height="540"></button></li><li class="phone"><button type="button" class="th" data-big="img/A1_race.jpg" data-cap="Race distance, phone upright" aria-label="Race distance, phone upright"><img src="img/A1_race.jpg" alt="Scooter at race distance, phone upright" loading="lazy" width="590" height="1278"></button></li></ul>
+<div class="actions"><button type="button" class="btn spin">Spin it here</button><button type="button" class="btn ghost wheels" hidden aria-pressed="false">Turn wheels</button><button type="button" class="btn ghost back" hidden>Back to pictures</button></div>
+<p class="live-msg" hidden></p>
+<dl class="facts">
+<div><dt>Triangles</dt><dd>29,999 <small>of 30,000</small></dd></div>
+<div><dt>File</dt><dd>0.94 MB <small>of 1.5</small></dd></div>
+<div><dt>Parts drawn</dt><dd>10 <small>5 materials</small></dd></div>
+</dl>
+<h3>What was done</h3><ul class="did"><li>Removed a Japanese beginner-driver sticker.</li><li>Cut from 95,583 to 29,999 triangles; wheels are separate parts so they can spin.</li><li>Textures shrunk from 4096 px to 1024 px.</li></ul>
+<p class="note"><b>Note.</b> No maker lettering was on this model.</p>
+<p class="credit">Model: <a href="https://sketchfab.com/3d-models/vino-2205f4e69bc64df3aab03c71ab9d7492" target="_blank" rel="noopener">Vino</a> by minghauLoh, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>, changed as listed.</p>
+</article>
+<article class="card" id="A2" data-id="A2">
+<header class="ch"><span class="idtag">A2</span><div><h2>Level 2: 125 cc commuter</h2><p class="req">Side stand up when ridden.</p></div><span class="status">to review</span></header>
+<figure class="stage"><img class="big" src="img/A2_side.jpg" alt="125 cc commuter, side" width="786" height="540"><canvas class="live" hidden role="img" aria-label="125 cc commuter, drag to turn it"></canvas><figcaption class="cap">Side</figcaption></figure>
+<ul class="strip" aria-label="Other views"><li><button type="button" class="th" data-big="img/A2_side.jpg" data-cap="Side" aria-label="Side"><img src="img/A2_side.jpg" alt="125 cc commuter, Side" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A2_front34.jpg" data-cap="Front three-quarter" aria-label="Front three-quarter"><img src="img/A2_front34.jpg" alt="125 cc commuter, Front three-quarter" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A2_rear34.jpg" data-cap="Rear three-quarter" aria-label="Rear three-quarter"><img src="img/A2_rear34.jpg" alt="125 cc commuter, Rear three-quarter" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A2_rear.jpg" data-cap="Rear" aria-label="Rear"><img src="img/A2_rear.jpg" alt="125 cc commuter, Rear" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A2_close.jpg" data-cap="Close up" aria-label="Close up"><img src="img/A2_close.jpg" alt="125 cc commuter, Close up" loading="lazy" width="786" height="540"></button></li><li class="phone"><button type="button" class="th" data-big="img/A2_race.jpg" data-cap="Race distance, phone upright" aria-label="Race distance, phone upright"><img src="img/A2_race.jpg" alt="125 cc commuter at race distance, phone upright" loading="lazy" width="590" height="1278"></button></li></ul>
+<div class="actions"><button type="button" class="btn spin">Spin it here</button><button type="button" class="btn ghost wheels" hidden aria-pressed="false">Turn wheels</button><button type="button" class="btn ghost back" hidden>Back to pictures</button></div>
+<p class="live-msg" hidden></p>
+<dl class="facts">
+<div><dt>Triangles</dt><dd>30,000 <small>of 30,000</small></dd></div>
+<div><dt>File</dt><dd>1.30 MB <small>of 1.5</small></dd></div>
+<div><dt>Parts drawn</dt><dd>28 <small>16 materials</small></dd></div>
+</dl>
+<h3>What was done</h3><ul class="did"><li>Removed the &quot;BROS&quot; lettering from both tank panels and the embossed &quot;HONDA&quot; on the engine cover.</li><li>Cut from 43,769 to 30,000 triangles, keeping the spoked wheels whole.</li><li>No side stand is modelled, so it is up.</li></ul>
+<p class="note"><b>Note.</b> Needs your call: this is a trail-style bike, not a plain commuter, and the source does not give its engine size. The only plainer 125 I found (a red Honda CG-style bike) had a smeared, blocky texture and flat grey wheel discs, so I dropped it.</p>
+<p class="credit">Model: <a href="https://sketchfab.com/3d-models/honda-nxr-bros-2003-2e88ff65e98e4d0c802242bdeccaf28d" target="_blank" rel="noopener">Honda NXR Bros 2003</a> by andersonfo, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>, changed as listed.</p>
+</article>
+<article class="card" id="A3" data-id="A3">
+<header class="ch"><span class="idtag">A3</span><div><h2>Level 3: 135 cc street bike</h2><p class="req">A 135 cc street bike, between the commuter and the 600 cc sport bike.</p></div><span class="status">to review</span></header>
+<figure class="stage"><img class="big" src="img/A3_side.jpg" alt="135 cc street bike, side" width="786" height="540"><canvas class="live" hidden role="img" aria-label="135 cc street bike, drag to turn it"></canvas><figcaption class="cap">Side</figcaption></figure>
+<ul class="strip" aria-label="Other views"><li><button type="button" class="th" data-big="img/A3_side.jpg" data-cap="Side" aria-label="Side"><img src="img/A3_side.jpg" alt="135 cc street bike, Side" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A3_front34.jpg" data-cap="Front three-quarter" aria-label="Front three-quarter"><img src="img/A3_front34.jpg" alt="135 cc street bike, Front three-quarter" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A3_rear34.jpg" data-cap="Rear three-quarter" aria-label="Rear three-quarter"><img src="img/A3_rear34.jpg" alt="135 cc street bike, Rear three-quarter" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A3_rear.jpg" data-cap="Rear" aria-label="Rear"><img src="img/A3_rear.jpg" alt="135 cc street bike, Rear" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A3_close.jpg" data-cap="Close up" aria-label="Close up"><img src="img/A3_close.jpg" alt="135 cc street bike, Close up" loading="lazy" width="786" height="540"></button></li><li class="phone"><button type="button" class="th" data-big="img/A3_race.jpg" data-cap="Race distance, phone upright" aria-label="Race distance, phone upright"><img src="img/A3_race.jpg" alt="135 cc street bike at race distance, phone upright" loading="lazy" width="590" height="1278"></button></li></ul>
+<div class="actions"><button type="button" class="btn spin">Spin it here</button><button type="button" class="btn ghost wheels" hidden aria-pressed="false">Turn wheels</button><button type="button" class="btn ghost back" hidden>Back to pictures</button></div>
+<p class="live-msg" hidden></p>
+<dl class="facts">
+<div><dt>Triangles</dt><dd>24,382 <small>of 30,000</small></dd></div>
+<div><dt>File</dt><dd>1.14 MB <small>of 1.5</small></dd></div>
+<div><dt>Parts drawn</dt><dd>15 <small>7 materials</small></dd></div>
+</dl>
+<h3>What was done</h3><ul class="did"><li>Removed the &quot;pulsar&quot; script on the tank and tail, and the hexagon badge on both tank sides (colour and bump maps).</li><li>Turned it round to face forward; wheels are separate parts.</li><li>Already under budget, so no triangles were removed.</li></ul>
+<p class="note"><b>Note.</b> Brake caliper and fork look a little low-poly up close.</p>
+<p class="credit">Model: <a href="https://sketchfab.com/3d-models/pulsar-135-ls-36d04d99171e4d59b540c25d8650dbd5" target="_blank" rel="noopener">pulsar 135 ls</a> by EmanuelRestrepoVelez, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>, changed as listed.</p>
+</article>
+<article class="card" id="A4" data-id="A4">
+<header class="ch"><span class="idtag">A4</span><div><h2>Level 4: Sport bike</h2><p class="req">A sport bike, faster than A3.</p></div><span class="status">to review</span></header>
+<figure class="stage"><img class="big" src="img/A4_side.jpg" alt="Sport bike, side" width="786" height="540"><canvas class="live" hidden role="img" aria-label="Sport bike, drag to turn it"></canvas><figcaption class="cap">Side</figcaption></figure>
+<ul class="strip" aria-label="Other views"><li><button type="button" class="th" data-big="img/A4_side.jpg" data-cap="Side" aria-label="Side"><img src="img/A4_side.jpg" alt="Sport bike, Side" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A4_front34.jpg" data-cap="Front three-quarter" aria-label="Front three-quarter"><img src="img/A4_front34.jpg" alt="Sport bike, Front three-quarter" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A4_rear34.jpg" data-cap="Rear three-quarter" aria-label="Rear three-quarter"><img src="img/A4_rear34.jpg" alt="Sport bike, Rear three-quarter" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A4_rear.jpg" data-cap="Rear" aria-label="Rear"><img src="img/A4_rear.jpg" alt="Sport bike, Rear" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A4_close.jpg" data-cap="Close up" aria-label="Close up"><img src="img/A4_close.jpg" alt="Sport bike, Close up" loading="lazy" width="786" height="540"></button></li><li class="phone"><button type="button" class="th" data-big="img/A4_race.jpg" data-cap="Race distance, phone upright" aria-label="Race distance, phone upright"><img src="img/A4_race.jpg" alt="Sport bike at race distance, phone upright" loading="lazy" width="590" height="1278"></button></li></ul>
+<div class="actions"><button type="button" class="btn spin">Spin it here</button><button type="button" class="btn ghost wheels" hidden aria-pressed="false">Turn wheels</button><button type="button" class="btn ghost back" hidden>Back to pictures</button></div>
+<p class="live-msg" hidden></p>
+<dl class="facts">
+<div><dt>Triangles</dt><dd>27,023 <small>of 30,000</small></dd></div>
+<div><dt>File</dt><dd>0.56 MB <small>of 1.5</small></dd></div>
+<div><dt>Parts drawn</dt><dd>13 <small>6 materials</small></dd></div>
+</dl>
+<h3>What was done</h3><ul class="did"><li>Removed &quot;SUZUKI&quot; on both lower fairings and the front, the &quot;GSX-R&quot; decals, the &quot;S&quot; emblems (fairing, tank, handlebar clamp), the label on the number plate and a game logo that was printed on it.</li><li>Wheels are separate parts. Already under budget.</li></ul>
+<p class="note"><b>Note.</b> The source is a 750, and the plan says 600 cc. Nothing in the game will state an engine size unless you want it to. Tiny tyre-maker text on the tyre sidewalls is still there.</p>
+<p class="credit">Model: <a href="https://sketchfab.com/3d-models/suzuki-gsxr-750-3e05cd872ef0458ca3d6b0770bb03622" target="_blank" rel="noopener">Suzuki GSXR 750</a> by kaleemullah550, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>, changed as listed.</p>
+</article>
+<article class="card" id="A5" data-id="A5">
+<header class="ch"><span class="idtag">A5</span><div><h2>Level 5: Hyper bike</h2><p class="req">The best bike.</p></div><span class="status">to review</span></header>
+<figure class="stage"><img class="big" src="img/A5_side.jpg" alt="Hyper bike, side" width="786" height="540"><canvas class="live" hidden role="img" aria-label="Hyper bike, drag to turn it"></canvas><figcaption class="cap">Side</figcaption></figure>
+<ul class="strip" aria-label="Other views"><li><button type="button" class="th" data-big="img/A5_side.jpg" data-cap="Side" aria-label="Side"><img src="img/A5_side.jpg" alt="Hyper bike, Side" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A5_front34.jpg" data-cap="Front three-quarter" aria-label="Front three-quarter"><img src="img/A5_front34.jpg" alt="Hyper bike, Front three-quarter" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A5_rear34.jpg" data-cap="Rear three-quarter" aria-label="Rear three-quarter"><img src="img/A5_rear34.jpg" alt="Hyper bike, Rear three-quarter" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A5_rear.jpg" data-cap="Rear" aria-label="Rear"><img src="img/A5_rear.jpg" alt="Hyper bike, Rear" loading="lazy" width="786" height="540"></button></li><li><button type="button" class="th" data-big="img/A5_close.jpg" data-cap="Close up" aria-label="Close up"><img src="img/A5_close.jpg" alt="Hyper bike, Close up" loading="lazy" width="786" height="540"></button></li><li class="phone"><button type="button" class="th" data-big="img/A5_race.jpg" data-cap="Race distance, phone upright" aria-label="Race distance, phone upright"><img src="img/A5_race.jpg" alt="Hyper bike at race distance, phone upright" loading="lazy" width="590" height="1278"></button></li></ul>
+<div class="actions"><button type="button" class="btn spin">Spin it here</button><button type="button" class="btn ghost wheels" hidden aria-pressed="false">Turn wheels</button><button type="button" class="btn ghost back" hidden>Back to pictures</button></div>
+<p class="live-msg" hidden></p>
+<dl class="facts">
+<div><dt>Triangles</dt><dd>30,000 <small>of 30,000</small></dd></div>
+<div><dt>File</dt><dd>0.63 MB <small>of 1.5</small></dd></div>
+<div><dt>Parts drawn</dt><dd>12 <small>5 materials</small></dd></div>
+</dl>
+<h3>What was done</h3><ul class="did"><li>Removed the &quot;Kawasaki&quot; lettering on the tank and the &quot;Ninja&quot; and &quot;H2R&quot; script on the side panels and tail.</li><li>Turned the white bodywork black (the source is white).</li><li>Cut from 34,913 to 30,000 triangles; wheels are separate parts.</li></ul>
+<p class="note"><b>Note.</b> Tiny tyre-maker text on the tyre sidewalls is still there.</p>
+<p class="credit">Model: <a href="https://sketchfab.com/3d-models/kawasaki-ninja-h2r-c8e3a10263d44c9baf8fc33d606a51bf" target="_blank" rel="noopener">kawasaki ninja h2r</a> by amogusstrikesback2, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>, changed as listed.</p>
+</article>
+<footer class="credit">Free models only, credited as above. Makers' logos are removed throughout. Nothing here is on the site.</footer>
+</div>
+<script type="module">
+const $=(s,r=document)=>r.querySelector(s);
+let active=null;
+async function closeLive(card){
+  const st=card._st; if(!st) return;
+  cancelAnimationFrame(st.raf); st.stage.dispose(); card._st=null;
+  $('.live',card).hidden=true; $('.big',card).hidden=false;
+  $('.back',card).hidden=true;$('.wheels',card).hidden=true;$('.spin',card).hidden=false;$('.live-msg',card).hidden=true;
+  $('.cap',card).textContent='Side'; if(active===card) active=null;
+}
+document.addEventListener('click',async e=>{
+  const th=e.target.closest('.th');
+  if(th){const card=th.closest('.card');await closeLive(card);const big=$('.big',card);big.src=th.dataset.big;$('.cap',card).textContent=th.dataset.cap;
+    card.querySelectorAll('.th').forEach(b=>b.removeAttribute('aria-current'));th.setAttribute('aria-current','true');
+    big.style.objectFit=th.dataset.big.endsWith('_race.jpg')?'contain':'cover';return}
+  const spin=e.target.closest('.spin');
+  if(spin){
+    const card=spin.closest('.card'),msg=$('.live-msg',card);
+    if(active&&active!==card) await closeLive(active);
+    msg.hidden=false;msg.textContent='Loading the bike…';
+    try{
+      const {createStage}=await import('./stage.js');
+      const canvas=$('.live',card),box=$('.stage',card);
+      canvas.hidden=false;$('.big',card).hidden=true;
+      const w=box.clientWidth,h=box.clientHeight;
+      const stage=await createStage(canvas,{width:w,height:h,dpr:window.devicePixelRatio||1,hdrUrl:'daylight.hdr'});
+      await stage.load('bikes/'+card.dataset.id+'.glb');
+      let yaw=0.55,spinA=0,wheelsOn=false,dirty=true,drag=null;
+      const st={stage,raf:0};card._st=st;active=card;
+      const frame=()=>{if(wheelsOn){spinA-=0.18;stage.spin(spinA);dirty=true}
+        if(dirty){stage.view('front34',{yaw:yaw-0.55});stage.render();dirty=false}
+        st.raf=requestAnimationFrame(frame)};
+      canvas.addEventListener('pointerdown',ev=>{drag={x:ev.clientX};canvas.setPointerCapture(ev.pointerId)});
+      canvas.addEventListener('pointermove',ev=>{if(!drag)return;yaw-=(ev.clientX-drag.x)*0.01;drag.x=ev.clientX;dirty=true});
+      const end=()=>{drag=null};canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
+      $('.wheels',card).onclick=ev=>{wheelsOn=!wheelsOn;ev.currentTarget.setAttribute('aria-pressed',String(wheelsOn))};
+      $('.spin',card).hidden=true;$('.back',card).hidden=false;$('.wheels',card).hidden=false;
+      $('.cap',card).textContent='Drag to turn';msg.hidden=true;frame();
+    }catch(err){
+      canvas_fail(card,err);
+    }
+    return;
+  }
+  if(e.target.closest('.back')) await closeLive(e.target.closest('.card'));
+});
+function canvas_fail(card,err){
+  $('.live',card).hidden=true;$('.big',card).hidden=false;
+  const m=$('.live-msg',card);m.hidden=false;m.textContent='The 3D view could not start here ('+(err&&err.message?err.message:'unknown error')+'). The pictures above are drawn from the same file.';
+}
+</script>

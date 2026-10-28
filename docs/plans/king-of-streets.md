@@ -81,6 +81,24 @@ Objects are shown in plain daylight; night and each time of day are judged with 
 
 Done when all 66 are approved. A rider on a bike is approved only with fingers closed round the grips, feet on the pegs and the stand up.
 
+#### Phone budgets
+
+Set on 28 October 2026, before round 1, from the [targets](#7-quality-targets-on-the-owners-iphone-15-pro) (under 15 MB a race, 60 frames a second). Every object is made within its budget before it's shown, and the file shown is the file that ships: a GLB with meshopt-compressed geometry and WebP textures. They're proposals like the targets, and are fixed in Phase 3 from the first route's real numbers. Revised on 28 October, before anything was approved: the first draft counted materials, and the best free bikes use up to 16, so the budget now counts parts drawn (draw calls), which is what costs the phone; textures are capped at 1024 px because the bikes were well under the file budget at that size.
+
+| Kind | Triangles | Parts drawn (meshes × materials) | Textures | GLB size |
+|---|---|---|---|---|
+| Bike (A) | 30,000 | 30 | 1024 px at most | 1.5 MB |
+| Rider (B, D), without the bike | 20,000 | 6 | 2048 px at most, 1 map | 0.5 MB |
+| Weapon (E) | 3,000 | 2 | 512 px | 0.1 MB |
+| Car, CNG, cycle rickshaw (F) | 20,000 | 16 | 2048 px at most | 0.8 MB |
+| Bus, truck (F) | 30,000 | 20 | 2048 px at most | 1 MB |
+| CNG driver, pedestrian (F2, G) | 8,000 | 4 | 1024 px at most | 0.3 MB |
+| Street object (H) | 5,000, or 20,000 for a mosque or a flyover section | 8 | 1024 px at most, shared by its kind | 0.3 MB, or 0.6 MB for a mosque or a flyover section |
+
+Per race: about 1.2 million triangles on screen and 250 draw calls at most (repeated objects drawn as instances), 15 MB to download in all. The 15 MB is the sum of one route's own set: the player's bike and the level's bike (1.5 MB each), the player's rider and up to six rivals (0.5 MB each), the weapons, the traffic kinds that route has, its people, its street objects and its sounds (1 MB). A route that has fewer kinds of traffic loads less.
+
+The game's pictures and models live in `work/king-of-streets/` on this branch until Phase 10 moves them into the game's module, so approved files survive between sessions.
+
 ### Phase 2: Names
 
 Once the owner has seen every character, propose names in Bangla and English, each with its meaning, in the style the owner picks. Show one page: each character's picture with its proposed name and alternatives.
@@ -239,11 +257,21 @@ Shown from the side, three-quarter and rear views, close up and at race distance
 
 | ID | Object | Requirements | Status |
 |---|---|---|---|
-| A1 | Level 1: scooter | The weakest bike; the player starts on it | to review |
-| A2 | Level 2: 125 cc commuter | Side stand up when ridden | to review |
+| A1 | Level 1: scooter | The weakest bike; the player starts on it | to review (round 1 sent 28 Oct) |
+| A2 | Level 2: 125 cc commuter | Side stand up when ridden | to review. Flag: a trail-style bike, engine size not stated by the source |
 | A3 | Level 3: 135 cc street bike | | to review |
-| A4 | Level 4: 600 cc sport bike | | to review |
+| A4 | Level 4: 600 cc sport bike | | to review. Flag: the source is a 750 |
 | A5 | Level 5: hyper bike | The best bike | to review |
+
+Round 1 files, in `work/king-of-streets/models/bikes/` (source, author and licence in [credits](../../work/king-of-streets/credits.md); how each was made in [the pipeline](../../work/king-of-streets/README.md)):
+
+| ID | Source model | File | Triangles | SHA-256 (not frozen until approved) |
+|---|---|---|---|---|
+| A1 | Vino, minghauLoh | `A1.glb` | 29,999 | `c5001f09c6edb97850f3285970c48cb58deac4da630f3df461faa70e2bb666f9` |
+| A2 | Honda NXR Bros 2003, andersonfo | `A2.glb` | 30,000 | `c3cf96feb03e067f0c5a7105067e712c883dafca7d35bb1456028808c6adce9e` |
+| A3 | pulsar 135 ls, EmanuelRestrepoVelez | `A3.glb` | 24,382 | `2fba25ed2e74e700f8a381ecb0037ef1b0a43341644f982a36c151f2b417e202` |
+| A4 | Suzuki GSXR 750, kaleemullah550 | `A4.glb` | 27,023 | `a3482dba706368dea6f10bb177fbc5d724644e03e83d2cc38033e3326c6e46a5` |
+| A5 | kawasaki ninja h2r, amogusstrikesback2 | `A5.glb` | 30,000 | `529d95e90bba24834a916213f139d9a56cfbe9b5d59481cdf512748f53dee42c` |
 
 ### B. The player's riders (round 2)
 
@@ -458,7 +486,8 @@ These are proposals. They're fixed in Phase 3 from the phone's real numbers, the
 
 ## Where the work is
 
-- **Done:** PR #103 closed, the `king-of-streets` branch created, this plan written.
-- **Phase:** 1, Objects.
-- **Next:** set the phone budgets, then round 1 (the five bikes).
-- **Waiting on the owner:** nothing.
+- **Done:** PR #103 closed, the `king-of-streets` branch created, this plan written, the phone budgets set, round 1 (the five bikes) built and sent for review on 28 October.
+- **Phase:** 1, Objects, round 1 (A1 to A5).
+- **Next:** the owner's reply on A1 to A5. Rework what needs it, freeze what's approved (record the date here), then round 2 (the two riders and the helmet).
+- **Waiting on the owner:** round 1: approve, or say what's wrong. Two calls to make: A2 is a trail-style bike, and A4 is a 750 where the plan says 600 cc.
+- **Working notes for the next session:** tools live in `work/king-of-streets/pipeline/` (Blender through `pip install bpy`, gltf-transform, Playwright; `README.md` there). The review page for a round is built by `reviews/round1/build_page.py`. jsDelivr isn't reachable from the container, so a local test maps those requests to the same three.js version from npm.
