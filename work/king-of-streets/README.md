@@ -11,3 +11,5 @@ Models, preview and pipeline for [the plan](../../docs/plans/king-of-streets.md)
   3. `build.py` (Blender, `pip install bpy`) turns the model to face +Z, scales it to real size, splits the wheels into `wheel_f` and `wheel_r` parts, deletes logo-only decals, reduces triangles and exports a GLB.
   4. `opt.mjs` (`@gltf-transform`, `meshoptimizer`, `sharp`) compresses it.
   5. `render.mjs` draws stills in headless Chromium with SwiftShader.
+
+Review pages can't publish `.hdr` or `.glb` by their own extension. Both go up as `.wav` (audio/wav): `bikes/A1.wav` is the bytes of `A1.glb`, `daylight.wav` those of `daylight.hdr`, which the loader reads fine since it ignores the type.

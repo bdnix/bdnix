@@ -138,8 +138,8 @@ document.addEventListener('click',async e=>{
       const canvas=$('.live',card),box=$('.stage',card);
       canvas.hidden=false;$('.big',card).hidden=true;
       const w=box.clientWidth,h=box.clientHeight;
-      const stage=await createStage(canvas,{width:w,height:h,dpr:window.devicePixelRatio||1,hdrUrl:'daylight.hdr'});
-      await stage.load('bikes/'+card.dataset.id+'.glb');
+      const stage=await createStage(canvas,{width:w,height:h,dpr:window.devicePixelRatio||1,hdrUrl:'daylight.wav'});
+      await stage.load('bikes/'+card.dataset.id+'.wav');
       let yaw=0.55,spinA=0,wheelsOn=false,dirty=true,drag=null;
       const st={stage,raf:0};card._st=st;active=card;
       const frame=()=>{if(wheelsOn){spinA-=0.18;stage.spin(spinA);dirty=true}

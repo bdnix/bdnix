@@ -486,7 +486,7 @@ These are proposals. They're fixed in Phase 3 from the phone's real numbers, the
 
 ## Where the work is
 
-- **Done:** PR #103 closed, the `king-of-streets` branch created, this plan written, the phone budgets set, round 1 (the five bikes) built and sent for review on 28 October.
+- **Done:** PR #103 closed, the `king-of-streets` branch created, this plan written, the phone budgets set, round 1 (the five bikes) built and sent for review on 28 October: <https://claude.ai/artifact/9vjEHVRJ3TTAe9TifuGYaN>.
 - **Phase:** 1, Objects, round 1 (A1 to A5).
 - **Next:** the owner's reply on A1 to A5. Rework what needs it, freeze what's approved (record the date here), then round 2 (the two riders and the helmet).
 - **Waiting on the owner:** round 1: approve, or say what's wrong. Two calls to make: A2 is a trail-style bike, and A4 is a 750 where the plan says 600 cc.
