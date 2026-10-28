@@ -80,8 +80,9 @@ jobs:
     name: UI tests
     runs-on: ubuntu-latest
     # A full run (every spec, weekly or by hand) took 10 to 14 minutes on one
-    # machine before the suite reached 998 tests.
-    timeout-minutes: 30
+    # machine before the suite reached 998 tests, 23 minutes at 1,208, and
+    # more with King of Streets' 3D page, so the limit leaves room for it.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup

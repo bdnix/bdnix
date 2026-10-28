@@ -108,6 +108,10 @@
   // Starts a race: the countdown once its city is ready.
   function go(w){
     world = w; carry = 0; banked = false; msgTime = 0;
+    // Nothing of the last race shows while this one's city loads.
+    hud.hidden = true;
+    el.count.textContent = '';
+    el.msg.textContent = '';
     hideCards();
     setState('loading');
     if (staged !== w) stage(w);
@@ -135,6 +139,7 @@
         setState(world.time ? 'playing' : 'ready');
         hud.hidden = false;
         if (!world.time) sound.play('start');
+        view.detailed();
         A.start(F.BIKES[world.bike - 1].id, world.rivals.map(function(o){ return F.BIKES[o.bike - 1].id; }));
       }
       return;

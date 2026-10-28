@@ -369,12 +369,17 @@
     }).then(function(){
       if (self.w !== w) return;
       self.frame(w, 0);
-      // The detailed models of the others, for when they come close.
-      var more = Object.keys(bikes).concat(rivals.map(function(i){ return CHARACTERS[i].id; }), ['cng', 'corolla', 'yaris', 'b_viking', 't_al', 't_bd', 'd_striped']);
-      self.later = Promise.all(more.map(gltf)).then(function(){
-        if (self.w === w) self.upgrade();
-      }, function(){});
+      self.more = Object.keys(bikes).concat(rivals.map(function(i){ return CHARACTERS[i].id; }), ['cng', 'corolla', 'yaris', 'b_viking', 't_al', 't_bd', 'd_striped']);
     });
+  };
+  // The detailed models of the others, for when they come close: fetched
+  // once the race is on (street.js calls it), not while a card shows.
+  View.prototype.detailed = function(){
+    var self = this, w = this.w;
+    if (!this.more || this.later) return;
+    this.later = Promise.all(this.more.map(gltf)).then(function(){
+      if (self.w === w) self.upgrade();
+    }, function(){});
   };
 
   // ---------- Racers ----------
@@ -713,7 +718,7 @@
   View.prototype.clear = function(){
     for (var c in this.chunks) this.chunks[c].dispose();
     this.chunks = {}; this.racers = []; this.cars = {}; this.walkers = {}; this.look = null; this.clock = 0;
-    this.scene = null; this.w = null; this.upgraded = false;
+    this.scene = null; this.w = null; this.upgraded = false; this.more = null; this.later = null;
   };
 
   // `current`: the view last started. `draw`: whether frames are drawn. Everything else about them (the road

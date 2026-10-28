@@ -30,7 +30,7 @@ test('the unit tests and the UI tests each run on one machine, the same steps ev
   for (const id of ['unit', 'ui']) assert.doesNotMatch(jobs[id], /matrix|shard/);
   assert.match(jobs.ui, /name: UI tests\n/);
   assert.doesNotMatch(jobs.ui, /--plan|steps\.plan/);
-  assert.match(jobs.ui, /timeout-minutes: 30\n/);
+  assert.match(jobs.ui, /timeout-minutes: 45\n/);
   assert.match(jobs.ui, /run: npm run coverage:ui:cached\n/);
   assert.match(jobs.coverage, /needs: \[unit, ui\]/);
   // GitHub's expressions have no arithmetic: a sum in one makes the whole

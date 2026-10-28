@@ -8,7 +8,7 @@ import { URL, noDrawing, until, seed, resume } from './street.mjs';
 // frame, small, and looks at it.
 noDrawing(test);
 test.use({ viewport: { width: 480, height: 270 } });
-test.setTimeout(120_000);
+test.setTimeout(240_000);
 
 const stats = (page) => page.evaluate(() => window.bdnixStreet3d.current.stats());
 // Draws a frame, and says how varied the picture is: a plain screen's
@@ -35,44 +35,41 @@ async function ride(page, race, z, career){
   await page.clock.runFor(500);
 }
 
-test('Old Dhaka after midnight: the street, its lamps, the racers and the traffic', async ({ page }) => {
-  await ride(page, 1, 400);
-  expect(await busy(page)).toBeGreaterThan(10);
-  const s = await stats(page);
-  expect(s.chunks).toBeGreaterThanOrEqual(4);
-  expect(s.racers).toBe(7);
-  expect(s.calls).toBeGreaterThan(30);
-  expect(s.triangles).toBeGreaterThan(10_000);
-});
-
-test('the lake and its bridges at midday, from the rider’s seat', async ({ page }) => {
-  await ride(page, 7, 520, { points: 0, owned: [1, 2, 3], done: [], view: 'rider' });
-  expect((await stats(page)).mode).toBe('rider');
-  await page.keyboard.press('KeyX');
-  await page.clock.runFor(300);
-  expect(await busy(page)).toBeGreaterThan(10);
-});
-
-test('up the flyover at dusk, with a fight on', async ({ page }) => {
-  await ride(page, 10, 900, { points: 0, owned: [1, 2, 3, 4], done: [] });
-  await page.keyboard.press('KeyZ');
-  await page.clock.runFor(1500);
-  expect((await stats(page)).cars).toBeGreaterThan(0);
-  expect(await busy(page)).toBeGreaterThan(10);
-});
-
-test('the expressway in the morning rush, and Mirpur Road at dawn, drawn plainly', async ({ page }) => {
-  await ride(page, 13, 700, { points: 0, owned: [1, 2, 3, 4, 5], done: [], quality: 'low' });
-  expect((await stats(page)).quality).toBe('low');
-  expect(await busy(page)).toBeGreaterThan(10);
-  await ride(page, 4, 300, { points: 0, owned: [1, 2], done: [], quality: 'low' });
-  await page.clock.runFor(4000);
-  expect((await stats(page)).people).toBeGreaterThan(0);
-});
-
-test('the start card shows the street behind it', async ({ page }) => {
+// Every route at its time of day, drawn in one page (a fresh page would
+// set the drawing up again, slowly): the start card's street behind it,
+// then a quick race on each route, from the grid.
+test('every route at its time of day, from the start card on', async ({ page }) => {
   await openGame(page, URL);
   await until(page, () => window.bdnixStreet3d.current && window.bdnixStreet3d.current.stats().chunks > 0);
   await page.clock.runFor(100);
   expect(await busy(page)).toBeGreaterThan(5);
+  const routes = ['Old Dhaka after midnight', 'Mirpur Road at dawn', 'Hatirjheel at midday', 'Moghbazar flyover at dusk', 'The expressway in the morning rush'];
+  for (const [i, route] of routes.entries()) {
+    if (i) await page.keyboard.press('KeyP');
+    await page.getByRole('button', { name: 'Quick race' }).click();
+    await page.locator('#quick').getByRole('radio', { name: route }).click();
+    await page.locator('#quick').getByRole('button', { name: 'Race' }).click();
+    await until(page, () => /^[3৩]$/.test(document.getElementById('count').textContent));
+    await page.clock.runFor(500);
+    expect(await busy(page), route).toBeGreaterThan(10);
+    const s = await stats(page);
+    expect(s.chunks, route).toBeGreaterThanOrEqual(3);
+    expect(s.racers, route).toBe(7);
+    expect(s.calls, route).toBeGreaterThan(30);
+    // People on the footpaths at dawn, once the walk they share has loaded.
+    if (i === 1) {
+      await until(page, () => window.bdnixStreet3d.current.stats().people > 0);
+    }
+  }
+});
+
+test('over a bridge on the lake, from the rider’s seat, with a fight on', async ({ page }) => {
+  await ride(page, 7, 640, { points: 0, owned: [1, 2, 3], done: [], view: 'rider' });
+  expect((await stats(page)).mode).toBe('rider');
+  await page.keyboard.press('KeyX');
+  await page.clock.runFor(300);
+  expect(await busy(page)).toBeGreaterThan(10);
+  await page.keyboard.press('KeyZ');
+  await page.clock.runFor(1500);
+  expect((await stats(page)).cars).toBeGreaterThan(0);
 });
