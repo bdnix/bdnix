@@ -22,7 +22,7 @@ test.describe('in Bangla', () => {
     await expect(page.locator('.avatar-lg')).toHaveText('ব');
     await expect(page.getByText('সেরা স্কোর')).toBeVisible();
     const shown = await scores(page);
-    expect(shown).toHaveLength(7);
+    expect(shown).toHaveLength(8);
     for (const s of shown) expect(s).toEqual({ best: 'এখনো খেলা হয়নি', link: 'খেলুন' });
     await expect(page.locator('#visits')).toHaveText('');
     await expectNoSideScroll(page);

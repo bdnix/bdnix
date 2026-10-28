@@ -25,7 +25,7 @@ test.describe('in Bangla', () => {
   test('a card in Bangla for every game and tool', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle('bdnix — ফ্রি ব্রাউজার গেম আর PDF, অডিও ও ছবির টুল');
-    for (const [section, count] of [['গেম', 7], ['টুল', 10]]) {
+    for (const [section, count] of [['গেম', 8], ['টুল', 10]]) {
       const cards = page.getByRole('region', { name: section }).locator('.card');
       await expect(cards).toHaveCount(count);
       for (const card of await cards.all()) {
