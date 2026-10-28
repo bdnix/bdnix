@@ -250,7 +250,7 @@ Shown from the front, side and rear at road distance, in daylight and at night.
 
 | ID | Object | Requirements | Status |
 |---|---|---|---|
-| F1 | CNG auto-rickshaw | Only the Bangla plate on its back, no extra white panel | to review |
+| F1 | CNG auto-rickshaw | **No white rectangle on its back.** Only the Bangla number plate there | to review |
 | F2 | CNG driver | The CNG drivers' blue uniform, shirt untucked; seated, or standing near a parked CNG | to review |
 | F3 | Sedan | Bangla plate on the car's own plate area, lettering filling it, nothing showing behind it | to review |
 | F4 | Hatchback | As F3 | to review |
@@ -373,7 +373,7 @@ Build to these, and don't ask about them again. They're the owner's requirements
 | Look | Real-looking: realistic motorcycles, riders, cars and traffic, made from artist-made models and photo textures. Rejected so far: flat 2D, shapes built in code, cartoon or low-poly models, and graphics that look like a game from the 2000s. |
 | The player's riders | Two: one man and one woman, easy to tell apart. Full-face helmets, no faces, no hair or ponytails out of the helmet. Everyday clothes, not riding suits. Straight backs. Hands closed on the grips. |
 | Names | Every character's and bike's name is confirmed in Phase 3. |
-| City | Dhaka: no hills, loads of mosques, flyovers and an expressway. Dhaka buses and painted trucks, not Chinese-looking ones. CNG drivers in their uniform, shirts untucked, standing near parked CNGs. Proper Bangla number plates. Shops that look real. Tiled footpaths. Poles and cables as in Dhaka today. Pedestrians mostly darker-skinned, as Bangladeshi people are. No date palms. |
+| City | Dhaka: no hills, loads of mosques, flyovers and an expressway. Dhaka buses and painted trucks, not Chinese-looking ones. CNGs with no white rectangle on the back. CNG drivers in their uniform, shirts untucked, standing near parked CNGs. Proper Bangla number plates. Shops that look real. Tiled footpaths. Poles and cables as in Dhaka today. Pedestrians mostly darker-skinned, as Bangladeshi people are. No date palms. |
 | Bikes and career | Five bikes, level 1 the weakest and level 5 the best. Start on a scooter, win races and earn points to buy better bikes. Prices 1,500 / 4,000 / 10,000 / 22,500: about 15 good races to the top bike. Also one-off races on any bike. |
 | Routes | Time is part of each level: the easier ones early morning or after midnight with little traffic, the hardest in the morning or evening rush hour. |
 | Views | Chase camera, plus an optional rider's view that shows the rider's hands and the bike's dashboard. |
