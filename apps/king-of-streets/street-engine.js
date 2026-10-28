@@ -1,5 +1,8 @@
 // King of Streets: the engines and the street, played with the Web Audio
-// API (no sound files). The player's engine follows the revs, in its own
+// API. The engines are a real motorbike's, recorded (sound/: a low and a
+// high loop, crossfaded and pitched with the revs; until they've loaded,
+// or if they can't, an engine made of oscillators stands in); the rest is
+// made as it plays. The player's engine follows the revs, in its own
 // bike's voice; the rivals' are heard as they pass, nearer louder, panned
 // to their side and higher as they close in; and around it all the street:
 // the hum of traffic, CNGs' two-stroke rattle, buses' and trucks' diesels
@@ -10,7 +13,7 @@
 (function(){
   var S = window.bdnixStreetScene, sound = window.bdnixSound;
   var ctx = null, out = null, on = false, me = null, rivals = [], street = null, lastHorn = 0;
-  var shown = { running: false, hz: 0, gain: 0, rivals: 0, horns: 0 };
+  var shown = { running: false, hz: 0, gain: 0, rivals: 0, horns: 0, passes: 0, recorded: false, taped: false };
 
   function context(){
     if (ctx) return ctx;
@@ -24,10 +27,27 @@
     return ctx;
   }
   // Phones only play sound that a press started: the start button calls
-  // this, so the engines can start once the city has loaded.
+  // this, so the engines can start once the city has loaded. It fetches the
+  // recordings too.
   function unlock(){
     var c = context();
     if (c && c.state === 'suspended' && c.resume) c.resume();
+    if (c) recordings(c);
+  }
+  // The recordings, fetched and decoded once: { low, high, pass }.
+  var SOUNDS = '/assets/street/sound/', tapes = null, taping = null;
+  function recordings(c){
+    if (taping) return taping;
+    var one = function(name){
+      return fetch(SOUNDS + name + '.wav').then(function(r){ if (!r.ok) throw new Error(name); return r.arrayBuffer(); }).then(function(b){
+        return new Promise(function(ok, fail){ var p = c.decodeAudioData(b, ok, fail); if (p && p.then) p.then(ok, fail); });
+      });
+    };
+    taping = Promise.all([one('engine-low'), one('engine-high'), one('pass')]).then(function(t){
+      tapes = { low: t[0], high: t[1], pass: t[2] };
+      shown.recorded = true;
+    }, function(){ taping = null; });
+    return taping;
   }
   var noiseBufs = {};
   // Looped noise: brown-ish (rumble) or, `white`, a hiss.
@@ -86,6 +106,58 @@
     this.level.gain.setTargetAtTime(loud, t, k);
     if (this.whine) { this.whine.frequency.setTargetAtTime(f * 7, t, k); this.whineLevel.gain.setTargetAtTime(revs * revs * this.v.whine, t, k); }
   };
+  // An engine from the recordings: the low loop and the high one played
+  // together, crossfaded as the revs rise and both pitched up with them,
+  // through a filter that opens with the revs. Each bike's voice sets how
+  // high it sits (`pitch`) and how bright it is (`open`).
+  var TAPES = {
+    buzz: { pitch: 1.35, open: 2600, high: 0.8 },
+    thump: { pitch: 0.82, open: 1500, high: 0.6 },
+    scream: { pitch: 1.6, open: 6000, high: 1.2 },
+    whine: { pitch: 1.4, open: 5000, high: 1.1, whine: 0.05 }
+  };
+  function Taped(c, voice, dest){
+    var v = TAPES[voice] || TAPES.buzz;
+    this.v = v;
+    this.filter = c.createBiquadFilter();
+    this.filter.type = 'lowpass';
+    this.filter.Q.value = 0.9;
+    this.level = gain(c, 0);
+    this.low = c.createBufferSource(); this.low.buffer = tapes.low; this.low.loop = true;
+    this.high = c.createBufferSource(); this.high.buffer = tapes.high; this.high.loop = true;
+    this.lowLevel = gain(c, 0); this.highLevel = gain(c, 0);
+    this.low.connect(this.lowLevel).connect(this.filter);
+    this.high.connect(this.highLevel).connect(this.filter);
+    // A little drive, for the bark of it.
+    this.drive = c.createWaveShaper();
+    var curve = new Float32Array(256);
+    for (var i = 0; i < 256; i++) { var x = i / 127.5 - 1; curve[i] = Math.tanh(1.8 * x) / Math.tanh(1.8); }
+    this.drive.curve = curve;
+    this.filter.connect(this.drive).connect(this.level);
+    if (v.whine) { this.whine = osc(c, 'sine'); this.whineLevel = gain(c, 0); this.whine.connect(this.whineLevel).connect(this.level); this.whine.start(); }
+    this.level.connect(dest);
+    // Started at different points in their loops, so no two engines beat together.
+    this.low.start(0, Math.random() * tapes.low.duration);
+    this.high.start(0, Math.random() * tapes.high.duration);
+  }
+  Taped.prototype.set = function(hz, revs, loud){
+    var t = ctx.currentTime, k = 0.06, v = this.v, r = Math.max(0, Math.min(1, revs));
+    this.low.playbackRate.setTargetAtTime(v.pitch * (0.55 + 1.25 * r), t, k);
+    this.high.playbackRate.setTargetAtTime(v.pitch * (0.5 + 0.85 * r), t, k);
+    this.lowLevel.gain.setTargetAtTime(Math.cos(r * Math.PI / 2), t, k);
+    this.highLevel.gain.setTargetAtTime(Math.sin(r * Math.PI / 2) * v.high, t, k);
+    this.filter.frequency.setTargetAtTime(v.open * (0.35 + 0.9 * r), t, k);
+    this.level.gain.setTargetAtTime(loud * 1.6, t, k);
+    if (this.whine) { this.whine.frequency.setTargetAtTime(Math.max(12, hz) * 14, t, k); this.whineLevel.gain.setTargetAtTime(r * r * v.whine, t, k); }
+  };
+  Taped.prototype.stop = function(){
+    var t = ctx.currentTime;
+    this.level.gain.setTargetAtTime(0, t, 0.05);
+    [this.low, this.high].concat(this.whine ? [this.whine] : []).forEach(function(n){ try { n.stop(t + 0.3); } catch (e) {} });
+  };
+  // The recorded engine if it's ready, or the made one.
+  function engineVoice(c, voice, dest){ return tapes ? new Taped(c, voice, dest) : new Voice(c, voice, dest); }
+
   Voice.prototype.stop = function(){
     var t = ctx.currentTime;
     this.level.gain.setTargetAtTime(0, t, 0.05);
@@ -124,6 +196,21 @@
     [this.hum, this.cng, this.diesel, this.wind, this.tyre].forEach(function(n){ try { n.stop(t + 0.3); } catch (e) {} });
   };
 
+  // A bike rushing past, from its side, quicker the faster it passes.
+  var lastPass = -9;
+  function passBy(pan, closing){
+    if (!tapes || ctx.currentTime - lastPass < 1.2) return;
+    lastPass = ctx.currentTime;
+    var src = ctx.createBufferSource(), p = ctx.createStereoPanner(), g = gain(ctx, 0.5);
+    src.buffer = tapes.pass;
+    src.playbackRate.value = Math.min(2, 1 + closing / 40);
+    p.pan.value = pan;
+    src.connect(g).connect(p).connect(out);
+    // The middle of the recording, where it's nearest.
+    src.start(0, tapes.pass.duration * 0.33, tapes.pass.duration * 0.4);
+    shown.passes++;
+  }
+
   // A horn: two quick blasts of two notes, from where the vehicle is.
   function horn(pan, loud, kind){
     var t = ctx.currentTime, p = ctx.createStereoPanner(), g = gain(ctx, 0);
@@ -153,12 +240,14 @@
     var c = context();
     if (!c) return false;
     if (c.state === 'suspended' && c.resume) c.resume();
-    me = { id: bike, voice: new Voice(c, S.engine(bike, 0).voice, out) };
+    recordings(c);
+    me = { id: bike, voice: engineVoice(c, S.engine(bike, 0).voice, out) };
     rivals = rivalBikes.map(function(id){
       var pan = c.createStereoPanner();
       pan.connect(out);
-      return { id: id, pan: pan, voice: new Voice(c, S.engine(id, 0).voice, pan) };
+      return { id: id, pan: pan, voice: engineVoice(c, S.engine(id, 0).voice, pan), along: null };
     });
+    shown.taped = !!tapes;
     street = new Street(c, out);
     on = true;
     shown.running = true;
@@ -190,6 +279,10 @@
       r.pan.pan.setTargetAtTime(h.pan, ctx.currentTime, 0.05);
       r.voice.set(re.hz * h.pitch, re.revs, 0.12 * h.gain);
       if (h.gain > 0.05) heardRivals++;
+      // Passing close by, either way: the rush of it going past.
+      var along = h.along;
+      if (r.along !== null && (r.along < 0) !== (along < 0) && h.distance < 6 && Math.abs(o.speed - L.speed) > 3) passBy(h.pan, Math.abs(o.speed - L.speed));
+      r.along = along;
     });
     shown.rivals = heardRivals;
     // The street around: its hum, and the nearest CNG and diesel.
@@ -222,7 +315,7 @@
   // engine's note and loudness, how many rivals can be heard and how many
   // horns have sounded.
   function state(){
-    return { running: shown.running, hz: shown.hz, gain: shown.gain, rivals: shown.rivals, horns: shown.horns, wind: shown.wind || 0, squeal: !!shown.squeal, muted: sound.isMuted() };
+    return { running: shown.running, hz: shown.hz, gain: shown.gain, rivals: shown.rivals, horns: shown.horns, passes: shown.passes, recorded: shown.recorded, taped: shown.taped, wind: shown.wind || 0, squeal: !!shown.squeal, muted: sound.isMuted() };
   }
 
   window.bdnixStreetAudio = { unlock: unlock, start: start, stop: stop, update: update, state: state };

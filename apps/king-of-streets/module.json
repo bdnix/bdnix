@@ -15,7 +15,8 @@
     "vendor/": "/assets/vendor/",
     "models/": "/assets/street/models/",
     "textures/": "/assets/street/textures/",
-    "data/": "/assets/street/data/"
+    "data/": "/assets/street/data/",
+    "sound/": "/assets/street/sound/"
   },
   "uses": [
     "analytics",

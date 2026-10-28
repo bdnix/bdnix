@@ -294,12 +294,13 @@
     var mixer = new T.AnimationMixer(name === 'p_old' ? rd.children[0] : mesh);
     mixer.clipAction(clip).play();
     mixer.setTime(phase * clip.duration);
+    mixer.length = clip.duration;
     return mixer;
   }
 
   // ---------- Fighting ----------
   // The bones a move turns, as they sit on the bike, to go back to.
-  var LIMBS = ['upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r', 'upperleg_l', 'lowerleg_l', 'foot_l', 'upperleg_r', 'lowerleg_r', 'foot_r', 'spine_02', 'spine_03'];
+  var LIMBS = ['upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r', 'upperleg_l', 'lowerleg_l', 'foot_l', 'upperleg_r', 'lowerleg_r', 'foot_r', 'spine_02', 'spine_03', 'head'];
   function rest(b){
     var r = {};
     LIMBS.forEach(function(k){ if (b[k]) r[k] = b[k].quaternion.clone(); });
@@ -311,26 +312,46 @@
   // A move part way through: `bike` the rider's bike (its matrices up to
   // date), `b` the rider's bones, `move` 'punch', 'kick' or a weapon, `side`
   // which way (-1 the rider's left, 1 right), `u` how far through (0 to 1)
-  // and `at` when in it the blow lands. Out to the side and back.
-  function strike(bike, b, move, side, u, at){
+  // and `at` when in it the blow lands; `goal`, if there's someone to hit,
+  // where they are (world): the blow goes at them, as far as an arm or a
+  // leg reaches. A wind-up first (the fist drawn back, the leg lifted, the
+  // shoulders turned away), then the blow, hard, and back.
+  function strike(bike, b, move, side, u, at, goal){
     var s = side < 0 ? 'l' : 'r', sx = -side;   // the rider's left is the bike's +x
-    var out = u < at ? Math.sin(u / at * Math.PI / 2) : Math.cos((u - at) / (1 - at) * Math.PI / 2);
+    var wind = at * 0.45, back = u < wind ? Math.sin(u / wind * Math.PI / 2) : u < at ? Math.cos((u - wind) / (at - wind) * Math.PI / 2) : 0;
+    var out = u < wind ? 0 : u < at ? Math.sin((u - wind) / (at - wind) * Math.PI / 2) : Math.cos((u - at) / (1 - at) * Math.PI / 2);
     var L = function(x, y, z){ return bike.localToWorld(V(x, y, z)); };
     var twist = V(0, 1, 0).transformDirection(bike.matrixWorld);
-    if (b.spine_03) turnAbout(b.spine_03, twist, sx * 0.25 * out);
+    if (b.spine_03) turnAbout(b.spine_03, twist, sx * (0.45 * out - 0.3 * back));
+    var g = goal ? bike.worldToLocal(goal.clone()) : null;
+    // Towards the goal from `from`, no further than `len`.
+    var toward = function(from, fallback, len){
+      if (!g) return fallback;
+      var d = g.clone().sub(from);
+      if (d.x * sx < 0.2) d.x = sx * 0.2;   // always out to its side
+      return from.clone().add(d.setLength(Math.min(len, d.length())));
+    };
     if (move === 'kick') {
       var hip = bike.worldToLocal(wpos(b['upperleg_' + s])), foot = bike.worldToLocal(wpos(b['foot_' + s]));
-      var to = foot.clone().lerp(V(sx * 0.95, hip.y - 0.25, hip.z + 0.1), out);
+      var lift = V(foot.x + sx * 0.15, foot.y + 0.25, foot.z - 0.15);
+      var hit = toward(hip, V(sx * 0.95, hip.y - 0.25, hip.z + 0.1), 0.95);
+      var to = foot.clone().lerp(lift, back).lerp(hit, out);
       ik(b['upperleg_' + s], b['lowerleg_' + s], b['foot_' + s], bike.localToWorld(to), L(sx * 0.5, hip.y + 0.3, hip.z + 1));
       return;
     }
     var sh = bike.worldToLocal(wpos(b['upperarm_' + s])), hand = bike.worldToLocal(wpos(b['hand_' + s]));
-    // A fist goes straight out at shoulder height; a weapon comes down from high over the shoulder.
-    var aimAt = move === 'punch' ? V(sh.x + sx * 0.62, sh.y - 0.02, sh.z + 0.2)
-      : u < at ? V(sh.x + sx * 0.2, sh.y + 0.45, sh.z - 0.1).lerp(V(sh.x + sx * 0.6, sh.y + 0.05, sh.z + 0.25), u / at)
-      : V(sh.x + sx * 0.6, sh.y + 0.05, sh.z + 0.25);
-    var target = hand.clone().lerp(aimAt, move === 'punch' ? out : Math.min(1, out * 1.6));
+    // A fist goes out at the head; a weapon comes down from high over the shoulder.
+    var drawn = move === 'punch' ? V(sh.x + sx * 0.05, sh.y - 0.1, sh.z - 0.25) : V(sh.x + sx * 0.15, sh.y + 0.5, sh.z - 0.15);
+    var aimAt = toward(sh, V(sh.x + sx * 0.62, sh.y - 0.02, sh.z + 0.2), move === 'punch' ? 0.66 : 0.6);
+    var target = hand.clone().lerp(drawn, back).lerp(aimAt, out);
     ik(b['upperarm_' + s], b['lowerarm_' + s], b['hand_' + s], bike.localToWorld(target), L(sh.x + sx * 0.3, sh.y - 0.6, sh.z - 0.4));
+  }
+  // A rider reeling from a blow: bent away from it (`side`, as in strike(),
+  // the way they're knocked), the head snapping back, `k` (0 to 1) how hard.
+  function recoil(bike, b, side, k){
+    var fwd = V(0, 0, 1).transformDirection(bike.matrixWorld), across = V(1, 0, 0).transformDirection(bike.matrixWorld);
+    if (b.spine_03) turnAbout(b.spine_03, fwd, side * 0.35 * k);
+    if (b.head) { turnAbout(b.head, fwd, side * 0.5 * k); turnAbout(b.head, across, -0.35 * k); }
   }
   function turnAbout(bone, axis, angle){
     bone.updateWorldMatrix(true, false);
@@ -341,6 +362,6 @@
   window.bdnixStreetRider = {
     init: init, canonical: canonical, bones: bones, aim: aim, ik: ik, pose: pose, dress: dress, helmet: helmet,
     paintHelmet: paintHelmet, hold: hold, recolor: recolor, uniform: uniform, skinTone: skinTone, stand: stand,
-    walkSource: walkSource, walk: walk, rest: rest, relax: relax, strike: strike
+    walkSource: walkSource, walk: walk, rest: rest, relax: relax, strike: strike, recoil: recoil
   };
 })();

@@ -94,22 +94,77 @@ body.street{background:#05060a}
 .street .overlay .career{color:var(--fg);font-weight:600}
 .street .overlay .career:empty{display:none}
 .sheet{justify-content:flex-start;gap:10px}
-.sheet h2{margin:10px 0 0;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.bikes{display:grid;gap:6px;width:min(100%,460px);margin:0;padding:0;list-style:none}
-.bikes li{display:grid;grid-template-columns:1fr auto;grid-template-areas:"name btn" "info btn";align-items:center;gap:0 12px;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.05);text-align:left}
-.bikes b{grid-area:name}
-.bikes span{grid-area:info;font-size:12px;color:var(--muted)}
-.bikes .btn{grid-area:btn;margin:0;padding:8px 14px}
-.riders,.races,.routes,.picks{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:520px}
-.riders button,.races button,.routes button,.picks button{
-  display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:6px 12px;border-radius:10px;
-  border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:var(--fg);font:inherit;font-size:13px;cursor:pointer;
+.sheet h2{margin:12px 0 0;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* The garage and the quick race: like a racing game's, every bike, rider
+   and route a picture. */
+.garage{--card:rgba(255,255,255,.05);--edge:rgba(255,255,255,.14);--hot:#ff7a3c;align-items:center}
+.g-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;width:min(100%,760px);text-align:left}
+.g-head h1{margin:2px 0 0}
+.garage .g-points{margin:0;padding:6px 14px;border-radius:999px;background:linear-gradient(90deg,#facc15,#ff9a3c);color:#1b1306;font:800 15px/1.3 var(--mono);white-space:nowrap}
+.showroom{width:min(100%,760px)}
+.hero{
+  display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:center;gap:8px 18px;
+  padding:14px;border-radius:18px;border:1px solid var(--edge);
+  background:radial-gradient(120% 90% at 30% 70%,rgba(255,122,60,.18),rgba(255,122,60,0) 60%),linear-gradient(160deg,#1f2738,#121722);
 }
-.races button{min-width:40px;justify-content:center}
-.riders i{width:14px;height:14px;border-radius:50%;border:1px solid rgba(255,255,255,.4)}
-[role=radio][aria-checked=true]{border-color:var(--cyan);background:rgba(34,211,238,.16)}
-.races .done::after{content:"✓";margin-left:4px;color:#4ade80}
-.riders button:disabled,.races button:disabled{opacity:.35;cursor:default}
+.hero-img{width:100%;aspect-ratio:16/10;object-fit:contain;filter:drop-shadow(0 18px 18px rgba(0,0,0,.55))}
+.hero-info{text-align:left}
+.hero-class{display:flex;align-items:center;gap:10px;margin:0}
+.hero-class b{padding:2px 9px;border-radius:6px;background:var(--hot);color:#160b04;font:800 12px/1.6 var(--mono);letter-spacing:.06em}
+.hero-class span{font:700 13px/1 var(--mono);color:#facc15}
+.sheet .hero-name{margin:6px 0 10px;font-size:clamp(22px,4vw,32px);letter-spacing:-.01em;text-transform:none;color:var(--fg)}
+.hero-stats{display:grid;grid-template-columns:auto 1fr;gap:7px 10px;align-items:center;margin:0 0 12px}
+.hero-stats dt{font:600 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.hero-stats dd{display:flex;align-items:center;gap:8px;margin:0}
+.stat-bar{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden}
+.stat-bar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#ff7a3c,#facc15)}
+.stat-val{font:700 12px/1 var(--mono);white-space:nowrap}
+.hero-btn{width:100%;margin:0;padding:12px 16px;font-size:16px}
+.hero-btn:disabled{opacity:1;background:rgba(255,255,255,.1);color:var(--fg);box-shadow:none}
+.hero-note{margin:6px 0 0;font-size:12px;color:var(--muted)}
+.hero-note:empty{display:none}
+.bikes{display:flex;gap:8px;margin:10px 0 0;padding:2px 2px 8px;list-style:none;overflow-x:auto;scroll-snap-type:x mandatory}
+.bikes li{flex:0 0 auto;scroll-snap-align:start}
+.bike-card,.rider-card,.route-pick,.bike-pick{
+  display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px 8px;border-radius:14px;
+  border:1px solid var(--edge);background:var(--card);color:var(--fg);font:inherit;cursor:pointer;
+}
+.bike-card{width:132px}
+.bike-card img,.bike-pick img{width:100%;aspect-ratio:16/10;object-fit:contain}
+.bike-card b{font-size:13px}
+.bike-card .state{font:600 11px/1.2 var(--mono);color:var(--muted)}
+.bike-card.locked img{filter:grayscale(.85) brightness(.6)}
+.bike-card.locked .state::before{content:"🔒 "}
+.bike-card[aria-pressed=true]{border-color:var(--hot);background:rgba(255,122,60,.14);box-shadow:0 0 0 1px var(--hot) inset}
+.riders{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;width:min(100%,760px)}
+.rider-card{padding:4px 4px 8px}
+.rider-card img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;background:linear-gradient(160deg,#1f2738,#121722)}
+.rider-card span{display:flex;align-items:center;gap:5px;font-size:12px;text-align:center}
+.rider-card i{flex:0 0 auto;width:10px;height:10px;border-radius:50%;border:1px solid rgba(255,255,255,.4)}
+.races{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;width:min(100%,760px)}
+.route-card{display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:14px;border:1px solid var(--edge);background:var(--card);text-align:left}
+.route-card img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px}
+.route-card b{font-size:13px}
+.route-card .needs{font:600 11px/1.2 var(--mono);color:#facc15}
+.route-card.locked img{filter:grayscale(.85) brightness(.55)}
+.chips{display:flex;gap:6px}
+.chips button{
+  flex:1;min-height:36px;border-radius:10px;border:1px solid var(--edge);background:rgba(255,255,255,.05);
+  color:var(--fg);font:700 14px/1 var(--mono);cursor:pointer;
+}
+.chips button:disabled{opacity:.35;cursor:default}
+.chips .done::after{content:" ✓";color:#4ade80}
+.routes{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;width:min(100%,760px)}
+.route-pick img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:9px}
+.route-pick span,.bike-pick span{font-size:12px;text-align:center}
+.picks{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;width:min(100%,760px)}
+[role=radio][aria-checked=true]{border-color:var(--hot);background:rgba(255,122,60,.16)}
+@media (max-width:560px){
+  .hero{grid-template-columns:1fr}
+  .riders{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .picks{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
 
 @media (max-width:700px),(pointer:coarse){
   .street .stats{top:54px;grid-template-columns:repeat(3,auto);gap:10px;padding:6px 10px}

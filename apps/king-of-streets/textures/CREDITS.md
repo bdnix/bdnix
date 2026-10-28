@@ -6,3 +6,5 @@ The photo textures and skies are from [Poly Haven](https://polyhaven.com), under
 - Skies (`sky/`): Qwantani Night, Kloofendal Misty Morning, Kloofendal 48d Partly Cloudy and Qwantani Dusk 2, all "pure sky".
 
 `card.webp`, the picture behind the start card, is a frame of the game itself, drawn from the models above and in `../models/`.
+
+`garage/`: the garage's pictures of the bikes, riders and routes, frames of the game too.

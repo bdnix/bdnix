@@ -62,6 +62,7 @@
     nunchaku: { reach: 2.5, dmg: 28, push: 5.5, time: 0.42, at: 0.16 }
   };
   var AHEAD = 3, BEHIND = 2.5;          // a blow reaches a bike this far ahead or behind
+  var FLINCH = 0.45;                    // seconds a rival reels from a blow
   var WEAPONS = ['stick', 'chain', 'nunchaku'];
   var RIVAL_HURT = 0.5;                 // rivals' blows do this much of the damage yours do
   var BIKE_WIDE = 0.8;                  // two bikes closer than this across bump
@@ -328,13 +329,17 @@
 
   // Starts one of the player's moves ('punch' or 'kick'). Returns whether
   // it started: it doesn't while another is under way, off the bike or
-  // after the finish.
+  // after the finish. It locks on to the rival nearest in reach as it
+  // starts (or a little beyond), whom it lands on if they're still near
+  // enough when it lands (LENIENT times its reach), the bike edging towards
+  // them meanwhile: timing a blow is pressing while they're alongside.
+  var LENIENT = 1.35, CLOSE_IN = 5;     // how much further a locked-on blow reaches; metres a second the bike edges in
   function attack(w, move){
     var p = w.player;
     if (w.over || w.place || p.crash || p.attack || (move !== 'punch' && move !== 'kick')) return false;
     var m = moveFor(p, move), aim = target(w.rivals, p.z, p.x, MOVES[m].reach + 1.5);
     var car = !aim && move === 'kick' ? vehicleBeside(w, p.z, p.x, MOVES.kick.reach) : null;
-    p.attack = { move: m, t: 0, side: aim ? (aim.x < p.x ? -1 : 1) : car ? (car.x < p.x ? -1 : 1) : (p.lean < 0 ? -1 : 1), done: false };
+    p.attack = { move: m, t: 0, side: aim ? (aim.x < p.x ? -1 : 1) : car ? (car.x < p.x ? -1 : 1) : (p.lean < 0 ? -1 : 1), done: false, aim: aim ? aim.id : null };
     w.events.push({ type: 'swing', move: m });
     return true;
   }
@@ -362,12 +367,12 @@
   // no rival in reach lands on a vehicle beside: a CNG goes flying, anything
   // bigger doesn't budge.
   function land(w){
-    var p = w.player, a = p.attack, m = MOVES[a.move];
-    var o = target(w.rivals, p.z, p.x, m.reach);
+    var p = w.player, a = p.attack, m = MOVES[a.move], locked = a.aim != null ? w.rivals[a.aim] : null;
+    var o = locked && target([locked], p.z, p.x, m.reach * LENIENT) || target(w.rivals, p.z, p.x, m.reach);
     a.done = true;
     if (!o) {
       var c = a.move === 'kick' ? vehicleBeside(w, p.z, p.x, m.reach) : null;
-      if (!c) return;
+      if (!c) { w.events.push({ type: 'miss', move: a.move }); return; }
       a.side = c.x < p.x ? -1 : 1;
       if (c.kind === 'cng') shove(w, traffic(w.race)[c.id], a.side);
       else w.events.push({ type: 'clang', car: c.id });
@@ -378,6 +383,8 @@
     o.health = Math.max(0, o.health - m.dmg);
     o.push += side * m.push;
     o.speed *= a.move === 'kick' ? 0.85 : 0.93;
+    // They reel from it, away from the blow (for drawing: not saved).
+    o.flinch = FLINCH; o.flinchSide = side;
     w.events.push({ type: 'hit', move: a.move, rival: o.id });
     if (o.health > 0) return;
     // Knocked off: the rival is out of the race, and their weapon is yours.
@@ -393,6 +400,7 @@
   function rival(w, o, T, cars){
     var p = w.player, dz = p.z - o.z, dx = p.x - o.x, i, c;
     o.cool = down(o.cool);
+    o.flinch = down(o.flinch || 0);
     if (o.down) {
       // Sliding to a stop where they fell.
       o.down += STEP;
@@ -521,6 +529,12 @@
 
     if (p.attack) {
       p.attack.t += STEP;
+      // Closing in on whom it's locked on to, until it lands.
+      var aimed = !p.attack.done && p.attack.aim != null ? w.rivals[p.attack.aim] : null;
+      if (aimed && !aimed.down && !p.crash) {
+        var gap = Math.abs(aimed.x - p.x) - Math.max(BIKE_WIDE + 0.3, MOVES[p.attack.move].reach * 0.85);
+        if (gap > 0) p.x += (aimed.x > p.x ? 1 : -1) * Math.min(gap, CLOSE_IN * STEP);
+      }
       if (!p.attack.done && p.attack.t >= MOVES[p.attack.move].at) land(w);
       if (p.attack && p.attack.t >= MOVES[p.attack.move].time) p.attack = null;
     }
@@ -685,7 +699,7 @@
   window.bdnixStreet = {
     SEG: SEG, STEP: STEP, ROAD: ROAD, EDGE: EDGE, WALL: WALL, LANES: LANES, KERB_TOP: KERB_TOP, HEALTH: HEALTH,
     CRASH_TIME: CRASH_TIME, CRASH_HURT: CRASH_HURT, SAFE_TIME: SAFE_TIME, PLACE_POINTS: PLACE_POINTS,
-    KO_POINTS: KO_POINTS, UNDERDOG: UNDERDOG, RACES: RACES, RUN_OUT: RUN_OUT, MOVES: MOVES, AHEAD: AHEAD, BEHIND: BEHIND,
+    KO_POINTS: KO_POINTS, UNDERDOG: UNDERDOG, RACES: RACES, RUN_OUT: RUN_OUT, MOVES: MOVES, AHEAD: AHEAD, BEHIND: BEHIND, FLINCH: FLINCH, LENIENT: LENIENT,
     WEAPONS: WEAPONS, RIVALS: RIVALS, VEHICLES: VEHICLES, RIVAL_HURT: RIVAL_HURT, BIKES: BIKES, LEVELS: LEVELS,
     RAISED: RAISED, PARKED_X: PARKED_X, SHOVE: SHOVE,
     seeded: seeded, levelOf: levelOf, level: level, raceLength: raceLength, track: track, segIndex: segIndex,

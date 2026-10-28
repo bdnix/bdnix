@@ -221,13 +221,17 @@ test('a punch lands on a rival in reach, and one move at a time', () => {
   const w = alone();
   const o = beside(w, 0, 1, 1.2);
   assert.equal(F.attack(w, 'punch'), true);
-  same(w.player.attack, { move: 'punch', t: 0, side: 1, done: false });
+  same(w.player.attack, { move: 'punch', t: 0, side: 1, done: false, aim: 0 });
   assert.equal(F.attack(w, 'kick'), false, 'already punching');
   same(types(w), ['swing']);
   ride(w, F.MOVES.punch.at + F.STEP);
   assert.equal(o.health, o.max - F.MOVES.punch.dmg);
   same(w.events[1], { type: 'hit', move: 'punch', rival: 0 });
   assert.ok(o.push > 0, 'shoved away');
+  assert.equal(o.flinchSide, 1, 'reeling away from the blow');
+  assert.ok(o.flinch > 0 && o.flinch <= F.FLINCH);
+  ride(w, F.FLINCH);
+  assert.equal(o.flinch, 0, 'and over it');
   ride(w, F.MOVES.punch.time);
   assert.equal(w.player.attack, null);
   assert.equal(F.attack(w, 'kick'), true, 'free again');
@@ -236,15 +240,16 @@ test('a punch lands on a rival in reach, and one move at a time', () => {
 
 test('a kick reaches further, hits harder and shoves harder; a punch out of reach misses', () => {
   const w = alone();
-  const o = beside(w, 1, 0, -2.2);
+  const o = beside(w, 1, 0, -3.6);
   F.attack(w, 'punch');
-  assert.equal(w.player.attack.side, -1, 'aimed at the rival on the left');
+  assert.equal(w.player.attack.aim, null, 'too far to lock on to');
   ride(w, F.MOVES.punch.time + F.STEP);
   assert.equal(o.health, o.max, 'too far for a fist');
-  same(types(w), ['swing']);
+  same(types(w), ['swing', 'miss']);
   w.events.length = 0;
   beside(w, 1, 0, -2.2, { push: 0 });
   F.attack(w, 'kick');
+  assert.equal(w.player.attack.side, -1, 'aimed at the rival on the left');
   ride(w, F.MOVES.kick.at + F.STEP);
   assert.equal(o.health, o.max - F.MOVES.kick.dmg);
   assert.ok(o.push < -F.MOVES.punch.push);
@@ -294,7 +299,33 @@ test('knocking a rival off scores, takes their weapon, and they stay down', () =
   ride(w, 1);
   F.attack(w, 'kick');
   ride(w, 1);
-  same(types(w).filter((t) => t !== 'shove' && t !== 'clang'), ['swing']);
+  same(types(w).filter((t) => t !== 'shove' && t !== 'clang'), ['swing', 'miss']);
+});
+
+test('a blow locks on to the rival alongside: the bike edges in, and it lands a little beyond its reach', () => {
+  // Alongside on the right, just out of a fist's reach, and edging away.
+  const w = alone();
+  const o = beside(w, 0, 0.5, F.MOVES.punch.reach + 0.9);
+  F.attack(w, 'punch');
+  assert.equal(w.player.attack.aim, 0);
+  const x = w.player.x;
+  ride(w, F.MOVES.punch.at / 2);
+  assert.ok(w.player.x > x, 'the bike edges in towards them');
+  o.x += 0.2;
+  ride(w, F.MOVES.punch.at / 2 + 2 * F.STEP);
+  assert.equal(o.health, o.max - F.MOVES.punch.dmg, 'and it lands');
+  // Once it's landed, the bike stops edging in.
+  const after = w.player.x;
+  ride(w, 0.1);
+  assert.ok(Math.abs(w.player.x - after) < 0.01);
+  // Locked on, but they got clean away: a miss.
+  const v = alone();
+  const a = beside(v, 0, 0.5, 2.5);
+  F.attack(v, 'punch');
+  a.x = 9; a.push = 0;
+  ride(v, F.MOVES.punch.time);
+  assert.equal(a.health, a.max);
+  assert.ok(types(v).includes('miss'));
 });
 
 test('a kick sends a CNG beside the bike off to the kerb; a car, a bus or a truck does not budge', () => {
@@ -346,7 +377,7 @@ test('a kick sends a CNG beside the bike off to the kerb; a car, a bus or a truc
   const n = alone(20, 50);
   F.attack(n, 'kick');
   ride(n, F.MOVES.kick.time);
-  same(types(n), ['swing']);
+  same(types(n), ['swing', 'miss']);
 });
 
 test('a keen rival kicks a CNG out of the way too', () => {

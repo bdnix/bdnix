@@ -13,14 +13,14 @@ test.setTimeout(90_000);
 
 const text = (page, id) => page.locator('#' + id).textContent();
 // A race with the player `z` metres in at `speed`, everyone else stopped at
-// the start (unless brought alongside), late enough that the traffic has
-// gone on ahead.
+// the start (unless brought alongside, at its own speed if given), late
+// enough that the traffic has gone on ahead.
 function lonely({ race = 1, bike, z = 300, speed = 20, x = 0, health = 100, rivals = {} }){
   const F = window.bdnixStreet, w = F.create(race, bike);
   w.time = 3000;
   Object.assign(w.player, { z, speed, x, health });
   w.rivals.forEach((o, i) => {
-    Object.assign(o, { z: 5, x: o.x, speed: 0, top: 0, cool: 5 }, rivals[i] ? { z: z + rivals[i].dz, x: x + rivals[i].dx, speed, top: speed, health: rivals[i].health || o.health } : {});
+    Object.assign(o, { z: 5, x: o.x, speed: 0, top: 0, cool: 5 }, rivals[i] ? { z: z + rivals[i].dz, x: x + rivals[i].dx, speed: rivals[i].speed || speed, top: rivals[i].speed || speed, health: rivals[i].health || o.health } : {});
   });
   return F.snapshot(w);
 }
@@ -237,22 +237,44 @@ test('the garage: buy a bike with points and ride it, pick a rider and a race', 
   await page.getByRole('button', { name: 'Garage' }).click();
   const garage = page.locator('#garage');
   await expect(garage.locator('#garagePoints')).toHaveText('2000 points');
-  const bikes = garage.locator('.bikes li');
+  // Every bike, rider and route has its picture.
+  await expect.poll(() => garage.locator('img').evaluateAll((imgs) => imgs.filter((i) => !(i.complete && i.naturalWidth > 0)).map((i) => i.src))).toEqual([]);
+  expect(await garage.locator('img').count()).toBe(1 + 5 + 6 + 5);
+  const bikes = garage.locator('.bikes .bike-card');
   await expect(bikes).toHaveCount(5);
-  await expect(bikes.nth(0).getByRole('button')).toHaveText('Riding');
-  await expect(bikes.nth(1)).toContainText('Top speed 115 km/h');
-  await expect(bikes.nth(2).getByRole('button', { name: 'Buy for 4000' })).toBeDisabled();
+  // The showroom shows the bike ridden, pictured, and what it's like.
+  await expect(garage.locator('#heroName')).toHaveText('Scooter');
+  await expect(garage.locator('#heroImg')).toHaveAttribute('src', /\/k1_vino\.webp$/);
+  await expect(garage.locator('#heroBtn')).toHaveText('Riding');
+  await expect(garage.locator('#heroBtn')).toBeDisabled();
+  await expect(bikes.nth(0)).toContainText('Riding');
+  await expect(bikes.nth(2)).toContainText('4000 points');
+  await expect(bikes.nth(2)).toHaveClass(/locked/);
+  // The Street 135: too dear for now.
+  await bikes.nth(2).click();
+  await expect(bikes.nth(2)).toHaveAttribute('aria-pressed', 'true');
+  await expect(garage.locator('#heroName')).toHaveText('Street 135');
+  await expect(garage.locator('#heroClass')).toHaveText('Class B');
+  await expect(garage.locator('#heroRating')).toHaveText(/^Rating \d+$/);
+  await expect(garage.locator('#heroStats')).toContainText('135 km/h');
+  await expect(garage.getByRole('button', { name: 'Buy for 4000' })).toBeDisabled();
+  await expect(garage.locator('#heroNote')).toHaveText('2000 more points to buy it');
   // Level 2's races open with the 125.
   await expect(garage.getByRole('radio', { name: '4', exact: true })).toBeDisabled();
-  await bikes.nth(1).getByRole('button', { name: 'Buy for 1500' }).click();
+  await expect(garage.locator('.route-card').nth(1)).toContainText('Needs the 125');
+  await bikes.nth(1).click();
+  await expect(garage.locator('#heroStats')).toContainText('115 km/h');
+  await garage.getByRole('button', { name: 'Buy for 1500' }).click();
   expect(await heard(page)).toContain('buy');
   await expect(garage.locator('#garagePoints')).toHaveText('500 points');
-  await expect(bikes.nth(1).getByRole('button')).toHaveText('Riding');
+  await expect(garage.locator('#heroBtn')).toHaveText('Riding');
+  await expect(bikes.nth(1)).toContainText('Riding');
   // Race 3 is still the next not placed in; 4 is open now.
   await expect(garage.getByRole('radio', { name: '3', exact: true })).toHaveAttribute('aria-checked', 'true');
   await expect(garage.getByRole('radio', { name: '4', exact: true })).toBeEnabled();
   // Back on the scooter, for race 2 again, as the teal helmet.
-  await bikes.nth(0).getByRole('button', { name: 'Ride' }).click();
+  await bikes.nth(0).click();
+  await garage.getByRole('button', { name: 'Ride' }).click();
   await garage.getByRole('radio', { name: /^2( ✓)?$/ }).click();
   await garage.getByRole('radio', { name: 'Teal helmet' }).click();
   await expect(garage.getByRole('radio', { name: 'Teal helmet' })).toHaveAttribute('aria-checked', 'true');
@@ -379,9 +401,28 @@ test('muting silences the engines, and pausing stops them', async ({ page }) => 
   expect((await page.evaluate(() => window.bdnixStreetAudio.state())).running).toBe(true);
 });
 
+test('the engines are a real motorbike’s, recorded, and a rival rushing past is heard going by', async ({ page }) => {
+  await seed(page, lonely, { z: 40, rivals: { 0: { dz: -4, dx: 2.2, speed: 30 } } });
+  const engine = () => page.evaluate(() => window.bdnixStreetAudio.state());
+  await resume(page);
+  // The recordings load with the first press; the engines started after use them.
+  await expect.poll(async () => (await engine()).recorded).toBe(true);
+  await page.keyboard.press('KeyP');
+  await page.locator('#startBtn').click();
+  expect(await engine()).toMatchObject({ running: true, taped: true });
+  // Kalu comes past, 10 m/s quicker.
+  await page.clock.runFor(200);
+  const before = (await engine()).passes;
+  await page.keyboard.press('KeyP');
+  const w = await page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_kingofstreets_save')).data.world);
+  expect(w.rivals[0].z).toBeLessThan(w.player.z);
+  await page.locator('#startBtn').click();
+  await expect.poll(async () => { await page.clock.runFor(100); return (await engine()).passes; }).toBeGreaterThan(before);
+});
+
 test('by touch: a finger anywhere steers while the buttons punch, kick and brake', async ({ page }) => {
   await listen(page);
-  await seed(page, lonely, { z: 40, rivals: { 2: { dz: 0.3, dx: -2 } } });
+  await seed(page, lonely, { z: 40 });
   await resume(page);
   const finger = (target, type, id, x, y) => page.locator(target).dispatchEvent(type, { pointerType: 'touch', isPrimary: id === 1, pointerId: id, clientX: x, clientY: y, button: 0 });
   // One finger drags right and stays down while another punches: both at once.

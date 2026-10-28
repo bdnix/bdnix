@@ -301,6 +301,8 @@
     this.racers = [];
     this.cars = {};
     this.walkers = {};
+    this.idle = {};
+    this.feet = {};
     this.time = 0;
     this.camAt = null;
   }
@@ -465,10 +467,11 @@
     if (!this.scene || w !== this.w) return;
     var p = w.player, self = this;
     this.clock = (this.clock || 0) + dt;
-    this.stream(p.z);
+    this.stream(p.z, !dt);
     // The racers: player first, then the rivals.
     [p].concat(w.rivals).forEach(function(o, i){ self.ride(self.racers[i], o, i === 0 ? p.crash > 0 || w.over === 'ko' : o.down > 0, dt); });
     this.traffic(w);
+    this.fade(dt);
     this.people(p.z, dt);
     this.aim(w, dt);
     // The sun follows the player, so the shadows near them are sharp.
@@ -499,15 +502,18 @@
   };
 
   // Builds the chunks of road the camera can see, and lets go of those behind.
-  View.prototype.stream = function(z){
-    var want = S.chunks(this.P, z, this.Q.ahead, this.Q.behind), keep = {}, self = this, built = 0;
+  // Building takes at most 4 ms of a frame, nearest first, a piece at a
+  // time, so a frame never stalls; a chunk shows once it's finished. With
+  // `all` (the race's first frame), everything wanted is built at once.
+  var BUILD_MS = 4;
+  View.prototype.stream = function(z, all){
+    var want = S.chunks(this.P, z, this.Q.ahead, this.Q.behind), keep = {}, self = this, from = performance.now();
     want.forEach(function(c){
       keep[c] = 1;
-      // At most two new chunks a frame, nearest first, so a frame never stalls for long.
-      if (self.chunks[c] || built >= 2) return;
-      self.chunks[c] = C.chunk(self.P, c, self.q);
-      self.scene.add(self.chunks[c].group);
-      built++;
+      var ch = self.chunks[c], left = all ? Infinity : BUILD_MS - (performance.now() - from);
+      if ((ch && ch.ready) || left <= 0) return;
+      ch = self.chunks[c] = ch || C.chunk(self.P, c, self.q);
+      if (ch.step(left)) { ch.ready = true; self.scene.add(ch.group); }
     });
     for (var c in this.chunks) if (!keep[c]) {
       this.scene.remove(this.chunks[c].group);
@@ -529,9 +535,13 @@
     racer.lift = racer.lift || 0;
     racer.lift += ((!down && o.speed < 14 && pull > 3 ? Math.min(0.16, pull / 45) : 0) - racer.lift) * Math.min(1, dt * 5);
     racer.fall = down ? Math.min(1, racer.fall + dt * 3) : Math.max(0, racer.fall - dt * 2);
+    // Reeling from a blow: the bike wobbles away from it, and a burst shows where it landed.
+    var reel = o.flinch > 0 ? Math.sin(Math.min(1, (F.FLINCH - o.flinch) / F.FLINCH) * Math.PI) : 0;
+    if (o.flinch > (racer.flinch || 0) + 0.05 && racer.sets.hi) this.burst(racer);
+    racer.flinch = o.flinch || 0;
     g.position.set(at.x, at.y + 0.02 + Math.sin(racer.lift) * 0.7, at.z);
-    g.rotation.set(0, at.heading - lean * 0.06, 0);
-    g.rotateZ(racer.roll + racer.fall * 1.35 * (o.x < 0 ? 1 : -1));
+    g.rotation.set(0, at.heading - lean * 0.06 + (o.flinchSide || 0) * 0.12 * reel, 0);
+    g.rotateZ(racer.roll + racer.fall * 1.35 * (o.x < 0 ? 1 : -1) + (o.flinchSide || 0) * 0.28 * reel);
     g.rotateX(-racer.lift);
     var near = racer.i === 0 || (this.camAt && this.camAt.distanceTo(g.position) < NEAR_RACER[this.q]);
     var hi = racer.sets.hi, lo = racer.sets.lo, set = hi && (near || !lo) ? hi : lo;
@@ -541,13 +551,54 @@
     this.arm(racer, set, o.weapon || null);
     R.relax(set.bones, set.rest);
     var a = o.attack, M = a && F.MOVES[a.move];
+    if ((a && M && !down) || reel) g.updateMatrixWorld(true);
+    if (reel) R.recoil(set.bike, set.bones, o.flinchSide || 0, reel);
     if (a && M && !down) {
-      g.updateMatrixWorld(true);
-      R.strike(set.bike, set.bones, a.move, a.side, Math.min(1, a.t / M.time), M.at / M.time);
+      // At whom: the player at the rival locked on to; a rival at the player.
+      var foe = racer.i === 0 ? (a.aim != null ? this.racers[a.aim + 1] : null) : this.racers[0], goal = null;
+      if (foe && !a.car) goal = this.chest(foe);
+      R.strike(set.bike, set.bones, a.move, a.side, Math.min(1, a.t / M.time), M.at / M.time, goal);
     }
     // In the rider's own view the player's head and helmet are out of the way.
     // (Everything of them above the shoulders is cut away: see aim().)
     if (racer.i === 0) set.helmet.visible = this.mode !== 'rider';
+  };
+
+  // Where a racer's chest is, in the world, on whichever set is showing.
+  View.prototype.chest = function(racer){
+    var set = racer.sets.hi && racer.sets.hi.bike.visible ? racer.sets.hi : racer.sets.lo;
+    if (!set || !set.bones.spine_03) return null;
+    return set.bones.spine_03.getWorldPosition(new T.Vector3());
+  };
+  // A blow landing: a flash of light at the racer's chest, going with them,
+  // gone in a moment.
+  View.prototype.burst = function(racer){
+    var at = this.chest(racer);
+    if (!at) return;
+    var mat = this.shared('burst', function(){
+      var cv = document.createElement('canvas'), g = cv.getContext('2d');
+      cv.width = cv.height = 64;
+      var grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grad.addColorStop(0, 'rgba(255,255,240,1)'); grad.addColorStop(0.3, 'rgba(255,210,120,0.9)'); grad.addColorStop(1, 'rgba(255,120,40,0)');
+      g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
+      return new T.SpriteMaterial({ map: new T.CanvasTexture(cv), blending: T.AdditiveBlending, depthWrite: false, transparent: true });
+    });
+    var sp = new T.Sprite(mat.clone());
+    racer.group.updateMatrixWorld(true);
+    sp.position.copy(racer.group.worldToLocal(at));
+    sp.life = 0;
+    racer.group.add(sp);
+    (this.bursts = this.bursts || []).push(sp);
+  };
+  View.prototype.fade = function(dt){
+    this.bursts = (this.bursts || []).filter(function(sp){
+      sp.life += dt;
+      var u = sp.life / 0.22;
+      if (u >= 1) { sp.removeFromParent(); sp.material.dispose(); return false; }
+      sp.scale.setScalar(0.3 + 0.8 * u);
+      sp.material.opacity = 1 - u * u;
+      return true;
+    });
   };
 
   // ---------- Traffic ----------
@@ -561,7 +612,13 @@
       car.group.position.set(at.x, at.y + 0.02, at.z);
       car.group.rotation.set(0, at.heading + (s ? s.vx * 0.05 : 0), 0);
     });
-    for (var id in this.cars) if (!seen[id]) { this.scene.remove(this.cars[id].group); delete this.cars[id]; }
+    for (var id in this.cars) if (!seen[id]) {
+      var gone = this.cars[id];
+      this.scene.remove(gone.group);
+      // Its driver waits to drive another CNG.
+      if (gone.driver) { gone.driver.group.removeFromParent(); (this.idle[gone.driver.look] = this.idle[gone.driver.look] || []).push(gone.driver); }
+      delete this.cars[id];
+    }
   };
   // A vehicle: its model (already loaded with the race), and a CNG's driver.
   View.prototype.car = function(c){
@@ -605,71 +662,92 @@
     });
   };
   // A CNG's driver: at the wheel when it's moving; when it's parked, now and
-  // then standing by it on the footpath instead.
+  // then standing by it on the footpath instead. Drivers are kept, by their
+  // uniform and whether they sit or stand, to drive the next CNG.
   View.prototype.driver = function(car, v){
-    var self = this, n = v.id;
+    var self = this, n = v.id, stands = v.parked && n % 10 < 7, side = v.x < 0 ? -1 : 1;
+    var look = 'driver' + (stands ? 's' : 'd') + n % 12, pool = this.idle[look];
+    var seat = function(d){
+      if (!self.cars[v.id] || car.driver) { (self.idle[look] = self.idle[look] || []).push(d); return; }
+      car.driver = d;
+      if (stands) {
+        d.figure.position.set(side * -1.7, 0.2, (n % 3 - 1) * 1.1);
+        d.figure.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
+      }
+      car.group.add(d.group);
+    };
+    if (pool && pool.length) { seat(pool.pop()); return; }
     figure('d_striped_lo', { len: 1, by: 'height' }).then(function(rd){
-      if (!self.cars[v.id]) return;
       R.uniform(rd, n);
       slim(rd, 'driver' + n % 12);
-      if (v.parked && n % 10 < 7) {
-        var side = v.x < 0 ? -1 : 1, g = new T.Group();
-        rd.scale.multiplyScalar(0.96);
-        g.add(rd);
-        rd.position.set(side * -1.7, 0.2, (n % 3 - 1) * 1.1);
-        rd.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
-        R.stand(rd);
-        car.group.add(g);
-      } else {
-        var holder = new T.Group();
-        car.group.add(holder);
-        holder.add(rd);
-        R.pose(rd, self.poses['cng:d_striped']);
-      }
+      var g = new T.Group();
+      g.add(rd);
+      if (stands) { rd.scale.multiplyScalar(0.96); R.stand(rd); }
+      else R.pose(rd, self.poses['cng:d_striped']);
+      seat({ group: g, figure: rd, look: look });
     });
   };
 
   // ---------- People ----------
   // People walk along the footpaths at their own pace, each way; only those
-  // near the camera are made.
+  // near the camera are shown, and only the nearest walk (every other frame:
+  // a crowd's skeletons are the costliest thing to move). A figure that
+  // walks out of sight goes back to a pool and walks on again further up the
+  // road, so none is made twice.
+  var WALK_NEAR = 30;   // metres from the camera within which people walk
   View.prototype.people = function(z, dt){
     var self = this, L = this.level, gap = 7 / Math.max(0.05, L.people * this.Q.people), w = this.w;
     if (!this.walkSrc) {
       if (!this.askedWalk) { this.askedWalk = true; gltf('p_old').then(function(g){ self.walkSrc = R.walkSource(g); }); }
       return;
     }
-    var from = Math.floor((z - 20) / gap), to = Math.floor((z + Math.min(90, this.Q.ahead)) / gap), keep = {};
+    this.tick = !this.tick;
+    var from = Math.floor((z - 15) / gap), to = Math.floor((z + Math.min(75, this.Q.ahead)) / gap), keep = {};
     for (var i = Math.max(0, from); i <= to; i++) [-1, 1].forEach(function(side){
       if (side < 0 && self.P.track.lake) return;
       var id = i * 2 + (side > 0 ? 1 : 0), r = F.seeded(w.race * 7777 + id), z0 = i * gap + r() * gap;
       if (F.heightAt(self.P.track, z0) > 0.3 && self.P.track.raised[0].kind === 'bridge') return;
       keep[id] = 1;
       var p = self.walkers[id] || self.walker(id, side, z0, r);
-      if (!p.group) return;
-      var zz = p.z0 + p.dir * p.speed * self.clock, at = S.place(self.P, zz, p.x);
-      p.group.position.set(at.x, 0.2, at.z);
-      p.group.rotation.y = at.heading + (p.dir > 0 ? 0 : Math.PI);
-      if (p.mixer) p.mixer.update(dt);
+      if (!p.body) return;
+      var zz = p.z0 + p.dir * p.speed * self.clock, at = S.place(self.P, zz, p.x), g = p.body.group;
+      g.position.set(at.x, 0.2, at.z);
+      g.rotation.y = at.heading + (p.dir > 0 ? 0 : Math.PI);
+      p.wait += dt;
+      if (self.tick && self.camAt && self.camAt.distanceTo(g.position) < WALK_NEAR) { p.body.mixer.update(p.wait); p.wait = 0; }
     });
-    for (var id in this.walkers) if (!keep[id]) { if (this.walkers[id].group) this.scene.remove(this.walkers[id].group); delete this.walkers[id]; }
+    for (var id in this.walkers) if (!keep[id]) {
+      var p = this.walkers[id];
+      if (p.body) { this.scene.remove(p.body.group); (this.idle[p.look] = this.idle[p.look] || []).push(p.body); }
+      delete this.walkers[id];
+    }
   };
+  // A person: a figure from the pool for their look, or a new one.
   View.prototype.walker = function(id, side, z0, r){
-    var self = this, who = PEOPLE[Math.floor(r() * PEOPLE.length)];
-    var p = this.walkers[id] = { z0: z0, x: side * (8.2 + r() * 3.2), dir: r() < 0.5 ? 1 : -1, speed: 1.1 + r() * 0.5, group: null, mixer: null };
-    var tone = TONES[Math.floor(r() * TONES.length)], phase = r();
-    figure(who.n, { len: 1.6 + r() * 0.15, by: 'height' }).then(function(o){
-      if (self.walkers[id] !== p) return;
+    var self = this, who = PEOPLE[Math.floor(r() * PEOPLE.length)], tone = TONES[Math.floor(r() * TONES.length)];
+    var look = who.n + (who.tone ? tone : '') + (/^d_striped/.test(who.n) ? id % 12 : '');
+    var p = this.walkers[id] = { z0: z0, x: side * (8.2 + r() * 3.2), dir: r() < 0.5 ? 1 : -1, speed: 1.1 + r() * 0.5, look: look, body: null, wait: 0 };
+    var tall = 1.6 + r() * 0.15, phase = r(), pool = this.idle[look];
+    var ready = function(body){
+      if (self.walkers[id] !== p) { (self.idle[look] = self.idle[look] || []).push(body); return; }
+      body.group.scale.setScalar(tall / 1.68);
+      body.mixer.setTime(phase * body.mixer.length);
+      p.body = body;
+      self.scene.add(body.group);
+    };
+    if (pool && pool.length) ready(pool.pop());
+    else figure(who.n, { len: 1.68, by: 'height' }).then(function(o){
       if (who.tone) R.skinTone(o, tone);
       if (/^d_striped/.test(who.n)) R.uniform(o, id);
-      slim(o, who.n + (who.tone ? tone : '') + (/^d_striped/.test(who.n) ? id % 12 : ''));
-      p.mixer = R.walk(o, who.n.replace('_lo', ''), self.walkSrc, phase);
-      // Feet on the ground, as the walk holds them.
-      o.updateMatrixWorld(true);
-      o.position.y -= new T.Box3().setFromObject(o, true).min.y;
+      slim(o, look);
+      var mixer = R.walk(o, who.n.replace('_lo', ''), self.walkSrc, 0);
+      // Feet on the ground, as the walk holds them: measured once for each look.
+      if (self.feet[look] === undefined) { o.updateMatrixWorld(true); self.feet[look] = new T.Box3().setFromObject(o, true).min.y; }
+      o.position.y -= self.feet[look];
       o.traverse(function(m){ if (m.isMesh) m.castShadow = self.Q.shadows; });
-      p.group = new T.Group();
-      p.group.add(o);
-      self.scene.add(p.group);
+      var group = new T.Group();
+      group.add(o);
+      ready({ group: group, mixer: mixer });
     });
     return p;
   };
@@ -746,8 +824,14 @@
   // Lets go of the race's scene.
   View.prototype.clear = function(){
     for (var c in this.chunks) this.chunks[c].dispose();
-    this.chunks = {}; this.racers = []; this.cars = {}; this.walkers = {}; this.look = null; this.clock = 0;
-    this.scene = null; this.w = null;
+    // The people's and drivers' figures go with the race's scene; their
+    // skeletons' bone textures are let go.
+    var drop = function(body){ body.group.traverse(function(m){ if (m.isSkinnedMesh) m.skeleton.dispose(); }); };
+    for (var id in this.walkers) if (this.walkers[id].body) drop(this.walkers[id].body);
+    for (var k in this.idle) this.idle[k].forEach(drop);
+    for (var id2 in this.cars) if (this.cars[id2].driver) drop(this.cars[id2].driver);
+    this.chunks = {}; this.racers = []; this.cars = {}; this.walkers = {}; this.idle = {}; this.look = null; this.clock = 0;
+    this.scene = null; this.w = null; this.bursts = [];
   };
 
   // `current`: the view last started. `draw`: whether frames are drawn. Everything else about them (the road

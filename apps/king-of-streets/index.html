@@ -73,12 +73,24 @@
         <p class="credit">Inspired by Road Rash, created by Electronic Arts in 1991. Road Rash is a trademark of its owner; bdnix isn’t affiliated with or endorsed by them.</p>
       </div>
 
-      <div id="garage" class="overlay sheet" hidden>
-        <p class="label">Career</p>
-        <h1>Garage</h1>
-        <p id="garagePoints"></p>
-        <h2>Your bike</h2>
-        <ul class="bikes" id="bikes"></ul>
+      <div id="garage" class="overlay sheet garage" hidden>
+        <div class="g-head">
+          <div><p class="label">Career</p><h1>Garage</h1></div>
+          <p class="g-points" id="garagePoints"></p>
+        </div>
+        <section class="showroom" aria-label="Bike">
+          <div class="hero">
+            <img class="hero-img" id="heroImg" alt="">
+            <div class="hero-info">
+              <p class="hero-class"><b id="heroClass"></b><span id="heroRating"></span></p>
+              <h2 class="hero-name" id="heroName"></h2>
+              <dl class="hero-stats" id="heroStats"></dl>
+              <button type="button" id="heroBtn" class="btn btn-primary hero-btn"></button>
+              <p class="hero-note" id="heroNote"></p>
+            </div>
+          </div>
+          <ul class="bikes" id="bikes" aria-label="Bikes"></ul>
+        </section>
         <h2>Your rider</h2>
         <div class="riders" id="riders" role="radiogroup" aria-label="Rider"></div>
         <h2>Race</h2>
@@ -94,9 +106,10 @@
         </div>
       </div>
 
-      <div id="quick" class="overlay sheet" hidden>
-        <p class="label">One race, any bike</p>
-        <h1>Quick race</h1>
+      <div id="quick" class="overlay sheet garage" hidden>
+        <div class="g-head">
+          <div><p class="label">One race, any bike</p><h1>Quick race</h1></div>
+        </div>
         <h2>Where and when</h2>
         <div class="routes" id="routes" role="radiogroup" aria-label="Route"></div>
         <h2>Bike</h2>

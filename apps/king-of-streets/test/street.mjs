@@ -56,9 +56,12 @@ export async function seed(page, make, arg, opts = {}){
   await openGame(page, URL);
 }
 
-// Resumes a race picked up from a save, once its city has loaded.
+// Resumes a race picked up from a save, once its city has loaded. The city
+// loads (in real time) behind the pause card, so resuming carries straight
+// on, the same moment of the race every time.
 export async function resume(page){
   await expect(page.locator('#newBtn')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => { const v = window.bdnixStreet3d.current; return !!v && v.progress === 1; }), { timeout: 90_000 }).toBe(true);
   await page.locator('#startBtn').click();
   await until(page, () => document.getElementById('loading').hidden && !document.getElementById('hud').hidden);
 }

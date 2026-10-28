@@ -413,7 +413,10 @@
 
   // ---------- A chunk ----------
   // Builds chunk c of race P's road: a group to add to the scene, the street
-  // lamps in it (for their glow and pools of light at night) and dispose().
+  // lamps in it (for their glow and pools of light at night), dispose(), and
+  // step(ms): the road is laid at once, but its poles, each building and the
+  // merging are left to step(), which does as many as fit in `ms` and says
+  // whether the chunk is finished, so building one never holds up a frame.
   function chunk(P, c, q){
     var CH = S.CHUNK, z0 = c * CH, z1 = Math.min((c + 1) * CH, P.n * F.SEG), Tk = P.track;
     var B = new Bucket(), group = new T.Group(), lamps = [], inst = {}, i, k;
@@ -475,7 +478,9 @@
         });
       }
     }
+    var jobs = [];
     // Poles, with lamps on every other one, and the cables strung from each to the next on its side.
+    jobs.push(function(){
     var poles = [];
     for (i = Math.max(0, Math.floor(z0 / F.SEG)); i < Math.min(Tk.n, Math.ceil(z1 / F.SEG)); i++) Tk.scenery[i].forEach(function(o){
       var z = i * F.SEG;
@@ -501,18 +506,22 @@
         B.add(M.cable, new T.TubeGeometry(new T.CatmullRomCurve3(pts), 16, 0.008 + rr() * 0.01, 3));
       }
     });
-    // Buildings and mosques.
+    });
+    // Buildings and mosques, one at a time.
     var L = layout(P), shopsOpen = [], shopsShut = [], acs = [];
     [-1, 1].forEach(function(side){
       (side < 0 ? L.left : L.right).forEach(function(bd){
         if (bd.z < z0 || bd.z >= z1) return;
-        var fm = frame(P, side, bd.z, bd.w);
-        if (bd.mosque !== undefined) { mosque(B, place, fm, bd.w, bd.mosque); return; }
-        var shops = [];
-        building(B, shops, fm, bd.w, F.seeded(bd.seed));
-        shops.forEach(function(s){ (s.ac ? acs : s.open ? shopsOpen : shopsShut).push(new T.Matrix4().multiplyMatrices(fm, s.m)); });
+        jobs.push(function(){
+          var fm = frame(P, side, bd.z, bd.w);
+          if (bd.mosque !== undefined) { mosque(B, place, fm, bd.w, bd.mosque); return; }
+          var shops = [];
+          building(B, shops, fm, bd.w, F.seeded(bd.seed));
+          shops.forEach(function(s){ (s.ac ? acs : s.open ? shopsOpen : shopsShut).push(new T.Matrix4().multiplyMatrices(fm, s.m)); });
+        });
       });
     });
+    jobs.push(function(){
     inst.crates = shopsOpen; inst.front = shopsShut; inst.ac = acs;
     // Pools of light under the lamps at night, and their glow.
     if (NIGHT) lamps.forEach(function(l){
@@ -526,7 +535,15 @@
     // The shops' fronts and the air conditioners are small and many: they
     // take shadows, but cast none.
     for (var name in inst) if (inst[name].length) instance(group, MODELS[name], inst[name], q !== 'low', !/^(crates|front|ac)$/.test(name));
-    return { group: group, lamps: lamps, dispose: function(){ dispose(group); } };
+    });
+    return {
+      group: group, lamps: lamps, dispose: function(){ dispose(group); },
+      step: function(ms){
+        var from = performance.now();
+        while (jobs.length) { jobs.shift()(); if (performance.now() - from > ms) break; }
+        return !jobs.length;
+      }
+    };
   }
   // Lane lines: dashes between the lanes, solid lines along the edges.
   function lines(B, P, z0, z1, base){

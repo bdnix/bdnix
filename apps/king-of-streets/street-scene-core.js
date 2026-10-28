@@ -145,7 +145,8 @@
   // How a sound from (x, z) on the map is heard by a listener at (lx, lz)
   // heading `h`: louder near (0 to 1), from the left (-1) or right (1), and
   // higher as it closes in (the Doppler shift, a pitch factor) given both
-  // speeds along the road (metres a second).
+  // speeds along the road (metres a second); and how far it is ahead
+  // (`along`, metres, behind below 0).
   function heard(lx, lz, h, x, z, speed, listenerSpeed){
     var dx = x - lx, dz = z - lz, d = Math.sqrt(dx * dx + dz * dz);
     var right = -Math.cos(h) * dx + Math.sin(h) * dz, along = Math.sin(h) * dx + Math.cos(h) * dz;
@@ -153,7 +154,7 @@
     // Closing speed: the gap shrinks if the one behind is faster.
     var closing = along > 0 ? listenerSpeed - speed : speed - listenerSpeed;
     var pitch = 340 / (340 - Math.max(-60, Math.min(60, closing)));
-    return { gain: 1 / (1 + d * d / 64), pan: pan, pitch: pitch, distance: d };
+    return { gain: 1 / (1 + d * d / 64), pan: pan, pitch: pitch, distance: d, along: along };
   }
 
   // ---------- Graphics quality ----------

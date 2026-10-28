@@ -32,17 +32,18 @@
   sound.add({
     beep: [tone(440, 440, 0.14, 'square', 0.2)],
     go: [tone(880, 880, 0.35, 'square', 0.22)],
-    swing: [tone(0, 0, 0.12, 'noise', 0.14), tone(900, 300, 0.12, 'sine', 0.25)],
-    punch: [tone(0, 0, 0.08, 'noise', 0.4), tone(160, 70, 0.12, 'triangle', 0.55)],
-    kick: [tone(0, 0, 0.12, 'noise', 0.38), tone(120, 45, 0.18, 'triangle', 0.58)],
-    whack: [tone(0, 0, 0.1, 'noise', 0.4), tone(600, 140, 0.14, 'square', 0.22)],
-    hurt: [tone(220, 110, 0.18, 'sawtooth', 0.32), tone(0, 0, 0.08, 'noise', 0.3)],
+    // Blows: a deep thump with a sharp slap on top, not a beep.
+    swing: [tone(0, 0, 0.16, 'noise', 0.2), tone(420, 160, 0.14, 'sine', 0.2)],
+    punch: [tone(0, 0, 0.04, 'noise', 0.3), tone(190, 50, 0.16, 'sine', 0.6), tone(2200, 700, 0.03, 'triangle', 0.1)],
+    kick: [tone(0, 0, 0.06, 'noise', 0.3), tone(140, 38, 0.24, 'sine', 0.5), tone(75, 32, 0.28, 'sine', 0.2)],
+    whack: [tone(0, 0, 0.05, 'noise', 0.3), tone(1100, 220, 0.09, 'triangle', 0.2), tone(160, 55, 0.18, 'sine', 0.5)],
+    hurt: [tone(0, 0, 0.06, 'noise', 0.25), tone(120, 45, 0.22, 'sine', 0.55), tone(220, 140, 0.16, 'triangle', 0.15)],
     bump: [tone(110, 80, 0.08, 'triangle', 0.4)],
     shove: [tone(0, 0, 0.2, 'noise', 0.4), tone(90, 50, 0.25, 'triangle', 0.45), tone(700, 500, 0.08, 'square', 0.12, 0.05)],
     clang: [tone(1200, 1150, 0.18, 'square', 0.12), tone(0, 0, 0.06, 'noise', 0.3)],
     scrape: [tone(0, 0, 0.3, 'noise', 0.22), tone(2400, 1800, 0.3, 'sawtooth', 0.05)],
     ko: [tone(0, 0, 0.3, 'noise', 0.35), tone(523, 523, 0.08, 'square', 0.16, 0.12), tone(784, 784, 0.16, 'square', 0.16, 0.2)],
-    crash: [tone(0, 0, 0.5, 'noise', 0.5), tone(140, 40, 0.5, 'triangle', 0.5)],
+    crash: [tone(0, 0, 0.6, 'noise', 0.35), tone(95, 30, 0.6, 'sine', 0.5), tone(320, 70, 0.3, 'triangle', 0.15)],
     buy: notes([659, 784, 1047], 0.08, 0.12, 'square', 0.16),
     finish: notes([523, 659, 784, 1047, 784, 1047], 0.1, 0.18, 'square', 0.17)
   });
@@ -88,7 +89,7 @@
   var state = 'idle', pausedFrom = null, stateTime = 0;
   var mode = 'career', quickPick = { level: 1, bike: 1 };
   var world = null, carry = 0, msgTime = 0, stale = true, banked = false;
-  var slow = 0, tips = null;     // slow motion after a knockout; the first race's tips still to show
+  var slow = 0, freeze = 0, tips = null;     // slow motion after a knockout, a moment's stop as a blow lands; the first race's tips still to show
   var touch = matchMedia('(pointer: coarse)').matches;
   var view = null, staged = null, failed = false;
 
@@ -227,7 +228,8 @@
   function happen(e){
     var o = e.rival === undefined ? null : world.rivals[e.rival];
     if (e.type === 'swing') sound.play('swing');
-    if (e.type === 'hit') { sound.play(e.move === 'punch' ? 'punch' : e.move === 'kick' ? 'kick' : 'whack'); strike(0.35); }
+    if (e.type === 'hit') { sound.play(e.move === 'punch' ? 'punch' : e.move === 'kick' ? 'kick' : 'whack'); strike(0.35); freeze = 0.07; }
+    if (e.type === 'miss') say('Missed!', 0.6);
     if (e.type === 'ko') {
       sound.play('ko');
       slow = 0.8;
@@ -503,6 +505,35 @@
   });
 
   // ---------- The garage ----------
+  // Laid out as racing games do: the bike looked at, pictured large, with
+  // its class, rating and how it compares (bars), and the button to ride or
+  // buy it; under it every bike as a card, the locked ones with their price.
+  // Then the riders and the races, each with its picture.
+  var PICS = '/assets/street/textures/garage/';
+  var CLASSES = ['D', 'C', 'B', 'A', 'S'];
+  var STATS = [
+    ['Top speed', function(B){ return B.top; }, function(B){ return Lang.t('{speed} km/h', { speed: Math.round(B.top * 3.6) }); }],
+    ['Acceleration', function(B){ return B.accel; }],
+    ['Handling', function(B){ return B.steer; }],
+    ['Grip', function(B){ return B.grip; }]
+  ];
+  var viewing = null;   // the bike in the showroom
+  // A bike's rating, out of 1000 for the best there could be.
+  function rating(B){
+    var most = function(k){ return Math.max.apply(null, F.BIKES.map(function(b){ return b[k]; })); };
+    return Math.round(1000 * (0.5 * B.top / most('top') + 0.2 * B.accel / most('accel') + 0.15 * B.steer / most('steer') + 0.15 * B.grip / most('grip')));
+  }
+  function picture(src, alt){
+    var img = document.createElement('img');
+    img.src = src; img.alt = alt || ''; img.decoding = 'async';
+    return img;
+  }
+  function el2(tag, cls, text){
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
   function radio(group, label, on, pick, disabled){
     var b = document.createElement('button');
     b.type = 'button';
@@ -516,55 +547,99 @@
   }
   function showGarage(){
     $('garagePoints').textContent = Lang.t('{points} points', { points: career.points });
+    if (!viewing) viewing = career.ride;
+    showBike(viewing);
     var list = $('bikes');
     list.textContent = '';
     F.BIKES.forEach(function(B, i){
-      var n = i + 1, li = document.createElement('li'), name = document.createElement('b'), info = document.createElement('span'), b = document.createElement('button');
-      name.textContent = Lang.t(B.name);
-      info.textContent = Lang.t('Top speed {speed} km/h', { speed: Math.round(B.top * 3.6) });
+      var n = i + 1, li = document.createElement('li'), b = el2('button', 'bike-card');
+      var owned = career.owned.indexOf(n) >= 0;
       b.type = 'button';
-      b.className = 'btn ' + (career.ride === n ? 'btn-primary' : 'btn-ghost');
-      if (career.owned.indexOf(n) >= 0) {
-        b.textContent = career.ride === n ? 'Riding' : 'Ride';
-        b.setAttribute('aria-pressed', career.ride === n ? 'true' : 'false');
-        b.addEventListener('click', function(){ career.ride = n; keepCareer(); showGarage(); });
-      } else {
-        b.textContent = Lang.t('Buy for {price}', { price: B.price });
-        b.disabled = career.points < B.price;
-        b.addEventListener('click', function(){
-          if (!F.buy(career, n)) return;
-          sound.play('buy');
-          career.ride = n;
-          career.race = nextRace(career);
-          keepCareer();
-          showGarage();
-        });
-      }
-      li.appendChild(name); li.appendChild(info); li.appendChild(b);
+      b.setAttribute('aria-pressed', viewing === n ? 'true' : 'false');
+      if (!owned) b.classList.add('locked');
+      b.appendChild(picture(PICS + B.id + '.webp'));
+      b.appendChild(el2('b', '', Lang.t(B.name)));
+      b.appendChild(el2('span', 'state', career.ride === n ? Lang.t('Riding') : owned ? Lang.t('Owned') : Lang.t('{points} points', { points: B.price })));
+      b.addEventListener('click', function(){ viewing = n; showGarage(); });
+      li.appendChild(b);
       list.appendChild(li);
     });
     var riders = $('riders');
     riders.textContent = '';
     RIDERS.forEach(function(r, i){
-      var b = radio(riders, Lang.t(r), career.rider === i, function(){ career.rider = i; keepCareer(); showGarage(); });
+      var b = radio(riders, '', career.rider === i, function(){ career.rider = i; keepCareer(); showGarage(); });
+      b.className = 'rider-card';
+      b.appendChild(picture(PICS + 'rider' + i + '.webp'));
+      b.appendChild(el2('span', '', Lang.t(r)));
       var sw = document.createElement('i');
       sw.style.background = SWATCHES[i];
-      b.insertBefore(sw, b.firstChild);
+      b.lastChild.insertBefore(sw, b.lastChild.firstChild);
     });
     var races = $('races');
     races.textContent = '';
-    for (var r = 1; r <= F.LEVELS.length * F.RACES; r++) (function(r){
-      var b = radio(races, Lang.num(r), career.race === r, function(){ career.race = r; keepCareer(); showGarage(); }, !F.open(career, r));
-      if (career.done.indexOf(r) >= 0) b.classList.add('done');
-      b.title = Lang.t(ROUTES[F.levelOf(r) - 1]);
-    })(r);
+    F.LEVELS.forEach(function(L, k){
+      var first = k * F.RACES + 1, card = el2('div', 'route-card'), open = F.open(career, first);
+      if (!open) card.classList.add('locked');
+      card.appendChild(picture(PICS + 'route' + (k + 1) + '.webp'));
+      card.appendChild(el2('b', '', Lang.t(ROUTES[k])));
+      if (!open) card.appendChild(el2('span', 'needs', Lang.t('Needs the {bike}', { bike: Lang.t(F.BIKES[k].name) })));
+      var chips = el2('div', 'chips');
+      for (var r = first; r < first + F.RACES; r++) (function(r){
+        var b = radio(chips, Lang.num(r), career.race === r, function(){ career.race = r; keepCareer(); showGarage(); }, !F.open(career, r));
+        if (career.done.indexOf(r) >= 0) b.classList.add('done');
+        b.title = Lang.t(ROUTES[k]);
+      })(r);
+      card.appendChild(chips);
+      races.appendChild(card);
+    });
     showSettings();
   }
+  // The showroom: bike n, pictured, compared, and what can be done with it.
+  function showBike(n){
+    var B = F.BIKES[n - 1], owned = career.owned.indexOf(n) >= 0;
+    $('heroImg').src = PICS + B.id + '.webp';
+    $('heroImg').alt = Lang.t(B.name);
+    $('heroName').textContent = Lang.t(B.name);
+    $('heroClass').textContent = Lang.t('Class {c}', { c: CLASSES[n - 1] });
+    $('heroRating').textContent = Lang.t('Rating {n}', { n: rating(B) });
+    var stats = $('heroStats');
+    stats.textContent = '';
+    // Each bar from a fifth full for the least of all the bikes to full for the most.
+    STATS.forEach(function(S){
+      var all = F.BIKES.map(S[1]), lo = Math.min.apply(null, all), hi = Math.max.apply(null, all);
+      var dt = el2('dt', '', Lang.t(S[0])), dd = el2('dd'), bar = el2('span', 'stat-bar'), fill = el2('i');
+      fill.style.width = Math.round(20 + 80 * (S[1](B) - lo) / (hi - lo || 1)) + '%';
+      bar.appendChild(fill);
+      dd.appendChild(bar);
+      if (S[2]) dd.appendChild(el2('span', 'stat-val', S[2](B)));
+      stats.appendChild(dt); stats.appendChild(dd);
+    });
+    var btn = $('heroBtn'), note = $('heroNote');
+    btn.disabled = false; note.textContent = '';
+    if (career.ride === n) { btn.textContent = 'Riding'; btn.disabled = true; }
+    else if (owned) btn.textContent = 'Ride';
+    else {
+      btn.textContent = Lang.t('Buy for {price}', { price: B.price });
+      btn.disabled = career.points < B.price;
+      if (btn.disabled) note.textContent = Lang.t('{points} more points to buy it', { points: B.price - career.points });
+    }
+  }
+  $('heroBtn').addEventListener('click', function(){
+    var n = viewing;
+    if (career.owned.indexOf(n) < 0) {
+      if (!F.buy(career, n)) return;
+      sound.play('buy');
+      career.race = nextRace(career);
+    }
+    career.ride = n;
+    keepCareer();
+    showGarage();
+  });
   function showSettings(){
     $('viewBtn').textContent = career.view === 'rider' ? 'Camera: rider' : 'Camera: behind';
     $('qualityBtn').textContent = career.quality === 'low' ? 'Graphics: low' : 'Graphics: high';
   }
-  garageBtn.addEventListener('click', function(){ overlay.hidden = true; garage.hidden = false; showGarage(); garage.scrollTop = 0; });
+  garageBtn.addEventListener('click', function(){ overlay.hidden = true; garage.hidden = false; viewing = career.ride; showGarage(); garage.scrollTop = 0; });
   $('garageDone').addEventListener('click', function(){
     garage.hidden = true;
     menu();
@@ -581,8 +656,18 @@
   function showQuick(){
     var routes = $('routes'), bikes = $('quickBikes');
     routes.textContent = ''; bikes.textContent = '';
-    ROUTES.forEach(function(r, i){ radio(routes, Lang.t(r), quickPick.level === i + 1, function(){ quickPick.level = i + 1; showQuick(); }); });
-    F.BIKES.forEach(function(B, i){ radio(bikes, Lang.t(B.name), quickPick.bike === i + 1, function(){ quickPick.bike = i + 1; showQuick(); }); });
+    ROUTES.forEach(function(r, i){
+      var b = radio(routes, '', quickPick.level === i + 1, function(){ quickPick.level = i + 1; showQuick(); });
+      b.className = 'route-pick';
+      b.appendChild(picture(PICS + 'route' + (i + 1) + '.webp'));
+      b.appendChild(el2('span', '', Lang.t(r)));
+    });
+    F.BIKES.forEach(function(B, i){
+      var b = radio(bikes, '', quickPick.bike === i + 1, function(){ quickPick.bike = i + 1; showQuick(); });
+      b.className = 'bike-pick';
+      b.appendChild(picture(PICS + B.id + '.webp'));
+      b.appendChild(el2('span', '', Lang.t(B.name)));
+    });
   }
   quickBtn.addEventListener('click', function(){ overlay.hidden = true; quick.hidden = false; showQuick(); quick.scrollTop = 0; });
   $('quickBack').addEventListener('click', function(){ quick.hidden = true; menu(); });
@@ -627,8 +712,9 @@
     if (meter) count(now);
     var dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
     last = now;
-    // A knockout plays out slowly for a moment.
-    if (slow > 0) { slow -= dt; dt *= 0.35; }
+    // A blow landing stops everything for a moment; a knockout plays out slowly.
+    if (freeze > 0) { freeze -= dt; dt *= 0.05; }
+    else if (slow > 0) { slow -= dt; dt *= 0.35; }
     update(dt);
     // The scene is drawn while anything moves; under a card it's drawn once.
     var moving = state === 'ready' || state === 'playing' || state === 'finishing' || state === 'down';

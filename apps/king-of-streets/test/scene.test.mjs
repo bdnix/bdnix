@@ -107,6 +107,8 @@ test('heard: louder near, panned to its side, higher closing in and lower going 
   assert.ok(left.pan < 0 && right.pan > 0);
   assert.ok(left.gain > far.gain);
   near(left.distance, 5);
+  near(far.along, 80, 1e-9, 'ahead');
+  assert.ok(S.heard(0, 0, 0, 0, -10, 20, 20).along < 0, 'behind');
   near(left.pitch, 1, 1e-9, 'same speeds: no shift');
   // A faster rival coming up from behind, then pulling away ahead.
   assert.ok(S.heard(0, 0, 0, 0, -10, 30, 20).pitch > 1);

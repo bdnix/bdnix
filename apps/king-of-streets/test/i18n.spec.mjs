@@ -26,7 +26,10 @@ test('in Bangla: the garage, a quick race, the race and its result', async ({ pa
   await expect(page.locator('#ovCareer')).toHaveText('রেস ২/১৫ · ৫০০০ পয়েন্ট · ১২৫');
   await page.getByRole('button', { name: 'গ্যারেজ' }).click();
   await expect(page.locator('#garagePoints')).toHaveText('৫০০০ পয়েন্ট');
-  await expect(page.locator('.bikes li').nth(2)).toContainText('সর্বোচ্চ গতি ১৩৫ কিমি/ঘণ্টা');
+  await page.locator('.bikes .bike-card').nth(2).click();
+  await expect(page.locator('#heroStats')).toContainText('সর্বোচ্চ গতি');
+  await expect(page.locator('#heroStats')).toContainText('১৩৫ কিমি/ঘণ্টা');
+  await expect(page.locator('#heroClass')).toHaveText('ক্লাস B');
   await page.locator('#viewBtn').click();
   if (await page.locator('#steerBtn').isVisible()) {
     await page.locator('#steerBtn').click();
