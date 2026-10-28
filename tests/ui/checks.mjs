@@ -32,8 +32,13 @@ export function watchGoogle(page){
 export async function serveLive(page){
   const local = test.info().project.use.baseURL;
   await page.route(/^https:\/\/www\.bdnix\.com\//, async (route) => {
-    const response = await route.fetch({ url: route.request().url().replace(LIVE, local) });
-    await route.fulfill({ response });
+    // A page still loading something as its test ends is closed under it.
+    try {
+      const response = await route.fetch({ url: route.request().url().replace(LIVE, local) });
+      await route.fulfill({ response });
+    } catch (e) {
+      if (!page.isClosed()) throw e;
+    }
   });
 }
 

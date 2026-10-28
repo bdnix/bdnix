@@ -35,33 +35,34 @@ async function ride(page, race, z, career){
   await page.clock.runFor(500);
 }
 
-// Every route at its time of day, drawn in one page (a fresh page would
-// set the drawing up again, slowly): the start card's street behind it,
-// then a quick race on each route, from the grid.
-test('every route at its time of day, from the start card on', async ({ page }) => {
+// The start card, with the street drawn behind it.
+test('the start card, with the street behind it', async ({ page }) => {
   await openGame(page, URL);
   await until(page, () => window.bdnixStreet3d.current && window.bdnixStreet3d.current.stats().chunks > 0);
   await page.clock.runFor(100);
   expect(await busy(page)).toBeGreaterThan(5);
-  const routes = ['Old Dhaka after midnight', 'Mirpur Road at dawn', 'Hatirjheel at midday', 'Moghbazar flyover at dusk', 'The expressway in the morning rush'];
-  for (const [i, route] of routes.entries()) {
-    if (i) await page.keyboard.press('KeyP');
+});
+
+// Every route at its time of day: a quick race on it, from the start card,
+// drawn from the grid. Each in a page of its own, so they draw side by side.
+const routes = ['Old Dhaka after midnight', 'Mirpur Road at dawn', 'Hatirjheel at midday', 'Moghbazar flyover at dusk', 'The expressway in the morning rush'];
+for (const route of routes) {
+  test(`${route}, drawn from the grid`, async ({ page }) => {
+    await openGame(page, URL);
     await page.getByRole('button', { name: 'Quick race' }).click();
     await page.locator('#quick').getByRole('radio', { name: route }).click();
     await page.locator('#quick').getByRole('button', { name: 'Race' }).click();
     await until(page, () => /^[3৩]$/.test(document.getElementById('count').textContent));
     await page.clock.runFor(500);
-    expect(await busy(page), route).toBeGreaterThan(10);
+    expect(await busy(page)).toBeGreaterThan(10);
     const s = await stats(page);
-    expect(s.chunks, route).toBeGreaterThanOrEqual(3);
-    expect(s.racers, route).toBe(7);
-    expect(s.calls, route).toBeGreaterThan(30);
+    expect(s.chunks).toBeGreaterThanOrEqual(3);
+    expect(s.racers).toBe(7);
+    expect(s.calls).toBeGreaterThan(30);
     // People on the footpaths at dawn, once the walk they share has loaded.
-    if (i === 1) {
-      await until(page, () => window.bdnixStreet3d.current.stats().people > 0);
-    }
-  }
-});
+    if (route === routes[1]) await until(page, () => window.bdnixStreet3d.current.stats().people > 0);
+  });
+}
 
 test('over a bridge on the lake, from the rider’s seat, with a fight on', async ({ page }) => {
   await ride(page, 7, 640, { points: 0, owned: [1, 2, 3], done: [], view: 'rider' });

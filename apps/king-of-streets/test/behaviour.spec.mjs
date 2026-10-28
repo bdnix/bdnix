@@ -7,6 +7,9 @@ import { URL, noDrawing, until, startRace, seed, resume, race } from './street.m
 // race, the camera, the engines and saving. See street.mjs for why nothing
 // is drawn.
 noDrawing(test);
+// Each page loads a city of 3D models: on a busy machine, with coverage on,
+// that takes longer than the usual 30 seconds a test may.
+test.setTimeout(90_000);
 
 const text = (page, id) => page.locator('#' + id).textContent();
 // A race with the player `z` metres in at `speed`, everyone else stopped at
@@ -299,7 +302,7 @@ test('a career race on a bike the career doesn’t own isn’t picked up', async
   await expect(page.locator('#ovTitle')).toHaveText('King of Streets');
 });
 
-test('V switches to the rider’s own view and back, and the garage keeps it', async ({ page }) => {
+test('V switches to the rider’s own view and back, and a new race keeps it', async ({ page }) => {
   await openGame(page, URL);
   await startRace(page, true);
   const mode = () => page.evaluate(() => window.bdnixStreet3d.current.stats().mode);
@@ -310,12 +313,19 @@ test('V switches to the rider’s own view and back, and the garage keeps it', a
   await page.keyboard.press('KeyP');
   await page.reload();
   await expect(page.locator('#ovTitle')).toHaveText('Paused');
-  await page.locator('#newBtn').click();
-  await page.keyboard.press('KeyP');
   await page.getByRole('button', { name: 'New game' }).click();
   await until(page, () => window.bdnixStreet3d.current && window.bdnixStreet3d.current.stats().mode === 'rider');
-  await page.keyboard.press('KeyP');
-  await page.goto(URL);
+  await page.keyboard.press('KeyV');
+  await page.clock.runFor(200);
+  expect(await mode()).toBe('chase');
+});
+
+test('the garage shows the camera and the graphics, and keeps a change', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!sessionStorage.getItem('seeded')) localStorage.setItem('bdnix_kingofstreets_career', JSON.stringify({ points: 0, owned: [1], done: [], view: 'rider' }));
+    sessionStorage.setItem('seeded', '1');
+  });
+  await openGame(page, URL);
   await page.getByRole('button', { name: 'Garage' }).click();
   await expect(page.locator('#viewBtn')).toHaveText('Camera: rider');
   await page.locator('#viewBtn').click();
@@ -324,6 +334,10 @@ test('V switches to the rider’s own view and back, and the garage keeps it', a
   const q = await page.locator('#qualityBtn').textContent();
   expect(['Graphics: low', 'Graphics: high']).toContain(q);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('bdnix_kingofstreets_career')).view)).toBe('chase');
+  await page.reload();
+  await page.getByRole('button', { name: 'Garage' }).click();
+  await expect(page.locator('#viewBtn')).toHaveText('Camera: behind');
+  await expect(page.locator('#qualityBtn')).toHaveText(q);
 });
 
 test('muting silences the engines, and pausing stops them', async ({ page }) => {

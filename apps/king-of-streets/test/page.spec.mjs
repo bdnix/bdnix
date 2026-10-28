@@ -7,5 +7,8 @@ import { noDrawing } from './street.mjs';
 // checks.mjs and checks-game.mjs), in English. Its other languages are its
 // i18n target's (i18n.spec.mjs). It may be played with a phone sideways.
 noDrawing(test);
+// Each page loads a city of 3D models: on a busy machine, with coverage on,
+// that takes longer than the usual 30 seconds a test may.
+test.setTimeout(90_000);
 checkPage('/king-of-streets/', { languages: false, schema: 'WebApplication', category: 'GameApplication', game: true, backdrop: false });
 checkGame('/king-of-streets/', { languages: false, upright: false, credit: ['Road Rash', 'Electronic Arts'], gestures: [['Steer', 'drag'], ['Punch', 'tap'], ['Kick', 'flick'], ['Brake', 'flick']] });

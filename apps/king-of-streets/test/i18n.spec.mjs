@@ -10,6 +10,9 @@ import { URL, noDrawing, seed, resume, startRace } from './street.mjs';
 // the site has, from its own translations (lang/) and those of the shared
 // modules it uses, and nothing else; and its cards and messages in Bangla.
 noDrawing(test);
+// Each page loads a city of 3D models: on a busy machine, with coverage on,
+// that takes longer than the usual 30 seconds a test may.
+test.setTimeout(90_000);
 checkPageLanguages('/king-of-streets/');
 checkGameLanguages('/king-of-streets/', { upright: false });
 checkStrings('/king-of-streets/', 'king-of-streets');

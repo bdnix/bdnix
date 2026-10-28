@@ -40,10 +40,13 @@ export async function startRace(page, go){
 // (with `arg`) and returns the race as bdnixStreet.snapshot() gives it, which
 // the game picks up paused. opts: { mode, career } (the career to keep).
 export async function seed(page, make, arg, opts = {}){
-  await page.goto(URL);
+  // Made by the rules alone, on a page with nothing else on it: the game's
+  // own page would load a whole city first.
+  await page.goto('/assets/js/street-core.js');
+  await page.setContent('<script src="/assets/js/street-core.js"></script>');
   const world = await page.evaluate(make, arg);
-  // Put in place as the next page loads (leaving this one clears the save),
-  // once only, so a reload finds what the game itself saved.
+  // Put in place as the next page loads, once only, so a reload finds what
+  // the game itself saved.
   await page.addInitScript(({ world, opts }) => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
