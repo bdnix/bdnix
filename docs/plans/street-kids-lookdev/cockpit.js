@@ -195,14 +195,16 @@ export function frame(camera, grips, gripsAt = -0.62, maxFov = 110) {
     const cs = grips.map(g => camera.worldToLocal(g.clone()));
     const across = Math.max(...cs.map(c => Math.abs(c.x) / -c.z)) * 1.3 + 0.08;
     // And down: the hands (the grips, plus a hand's depth below them) above the frame's bottom edge.
-    const below = Math.max(...cs.map(c => (-c.y + 0.05) / -c.z)) / 0.9;
+    const below = Math.max(...cs.map(c => (-c.y + 0.015) / -c.z)) / 0.92;
     const need = Math.max(THREE.MathUtils.radToDeg(2 * Math.atan(across / camera.aspect)), THREE.MathUtils.radToDeg(2 * Math.atan(below)));
-    if (need <= camera.fov + 0.5) return;
+    if (globalThis.FRAME_DEBUG) console.error('frame fov', camera.fov.toFixed(1), 'need', need.toFixed(1));
+    if (need <= camera.fov + 0.5) return camera.fov;
     camera.fov = Math.min(maxFov, need); camera.updateProjectionMatrix();
   }
+  return camera.fov;
 }
 function aimAt(camera, grips, gripsAt) {
-  const mid = grips[0].clone().add(grips[1]).multiplyScalar(0.5);
+  const mid = new THREE.Vector3(); grips.forEach(g => mid.add(g)); mid.divideScalar(grips.length);
   const d = mid.clone().sub(camera.position);
   const horiz = Math.hypot(d.x, d.z), below = Math.atan2(-d.y, horiz);
   const half = THREE.MathUtils.degToRad(camera.fov / 2);
@@ -228,6 +230,25 @@ export function behead(root, neck) {
     for (let v = 0; v < n; v++) { let w = 0; for (let k = 0; k < 4; k++) if (hit.has(idxs.getComponent(v, k))) w += wts.getComponent(v, k); top[v] = w > 0.2 ? 1 : 0; }
     const src = g.index ? g.index.array : [...Array(n).keys()], keep = [];
     for (let i = 0; i < src.length; i += 3) if (!top[src[i]] && !top[src[i + 1]] && !top[src[i + 2]]) keep.push(src[i], src[i + 1], src[i + 2]);
+    g.setIndex(keep);
+  });
+}
+
+// Take the chest, back and shoulders off the player's figure too, keeping the arms and the legs:
+// a camera drawn back over a low crouch would otherwise see its own back. `torso` is the bones
+// whose skin goes (the spine and the collarbones); skin hanging mostly from them is removed.
+export function hideTorso(root, torso) {
+  const set = new Set(torso.filter(Boolean));
+  root.traverse(m => {
+    if (!m.isSkinnedMesh) return;
+    const bones = m.skeleton.bones, idxs = m.geometry.attributes.skinIndex, wts = m.geometry.attributes.skinWeight;
+    const hit = new Set(bones.map((b, i) => set.has(b) ? i : -1).filter(i => i >= 0));
+    if (!hit.size) return;
+    const g = m.geometry = m.geometry.clone();
+    const n = g.attributes.position.count, off = new Uint8Array(n);
+    for (let v = 0; v < n; v++) { let w = 0; for (let k = 0; k < 4; k++) if (hit.has(idxs.getComponent(v, k))) w += wts.getComponent(v, k); off[v] = w > 0.5 ? 1 : 0; }
+    const src = g.index ? g.index.array : [...Array(n).keys()], keep = [];
+    for (let i = 0; i < src.length; i += 3) if (!off[src[i]] && !off[src[i + 1]] && !off[src[i + 2]]) keep.push(src[i], src[i + 1], src[i + 2]);
     g.setIndex(keep);
   });
 }

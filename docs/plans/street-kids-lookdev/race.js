@@ -20,6 +20,9 @@ import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 const q = new URLSearchParams(location.search);
 if (q.get('dbg')) globalThis.CLASP_DEBUG = 1;
 if (q.get('nothumb')) globalThis.CLASP_NOTHUMB = 1;
+if (q.get('noside')) globalThis.CLASP_NOSIDE = 1;
+if (q.get('stop')) globalThis.CLASP_STOP = +q.get('stop');
+if (q.get('win')) globalThis.CLASP_WIN = +q.get('win');
 if (q.get('pad')) globalThis.CLASP_PAD = +q.get('pad');
 if (q.get('arm')) globalThis.CLASP_ARM = +q.get('arm');
 const W = innerWidth, H = innerHeight;
@@ -359,6 +362,17 @@ if (shot === 'none') {
   await racer('k4_zx6r', 'c_teenboy', P.x + 3.2, P.z + 8, { roll: -0.03 });
 }
 
+if (q.get('xray') && me) {
+  // The player's bike hidden, its grips drawn as plain tubes, to see the hands.
+  me.bk.traverse(m => { if (m.isMesh && !m.isSkinnedMesh) m.visible = false; });
+  for (const G of (globalThis.CLASP_GRIPS || []).filter(g => g.root.parent === me.bk)) {
+    const len = G.ends ? G.ends[1] - G.ends[0] : 0.12, mid = G.ends ? (G.ends[0] + G.ends[1]) / 2 : 0;
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(G.R, G.R, len, 32), new THREE.MeshStandardMaterial({ color: 0x3060c0, roughness: 0.6 }));
+    tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), G.out);
+    tube.position.copy(G.grip).add(G.out.clone().multiplyScalar(mid));
+    scene.add(tube);
+  }
+}
 // Traffic around them: on the deck if we're on the flyover, and on the road below.
 if (q.get('traffic') !== '0') {
   if (!(deck && P.y > 0)) await parkedCngs(P.z - 15, P.z + 200);
@@ -401,12 +415,32 @@ if (q.get('view') === 'rider' && me) {
   const neckY = me.bn.neck.getWorldPosition(new THREE.Vector3()).y;
   me.bk.traverse(m => { if (m.isMesh && !m.isSkinnedMesh) return; if (m.isSkinnedMesh) { const b = new THREE.Box3().setFromObject(m, true); if (b.min.y > neckY - 0.05) m.visible = false; } });
   cockpit.behead(me.bk, me.bn.neck);
+  cockpit.hideTorso(me.bk, ['spine_01', 'spine_02', 'spine_03', 'shoulder_l', 'shoulder_r'].map(k => me.bn[k]));
   const eye = me.bn.head.getWorldPosition(new THREE.Vector3());
   // On a phone held upright the eye rides higher, so the bars fit across the narrow screen.
   camera.position.copy(eye).add(new THREE.Vector3(0, +(q.get('eyeup') || (W > H ? 0.07 : 0.24)), +(q.get('eyefwd') || -0.02)));
   camera.near = +(q.get('near') || 0.15); camera.fov = W > H ? 75 : 88; camera.updateProjectionMatrix();
   if (q.get('pitch')) camera.lookAt(camera.position.x, camera.position.y - +q.get('pitch'), camera.position.z + 2.5);
-  else cockpit.frame(camera, ['l', 'r'].map(s => me.bn['hand_' + s].getWorldPosition(new THREE.Vector3())), W > H ? -0.72 : -0.66);
+  else {
+    // The whole of both hands in view: the wrists and every fingertip (their skin, a few points each).
+    const pts = [];
+    me.bk.traverse(m => {
+      if (!m.isSkinnedMesh || !m.visible) return;
+      const hands = new Set(); for (const s of ['l', 'r']) me.bn['hand_' + s].traverse(b => hands.add(b));
+      const idx = m.skeleton.bones.map(b => hands.has(b)), si = m.geometry.attributes.skinIndex, sw = m.geometry.attributes.skinWeight;
+      for (let v = 0; v < si.count; v += 7) { let w = 0; for (let k = 0; k < 4; k++) if (idx[si.getComponent(v, k)]) w += sw.getComponent(v, k); if (w > 0.8) pts.push(m.getVertexPosition(v, new THREE.Vector3()).applyMatrix4(m.matrixWorld)); }
+    });
+    if (q.get('dbg')) globalThis.FRAME_DEBUG = 1;
+    const P2 = pts.length ? pts : ['l', 'r'].map(s => me.bn['hand_' + s].getWorldPosition(new THREE.Vector3()));
+    // If the hands only fit in a very wide view (a crouch over low, close clip-ons), lift the eye and
+    // draw it back, as far as it takes and no further, so the view stays natural.
+    const fovBase = W > H ? 75 : 88, fovMax = W > H ? 86 : 100;
+    if (!q.get('eyeup')) for (let k = 0; k <= 1.0001; k += 0.1) {
+      camera.position.copy(eye).add(new THREE.Vector3(0, (W > H ? 0.07 : 0.24) + 0.25 * k, -0.02 - 0.22 * k));
+      camera.fov = fovBase; camera.updateProjectionMatrix();
+      if (cockpit.frame(camera, P2, W > H ? -0.62 : -0.58) <= fovMax) break;
+    } else cockpit.frame(camera, P2, W > H ? -0.62 : -0.58);
+  }
   camera.layers.enable(1);
   const ck = COCKPIT[me.name] || {};
   if (ck.mirrors) mirrorView = cockpit.mirrors(me.bk, scene, ck.mirrors);
@@ -420,6 +454,17 @@ if (q.get('pick')) {
     lines.push(pt + ' ' + (h ? h.object.name + ' / ' + [].concat(h.object.material)[0].name + ' ' + h.point.toArray().map(v => v.toFixed(2)).join(',') + ' uv:' + (h.uv ? h.uv.x.toFixed(2) + ',' + h.uv.y.toFixed(2) : '-') : 'none'));
   }
   const d = document.createElement('pre'); d.style.cssText = 'position:fixed;left:10px;top:80px;color:#ff0;background:#000;font-size:13px;z-index:9'; d.textContent = lines.join('\n'); document.body.appendChild(d); console.error(lines.join(' || '));
+}
+if (q.get('gripcam') && me) {
+  // A camera on one of the player's grips: gripcam=l|r,end|under|front|top|back[,distance]
+  const [side, view, dist] = q.get('gripcam').split(',');
+  const G = (globalThis.CLASP_GRIPS || []).filter(g => g.root.parent === me.bk)[side === 'l' ? 0 : 1];
+  if (G) {
+    const mid = G.grip.clone().add(G.out.clone().multiplyScalar(G.ends ? (G.ends[0] + G.ends[1]) / 2 - 0.01 : 0));
+    const fwd = new THREE.Vector3(0, 0, 1), up = new THREE.Vector3(0, 1, 0);
+    const d = +(dist || 0.22), dir = { end: G.out.clone().negate().add(up.clone().multiplyScalar(0.15)), under: up.clone().negate().add(G.out.clone().negate().multiplyScalar(0.3)).add(fwd.clone().multiplyScalar(0.2)), front: fwd.clone().add(up.clone().multiplyScalar(0.2)), top: up.clone().add(fwd.clone().multiplyScalar(-0.15)), back: fwd.clone().negate().add(up.clone().multiplyScalar(0.25)).add(G.out.clone().multiplyScalar(0.4)) }[view].normalize();
+    camera.position.copy(mid).add(dir.multiplyScalar(d)); camera.up.set(0, 1, 0); camera.lookAt(mid); camera.near = 0.01; camera.fov = 30; camera.updateProjectionMatrix();
+  }
 }
 if (q.get('side')) { camera.position.set(P.x + 6, 1.5, P.z); camera.lookAt(P.x, 1, P.z); }
 sun.target.position.set(P.x, P.y, P.z + 15); sun.position.set(P.x + TIME.sunAt[0], P.y + TIME.sunAt[1], P.z + TIME.sunAt[2]);

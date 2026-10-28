@@ -15,7 +15,8 @@ if (gl.animations[0]) { const mx = new THREE.AnimationMixer(gl.scene); mx.clipAc
 gl.scene.updateMatrixWorld(true);
 let hand = null; gl.scene.traverse(n => { if (!hand && n.isBone && new RegExp((q.get('hand') || 'Right') + 'Hand_?\\d*$').test(n.name)) hand = n; });
 const all = new THREE.Box3().setFromObject(gl.scene, true), size = all.getSize(new THREE.Vector3()).length();
-const c = hand ? hand.getWorldPosition(new THREE.Vector3()) : all.getCenter(new THREE.Vector3());
+let mid1 = null; gl.scene.traverse(n => { if (!mid1 && n.isBone && new RegExp((q.get('hand') || 'Right') + 'HandMiddle2').test(n.name)) mid1 = n; });
+const c = mid1 ? mid1.getWorldPosition(new THREE.Vector3()) : hand ? hand.getWorldPosition(new THREE.Vector3()) : all.getCenter(new THREE.Vector3());
 const d = +(q.get('dist') || 0.35) * size / 2, az = +(q.get('az') || 0), el = +(q.get('el') || 0.3);
 const cam = new THREE.PerspectiveCamera(30, W / H, size / 1000, size * 10);
 if (q.get('whole')) { cam.position.copy(all.getCenter(new THREE.Vector3())).add(new THREE.Vector3(Math.sin(az), 0.3, Math.cos(az)).multiplyScalar(size)); cam.lookAt(all.getCenter(new THREE.Vector3())); }

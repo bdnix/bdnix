@@ -131,7 +131,7 @@ export function seat(rider, bike, fit, opts = {}) {
     const gl = bike.worldToLocal(grip.clone());
     const pole = toWorld([gl.x + sx * 0.6, gl.y - 0.5, gl.z - 0.6]);
     ik(b['upperarm_' + s], b['lowerarm_' + s], b['hand_' + s], grip, pole);
-    if (opts.grip !== false && !(opts.hands && opts.hands[s]) && !(opts.handsWorld && opts.handsWorld[s])) clasp(rider, b, s, grip, pole, out, fwd, up, bar ? gripFit(bike, grip, out) : 0.017);
+    if (opts.grip !== false && !(opts.hands && opts.hands[s]) && !(opts.handsWorld && opts.handsWorld[s])) clasp(rider, b, s, grip, pole, out, fwd, up, bar ? gripFit(bike, grip, out) : 0.017, bar && [bar[0].clone().sub(grip).dot(out), bar[1].clone().sub(grip).dot(out)]);
   }
   b._fwd = fwd;
   return b;
@@ -233,7 +233,8 @@ export async function loadGrip(url) {
   return GRIP;
 }
 
-function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017) {
+function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017, ends = null) {
+  (globalThis.CLASP_GRIPS = globalThis.CLASP_GRIPS || []).push({ root, grip, out: out.clone(), R, ends });
   const f = fingers(root, s), hand = b['hand_' + s], G = GRIP && GRIP[s];
   if (!G || ['thu', 'ind', 'mid', 'rin', 'pin'].some(k => !f[k] || !f[k][0] || !f[k][1])) return;
   const flat = v => v.sub(out.clone().multiplyScalar(v.dot(out))).normalize();
@@ -305,30 +306,53 @@ function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017) {
     root.updateMatrixWorld(true);
     const h = hole();
     const a0 = wpos(f.ind[0]).sub(h.c).dot(out), a1 = wpos(f.pin[0]).sub(h.c).dot(out);
-    const lo = Math.min(a0, a1) - 0.006, hi = Math.max(a0, a1) + 0.006;
+    const lo = Math.min(a0, a1) - 0.03, hi = Math.max(a0, a1) + 0.03;   // the whole hand: the heel and the thumb's root reach past the fingers
     const at = new Map(), P = (m, i) => { const k = m.id + ':' + i; let v = at.get(k); if (!v) { const w = m.getVertexPosition(i, new THREE.Vector3()).applyMatrix4(m.matrixWorld).sub(h.c); v = [w.dot(e1), w.dot(e2), w.dot(out)]; at.set(k, v); } return v; };
     const tri2 = [];
     for (const [m, a, bb, c] of tris) { const A = P(m, a), B = P(m, bb), C = P(m, c); if (Math.max(A[2], B[2], C[2]) < lo || Math.min(A[2], B[2], C[2]) > hi) continue; tri2.push([A, B, C]); }
     const segD = (x, y, A, B) => { const dx = B[0] - A[0], dy = B[1] - A[1], l = dx * dx + dy * dy; let t = l ? ((x - A[0]) * dx + (y - A[1]) * dy) / l : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(x - A[0] - t * dx, y - A[1] - t * dy); };
     const inTri = (x, y, A, B, C) => { const d1 = (x - B[0]) * (A[1] - B[1]) - (A[0] - B[0]) * (y - B[1]), d2 = (x - C[0]) * (B[1] - C[1]) - (B[0] - C[0]) * (y - C[1]), d3 = (x - A[0]) * (C[1] - A[1]) - (C[0] - A[0]) * (y - A[1]); return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0)); };
     let best = [0, 0], bestR = -1;
-    for (let x = -0.02; x <= 0.02; x += 0.0015) for (let y = -0.02; y <= 0.02; y += 0.0015) {
+    // Only near the middle of the fingers' own curl: the grip goes through the fingers, not into a
+    // gap beside them (between the fist and the thumb, say).
+    const W2 = globalThis.CLASP_WIN ?? 0.02;
+    // A spot counts only if the hand closes round it: skin within a centimetre of the circle there on
+    // at least 60% of the way round (36 bins of 10°).
+    const verts = []; for (const [A, B, C] of tri2) verts.push(A, B, C);
+    const enclosed = (x, y, r) => {
+      const bins = new Uint8Array(36);
+      for (const V of verts) { const dx = V[0] - x, dy = V[1] - y, d = Math.hypot(dx, dy); if (d < r + 0.01) bins[Math.floor(((Math.atan2(dy, dx) + Math.PI) / (2 * Math.PI)) * 36) % 36] = 1; }
+      let n = 0; for (const v of bins) n += v; return n >= 22;
+    };
+    for (let x = -W2; x <= W2; x += 0.0015) for (let y = -W2; y <= W2; y += 0.0015) {
       let r = Infinity;
       for (const [A, B, C] of tri2) { if (inTri(x, y, A, B, C)) { r = 0; break; } r = Math.min(r, segD(x, y, A, B), segD(x, y, B, C), segD(x, y, C, A)); if (r <= bestR) break; }
-      if (r > bestR) { bestR = r; best = [x, y]; }
+      if (r > bestR && enclosed(x, y, r)) { bestR = r; best = [x, y]; }
     }
     // Refine around the best.
     const b0 = best.slice();
     for (let x = b0[0] - 0.0015; x <= b0[0] + 0.0015; x += 0.0003) for (let y = b0[1] - 0.0015; y <= b0[1] + 0.0015; y += 0.0003) {
       let r = Infinity;
       for (const [A, B, C] of tri2) { if (inTri(x, y, A, B, C)) { r = 0; break; } r = Math.min(r, segD(x, y, A, B), segD(x, y, B, C), segD(x, y, C, A)); if (r <= bestR) break; }
-      if (r > bestR) { bestR = r; best = [x, y]; }
+      if (r > bestR && enclosed(x, y, r)) { bestR = r; best = [x, y]; }
+    }
+    if (globalThis.CLASP_DEBUG && globalThis.FIT_LOG) {
+      let ur = -1, ub = [0, 0];
+      for (let x = -W2; x <= W2; x += 0.002) for (let y = -W2; y <= W2; y += 0.002) { let r = Infinity; for (const [A, B, C] of tri2) { if (inTri(x, y, A, B, C)) { r = 0; break; } r = Math.min(r, segD(x, y, A, B), segD(x, y, B, C), segD(x, y, C, A)); } if (r > ur) { ur = r; ub = [x, y]; } }
+      const bins = new Uint8Array(36); for (const V of verts) { const dx = V[0] - ub[0], dy = V[1] - ub[1], d = Math.hypot(dx, dy); if (d < ur + 0.01) bins[Math.floor(((Math.atan2(dy, dx) + Math.PI) / (2 * Math.PI)) * 36) % 36] = 1; }
+      console.error('fit', root.name, s, 'tris', tri2.length, 'free best r', (ur * 1000).toFixed(1), 'at', ub.map(v => (v * 1000).toFixed(0)).join(','), 'cover', bins.reduce((t, v) => t + v, 0), 'enclosed best', (bestR * 1000).toFixed(1));
     }
     return { r: bestR, at: h.c.clone().add(e1.clone().multiplyScalar(best[0])).add(e2.clone().multiplyScalar(best[1])) };
   };
   const snug = R + 0.001;
-  let klo = -0.6, khi = 0.8;
-  for (let n = 0; n < 11; n++) { const k = (klo + khi) / 2; close(k); align(); if (fit().r > snug) klo = k; else khi = k; }
+  if (globalThis.CLASP_DEBUG) { globalThis.FIT_LOG = 1; close(0); align(); fit(); close(0.5); align(); fit(); globalThis.FIT_LOG = 0; }
+  // The tightest curl whose enclosed hole still takes the grip (opening the fingers too far loses
+  // the enclosure, so this is a scan, not a halving search), then refined between its neighbours.
+  let klo = null, khi = 0.8;
+  let roomiest = [0, -1];
+  for (let k = 0.8; k >= -1.0; k -= 0.05) { close(k); align(); const r = fit().r; if (r > roomiest[1]) roomiest = [k, r]; if (r > snug) { klo = k; break; } khi = k; }
+  if (klo === null) klo = roomiest[0];
+  else for (let n = 0; n < 5; n++) { const k = (klo + khi) / 2; close(k); align(); if (fit().r > snug) klo = k; else khi = k; }
   close(klo); align();
   const spot = fit();
   // 5. Move the hand so the grip runs through that circle, its middle on the grip point; the arm
@@ -342,12 +366,69 @@ function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017) {
     target.add(goal.clone().sub(wpos(hand)));
   }
   const meanR = () => spot.r, want = snug;
+  if ((globalThis.CLASP_STOP || 99) < 5) return;
+  // 5a. All four fingers on the grip itself, between the switch block and the bar end: slide the
+  // hand along the grip until no finger's skin lies past either end (the little finger may reach
+  // the bar end's lip); if the hand is wider than the grip, centre it.
+  let slid = 0;
+  if (ends) {
+    const fingersSkin = fingerSkin(root, four, null, false);
+    const extent = () => { root.updateMatrixWorld(true); let lo = Infinity, hi = -Infinity; for (const [m, i] of fingersSkin) { const a = m.getVertexPosition(i, new THREE.Vector3()).applyMatrix4(m.matrixWorld).sub(grip).dot(out); lo = Math.min(lo, a); hi = Math.max(hi, a); } return [lo, hi]; };
+    const [lo, hi] = extent(), inner = ends[0] + 0.003, outer = ends[1] + 0.006;
+    slid = hi - lo > outer - inner ? (inner + outer) / 2 - (lo + hi) / 2 : lo < inner ? inner - lo : hi > outer ? outer - hi : 0;
+    if (slid) {
+      goal.add(out.clone().multiplyScalar(slid)); target.copy(goal);
+      for (let n = 0; n < 6; n++) { ik(b['upperarm_' + s], b['lowerarm_' + s], hand, target, pole); setWorldQ(hand, handQ); target.add(goal.clone().sub(wpos(hand))); }
+    }
+    if (globalThis.CLASP_DEBUG) { const e2 = extent(); console.error('along', root.name, s, 'grip', (ends[0] * 1000).toFixed(0) + '..' + (ends[1] * 1000).toFixed(0), 'fingers', (lo * 1000).toFixed(0) + '..' + (hi * 1000).toFixed(0), 'slid', (slid * 1000).toFixed(0), 'now', (e2[0] * 1000).toFixed(0) + '..' + (e2[1] * 1000).toFixed(0)); }
+  }
   if (globalThis.CLASP_DEBUG) console.error('reach', root.name, s, 'hand off', (wpos(hand).distanceTo(goal) * 1000).toFixed(0) + 'mm', 'shoulder to grip', (wpos(b['upperarm_' + s]).distanceTo(grip) * 1000).toFixed(0) + 'mm', 'arm', ((wpos(b['upperarm_' + s]).distanceTo(wpos(b['lowerarm_' + s])) + wpos(b['lowerarm_' + s]).distanceTo(wpos(hand))) * 1000).toFixed(0) + 'mm', 'fit r', (spot.r * 1000).toFixed(1), 'k', klo.toFixed(2));
+  if ((globalThis.CLASP_STOP || 99) < 6) return;
+  // 5b. Fingers side by side: a grip is held with the fingers touching. Each finger's skin is kept
+  // about half a millimetre from its neighbour's: the index, ring and little fingers swing sideways
+  // at their base knuckle (about the back of the hand's normal) towards the middle finger, each
+  // after the one nearer it has settled, no more than 0.25 rad.
+  const sideGap = (A, B) => {
+    root.updateMatrixWorld(true);
+    const P = pts => pts.map(([m, i]) => m.getVertexPosition(i, new THREE.Vector3()).applyMatrix4(m.matrixWorld));
+    const a = P(A), bb = P(B); let d = Infinity;
+    for (const p of a) for (const q of bb) { const x = p.distanceToSquared(q); if (x < d) d = x; }
+    return Math.sqrt(d);
+  };
+  const thin = pts => pts.filter((_, i) => i % Math.max(1, Math.floor(pts.length / 160)) === 0);
+  const fSkin = four.map(c => thin(fingerSkin(root, [[c[1]]], null, true)));
+  const gripGap = pts => { root.updateMatrixWorld(true); let m = Infinity; for (const [mm, i] of pts) { const v = mm.getVertexPosition(i, new THREE.Vector3()).applyMatrix4(mm.matrixWorld).sub(grip); m = Math.min(m, v.sub(out.clone().multiplyScalar(v.dot(out))).length()); } return m - R; };
+  const wholeSkin = four.map(c => thin(fingerSkin(root, [c], null, true)));
+  const sideBefore = [sideGap(fSkin[0], fSkin[1]), sideGap(fSkin[1], fSkin[2]), sideGap(fSkin[2], fSkin[3])];
+  const normalAt = () => new THREE.Vector3().crossVectors(wpos(f.mid[0]).sub(wpos(hand)), wpos(f.ind[0]).sub(wpos(f.pin[0]))).normalize();
+  const closeSides = () => { if (!globalThis.CLASP_NOSIDE) for (const [i, nb] of [[0, 1], [2, 1], [3, 2]]) {
+    const c = four[i], q0 = c[0].quaternion.clone(), nrm = normalAt();
+    const kx = wpos(f.ind[0]).sub(wpos(f.pin[0])).normalize();
+    const at = (t, u = 0) => { c[0].quaternion.copy(q0); turn(c[0], nrm, t); if (u) turn(c[0], kx, u); };
+    // Search the swing both ways for the turn that brings it to rest against its neighbour
+    // (0.4–0.8 mm), the smallest turn that does; if none does, the one that comes closest.
+    // The knuckle may also tilt a little up or down, so a finger sitting lower round the grip than
+    // its neighbour can meet it rather than slide past.
+    const g0in = gripGap(wholeSkin[i]);
+    let best = [0, 0], bestS = Infinity;
+    for (let u = -0.2; u <= 0.2001; u += 0.05) for (let t = -0.45; t <= 0.4501; t += 0.015) {
+      at(t, u); const g = sideGap(fSkin[i], fSkin[nb]);
+      if (gripGap(wholeSkin[i]) < Math.min(0.0002, g0in)) continue;   // never into the grip
+      const sc = (g < 0.0004 ? 1 + (0.0004 - g) * 1000 : Math.max(0, g - 0.0008) * 100) + Math.abs(t) * 0.01 + Math.abs(u) * 0.02;
+      if (sc < bestS) { bestS = sc; best = [t, u]; }
+    }
+    at(best[0], best[1]);
+  } };
+  closeSides();
+  const sideAfter = [sideGap(fSkin[0], fSkin[1]), sideGap(fSkin[1], fSkin[2]), sideGap(fSkin[2], fSkin[3])];
+  if (globalThis.CLASP_DEBUG) console.error('side', root.name, s, 'before', sideBefore.map(x => (x * 1000).toFixed(1)).join('/'), 'after', sideAfter.map(x => (x * 1000).toFixed(1)).join('/'));
+  if ((globalThis.CLASP_STOP || 99) < 7) return;
   // 6. Each finger closes the rest of the way on its own until its skin rests on the grip (within
   // half a millimetre), the end joints most, as fingers tighten round a bar.
   const gap = pts => { root.updateMatrixWorld(true); let m = Infinity; for (const [mm, i] of pts) { const v = mm.getVertexPosition(i, new THREE.Vector3()).applyMatrix4(mm.matrixWorld).sub(grip); m = Math.min(m, v.sub(out.clone().multiplyScalar(v.dot(out))).length()); } return m - R; };
   const kax = () => wpos(f.ind[0]).sub(wpos(f.pin[0])).normalize();
   const tipSkins = four.map(c => fingerSkin(root, [[c[1]]], null, true));
+  const fullSkins = four.map(c => thin(fingerSkin(root, [c], null, true)));
   const handSkin = fingerSkin(root, four, hand, true);
   const fitted = four.map(c => c.map(j => j.quaternion.clone()));
   const settle = () => {
@@ -363,8 +444,8 @@ function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017) {
         // the palm, away from the grip again), then home in on it; if it never touches, keep the
         // bend that came closest.
         let lo = 0, hi = null, bestT = 0, bestG = gap(tipSkin);
-        for (let t = 0.05; t <= 1.8; t += 0.05) { bend(t); const g = gap(tipSkin); if (g <= 0.0005) { hi = t; break; } if (g < bestG) { bestG = g; bestT = t; } lo = t; }
-        if (hi !== null) { for (let n = 0; n < 8; n++) { const t = (lo + hi) / 2; bend(t); if (gap(tipSkin) > 0.0005) lo = t; else hi = t; } bend(lo); }
+        for (let t = 0.05; t <= 1.8; t += 0.05) { bend(t); const g = gap(tipSkin); if (g <= 0.0005 || gap(fullSkins[i]) < 0.0002) { hi = t; break; } if (g < bestG) { bestG = g; bestT = t; } lo = t; }
+        if (hi !== null) { for (let n = 0; n < 8; n++) { const t = (lo + hi) / 2; bend(t); if (gap(tipSkin) > 0.0005 && gap(fullSkins[i]) >= 0.0002) lo = t; else hi = t; } bend(lo); }
         else bend(bestT);
       } else if (gap(tipSkin) < 0.0005) {
         // Already sinking in: open it, a step at a time, until it rests on the grip.
@@ -375,64 +456,112 @@ function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017) {
     }
     return gaps;
   };
-  // A finger that can't reach the grip by bending (the little finger, usually: real hands cup the
-  // outer palm to bring it round, which our rigs have no bones for) is brought round by tilting the
-  // whole hand a little about the grip point, a few degrees at a time, either way, until all four
-  // fingers rest on the grip and the palm doesn't sink into it.
-  const spotLocal = hand.worldToLocal(grip.clone());
-  const tiltAxes = [new THREE.Vector3().crossVectors(out, onTop).normalize(), onTop.clone()];
-  const tilt = (ax, a) => {
-    setWorldQ(hand, new THREE.Quaternion().setFromAxisAngle(ax, a).multiply(handQ));
-    const tg = wpos(hand);
-    for (let n = 0; n < 5; n++) {
-      tg.add(grip.clone().sub(hand.localToWorld(spotLocal.clone())));
-      ik(b['upperarm_' + s], b['lowerarm_' + s], hand, tg, pole);
-      setWorldQ(hand, new THREE.Quaternion().setFromAxisAngle(ax, a).multiply(handQ));
+  // Wrap each finger round the grip segment by segment, about the hand's own knuckle hinge (so the
+  // fingers stay parallel): the base joint bends until the first segment's skin rests on the grip,
+  // then the middle joint until the middle segment does, then the end joint until the tip does.
+  // Each segment lies on the grip, so the fingers go over, down the front and round underneath.
+  const segSkin = bone => { const out2 = []; root.traverse(m => { if (!m.isSkinnedMesh || !m.visible) return; const bi = m.skeleton.bones.indexOf(bone); if (bi < 0) return; const si = m.geometry.attributes.skinIndex, sw = m.geometry.attributes.skinWeight; for (let v = 0; v < si.count; v++) { let w = 0; for (let k = 0; k < 4; k++) if (si.getComponent(v, k) === bi) w += sw.getComponent(v, k); if (w > 0.5) out2.push([m, v]); } }); return thin(out2); };
+  const wrapAll = () => { const wrapGaps = [];
+  for (const [i, c] of four.entries()) {
+    for (let n = 0; n < 3; n++) {
+      const j = c[n], below = c.slice(n).map(segSkin).flat(), seg = segSkin(j);
+      const palmPt = wpos(hand).lerp(wpos(f.mid[0]), 0.5), tip = () => tipPos(c);
+      const ax = kax(), q0 = j.quaternion.clone();
+      const sg = (() => { const d0 = tip().distanceTo(palmPt); turn(j, ax, 0.05); const r = tip().distanceTo(palmPt) < d0 ? 1 : -1; j.quaternion.copy(q0); j.updateWorldMatrix(false, true); return r; })();
+      const at = t => { j.quaternion.copy(q0); j.updateWorldMatrix(false, true); turn(j, ax, sg * t); };
+      // Bend in until this segment touches, or open if anything from here on is already inside.
+      let t = 0;
+      if (gap(below) < 0.0003) { while (t > -0.6 && gap(below) < 0.0003) { t -= 0.02; at(t); } }
+      else { while (t < 1.7) { at(t + 0.02); if (gap(seg) <= 0.0005 || gap(below) < 0.0003) { at(t); break; } t += 0.02; } }
     }
-  };
-  let gapsNow = settle(), bestScore = Infinity, best = [tiltAxes[0], 0];
-  const score = g => g.reduce((t, x) => t + Math.max(0, x - 0.0005), 0) + Math.max(0, -gap(handSkin) - 0.001) * 4;
-  if (Math.max(...gapsNow) > 0.001) {
-    search:
-    for (const a of [0.05, 0.1, 0.15, 0.2, 0.25, 0.3]) for (const ax of tiltAxes) for (const sg of [1, -1]) {
-      tilt(ax, sg * a); const g = settle(), sc = score(g);
-      if (sc < bestScore) { bestScore = sc; best = [ax, sg * a]; }
-      if (sc < 0.0005) break search;
-    }
-    if (bestScore < score(gapsNow)) { tilt(best[0], best[1]); gapsNow = settle(); }
-    else { tilt(tiltAxes[0], 0); gapsNow = settle(); }
+    wrapGaps.push(gap(fullSkins[i]));
   }
+  return wrapGaps; };
+  wrapAll(); closeSides();
+  let gapsNow = wrapAll(), best = [null, 0];
   const gaps = Object.fromEntries(['ind', 'mid', 'rin', 'pin'].map((k, i) => [k, gapsNow[i]]));
-  // 7. The thumb wraps round the grip from the inner side and underneath: each of its joints turns
-  // about the grip's direction, base first, as far round as it goes before its skin would sink
-  // into the grip, so it rests on the grip all the way.
-  let thumbGap = null, thumbStart = null;
+  if (globalThis.CLASP_DEBUG) console.error('final side', root.name, s, [sideGap(fSkin[0], fSkin[1]), sideGap(fSkin[1], fSkin[2]), sideGap(fSkin[2], fSkin[3])].map(x => (x * 1000).toFixed(1)).join('/'));
+  if ((globalThis.CLASP_STOP || 99) < 8) return;
+  // 7. The thumb wraps round the grip from the inner side and underneath, its tip resting across the
+  // index finger's middle segment, as in a power grip (and as in the owner's photos). Its joints
+  // bend, base to tip, a little at a time, to bring the tip there (cyclic coordinate descent); if its
+  // skin would sink into the grip or the index finger, the spot moves out a little and it tries again.
+  let thumbGap = null, thumbStart = null, thumbMiss = null;
+  const palmBeforeThumb = globalThis.CLASP_DEBUG ? (() => { root.updateMatrixWorld(true); return gap(thin(fingerSkin(root, [], hand, true))); })() : null;
+  const tipAt = () => tipPos(f.thu.filter(Boolean));
   if (!globalThis.CLASP_NOTHUMB && f.thu && f.thu[1] && f.thu[2]) {
-    const tb = f.thu.filter(Boolean), te = tipBone(tb);
-    const thumbSkin = fingerSkin(root, [tb], null, true);
-    const tipSkin = fingerSkin(root, [[tb[1]]], null, true);
+    const tb = f.thu.filter(Boolean);
+    const thumbSkin = thin(fingerSkin(root, [tb.slice(1)], null, true));
+    const indexSkin = thin(fingerSkin(root, [four[0]], null, true));
     thumbStart = gap(thumbSkin);
-    const tipAt = () => (te ? wpos(te) : wpos(tb[tb.length - 1]));
-    // The whole swing of each joint is searched, both ways (turning straight back out of the grip
-    // would lift the thumb into the air): the base turns to where the thumb rests on the grip with
-    // its tip underneath; then each of the other joints bends it in until its skin rests on the grip.
-    const below = () => tipAt().sub(grip).dot(onTop) < -R * 0.3;
-    const palmBefore = gap(handSkin);
-    for (const [n, j] of tb.entries()) {
-      if (n > 2) break;
-      const q0 = j.quaternion.clone(), measure = n === 0 ? thumbSkin : tipSkin;
-      const at = t => { j.quaternion.copy(q0); turn(j, out, t); };
-      let bestT = 0, bestS = Infinity;
-      for (let t = -2.4; t <= 2.4001; t += 0.04) {
-        at(t); const g = gap(thumbSkin), gm = n === 0 ? g : gap(measure);
-        if (g < 0.0002 || gap(handSkin) < Math.min(palmBefore, 0.0002)) continue;   // never into the grip, thumb or palm
-        const sc = Math.abs(gm - 0.0005) * 100 + (n === 0 && !below() ? 1 : 0) + Math.abs(t) * 0.05;
-        if (sc < bestS) { bestS = sc; bestT = t; }
+    const rest = tb.map(j => j.quaternion.clone());
+    if (globalThis.CLASP_DEBUG) { const ax = p => { const v = p.clone().sub(grip); return [v.sub(out.clone().multiplyScalar(v.dot(out))).length(), p.clone().sub(grip).dot(out)]; }; console.error('thumbjoints', root.name, s, tb.map(j => ax(wpos(j)).map(x => (x * 1000).toFixed(0)).join('@')).join(' '), 'R', (R * 1000).toFixed(1), 'ends', ends ? ends.map(e => (e * 1000).toFixed(0)).join('..') : '-'); }
+    const rotWorld = (j, q) => { const wq = q.multiply(j.getWorldQuaternion(new THREE.Quaternion())); j.parent.updateWorldMatrix(true, false); j.quaternion.copy(j.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(wq)); j.updateWorldMatrix(false, true); };
+    // The index finger's middle segment, seen from the grip's line: the thumb crosses it on the outside.
+    const seg = wpos(four[0][2]).lerp(tipPos(four[0]), +(globalThis.CLASP_THUMBAT ?? 0.2));
+    const radial = seg.clone().sub(grip); radial.sub(out.clone().multiplyScalar(radial.dot(out)));
+    const rad0 = radial.length(); radial.normalize();
+    const along = seg.clone().sub(grip).dot(out);
+    // CCD: bring `end()` to `to` by turning `joints`, a little at a time, the base least.
+    const ccd = (joints, end, to, iters = 30) => {
+      for (let it = 0; it < iters; it++) for (const j of joints.slice().reverse()) {
+        const J = wpos(j), a = end().sub(J).normalize(), bq = to.clone().sub(J).normalize();
+        const q = new THREE.Quaternion().setFromUnitVectors(a, bq);
+        const ang = 2 * Math.acos(Math.min(1, Math.abs(q.w))), cap = j === tb[0] ? 0.08 : 0.15;
+        if (ang > cap) q.slerp(new THREE.Quaternion(), 1 - cap / ang);
+        rotWorld(j, q);
       }
-      at(bestT);
+    };
+    // The thumb goes round the grip, not through it: its middle (interphalangeal) joint is put on the
+    // grip's surface (radius plus half a thumb) somewhere round it, then the tip curls on to the
+    // spot under the index finger. Every place round the grip is tried; the one that keeps the thumb
+    // out of the grip and the index finger and brings the tip nearest wins.
+    // Under the grip, a little to the front, beside the index finger: the thumb closes the fist from below.
+    const underDir = up.clone().negate().sub(out.clone().multiplyScalar(-up.dot(out))).normalize();
+    const frontDir = new THREE.Vector3().crossVectors(out, underDir).normalize(); if (frontDir.dot(fwd) < 0) frontDir.negate();
+    const goal2 = grip.clone().add(out.clone().multiplyScalar(along)).add(underDir.clone().multiplyScalar(R + 0.0075).applyAxisAngle(out, 0).add(frontDir.clone().multiplyScalar(0.006)));
+    // All three joints together: small random turns (seeded, so the pose is the same every time),
+    // each kept only if it scores better: the tip nearer its spot, no thumb skin inside the grip or
+    // the index finger, and not far from the animator's thumb. The turns shrink as it settles.
+    const thumbAll = thin(fingerSkin(root, [tb], null, true));
+    // The skin at the thumb's root hangs partly from the thumb, so moving the thumb moves it too: the
+    // palm (anything the hand bone carries much of) counts as the thumb's for staying out of the grip.
+    const palmAll = (() => { const out2 = []; root.traverse(m => { if (!m.isSkinnedMesh || !m.visible) return; const hi = m.skeleton.bones.indexOf(hand); if (hi < 0) return; const si = m.geometry.attributes.skinIndex, sw = m.geometry.attributes.skinWeight; for (let v = 0; v < si.count; v++) { let w = 0; for (let k = 0; k < 4; k++) if (si.getComponent(v, k) === hi) w += sw.getComponent(v, k); if (w > 0.25) out2.push([m, v]); } }); return thin(out2); })();
+    const palm0 = gap(palmAll);
+    const devOf = () => tb.reduce((t, j, n) => t + 2 * Math.acos(Math.min(1, Math.abs(j.quaternion.dot(rest[n])))), 0);
+    const score = () => {
+      const g1 = Math.min(gap(thumbAll), gap(palmAll) + 0.0015 - Math.min(0, palm0)), g2 = sideGap(thumbSkin, indexSkin), miss = tipAt().distanceTo(goal2);
+      // Round underneath, not over the top: the thumb's middle joint below the grip's middle.
+      const ipLow = wpos(tb[2]).sub(grip).dot(underDir);
+      return [miss + Math.max(0, 0.0003 - g1) * 40 + Math.max(0, 0.0003 - g2) * 40 + Math.max(0, g1 - 0.0008) * 0.5 + Math.max(0, R * 0.5 - ipLow) * 3 + devOf() * 0.002, miss, g1, g2];
+    };
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    // Several starts: the animator's thumb, and its base swung round the grip either way.
+    let bestStart = null, bestStartSc = Infinity;
+    for (const a0 of [0, 0.5, -0.5, 1.0, -1.0]) {
+      tb.forEach((j, n) => j.quaternion.copy(rest[n]));
+      if (a0) rotWorld(tb[0], new THREE.Quaternion().setFromAxisAngle(out, a0));
+      const sc = score()[0]; if (sc < bestStartSc) { bestStartSc = sc; bestStart = tb.map(j => j.quaternion.clone()); }
     }
+    tb.forEach((j, n) => j.quaternion.copy(bestStart[n])); tb.forEach(j => j.updateWorldMatrix(false, true));
+    let cur = score();
+    for (let it = 0; it < 1500; it++) {
+      const step = 0.35 * Math.pow(0.02 / 0.35, it / 1500);
+      const j = tb[Math.floor(rnd() * tb.length)], q0 = j.quaternion.clone();
+      const ax = new THREE.Vector3(rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1).normalize();
+      rotWorld(j, new THREE.Quaternion().setFromAxisAngle(ax, (rnd() * 2 - 1) * step));
+      const sc = score();
+      if (sc[0] < cur[0]) cur = sc; else { j.quaternion.copy(q0); j.updateWorldMatrix(false, true); }
+    }
+    const bestPose = tb.map(j => j.quaternion.clone()), bestInfo = [0, cur[1], cur[2], cur[3], 0];
+    tb.forEach((j, n) => j.quaternion.copy(bestPose[n])); tb.forEach(j => j.updateWorldMatrix(false, true));
+    thumbMiss = bestInfo[1];
+    const lift = 0;
+    if (globalThis.CLASP_DEBUG) console.error('thumbbest', root.name, s, 'angle', (bestInfo[0] * 57.3).toFixed(0) + '/' + (bestInfo[4] * 57.3).toFixed(0), 'miss', (bestInfo[1] * 1000).toFixed(1), 'grip', (bestInfo[2] * 1000).toFixed(1), 'index', (bestInfo[3] * 1000).toFixed(1));
     thumbGap = gap(thumbSkin);
+    if (globalThis.CLASP_DEBUG) { const t = tipAt().sub(grip); console.error('thumb', root.name, s, 'tip up', (t.dot(onTop) * 1000).toFixed(0) + 'mm', 'along', (t.dot(out) * 1000).toFixed(0) + 'mm', 'miss', (thumbMiss * 1000).toFixed(1) + 'mm', 'lift', (lift * 1000).toFixed(0), 'to index', (sideGap(thumbSkin, indexSkin) * 1000).toFixed(1)); }
   }
+  if (globalThis.CLASP_DEBUG) console.error('pen', root.name, s, 'palm before thumb', palmBeforeThumb === null ? '-' : (palmBeforeThumb * 1000).toFixed(1), wholeSkin.map(w => (gripGap(w) * 1000).toFixed(1)).join('/'), 'palm', (gripGap(thin(fingerSkin(root, [], hand, true))) * 1000).toFixed(1));
   if (globalThis.CLASP_DEBUG) console.error('contact', root.name, (root.parent && root.parent.name) || '', s, 'tilt', (best ? best[1] : 0).toFixed(2), 'palm gap', (gap(handSkin) * 1000).toFixed(1), Object.entries(gaps).map(([k, v]) => k + ' ' + (v * 1000).toFixed(1) + 'mm').join(' '), 'thumb', thumbGap === null ? '-' : (thumbGap * 1000).toFixed(1) + 'mm', 'thumb before', thumbStart === null ? '-' : (thumbStart * 1000).toFixed(1) + 'mm');
   if (globalThis.CLASP_DEBUG) {
     console.error('placed', s, 'fit r', (meanR() * 1000).toFixed(1), 'want', (want * 1000).toFixed(1), 'hand off target', (wpos(hand).distanceTo(goal) * 1000).toFixed(1) + 'mm', 'k', klo.toFixed(2));
