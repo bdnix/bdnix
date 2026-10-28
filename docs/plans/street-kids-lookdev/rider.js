@@ -131,7 +131,7 @@ export function seat(rider, bike, fit, opts = {}) {
     const gl = bike.worldToLocal(grip.clone());
     const pole = toWorld([gl.x + sx * 0.6, gl.y - 0.5, gl.z - 0.6]);
     ik(b['upperarm_' + s], b['lowerarm_' + s], b['hand_' + s], grip, pole);
-    if (opts.grip !== false && !(opts.hands && opts.hands[s]) && !(opts.handsWorld && opts.handsWorld[s])) clasp(rider, b, s, grip, pole, out, fwd, up, bar ? gripFit(bike, grip, out) : 0.017, bar && [bar[0].clone().sub(grip).dot(out), bar[1].clone().sub(grip).dot(out)]);
+    if (opts.grip !== false && !(opts.hands && opts.hands[s]) && !(opts.handsWorld && opts.handsWorld[s])) clasp(rider, b, s, grip, pole, out, fwd, up, bar ? gripFit(bike, grip, out) : 0.017, bar && [bar[0].clone().sub(grip).dot(out), bar[1].clone().sub(grip).dot(out)], bike);
   }
   b._fwd = fwd;
   return b;
@@ -233,7 +233,7 @@ export async function loadGrip(url) {
   return GRIP;
 }
 
-function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017, ends = null) {
+function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017, ends = null, bike = null) {
   (globalThis.CLASP_GRIPS = globalThis.CLASP_GRIPS || []).push({ root, grip, out: out.clone(), R, ends });
   const f = fingers(root, s), hand = b['hand_' + s], G = GRIP && GRIP[s];
   if (!G || ['thu', 'ind', 'mid', 'rin', 'pin'].some(k => !f[k] || !f[k][0] || !f[k][1])) return;
@@ -461,18 +461,67 @@ function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017, ends = null) {
   // then the middle joint until the middle segment does, then the end joint until the tip does.
   // Each segment lies on the grip, so the fingers go over, down the front and round underneath.
   const segSkin = bone => { const out2 = []; root.traverse(m => { if (!m.isSkinnedMesh || !m.visible) return; const bi = m.skeleton.bones.indexOf(bone); if (bi < 0) return; const si = m.geometry.attributes.skinIndex, sw = m.geometry.attributes.skinWeight; for (let v = 0; v < si.count; v++) { let w = 0; for (let k = 0; k < 4; k++) if (si.getComponent(v, k) === bi) w += sw.getComponent(v, k); if (w > 0.5) out2.push([m, v]); } }); return thin(out2); };
+  // The bike's other parts by the hand (brake and clutch levers, switches) are solid too: their
+  // surfaces near the grip, sampled every 2.5 mm; a finger's skin may come no nearer than 1.5 mm.
+  // (The grip itself, the part round its line, is left to `gap`.)
+  const obst = [];
+  if (bike) {
+    bike.updateMatrixWorld(true);
+    const near = p => { const v = p.clone().sub(grip), a = v.dot(out); return a > -0.08 && a < 0.1 && v.sub(out.clone().multiplyScalar(a)).length() < 0.07; };
+    const onGrip = p => { const v = p.clone().sub(grip), a = v.dot(out); return (!ends || (a > ends[0] - 0.003 && a < ends[1] + 0.003)) && v.sub(out.clone().multiplyScalar(a)).length() < R + 0.004; };
+    bike.traverse(m => {
+      if (!m.isMesh || m.isSkinnedMesh || !m.visible) return;
+      const pos = m.geometry.attributes.position, idx = m.geometry.index, n = idx ? idx.count : pos.count;
+      const P = i => new THREE.Vector3().fromBufferAttribute(pos, idx ? idx.getX(i) : i).applyMatrix4(m.matrixWorld);
+      for (let t = 0; t < n; t += 3) {
+        const A = P(t), B = P(t + 1), C = P(t + 2);
+        if (!near(A) && !near(B) && !near(C)) continue;
+        const k = Math.min(12, Math.ceil(Math.max(A.distanceTo(B), B.distanceTo(C), C.distanceTo(A)) / 0.0025));
+        for (let u = 0; u <= k; u++) for (let v = 0; u + v <= k; v++) {
+          const p = A.clone().multiplyScalar(1 - (u + v) / k).add(B.clone().multiplyScalar(u / k)).add(C.clone().multiplyScalar(v / k));
+          if (near(p) && !onGrip(p)) obst.push(p);
+        }
+      }
+    });
+  }
+  const obstGap = pts => {
+    if (!obst.length) return Infinity;
+    root.updateMatrixWorld(true); let m = Infinity;
+    for (const [mm, i] of pts) { const v = mm.getVertexPosition(i, new THREE.Vector3()).applyMatrix4(mm.matrixWorld); for (const o of obst) { const d = v.distanceToSquared(o); if (d < m) m = d; } }
+    return Math.sqrt(m) - 0.0015;
+  };
+  const gapAll = pts => Math.min(gap(pts), obstGap(pts));
+  if (globalThis.CLASP_DEBUG) console.error('obstacles', root.name, s, obst.length);
   const wrapAll = () => { const wrapGaps = [];
   for (const [i, c] of four.entries()) {
+    // One bend direction for the whole finger (its joints all flex the same way about the knuckle
+    // line), found at the base where it's clear: the way that takes the fingertip nearer the palm.
+    const fsg = (() => { const palmPt = wpos(hand).lerp(wpos(f.mid[0]), 0.5), q0 = c[0].quaternion.clone(), d0 = tipPos(c).distanceTo(palmPt); turn(c[0], kax(), 0.05); const r = tipPos(c).distanceTo(palmPt) < d0 ? 1 : -1; c[0].quaternion.copy(q0); c[0].updateWorldMatrix(false, true); return r; })();
+    // Open the finger first (end joint, then middle) so it can wrap from the knuckle, not tip-first.
+    const all = c.map(segSkin).flat();
+    for (const jj of [c[2], c[1]]) { let k = 0; while (k < 25 && gap(all) < 0.004) { turn(jj, kax(), -fsg * 0.04); k++; } }
     for (let n = 0; n < 3; n++) {
-      const j = c[n], below = c.slice(n).map(segSkin).flat(), seg = segSkin(j);
+      const j = c[n], below = c.slice(n).map(segSkin).flat();
+      // This segment's far half: its near end already touches once the joint before it has wrapped.
+      const J0 = wpos(j), J1 = n < 2 ? wpos(c[n + 1]) : tipPos(c), dir = J1.clone().sub(J0), L2 = dir.lengthSq();
+      root.updateMatrixWorld(true);
+      const seg = segSkin(j).filter(([mm, i]) => mm.getVertexPosition(i, new THREE.Vector3()).applyMatrix4(mm.matrixWorld).sub(J0).dot(dir) / L2 > 0.5);
       const palmPt = wpos(hand).lerp(wpos(f.mid[0]), 0.5), tip = () => tipPos(c);
       const ax = kax(), q0 = j.quaternion.clone();
-      const sg = (() => { const d0 = tip().distanceTo(palmPt); turn(j, ax, 0.05); const r = tip().distanceTo(palmPt) < d0 ? 1 : -1; j.quaternion.copy(q0); j.updateWorldMatrix(false, true); return r; })();
+      const sg = fsg; void palmPt; void tip;
       const at = t => { j.quaternion.copy(q0); j.updateWorldMatrix(false, true); turn(j, ax, sg * t); };
       // Bend in until this segment touches, or open if anything from here on is already inside.
       let t = 0;
-      if (gap(below) < 0.0003) { while (t > -0.6 && gap(below) < 0.0003) { t -= 0.02; at(t); } }
-      else { while (t < 1.7) { at(t + 0.02); if (gap(seg) <= 0.0005 || gap(below) < 0.0003) { at(t); break; } t += 0.02; } }
+      // The segments past this one only have to stay out of the grip here: if they meet a lever, the
+      // next joints curl them round it. This segment rests on whichever it meets first.
+      const segAll = segSkin(j), clear = () => gap(below) >= 0.0003 && obstGap(segAll) >= 0.0003;
+      if (!clear()) {
+        // Already inside something: the smallest turn either way that clears it.
+        let found = 0;
+        for (let d = 0.02; d <= 0.8; d += 0.02) { at(-d); if (clear()) { found = -d; break; } at(d); if (clear()) { found = d; break; } }
+        t = found; at(t);
+      } else { while (t < 1.7) { at(t + 0.02); if (Math.min(gap(seg), obstGap(seg)) <= 0.0005 || !clear()) { at(t); break; } t += 0.02; } }
+      if (globalThis.CLASP_DEBUG && root.name === 'c_teenboy') console.error('wrapj', s, i, n, 't', t.toFixed(2), 'seg', (gap(seg) * 1000).toFixed(1), 'below grip', (gap(below) * 1000).toFixed(1), 'below obst', (obstGap(below) * 1000).toFixed(1), 'segpts', seg.length);
     }
     wrapGaps.push(gap(fullSkins[i]));
   }
@@ -561,7 +610,7 @@ function clasp(root, b, s, grip, pole, out, fwd, up, R = 0.017, ends = null) {
     thumbGap = gap(thumbSkin);
     if (globalThis.CLASP_DEBUG) { const t = tipAt().sub(grip); console.error('thumb', root.name, s, 'tip up', (t.dot(onTop) * 1000).toFixed(0) + 'mm', 'along', (t.dot(out) * 1000).toFixed(0) + 'mm', 'miss', (thumbMiss * 1000).toFixed(1) + 'mm', 'lift', (lift * 1000).toFixed(0), 'to index', (sideGap(thumbSkin, indexSkin) * 1000).toFixed(1)); }
   }
-  if (globalThis.CLASP_DEBUG) console.error('pen', root.name, s, 'palm before thumb', palmBeforeThumb === null ? '-' : (palmBeforeThumb * 1000).toFixed(1), wholeSkin.map(w => (gripGap(w) * 1000).toFixed(1)).join('/'), 'palm', (gripGap(thin(fingerSkin(root, [], hand, true))) * 1000).toFixed(1));
+  if (globalThis.CLASP_DEBUG) console.error('pen', root.name, s, 'lever', wholeSkin.map(w => (obstGap(w) * 1000).toFixed(1)).join('/'), 'palm before thumb', palmBeforeThumb === null ? '-' : (palmBeforeThumb * 1000).toFixed(1), wholeSkin.map(w => (gripGap(w) * 1000).toFixed(1)).join('/'), 'palm', (gripGap(thin(fingerSkin(root, [], hand, true))) * 1000).toFixed(1));
   if (globalThis.CLASP_DEBUG) console.error('contact', root.name, (root.parent && root.parent.name) || '', s, 'tilt', (best ? best[1] : 0).toFixed(2), 'palm gap', (gap(handSkin) * 1000).toFixed(1), Object.entries(gaps).map(([k, v]) => k + ' ' + (v * 1000).toFixed(1) + 'mm').join(' '), 'thumb', thumbGap === null ? '-' : (thumbGap * 1000).toFixed(1) + 'mm', 'thumb before', thumbStart === null ? '-' : (thumbStart * 1000).toFixed(1) + 'mm');
   if (globalThis.CLASP_DEBUG) {
     console.error('placed', s, 'fit r', (meanR() * 1000).toFixed(1), 'want', (want * 1000).toFixed(1), 'hand off target', (wpos(hand).distanceTo(goal) * 1000).toFixed(1) + 'mm', 'k', klo.toFixed(2));
