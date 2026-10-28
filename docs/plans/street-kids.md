@@ -23,13 +23,18 @@ In the owner's words, then what that has come to mean.
      | Level | Bike | Top speed | 0–100 km/h | Grip in bends | Price |
      |---|---|---|---|---|---|
      | 1 | Scooter (Vino) | 90 km/h | 9 s | soft | free (start) |
-     | 2 | 125 cc commuter | 115 km/h | 7 s | soft | 3,000 |
-     | 3 | Pulsar 135 | 135 km/h | 5.5 s | medium | 8,000 |
-     | 4 | Ninja ZX-6R | 180 km/h | 3.5 s | firm | 20,000 |
-     | 5 | Ninja H2 | 230 km/h | 2.8 s | firm, but heavy | 45,000 |
+     | 2 | 125 cc commuter | 115 km/h | 7 s | soft | 1,500 |
+     | 3 | Pulsar 135 | 135 km/h | 5.5 s | medium | 4,000 |
+     | 4 | Ninja ZX-6R | 180 km/h | 3.5 s | firm | 10,000 |
+     | 5 | Ninja H2 | 230 km/h | 2.8 s | firm, but heavy | 22,500 |
 
-     Points are the same currency as the score: 100 per rival knocked off, 1,000 / 600 / 300 for 1st / 2nd / 3rd, plus 1,000 for winning on a bike below the race's level. Races come in five tiers, one per level, each a run of 3 races on longer and busier roads; rivals ride bikes of that tier (a few one level up or down). A tier is unlocked by owning its bike. At about 2,000–3,000 points a good race, Level 2 takes 1–2 races, Level 3 about 3, Level 4 about 7, Level 5 about 12: roughly 25 races in all. Bikes are kept once bought; a crash never loses a bike. One-off races give a score but no points. The best score and the career (points, bikes owned, tier reached) are saved in `bdnix_streetkids_best` and a new key, `bdnix_streetkids_career`.
+     Points are the same currency as the score: 100 per rival knocked off, 1,000 / 600 / 300 for 1st / 2nd / 3rd, plus 1,000 for winning on a bike below the race's level. Races come in five tiers, one per level, each a run of 3 races on longer and busier roads; rivals ride bikes of that tier (a few one level up or down). A tier is unlocked by owning its bike. Prices agreed with the owner (twenty-fourth round: "Let's go with 15 now"): 1,500 / 4,000 / 10,000 / 22,500, 38,000 in all, so a good player (about 2,500 a race) reaches the H2 in about 15 races, one placing mostly second or third with few knockouts in 30–40. To be tuned once the game can be played. Bikes are kept once bought; a crash never loses a bike. One-off races give a score but no points. The best score and the career (points, bikes owned, tier reached) are saved in `bdnix_streetkids_best` and a new key, `bdnix_streetkids_career`.
    - This changes the rules in `street-core.js` (the bike's top speed, acceleration and handling per level, points earned and bike prices), and the saves (the career's points and bikes owned must be kept too). Decide the numbers with the owner before building.
+9. **Engine and traffic sounds** (twenty-fourth round: "please add bike engine sounds and traffic sounds to the game").
+   - The player's engine: a continuous sound whose pitch and loudness follow the revs, a different voice per bike (the scooter's buzzy single, the 125's thump, the Pulsar, the ZX-6R's high four, the H2's supercharged whine), gear changes dipping the revs, idle when stopped.
+   - Rivals' engines heard as they pass, louder and higher as they come near (Doppler), panned left or right.
+   - Traffic: the hum of the street, louder at rush hour and quiet after midnight; CNG two-stroke rattles, bus and truck diesels, and horns (Dhaka's constant horns: frequent at rush hour, rare at night).
+   - Made with the Web Audio API in the game's own script, like the site's other sounds (no audio files), and muted by the game's mute button and M with everything else. `sound.js` only plays short sounds; continuous engine sound is the game's own (it doesn't go in the shared module). Tests: the engine starts and stops with the race, follows the speed, and is silent when muted.
 8. **Kicking CNGs off the road** (eighteenth round): "The riders should be able to kick or move cngs off the road too while racing. They won't be able to do that to bigger vehicles like buses or cars."
    - A kick that lands on a CNG beside the rider (within the kick's reach) shoves it sideways, away from the kicker, out of its lane; it rolls to a stop, at the kerb if it reaches it, and stays there. Its driver is shown getting out. Rivals can do it too.
    - Buses, trucks and cars can't be moved: a kick against one does nothing (the kicker's leg bounces off), and riding into any of them, a CNG included, is still a crash.
@@ -246,7 +251,8 @@ AGENTS.md has rules every game follows. A full-screen 3D game changes how some o
 
 ## Questions still open with the owner
 
-- **Career numbers:** proposed above (bike prices and points per race); asked again in plain words: "What do you mean career numbers?" (eighteenth round).
+- **Career numbers:** agreed (twenty-fourth round): prices 1,500 / 4,000 / 10,000 / 22,500, about 15 good races to the H2.
+- **Graphics approved** "for now" (twenty-third round): build the game; the owner may have more ideas once playing it.
 - **Approve the look?** (asked again with the six riders in gear)
 - Names for the six characters, and whether the race's rivals are the five the player didn't pick (the rules have six rivals).
 
