@@ -27,7 +27,8 @@ for(const it of items){
     const wr=st.model.getObjectByName('wheel_r').position, wf=st.model.getObjectByName('wheel_f').position;
     st.view({pos:[2.6,wr.y+0.25,wr.z-0.45],look:[0,wr.y,wr.z],fov:17});st.render();out.wheelR=c.toDataURL('image/png');
     st.view({pos:[-2.6,wf.y+0.25,wf.z+0.45],look:[0,wf.y,wf.z],fov:17});st.render();out.wheelF=c.toDataURL('image/png');
-    st.spin(0.9);st.view({pos:[2.6,wr.y+0.25,wr.z-0.45],look:[0,wr.y,wr.z],fov:17});st.render();out.wheelR_turned=c.toDataURL('image/png');st.spin(0);
+    st.spin(0.9);st.view({pos:[2.6,wr.y+0.25,wr.z-0.45],look:[0,wr.y,wr.z],fov:17});st.render();out.wheelR_turned=c.toDataURL('image/png');
+    st.view({pos:[-2.6,wf.y+0.25,wf.z+0.45],look:[0,wf.y,wf.z],fov:17});st.render();out.wheelF_turned=c.toDataURL('image/png');st.spin(0);
     st.resize(393,852,3);   // phone upright, as the game draws it
     st.view('race');st.render();out.race=c.toDataURL('image/png');
     st.dispose();return out;

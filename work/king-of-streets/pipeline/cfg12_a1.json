@@ -1,0 +1,1 @@
+{"name": "v4", "src": "src/v4", "rotz": 0, "length": 1.8, "tris": 45000, "drop": ["Body_7_Logo_0"], "keep_wheels": 1, "wheel_tris": 6000, "tex": 2048, "squeeze_dim": 0.25, "decim_weights": {"x": 1}, "img_fmt": "AUTO", "out": "/tmp/claude-0/-home-user-bdnix/c711becb-bcd6-50d7-b6e6-b36bf918247f/scratchpad/work/b12_v4.glb", "xmax": 0.07}

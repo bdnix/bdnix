@@ -286,10 +286,18 @@ for nm,val in cfg.get('mat_base',{}).items():
     for m in bpy.data.materials:
         if m.name==nm:
             nd=m.node_tree.nodes.get('Principled BSDF'); nd.inputs['Base Color'].default_value=(val[0],val[1],val[2],1)
+if cfg.get('drop_emissive'):
+    for m in bpy.data.materials:
+        nd=m.node_tree.nodes.get('Principled BSDF')
+        if nd:
+            for nm in ('Emission Color','Emission'):
+                if nm in nd.inputs and nd.inputs[nm].is_linked:
+                    m.node_tree.links.remove(nd.inputs[nm].links[0])
+            if 'Emission Strength' in nd.inputs: nd.inputs['Emission Strength'].default_value=0.0
 # shrink textures
 mx_px=cfg.get('tex',2048)
 for im in bpy.data.images:
     if im.size[0]>mx_px or im.size[1]>mx_px:
         im.scale(min(im.size[0],mx_px),min(im.size[1],mx_px))
-bpy.ops.export_scene.gltf(filepath=cfg['out'],export_format='GLB',export_apply=True,export_image_format='WEBP',export_image_quality=88)
+bpy.ops.export_scene.gltf(filepath=cfg['out'],export_format='GLB',export_apply=True,export_image_format=cfg.get('img_fmt','WEBP'),export_image_quality=88)
 print('MATERIALS',len(bpy.data.materials))
