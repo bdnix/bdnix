@@ -1,30 +1,30 @@
 # Writes index.html for the round 1 review, second try. Run from this folder: python3 build_page.py
 import html
 items=[
- dict(id='A1',kind='Level 1: scooter',tris=30000,mb=1.10,parts=10,
-  said='"The finishing on the side between the blue and the white part is bad and not acceptable."',
-  found='I had shrunk the body texture from 4096 to 1024 pixels and cut the body hard, so the blue/white edges and the white stripe came out smeared and jagged.',
-  did=['Body colour texture kept at 2048 pixels (the source was 4096). The stripe and the blue/white edges are crisp again.','The wheels are held to 3,000 triangles each so the body keeps 24,000 and its curves and edges are not eaten away.'],
-  note='There is still a thin dark line along the edge of the front leg shield where the blue panel meets the inner white. It is in the source model too. Tell me if that is what you meant and I will fix it by hand.'),
- dict(id='A2',kind='Level 2: 125 cc commuter',tris=30000,mb=0.80,parts=21,
-  said='"What are the huge white bars on the A2 wheel?"',
-  found='They are the swingarm (the long arm the rear wheel hangs from) and the plate behind the sprocket. The source gives them mirror-metal, which reflected the pale sky and made them look white.',
-  did=['Took most of the shine out of the swingarm, frame and hub plate, so they now read as dark steel.','The chain now stays still instead of turning with the wheel, and the spokes turn with the rim.'],
-  note='The swingarm is still a big flat box because the source modelled it that way. I can swap it for a slimmer shape if it still bothers you. The source does not say 125 cc, and it is a trail bike (as before).'),
+ dict(id='A1',kind='Level 1: scooter',tris=45000,mb=1.50,parts=10,
+  said='"A1 still has the same bad finish with crooked border between white and blue."',
+  found='My mistake in the build, not the model. The blue and white panels are separate pieces that meet along a seam. To save triangles I thinned every piece, so the two sides of each seam stopped lining up and the border went crooked and soft. The second try only changed the texture size, which did not touch the cause.',
+  did=['Every large body panel now keeps every triangle exactly as the original model has it. Only small hidden pieces (bolts, engine parts) are thinned.','Compared with the original model from the same camera positions: fewer than 1 in 100 pixels differ noticeably, and the borders sit where the original has them.','To pay for that, A1 has 45,000 triangles. I changed the bike budget from 30,000 to 45,000 (about 7 bikes on screen is still far under the phone limit).'],
+  note='The seat, indicator lamp and tail lamp differ slightly from the original because their small details were thinned. Look at the border picture first: it shows the second try, the new file and the original model at the same spot.',extra='A1_border'),
+ dict(id='A2',kind='Level 2: 125 cc commuter',tris=43769,mb=0.87,parts=21,
+  said='(Same cause as A1, found when I checked every bike.)',
+  found='A2 had been thinned from 43,769 to 30,000 triangles, which can bend panel borders the same way.',
+  did=['Rebuilt with all 43,769 triangles, nothing thinned.','Last round: swingarm shine reduced, chain kept still, spokes turn with the rim.'],
+  note='The swingarm is still a big flat box because the source modelled it that way. I can swap it for a slimmer shape if it still bothers you. The source does not say 125 cc, and it is a trail bike.'),
  dict(id='A3',kind='Level 3: 135 cc street bike',tris=21630,mb=0.67,parts=14,
-  said='"Why are chains hanging out on A3?"',
-  found='The white twisted rope was the drive chain, drawn in white and turning with the wheel, so it swung loose. There were also long thin white rods from the engine to the rear hub.',
-  did=['Removed the drive chain, the thin rods and straps along the swingarm, and the loose orange cables around the front fork and handlebar.','Checked from both sides, front and rear.'],
-  note='A short orange cable stub by the front brake and one thin white rod near the rear hub may still show up close. The rear sprocket now has no chain. I looked at the Yamaha FZ16 as a swap and dropped it: it is flat-coloured and cartoonish.'),
+  said='Unchanged since the last round. It was never thinned, so it was not affected.',
+  found='Last round you asked: "Why are chains hanging out on A3?"',
+  did=['Removed the drive chain, the thin rods and straps along the swingarm, and the loose orange cables around the front fork and handlebar.'],
+  note='A short orange cable stub by the front brake and one thin white rod near the rear hub may still show up close.'),
  dict(id='A4',kind='Level 4: sport bike',tris=27023,mb=0.54,parts=11,
-  said='"The border of the wheels does not rotate." (all bikes)',
-  found='On A4 the whole tyre was stuck to the body, so only the rim turned inside a fixed tyre.',
-  did=['Tyre, rim, brake disc and sprocket now all turn. The fork, caliper, swingarm and chain stay still.','Tested by turning each wheel and drawing the turning parts in red and blue (picture below).'],
+  said='Unchanged since the last round. It was never thinned, so it was not affected.',
+  found='Last round you said the border of the wheels did not rotate (all bikes).',
+  did=['Tyre, rim, brake disc and sprocket all turn. The fork, caliper, swingarm and chain stay still.'],
   note='The source is a 750, and the plan says 600 cc. Nothing in the game states an engine size.'),
- dict(id='A5',kind='Level 5: hyper bike',tris=29999,mb=0.61,parts=10,
-  said='"The border of the wheels does not rotate." (all bikes)',
-  found='Same fault as A4: the tyre ring stayed on the body.',
-  did=['Tyre, rim, disc and sprocket all turn now. Fork, caliper, swingarm and chain stay still.'],
+ dict(id='A5',kind='Level 5: hyper bike',tris=34913,mb=0.66,parts=10,
+  said='(Same cause as A1, found when I checked every bike.)',
+  found='A5 had been thinned from 34,913 to 30,000 triangles.',
+  did=['Rebuilt with all 34,913 triangles, nothing thinned.','Tyre, rim, disc and sprocket all turn. Fork, caliper, swingarm and chain stay still.'],
   note='The bike is still the black recolour of the source, which is white.'),
 ]
 def card(it):
@@ -32,11 +32,12 @@ def card(it):
     did=''.join(f'<li>{html.escape(d)}</li>' for d in it['did'])
     thumbs=''.join(f'<li><button type="button" class="th" data-big="img/{i}_{k}.jpg" data-cap="{cap}" aria-label="{cap}"><img src="img/{i}_{k}.jpg" alt="{html.escape(it["kind"])}, {cap}" loading="lazy" width="786" height="540"></button></li>' for k,cap in [('side','Side'),('front34','Front three-quarter'),('rear34','Rear three-quarter'),('rear','Rear'),('close','Close up'),('wheelR','Rear wheel at rest'),('wheelR_turned','Same wheel, turned'),('wheelF','Front wheel')])
     thumbs+=f'<li class="phone"><button type="button" class="th" data-big="img/{i}_race.jpg" data-cap="Race distance, phone upright" aria-label="Race distance, phone upright"><img src="img/{i}_race.jpg" alt="{html.escape(it["kind"])} at race distance" loading="lazy" width="590" height="1278"></button></li>'
+    extra_html=(f'<figure class="turnmap"><img src="img/{it["extra"]}.jpg" alt="Border close-ups: second try, new, original model" loading="lazy" width="2400" height="1066"><figcaption>Where the blue and white panels meet, from the same camera: the rejected second try, the new file, and the original model.</figcaption></figure>' if it.get('extra') else '')
     return f'''<article class="card" id="{i}" data-id="{i}">
-<header class="ch"><span class="idtag">{i}</span><div><h2>{html.escape(it["kind"])}</h2></div><span class="status">fixed, to review</span></header>
-<blockquote class="said"><span class="lab">You said</span>{html.escape(it["said"])}</blockquote>
+<header class="ch"><span class="idtag">{i}</span><div><h2>{html.escape(it["kind"])}</h2></div><span class="status">reworked, to review</span></header>
+<blockquote class="said"><span class="lab">What this is about</span>{html.escape(it["said"])}</blockquote>
 <p class="found"><span class="lab">What was wrong</span>{html.escape(it["found"])}</p>
-<div class="ba"><figure><img src="img/{i}_before_side.jpg" alt="Before, side" loading="lazy" width="786" height="540"><figcaption>Before</figcaption></figure><figure><img src="img/{i}_side.jpg" alt="After, side" loading="lazy" width="786" height="540"><figcaption>After</figcaption></figure></div>
+{extra_html}<div class="ba"><figure><img src="img/{i}_before_side.jpg" alt="Before, side" loading="lazy" width="786" height="540"><figcaption>Before</figcaption></figure><figure><img src="img/{i}_side.jpg" alt="After, side" loading="lazy" width="786" height="540"><figcaption>After</figcaption></figure></div>
 <figure class="stage"><img class="big" src="img/{i}_wheelR_turned.jpg" alt="Rear wheel turned" width="786" height="540"><canvas class="live" hidden role="img" aria-label="{html.escape(it["kind"])}, drag to turn it"></canvas><figcaption class="cap">Same wheel, turned</figcaption></figure>
 <ul class="strip" aria-label="Other views">{thumbs}</ul>
 <div class="actions"><button type="button" class="btn spin">Spin it here</button><button type="button" class="btn ghost wheels" hidden aria-pressed="true">Wheels turning</button><button type="button" class="btn ghost back" hidden>Back to pictures</button></div>
@@ -44,7 +45,7 @@ def card(it):
 <figure class="turnmap"><img src="img/{i}_turn.jpg" alt="Parts that turn with each wheel, in red and blue" loading="lazy" width="1000" height="420"><figcaption>Parts that turn with the wheels: front in red, rear in blue. Everything grey stays still.</figcaption></figure>
 <h3>What I changed</h3><ul class="did">{did}</ul>
 <p class="note"><b>Still open.</b> {html.escape(it["note"])}</p>
-<dl class="facts"><div><dt>Triangles</dt><dd>{it["tris"]:,} <small>of 30,000</small></dd></div><div><dt>File</dt><dd>{it["mb"]:.2f} MB <small>of 1.5</small></dd></div><div><dt>Parts drawn</dt><dd>{it["parts"]} <small>of 30</small></dd></div></dl>
+<dl class="facts"><div><dt>Triangles</dt><dd>{it["tris"]:,} <small>of 45,000</small></dd></div><div><dt>File</dt><dd>{it["mb"]:.2f} MB <small>of 1.5</small></dd></div><div><dt>Parts drawn</dt><dd>{it["parts"]} <small>of 30</small></dd></div></dl>
 </article>'''
 body='\n'.join(card(it) for it in items)
 page='''<title>King of Streets Bikes</title>
@@ -113,8 +114,8 @@ a{color:var(--accent)}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 <div class="wrap">
-<header class="intro"><span class="eyebrow">King of Streets · Phase 1 · Round 1, second try</span><h1>The five bikes, reworked</h1>
-<p>All five were rejected. Each card below quotes you, says what was wrong, and shows before and after. The files are new, so the pictures are drawn from them again.</p></header>
+<header class="intro"><span class="eyebrow">King of Streets · Phase 1 · Round 1, third try</span><h1>The five bikes, third try</h1>
+<p>A1 was rejected again for its crooked blue and white border. I found the real cause in my build (below), and the same cause could affect A2 and A5, so those are rebuilt too. A3 and A4 were never thinned and are unchanged.</p></header>
 <div class="how"><b>Reply in the chat:</b> "approved", or the IDs that still need work and what is wrong. "Spin it here" loads the real file on your phone: drag to turn the bike and tap "Wheels turning" to see the wheels go round.</div>
 '''+body+'''
 <footer class="credit">Models are credited in work/king-of-streets/credits.md (CC BY 4.0, changed as described). Makers' logos are removed throughout. Nothing here is on the site.</footer>

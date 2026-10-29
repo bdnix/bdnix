@@ -232,9 +232,52 @@ if tot>tgt:
         ratio=min(1,want/t)
         if ratio<1:
             m=o.modifiers.new('d','DECIMATE'); m.decimate_type='COLLAPSE'; m.ratio=ratio; m.use_collapse_triangulate=True
+            dw=cfg.get('decim_weights') if k=='b' else None
+            if dw:
+                vg=o.vertex_groups.new(name='squeeze')
+                mat_of_vert={}
+                if cfg.get('squeeze_dim'):
+                    # weight 1 for small loose pieces (bolts, engine bits), 0 for large pieces (body panels): panels keep every triangle
+                    me2=o.data; par=list(range(len(me2.vertices)))
+                    def fnd(a):
+                        while par[a]!=a: par[a]=par[par[a]]; a=par[a]
+                        return a
+                    first={}
+                    for vi,v in enumerate(me2.vertices):
+                        key=(round(v.co.x*2e4),round(v.co.y*2e4),round(v.co.z*2e4))
+                        if key in first: par[fnd(vi)]=fnd(first[key])
+                        else: first[key]=vi
+                    for p in me2.polygons:
+                        for a in p.vertices[1:]: 
+                            ra,rb=fnd(p.vertices[0]),fnd(a)
+                            if ra!=rb: par[ra]=rb
+                    lo={};hi={}
+                    for vi,v in enumerate(me2.vertices):
+                        r=fnd(vi); c=v.co
+                        l=lo.setdefault(r,[1e9]*3); h=hi.setdefault(r,[-1e9]*3)
+                        for i in range(3): l[i]=min(l[i],c[i]); h[i]=max(h[i],c[i])
+                    big={r for r in lo if max(hi[r][i]-lo[r][i] for i in range(3))>=cfg['squeeze_dim']}
+                    print('PIECES',len(lo),'large kept whole',len(big))
+                    for vi in range(len(me2.vertices)):
+                        mat_of_vert[vi]=0.0 if fnd(vi) in big else 1.0
+                for p in ([] if cfg.get('squeeze_dim') else o.data.polygons):
+                    mn_=o.data.materials[p.material_index].name
+                    for vi in p.vertices: mat_of_vert[vi]=max(mat_of_vert.get(vi,0),dw.get(mn_,0.0))
+                for vi,w in mat_of_vert.items():
+                    if w>0: vg.add([vi],w,'REPLACE')
+                m.vertex_group='squeeze'; m.invert_vertex_group=cfg.get('decim_invert',False); m.vertex_group_factor=1.0
+                bpy.context.view_layer.objects.active=o
+                print('BODYMATS',{mt.name:sum(1 for p in o.data.polygons if o.data.materials[p.material_index]==mt) for mt in o.data.materials})
             if cfg.get('delimit'): m.delimit=set(cfg['delimit'])
             if cfg.get('decim_sym') is not None: m.use_symmetry=cfg['decim_sym']
             bpy.context.view_layer.objects.active=o; bpy.ops.object.modifier_apply(modifier='d')
+            for _it in range(6):
+                cur=tris(o)
+                if cur<=want*1.01 or not dw: break
+                m=o.modifiers.new('d2','DECIMATE'); m.decimate_type='COLLAPSE'; m.ratio=want/cur; m.use_collapse_triangulate=True
+                m.vertex_group='squeeze'; m.invert_vertex_group=cfg.get('decim_invert',False); m.vertex_group_factor=1.0
+                bpy.ops.object.modifier_apply(modifier='d2')
+            if dw: print('AFTERMATS',{mt.name:sum(1 for p in o.data.polygons if o.data.materials[p.material_index]==mt) for mt in o.data.materials})
 for o in objs.values():
     bpy.context.view_layer.objects.active=o
     for p in o.data.polygons: p.use_smooth=True
