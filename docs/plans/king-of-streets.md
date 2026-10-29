@@ -267,11 +267,11 @@ Round 1 files, in `work/king-of-streets/models/bikes/` (source, author and licen
 
 | ID | Source model | File | Triangles | SHA-256 (not frozen until approved) |
 |---|---|---|---|---|
-| A1 | Vino, minghauLoh | `A1.glb` | 29,999 | `c5001f09c6edb97850f3285970c48cb58deac4da630f3df461faa70e2bb666f9` |
-| A2 | Honda NXR Bros 2003, andersonfo | `A2.glb` | 30,000 | `c3cf96feb03e067f0c5a7105067e712c883dafca7d35bb1456028808c6adce9e` |
-| A3 | pulsar 135 ls, EmanuelRestrepoVelez | `A3.glb` | 24,382 | `2fba25ed2e74e700f8a381ecb0037ef1b0a43341644f982a36c151f2b417e202` |
-| A4 | Suzuki GSXR 750, kaleemullah550 | `A4.glb` | 27,023 | `a3482dba706368dea6f10bb177fbc5d724644e03e83d2cc38033e3326c6e46a5` |
-| A5 | kawasaki ninja h2r, amogusstrikesback2 | `A5.glb` | 30,000 | `529d95e90bba24834a916213f139d9a56cfbe9b5d59481cdf512748f53dee42c` |
+| A1 | Vino, minghauLoh | `A1.glb` | 30,000 | `45c8690006790d6eff45a11dcf2f7c926babe177766fa1f5bffbafc27ff8bac3` |
+| A2 | Honda NXR Bros 2003, andersonfo | `A2.glb` | 30,000 | `66a1bd6936e9aa41b31650c1db5cdb57c65fd79cd22e3a8da566c6ae04f42cd7` |
+| A3 | pulsar 135 ls, EmanuelRestrepoVelez | `A3.glb` | 21,630 | `390b403f201947f49c05a5a224015429a7d2fe52fc4a1bfee9d1054c790896d8` |
+| A4 | Suzuki GSXR 750, kaleemullah550 | `A4.glb` | 27,023 | `c97d58124915b56ae39587a6511c6c8a3de347dcc7430b73994a1fda12a67d37` |
+| A5 | kawasaki ninja h2r, amogusstrikesback2 | `A5.glb` | 29,999 | `51d15ffa459678efe5ae1fcbd64ea6143e9191b0adacd2a6e7aabfdfa9674f75` |
 
 ### B. The player's riders (round 2)
 
