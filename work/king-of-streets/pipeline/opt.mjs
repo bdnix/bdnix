@@ -4,14 +4,16 @@ import {dedup,prune,weld,quantize,meshopt,textureCompress,flatten,getSceneVertex
 import {MeshoptEncoder,MeshoptDecoder} from 'meshoptimizer';
 import sharp from 'sharp';
 import fs from 'fs';
-const [,,inp,outp,maxTex='2048',q='80']=process.argv;
+const [,,inp,outp,maxTex='2048',q='80',maxOther]=process.argv;
 await MeshoptEncoder.ready; await MeshoptDecoder.ready;
 const io=new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'meshopt.encoder':MeshoptEncoder,'meshopt.decoder':MeshoptDecoder});
 const doc=await io.read(inp);
 await doc.transform(
   dedup(),prune(),
   weld({tolerance:1e-5}),
-  textureCompress({encoder:sharp,targetFormat:'webp',resize:[+maxTex,+maxTex],quality:+q}),
+  ...(maxOther?[textureCompress({encoder:sharp,targetFormat:'webp',slots:/^(?!baseColor)/,resize:[+maxOther,+maxOther],quality:+q}),
+                textureCompress({encoder:sharp,targetFormat:'webp',slots:/^baseColor/,resize:[+maxTex,+maxTex],quality:+q})]
+              :[textureCompress({encoder:sharp,targetFormat:'webp',resize:[+maxTex,+maxTex],quality:+q})]),
   quantize({quantizePosition:14,quantizeNormal:10,quantizeTexcoord:12}),
   meshopt({encoder:MeshoptEncoder,level:'high'}));
 await io.write(outp,doc);

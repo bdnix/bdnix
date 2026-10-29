@@ -18,3 +18,11 @@ w=np.ones((h,180,1),np.float32)
 w[:8]=np.linspace(0,1,8)[:,None,None]; w[-8:]=np.linspace(1,0,8)[:,None,None]
 n[1716:1716+h,1262:1442]=(src*w+dst*(1-w)).astype(np.uint8)
 save(n,pn)
+# the swingarm and frame are steel with full metal, so they mirror the pale sky and read as white bars: take most of the metal out
+for nm,metal,rough in [('ScratchedSteel',0.18,0.6),('Chrome',0.35,0.45)]:
+    pm=f'{d}/textures/{nm}_metallicRoughness.png'
+    if os.path.exists(pm):
+        t=load(pm).astype(np.float32)
+        t[...,2]*=metal                       # blue = metallic
+        t[...,1]=np.maximum(t[...,1],rough*255)   # green = roughness
+        save(np.clip(t,0,255).astype(np.uint8),pm)
