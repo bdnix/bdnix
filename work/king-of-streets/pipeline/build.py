@@ -361,6 +361,47 @@ def _q_slerp(q,w): return Quaternion((1,0,0,0)).slerp(q,w)
 def fit_circle(pts):
     A=_np.c_[2*pts[:,0],2*pts[:,1],_np.ones(len(pts))]; b=(pts**2).sum(1)
     sol=_np.linalg.lstsq(A,b,rcond=None)[0]; return sol[0],sol[1],math.sqrt(sol[2]+sol[0]**2+sol[1]**2)
+def ring_pts(k):
+    cy,cz,R,cx,hw=hub[k]
+    vi=sorted({v.index for fi,kk in turn.items() if kk==k for v in bm.faces[fi].verts})
+    bm.verts.ensure_lookup_table()
+    V=_np.array([tuple(bm.verts[i].co) for i in vi]); return vi,V
+def ring_fit(V,c):
+    r=_np.hypot(V[:,1]-c[1],V[:,2]-c[2]); Rt=_np.percentile(r,98.5)
+    P=V[(r>0.9*Rt)&(r<=Rt*1.001)]
+    A=_np.c_[P[:,1],P[:,2],_np.ones(len(P))]; sol=_np.linalg.lstsq(A,P[:,0],rcond=None)[0]
+    return P,sol,Rt
+for k in cfg.get('straighten2',[]):
+    cy,cz,R,cx,hw=hub[k]; c=[cx,cy,cz]
+    for it in range(8):
+        vi,V=ring_pts(k); P,sol,Rt=ring_fit(V,c)
+        tilt=math.degrees(math.atan(math.hypot(sol[0],sol[1])))
+        n=Vector((1,-sol[0],-sol[1])).normalized(); q=n.rotation_difference(Vector((1,0,0)))
+        cc=Vector(c)
+        for i in vi: bm.verts[i].co=cc+(q@(bm.verts[i].co-cc))
+        print('STRAIGHTEN2',k,'iter',it,'tilt before',round(tilt,3))
+        if tilt<0.15: break
+    vi,V=ring_pts(k); P,sol,Rt=ring_fit(V,c)
+    # centre of the tyre ring in y,z (circle fit on the convex hull) and its axial position
+    pts=_np.array([[p[1],p[2]] for p in P]);
+    from math import isfinite
+    def _hull(P2):
+        Q=sorted(set(map(tuple,_np.round(P2,5))))
+        def cr(o,a,b): return (a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0])
+        lo=[]
+        for p in Q:
+            while len(lo)>=2 and cr(lo[-2],lo[-1],p)<=0: lo.pop()
+            lo.append(p)
+        up=[]
+        for p in reversed(Q):
+            while len(up)>=2 and cr(up[-2],up[-1],p)<=0: up.pop()
+            up.append(p)
+        return _np.array(lo[:-1]+up[:-1])
+    H=_hull(pts); Ah=_np.c_[2*H[:,0],2*H[:,1],_np.ones(len(H))]; bh=(H**2).sum(1)
+    sh=_np.linalg.lstsq(Ah,bh,rcond=None)[0]; ny,nz=float(sh[0]),float(sh[1]); nr=math.sqrt(sh[2]+ny*ny+nz*nz)
+    nx=float(sol[0]*ny+sol[1]*nz+sol[2])
+    print('STRAIGHTEN2',k,'final tilt',round(math.degrees(math.atan(math.hypot(sol[0],sol[1]))),3),'centre shift mm',round((ny-c[1])*1000,1),round((nz-c[2])*1000,1),'tyre R',round(nr,4))
+    hub[k][0],hub[k][1],hub[k][3]=ny,nz,nx
 def hull_circle(pts):
     P=sorted(set(map(tuple,_np.round(pts,5))))
     def cr(o,a,b): return (a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0])

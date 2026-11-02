@@ -2,10 +2,10 @@
 import html
 items=[
  dict(id='A1',kind='Level 1: scooter',tris=44999,mb=1.43,parts=6,
-  said='"The front wheel is still rotating laterally."',
-  found='Two things were still sideways. The front wheel itself was fixed last time, but small brake parts and the brake cable were turning with it, so pieces swung out to the side. On A3, A4 and A5 the brake calipers and fork pieces were turning with the front wheel too.',
-  did=['Only parts that are round all the way round now turn with a wheel: tyre, rim, hub, brake disc, spokes. Anything that covers only part of a circle (brake calipers, brake arms, cable clips) stays on the bike.','I rendered every front wheel on all five bikes alone, from the front, at eight angles of one turn. The strip below shows it: on every bike the wheel is the same thin upright shape every time, and nothing swings out. Rear wheels were checked the same way.','The front wheel is still the straightened one from last time, and the brake cable is still removed.'],
-  note='If you meant a different bike wheel, tell me which one and what you see. I tested all ten wheels in software rendering, not on an iPhone.',extra='frontwheels'),
+  said='"A1 wheel is still doing the same thing. It is moving laterally and vertically and getting out of the wheel guard as it rotates. This is the third time I am reporting the same issue."',
+  found='I was checking the wrong thing. I compared the wheel outline from the front, which cannot show a wheel that is slightly tilted to the line it spins about. A tilted wheel precesses: its top sweeps sideways and up and down on every turn. A1 front was still 3.7 degrees off, which is about 15 mm of sideways sweep at the tyre edge, enough to leave the guard. My straightening step used a noisy estimate and stopped too early.',
+  did=['The front wheel is now straightened by a repeated fit that stops only when the tilt is under 0.15 degrees. The final file measures 0.03 degrees, and the tyre centre is 0.6 mm from the point it spins about.','I measured that on the final published file itself, for all ten wheels. Every wheel is under 1 mm of drift and under 0.25 degrees of tilt (A1 front 0.6 mm, 0.03 deg).','The strip below shows A1 front wheel at six angles of one turn from the side, the front and above. The tyre is in the same place in every frame, inside the guard.','A3 had a smaller version of the same fault (0.8 degrees on the front) and got the same fix.'],
+  note='If you still see it move on your phone, tell me the view and the moment it happens. I have tested in software rendering, not on an iPhone.',extra='guard'),
  dict(id='A2',kind='Level 2: 125 cc commuter',tris=43769,mb=0.87,parts=23,
   said='"All bikes look good except A2. When wheels turn the inner spikes don\'t turn."',
   found='The wire spokes were fused into the frame and swingarm in my build, so only the tyre and rim turned and the spokes stayed fixed.',
@@ -32,7 +32,7 @@ def card(it):
     did=''.join(f'<li>{html.escape(d)}</li>' for d in it['did'])
     thumbs=''.join(f'<li><button type="button" class="th" data-big="img/{i}_{k}.jpg" data-cap="{cap}" aria-label="{cap}"><img src="img/{i}_{k}.jpg" alt="{html.escape(it["kind"])}, {cap}" loading="lazy" width="786" height="540"></button></li>' for k,cap in [('side','Side'),('front34','Front three-quarter'),('rear34','Rear three-quarter'),('rear','Rear'),('close','Close up'),('wheelR','Rear wheel at rest'),('wheelR_turned','Same wheel, turned'),('wheelF','Front wheel')])
     thumbs+=f'<li class="phone"><button type="button" class="th" data-big="img/{i}_race.jpg" data-cap="Race distance, phone upright" aria-label="Race distance, phone upright"><img src="img/{i}_race.jpg" alt="{html.escape(it["kind"])} at race distance" loading="lazy" width="590" height="1278"></button></li>'
-    extra_html=(f'<figure class="turnmap"><img src="img/{it["extra"]}.jpg" alt="Front wheels from the front at eight angles" loading="lazy" width="1600" height="1000"><figcaption>Every bike front wheel from the front at eight angles of one turn (A1 to A5, top to bottom). A wheel that turns true looks the same in every frame.</figcaption></figure>' if it.get('extra') else '')
+    extra_html=(f'<figure class="turnmap"><img src="img/{it["extra"]}.jpg" alt="A1 front wheel at six angles" loading="lazy" width="1800" height="675"><figcaption>A1 front wheel at six angles of one turn. Top row: from the side. Middle: from the front. Bottom: from above. Nothing moves except the tread and hub pattern.</figcaption></figure>' if it.get('extra') else '')
     return f'''<article class="card" id="{i}" data-id="{i}">
 <header class="ch"><span class="idtag">{i}</span><div><h2>{html.escape(it["kind"])}</h2></div><span class="status">reworked, to review</span></header>
 <blockquote class="said"><span class="lab">What this is about</span>{html.escape(it["said"])}</blockquote>
@@ -114,8 +114,8 @@ a{color:var(--accent)}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 <div class="wrap">
-<header class="intro"><span class="eyebrow">King of Streets · Phase 1 · Round 1, ninth try</span><h1>The five bikes, ninth try</h1>
-<p>Brake calipers and other parts that are not round no longer turn with the wheels, on A1, A3, A4 and A5. A2 is unchanged.</p></header>
+<header class="intro"><span class="eyebrow">King of Streets · Phase 1 · Round 1, tenth try</span><h1>The five bikes, tenth try</h1>
+<p>A1 and A3 front wheels now turn about their true axle (tilt under 0.25 degrees, drift under 1 mm, measured on these files). A2, A4 and A5 are unchanged.</p></header>
 <div class="how"><b>Reply in the chat:</b> "approved", or the IDs that still need work and what is wrong. "Spin it here" loads the real file on your phone: drag to turn the bike and tap "Wheels turning" to see the wheels go round.</div>
 '''+body+'''
 <footer class="credit">Models are credited in work/king-of-streets/credits.md (CC BY 4.0, changed as described). Makers' logos are removed throughout. Nothing here is on the site.</footer>
