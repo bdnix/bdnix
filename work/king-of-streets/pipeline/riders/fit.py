@@ -1,10 +1,13 @@
 import bpy,numpy as np,sys,math
 from mathutils import Vector,Matrix,Quaternion
-BIKE=sys.argv[-2] if len(sys.argv)>3 else 'A3'
+import os
+BIKE=os.environ.get('BIKE') or sys.argv[-2]
 OUT=sys.argv[-1]
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=f'/tmp/claude-0/work/bikes_plain/{BIKE}.glb')
 bikeobjs=list(bpy.data.objects)
+import json
+CFG=json.load(open('/tmp/claude-0/work/bikes.json'))[BIKE]
 import os
 RIDER=os.environ.get('RIDER','claudia');RSCALE=float(os.environ.get('RSCALE','0.0095'))
 bpy.ops.import_scene.gltf(filepath=f'/tmp/claude-0/work/src/x/{RIDER}/scene.gltf')
@@ -49,9 +52,24 @@ def limb(up,mid,end,target,pole):
     aim(up,mid,Ed);aim(mid,end,T)
 # ---- bike points (Blender frame: X=x, Y=-z, Z=y of the bike's glTF)
 def B(x,y,z):return Vector((x,-z,y))
-seat=B(0,float(__import__('os').environ.get('SEATY','0.90')),float(__import__('os').environ.get('SEATZ','-0.25')))
-grip={'l':B(0.3553,1.0209,0.3217),'r':B(-0.3559,1.0210,0.3216)}
-peg={'l':B(0.18,0.333,-0.105),'r':B(-0.18,0.333,-0.105)}
+seat=B(0,float(__import__('os').environ.get('SEATY',str(CFG['seat'][1]+0.08))),float(__import__('os').environ.get('SEATZ',str(CFG['seat'][0]))))
+gc=CFG['grip']['c'];grip={'l':B(gc[0],gc[1],gc[2]),'r':B(-gc[0],gc[1],gc[2])}
+from mathutils.bvhtree import BVHTree
+_bv=[];_bp=[]
+for o_ in bikeobjs:
+    if o_.type=='MESH':
+        m_=o_.to_mesh();m_.transform(o_.matrix_world);off_=len(_bv);_bv+=[v.co.copy() for v in m_.vertices];_bp+=[tuple(off_+i for i in p.vertices) for p in m_.polygons]
+_bt=BVHTree.FromPolygons(_bv,_bp)
+def _top(x,z):
+    best=0.0
+    for dx in (-0.02,0,0.02):
+        for dz in (-0.02,0,0.02):
+            h=_bt.ray_cast(Vector((x+dx,-(z+dz),CFG['peg'][2]+0.07)),Vector((0,0,-1)),1.0)
+            if h[0]:best=max(best,h[0].z)
+    return best if best>0 else 0.3
+px,pz=CFG['peg'][0]+float(os.environ.get('PEGDX','0')),CFG['peg'][1]
+peg={'l':B(px,_top(px,pz),pz),'r':B(-px,_top(-px,pz),pz)}
+print('peg tops (bike y):',round(peg['l'].z,3),round(peg['r'].z,3))
 # pelvis
 hip0=W('hip_02',False)
 target_hip=seat+Vector((0,-0.02,0.10))
@@ -84,12 +102,12 @@ def find(prefix):
     for b in arm.data.bones:
         if b.name.startswith(prefix):return b.name
     raise KeyError(prefix)
-GR=0.0198           # grip radius (ray-cast circle fits, residual 2 mm)
+GR=CFG['grip']['r']   # grip radius (ray-cast circle fits)
 FT=float(__import__('os').environ.get('FT','0.0085'))           # finger half-thickness: bone line lies this far outside the grip surface
 GRIPAX={'l':Vector((0.803,0.595,-0.04)).normalized(),'r':Vector((0.812,-0.581,0.044)).normalized()}  # bike axis (gltf) -> blender (x,-z,y): fixed below
 # grip axes are measured in bike coordinates; convert once
 def Bd(x,y,z):return Vector((x,-z,y))
-GRIPAX={'l':Bd(0.8952,-0.0106,-0.4455).normalized(),'r':Bd(-0.8994,-0.0071,-0.4371).normalized()}
+ga=CFG['grip']['a'];GRIPAX={'l':Bd(ga[0],ga[1],ga[2]).normalized(),'r':Bd(-ga[0],ga[1],ga[2]).normalized()}
 FING=['index','middle','ring','pinky']
 def finger_names(s,k):
     return [find(f'{k}_0{i}_{s}_') for i in (1,2,3)]
@@ -117,7 +135,7 @@ THK={}
 for s_ in ('l','r'):
     for k_ in FING+['thumb']:
         t1=thickness(s_,k_,0);t2=thickness(s_,k_,1)
-        THK[(s_,k_)]=(1.1*t1+0.0005,1.1*t2+0.0005,0.85*1.1*t2+0.0005)
+        THK[(s_,k_)]=(1.1*t1+0.0005,1.1*t2+0.0005,float(os.environ.get('T3F','0.85'))*1.1*t2+0.0005)
 print('finger half-thickness mm (l)',{k[1]:[round(x*1000,1) for x in v] for k,v in THK.items() if k[0]=='l'})
 def rseg(Lseg,FTs):
     R0=GR+FTs;R=R0
@@ -176,8 +194,8 @@ for s,sg in (('l',1),('r',-1)):
     a=GRIPAX[s].copy()
     if a.x*sg<0:a=-a                      # outward = +x for l, -x for r
     c=grip[s]
-    e_up=(Vector((0,0,1))-a*a.z).normalized();e_fw=(Vector((0,-1,0))-a*a.y*(-1)).normalized()
-    e_fw=(e_fw-a*e_fw.dot(a)).normalized()
+    e_up=(Vector((0,0,1))-a*a.z).normalized()
+    e_fw=(a.cross(e_up)*(1 if s=='l' else -1)).normalized()   # turning 'up' toward the front about the outward axis; well defined for any grip angle
     inboard=-a if True else a                # lateral axis (index minus pinky) points inboard
     mid1=finger_names(s,'middle')[0];idx1=finger_names(s,'index')[0];pk1=finger_names(s,'pinky')[0]
     f_rest=W(mid1,False)-W(hd,False);l_rest=W(idx1,False)-W(pk1,False)
@@ -202,7 +220,12 @@ for s,sg in (('l',1),('r',-1)):
         else:
             n1,n2,n3=finger_names(s,k);sigma=1
         p0=W(n1);ax=a
-        q=c+ax*((p0-c).dot(ax))
+        # draw each finger toward the middle of the grip span so neighbouring fingers touch (FSQ<1 closes gaps)
+        FSQ=float(os.environ.get('FSQ','1.0'))
+        s_p0=(p0-c).dot(ax);s_new=s_p0*FSQ if k!='thumb' else s_p0
+        q=c+ax*s_new
+        dlt=s_p0-s_new
+        p0_plane=p0-ax*dlt
         e1=(e_up-ax*e_up.dot(ax)).normalized();e2=(e_fw-ax*e_fw.dot(ax)).normalized()
         L1=(W(n2,False)-W(n1,False)).length*HS;L2=(W(n3,False)-W(n2,False)).length*HS;L3=TIPLEN[(s,k)]*HS
         d0=W(n2)-W(n1)
@@ -214,7 +237,8 @@ for s,sg in (('l',1),('r',-1)):
             def pol(P):
                 d=P-q;return (round(d.dot(e1)*1000),round(d.dot(e2)*1000))
             print('THUMB',s,'p0 (up,fwd mm)',pol(p0),'rad',round((p0-q).length*1000),'L',round(L1*1000),round(L2*1000),round(L3*1000))
-        P1=circ_next(q,e1,e2,rseg(L1,t1),p0,L1,sigma);aimdir(n1,W(n2)-W(n1),P1)
+        L1e=math.sqrt(max(L1*L1-dlt*dlt,1e-8))
+        P1=circ_next(q,e1,e2,rseg(L1e,t1),p0_plane,L1e,sigma);aimdir(n1,W(n2)-W(n1),P1)
         P2=circ_next(q,e1,e2,rseg(L2,t2),P1,L2,sigma);aimdir(n2,W(n3)-W(n2),P2)
         P3=circ_next(q,e1,e2,rseg(L3,t3),P2,L3,sigma);aimdir(n3,tipdir_world(s,k),P3)
 # legs: place the sole of each foot on its peg (calibrated per foot from the measured sole)
@@ -233,18 +257,29 @@ def place_leg(s_,sg,ballT):
     ids={'l':('74','75','76','77'),'r':('81','82','83','84')}[s_]
     up,lo,ft,ba=[f'upperleg_{s_}_0{ids[0]}',f'lowerleg_{s_}_0{ids[1]}',f'foot_{s_}_0{ids[2]}',f'ball_{s_}_0{ids[3]}']
     ank=ballT+Vector((0,0.10*math.cos(0.5),0.10*math.sin(0.5)+0.02))
-    limb(up,lo,ft,ank,pole=ank+Vector((sg*0.4,-0.6,0.2)))
+    limb(up,lo,ft,ank,pole=ank+Vector((sg*float(os.environ.get('KNEEOUT','0.4')),-0.6,0.2)))
     aim(ft,ba,ballT)
     return ba
 for s_,sg in (('l',1),('r',-1)):
     target=peg[s_]+Vector((0,float(os.environ.get('BALLB','0')),0))
     ballT=target+Vector((0,0,0.03))
-    for it in range(10):
+    for it in range(14):
         ba=place_leg(s_,sg,ballT);upd()
-        sp=sole_point(s_);err=target-sp
-        if err.length<0.0015:break
-        ballT=ballT+err*0.7        # move the foot by what is still missing
-    print('foot',s_,'sole point error mm',round(err.length*1000,1),'after',it+1,'rounds')
+        sp=sole_point(s_)
+        # vertical clearance of the lowest foot vertices over whatever bike surface is below them
+        dg_=bpy.context.evaluated_depsgraph_get();ev_=mesh.evaluated_get(dg_);mw_=mesh.matrix_world
+        lows=sorted((mw_@ev_.data.vertices[i].co for i in FOOTV[s_]),key=lambda p:p.z)[:40]
+        gaps_=[]
+        for p_ in lows:
+            h_=_bt.ray_cast(Vector((p_.x,p_.y,p_.z+0.03)),Vector((0,0,-1)),0.5)
+            if h_[0] is not None:gaps_.append(p_.z-h_[0].z)
+        gap=min(gaps_) if gaps_ else 0.0
+        errxy=Vector((target.x-sp.x,target.y-sp.y,0))
+        err=Vector((errxy.x,errxy.y,-(gap-0.0015)))
+        if errxy.length<0.0015 and abs(gap-0.0015)<0.0012:break
+        ballT=ballT+err*0.7
+        ballT.z=min(max(ballT.z,target.z-0.01),target.z+0.08)   # the foot stays at the peg's height
+    print('foot',s_,'sideways error mm',round(errxy.length*1000,1),'lowest vertex above the surface mm',round(gap*1000,1),'after',it+1,'rounds','sole height vs peg top mm',round((sp.z-target.z)*1000,1))
 upd()
 
 # ---- helmet: full-face, pinned to the head bone
@@ -254,7 +289,7 @@ headrest=arm.matrix_world@hb.matrix_local
 headpose=arm.matrix_world@P['head_07'].matrix
 bpy.ops.object.mode_set(mode='OBJECT')
 pre=set(bpy.data.objects)
-bpy.ops.import_scene.gltf(filepath='/tmp/claude-0/work/src/x/helmet_motor/scene.gltf')
+bpy.ops.import_scene.gltf(filepath=f"/tmp/claude-0/work/src/x/{os.environ.get('HELMET','helmet_motor')}/scene.gltf")
 hobjs=[o for o in bpy.data.objects if o not in pre and o.type=='MESH']
 keep=[o for o in hobjs if not o.name.startswith(('Pattern_LP','PatternStripes'))]
 for o in hobjs:
@@ -324,8 +359,8 @@ hbvh=BVHTree.FromPolygons(hv,hp)
 rim_z=min(c.z for c in hv)+0.02
 lab=np.load(f'/tmp/claude-0/work/uvlab_{RIDER}.npy') if HAIR>=0 else None
 bm=bmesh.new();bm.from_mesh(me);bm.faces.ensure_lookup_table()
-hw=mesh.vertex_groups['head_07'].index
-HW={v.index:next((g.weight for g in v.groups if g.group==hw),0.0) for v in mesh.data.vertices}
+hwset={vg_.index for vg_ in mesh.vertex_groups if vg_.name.startswith(('head_07','jaw','eye_','eyelid','eyebrow','mouth'))}
+HW={v.index:sum(g.weight for g in v.groups if g.group in hwset) for v in mesh.data.vertices}
 kill=[]
 for f in bm.faces:
     c=f.calc_center_median()
@@ -350,4 +385,8 @@ bpy.data.objects.remove(mesh);bpy.data.objects.remove(arm)
 bpy.ops.object.select_all(action='DESELECT')
 for o in bpy.data.objects:o.select_set(True)
 bpy.ops.export_scene.gltf(filepath=OUT,export_format='GLB',use_selection=True,export_apply=False)
+bpy.ops.object.select_all(action='DESELECT')
+for o in bpy.data.objects:
+    if o.name.startswith(('rider','helmet')):o.select_set(True)
+bpy.ops.export_scene.gltf(filepath=OUT.replace('.glb','_rider.glb'),export_format='GLB',use_selection=True,export_apply=False)
 print('exported',OUT)

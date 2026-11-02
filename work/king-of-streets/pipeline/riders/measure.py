@@ -5,8 +5,10 @@ bpy.ops.import_scene.gltf(filepath=f)
 o=bpy.data.objects['rider'] if 'rider' in bpy.data.objects else [x for x in bpy.data.objects if x.type=='MESH' and x.name.startswith('rider')][0]
 M=o.matrix_world
 v=np.array([(M@vv.co)[:] for vv in o.data.vertices]);g=np.stack([v[:,0],v[:,2],-v[:,1]],1)   # back to bike gltf coords
-GR=0.0198
-grips={'left of bike (x>0)':(np.array([0.3553,1.0209,0.3217]),np.array([0.8952,-0.0106,-0.4455])),'right (x<0)':(np.array([-0.3559,1.0210,0.3216]),np.array([-0.8994,-0.0071,-0.4371]))}
+import json,os
+CFG=json.load(open('/tmp/claude-0/work/bikes.json'))[os.environ['BIKE']]
+GR=CFG['grip']['r']
+_c=np.array(CFG['grip']['c']);_a=np.array(CFG['grip']['a']);grips={'left of bike (x>0)':(_c,_a),'right (x<0)':(_c*np.array([-1,1,1]),_a*np.array([-1,1,1]))}
 for nm,(c,a) in grips.items():
     a=a/np.linalg.norm(a)
     d=g-c;t=d@a;rv=d-np.outer(t,a);r=np.linalg.norm(rv,axis=1)

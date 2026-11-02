@@ -8,10 +8,12 @@ rider=[o for o in bpy.data.objects if o.type=='MESH' and o.name.startswith('ride
 m=rider.to_mesh();m.transform(rider.matrix_world)
 bvh=BVHTree.FromPolygons([v.co[:] for v in m.vertices],[p.vertices[:] for p in m.polygons])
 B=lambda x,y,z:Vector((x,-z,y))
-GR=0.0198
-cfg={'x+':(B(0.3553,1.0209,0.3217),B(0.8952,-0.0106,-0.4455).normalized()),'x-':(B(-0.3559,1.0210,0.3216),B(-0.8994,-0.0071,-0.4371).normalized())}
+import json,os
+CFG=json.load(open('/tmp/claude-0/work/bikes.json'))[os.environ['BIKE']]
+GR=CFG['grip']['r']
+_c=CFG['grip']['c'];_a=CFG['grip']['a'];cfg={'x+':(B(*_c),B(*_a).normalized()),'x-':(B(-_c[0],_c[1],_c[2]),B(-_a[0],_a[1],_a[2]).normalized())}
 for nm,(c,a) in cfg.items():
-    e1=(Vector((0,0,1))-a*a.z).normalized();fw=Vector((0,-1,0));e2=(fw-a*fw.dot(a)).normalized()
+    e1=(Vector((0,0,1))-a*a.z).normalized();e2=(a.cross(e1)*(1 if nm=='x+' else -1)).normalized()
     # which axial range do the fingers occupy? use rider verts near the grip surface
     ts=[];
     for v in m.vertices:

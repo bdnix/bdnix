@@ -1,0 +1,10 @@
+import {NodeIO} from '@gltf-transform/core';
+import {ALL_EXTENSIONS} from '@gltf-transform/extensions';
+import {dequantize} from '@gltf-transform/functions';
+import {MeshoptDecoder} from 'meshoptimizer';
+await MeshoptDecoder.ready;
+const io=new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'meshopt.decoder':MeshoptDecoder});
+const d=await io.read(process.argv[2]);
+await d.transform(dequantize());
+for(const e of d.getRoot().listExtensionsUsed()) if(e.extensionName==='EXT_meshopt_compression'||e.extensionName==='KHR_mesh_quantization') e.dispose();
+await io.write(process.argv[3],d);

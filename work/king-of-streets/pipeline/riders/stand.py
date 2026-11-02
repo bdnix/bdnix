@@ -1,0 +1,165 @@
+import bpy,numpy as np,sys,math
+from mathutils import Vector,Matrix,Quaternion
+import os
+BIKE=os.environ.get('BIKE') or sys.argv[-2]
+OUT=sys.argv[-1]
+bpy.ops.wm.read_factory_settings(use_empty=True)
+bpy.ops.import_scene.gltf(filepath=f'/tmp/claude-0/work/bikes_plain/{BIKE}.glb')
+bikeobjs=list(bpy.data.objects)
+import json
+CFG=json.load(open('/tmp/claude-0/work/bikes.json'))[BIKE]
+import os
+RIDER=os.environ.get('RIDER','claudia');RSCALE=float(os.environ.get('RSCALE','0.0095'))
+bpy.ops.import_scene.gltf(filepath=f'/tmp/claude-0/work/src/x/{RIDER}/scene.gltf')
+arm=[o for o in bpy.data.objects if o.type=='ARMATURE'][0]
+mesh=[o for o in bpy.data.objects if o.type=='MESH' and len(o.vertex_groups)>0][0]
+for o in list(bpy.data.objects):
+    if o.type=='MESH' and o is not mesh and o not in bikeobjs:bpy.data.objects.remove(o)
+def canon(n):return n.split('idling_')[-1] if 'idling_' in n else n
+for vg_ in mesh.vertex_groups:vg_.name=canon(vg_.name)
+bpy.context.view_layer.objects.active=arm
+bpy.ops.object.mode_set(mode='EDIT')
+for eb in arm.data.edit_bones:eb.name=canon(eb.name)
+bpy.ops.object.mode_set(mode='OBJECT')
+arm.parent=None;arm.scale=(RSCALE,)*3;arm.location=(0,0,0)
+bpy.context.view_layer.update()
+bpy.context.view_layer.objects.active=arm
+bpy.ops.object.mode_set(mode='POSE')
+P=arm.pose.bones
+def W(n,pose=True):
+    b=P[n]
+    return arm.matrix_world@(b.head if pose else arm.data.bones[n].head_local)
+def upd():bpy.context.view_layer.update()
+def aim(n,child_or_pt,target):
+    """rotate bone n about its head so the direction to child_or_pt (a bone name) points at world target"""
+    h=W(n);c=W(child_or_pt)
+    d0=(c-h).normalized();d1=(Vector(target)-h).normalized()
+    R=d0.rotation_difference(d1).to_matrix().to_4x4()
+    Tm=Matrix.Translation(h)
+    M=Tm@R@Tm.inverted()          # world-space rotation about head
+    P[n].matrix=arm.matrix_world.inverted()@(M@(arm.matrix_world@P[n].matrix))
+    upd()
+def limb(up,mid,end,target,pole):
+    """two-bone solve: up head S, mid head E, end head -> target"""
+    S=W(up,False);E=W(mid,False);Wr=W(end,False)
+    l1=(E-S).length;l2=(Wr-E).length
+    S=W(up)   # current shoulder (hip moved)
+    T=Vector(target);d=(T-S).length;d=min(d,l1+l2-1e-4)
+    a=(l1*l1-l2*l2+d*d)/(2*d);h=math.sqrt(max(l1*l1-a*a,0))
+    ax=(T-S).normalized();pv=(Vector(pole)-S);pv=(pv-ax*pv.dot(ax)).normalized()
+    Ed=S+ax*a+pv*h
+    print('limb',up,'reach',round(d/(l1+l2),3),'l1',round(l1,3),'l2',round(l2,3),'S',np.round(S[:],3),'T',np.round(T[:],3))
+    aim(up,mid,Ed);aim(mid,end,T)
+
+# ---- standing pose: arms relaxed at the sides, legs straight, feet flat, pelvis and shoulders squared
+STANDOUT=True
+def _rot_about(n,R3,pivot):
+    R=R3.to_4x4();Tm=Matrix.Translation(pivot)
+    P[n].matrix=arm.matrix_world.inverted()@((Tm@R@Tm.inverted())@(arm.matrix_world@P[n].matrix));upd()
+def square(n,a_name,b_name):
+    """rotate bone n so the line from b to a (their heads) runs along +x"""
+    v=W(a_name)-W(b_name);v.z=v.z;d=Vector((1,0,0))
+    _rot_about(n,v.normalized().rotation_difference(d).to_matrix(),W(n))
+Bd_=lambda x,y,z:Vector((x,y,z))
+square('hip_02','upperleg_l_074','upperleg_r_081')
+square('spine_01_03','upperarm_l_024','upperarm_r_049')
+for s_,sg in (('l',1),('r',-1)):
+    ids={'l':('24','25','26'),'r':('49','50','51')}[s_]
+    up,lo,hd=f'upperarm_{s_}_0{ids[0]}',f'lowerarm_{s_}_0{ids[1]}',f'hand_{s_}_0{ids[2]}'
+    S_=W(up);l1_=(W(lo,False)-W(up,False)).length;l2_=(W(hd,False)-W(lo,False)).length
+    wrist=S_+Vector((sg*0.05,-0.03,-(l1_+l2_)*0.985))
+    limb(up,lo,hd,wrist,pole=wrist+Vector((sg*0.2,0.9,0)))
+for s_,sg in (('l',1),('r',-1)):
+    ids={'l':('74','75','76','77'),'r':('81','82','83','84')}[s_]
+    up,lo,ft,ba=[f'upperleg_{s_}_0{ids[0]}',f'lowerleg_{s_}_0{ids[1]}',f'foot_{s_}_0{ids[2]}',f'ball_{s_}_0{ids[3]}']
+    hip_=W(up);ank_rest=W(ft,False);ball_rest=W(ba,False)
+    limb(up,lo,ft,Vector((hip_.x,hip_.y,ank_rest.z)),pole=Vector((hip_.x,hip_.y-1.0,hip_.z-0.5)))
+    aim(ft,ba,W(ft)+Vector((0,-(ball_rest-ank_rest).xy.length,-(ank_rest.z-ball_rest.z))))
+HU=math.radians(float(os.environ.get('HEADUP','0')))
+if HU:
+    _rot_about('neck_06',Matrix.Rotation(-HU,3,'X'),W('neck_06'))
+upd()
+for o_ in bikeobjs:
+    if o_.name in bpy.data.objects:bpy.data.objects.remove(o_)
+# ---- helmet: full-face, pinned to the head bone
+HSCALE=float(os.environ.get('HSCALE','0.284'));HDX=float(os.environ.get('HDX','0'));HDY=float(os.environ.get('HDY','0.0'));HDZ=float(os.environ.get('HDZ','0'))
+hb=arm.data.bones['head_07'];eye=arm.matrix_world@arm.data.bones['eye_l_011'].head_local
+headrest=arm.matrix_world@hb.matrix_local
+headpose=arm.matrix_world@P['head_07'].matrix
+bpy.ops.object.mode_set(mode='OBJECT')
+pre=set(bpy.data.objects)
+bpy.ops.import_scene.gltf(filepath=f"/tmp/claude-0/work/src/x/{os.environ.get('HELMET','helmet_motor')}/scene.gltf")
+hobjs=[o for o in bpy.data.objects if o not in pre and o.type=='MESH']
+keep=[o for o in hobjs if not o.name.startswith(('Pattern_LP','PatternStripes'))]
+for o in hobjs:
+    if o not in keep:bpy.data.objects.remove(o)
+RAT={'Body':float(os.environ.get('RB','0.12')),'Glass':float(os.environ.get('RG','0.20')),'TopStripes':0.5,'BottomStriper':0.5,'Light':1.0,'SideLights':0.5}
+for o in keep:
+    bpy.ops.object.select_all(action='DESELECT');o.select_set(True);bpy.context.view_layer.objects.active=o
+    bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
+    bpy.ops.object.transform_apply(location=True,rotation=True,scale=True)
+    key=[k for k in RAT if o.name.startswith(k)][0]
+    if RAT[key]<1:
+        md=o.modifiers.new('d','DECIMATE');md.ratio=RAT[key];bpy.ops.object.modifier_apply(modifier='d')
+    bpy.ops.object.shade_smooth()
+bpy.ops.object.select_all(action='DESELECT')
+for o in keep:o.select_set(True)
+bpy.context.view_layer.objects.active=keep[0];bpy.ops.object.join();helm=bpy.context.view_layer.objects.active;helm.name='helmet'
+# helmet's own axes: up +Z, front +Y, origin near centre. Rest placement on the head (rest, character space).
+Rz=Matrix.Rotation(math.pi,4,'Z')
+org=Vector((headrest.translation.x+HDX,0.03+HDY,eye.z-0.05*HSCALE+HDZ))
+M_rest=Matrix.Translation(org)@Rz@Matrix.Scale(HSCALE,4)
+M=headpose@headrest.inverted()@M_rest
+helm.matrix_world=M
+bpy.context.view_layer.update()
+bb=[helm.matrix_world@Vector(c) for c in helm.bound_box];import numpy as _np
+bbn=_np.array([c[:] for c in bb]);print('helmet world bbox',bbn.min(0).round(3),bbn.max(0).round(3),'head pose head',_np.round((headpose@Vector((0,0,0)))[:],3),'eye rest',_np.round(eye[:],3))
+print('helmet tris',sum(len(p.vertices)-2 for p in helm.data.polygons))
+# bake the pose into a plain mesh
+dg=bpy.context.evaluated_depsgraph_get()
+bpy.ops.object.mode_set(mode='OBJECT')
+ev=mesh.evaluated_get(dg);me=bpy.data.meshes.new_from_object(ev)
+mw=mesh.matrix_world
+for v in me.vertices:v.co=mw@v.co
+
+# ---- remove what a helmet hides or must not show: the hair (one UV island) and any surface inside the helmet
+import bmesh
+from mathutils.bvhtree import BVHTree
+HAIRL=[int(x) for x in os.environ.get('HAIRISLAND','').split(',') if x!='']
+HAIR=0 if HAIRL else -1
+hv=[helm.matrix_world@v.co for v in helm.data.vertices];hp=[tuple(p.vertices) for p in helm.data.polygons]
+hbvh=BVHTree.FromPolygons(hv,hp)
+rim_z=min(c.z for c in hv)+0.02
+lab=np.load(f'/tmp/claude-0/work/uvlab_{RIDER}.npy') if HAIR>=0 else None
+bm=bmesh.new();bm.from_mesh(me);bm.faces.ensure_lookup_table()
+hwset={vg_.index for vg_ in mesh.vertex_groups if vg_.name.startswith(('head_07','jaw','eye_','eyelid','eyebrow','mouth'))}
+HW={v.index:sum(g.weight for g in v.groups if g.group in hwset) for v in mesh.data.vertices}
+kill=[]
+for f in bm.faces:
+    c=f.calc_center_median()
+    isHair=lab is not None and int(lab[f.index]) in HAIRL
+    inside=False
+    if c.z>rim_z:
+        n=0;o=c.copy();d=Vector((0,0,1))
+        for _ in range(8):
+            h=hbvh.ray_cast(o,d)
+            if h[0] is None:break
+            n+=1;o=h[0]+d*1e-4
+        inside=(n%2==1)
+    headish=sum(HW[v.index] for v in f.verts)/len(f.verts)>0.25
+    if isHair or inside or (headish and c.z>rim_z-0.03):kill.append(f)
+bmesh.ops.delete(bm,geom=kill,context='FACES')
+bm.to_mesh(me);bm.free()
+print('removed faces (hair + inside the helmet):',len(kill),' rider faces left',len(me.polygons))
+nm=bpy.data.objects.new('rider',me);bpy.context.scene.collection.objects.link(nm)
+nm.data.materials.clear()
+for m in mesh.data.materials:nm.data.materials.append(m)
+bpy.data.objects.remove(mesh);bpy.data.objects.remove(arm)
+bpy.ops.object.select_all(action='DESELECT')
+for o in bpy.data.objects:o.select_set(True)
+bpy.ops.export_scene.gltf(filepath=OUT,export_format='GLB',use_selection=True,export_apply=False)
+bpy.ops.object.select_all(action='DESELECT')
+for o in bpy.data.objects:
+    if o.name.startswith(('rider','helmet')):o.select_set(True)
+bpy.ops.export_scene.gltf(filepath=OUT.replace('.glb','_rider.glb'),export_format='GLB',use_selection=True,export_apply=False)
+print('exported',OUT)
