@@ -275,6 +275,28 @@ if cfg.get('static_small_far'):
                 for fi in c:
                     del turn[fi]
                     if ss.get('delete'): trash.add(fi)
+if cfg.get('min_cover'):
+    mc=cfg['min_cover']
+    for k in 'fr':
+        cy,cz,R,cx,hw=hub[k]; ids=[fi for fi,kk in turn.items() if kk==k]
+        for c in comps(ids):
+            bins=set()
+            for fi in c:
+                f=bm.faces[fi]; cc=sum((v.co for v in f.verts),Vector())/len(f.verts)
+                bins.add(int((math.atan2(cc.z-cz,cc.y-cy)+math.pi)/(2*math.pi)*36)%36)
+            if len(bins)/36<mc:
+                print('NOTROUND',k,len(c),round(len(bins)/36,2))
+                for fi in c: del turn[fi]
+if cfg.get('dbg_cover'):
+    for k in 'fr':
+        cy,cz,R,cx,hw=hub[k]; ids=[fi for fi,kk in turn.items() if kk==k]
+        for c in sorted(comps(ids),key=len,reverse=True)[:16]:
+            bins=set(); rs=[]; xs=[]
+            for fi in c:
+                f=bm.faces[fi]; cc=sum((v.co for v in f.verts),Vector())/len(f.verts)
+                bins.add(int((math.atan2(cc.z-cz,cc.y-cy)+math.pi)/(2*math.pi)*36)%36); rs.append(math.hypot(cc.y-cy,cc.z-cz)); xs.append(cc.x-cx)
+            mats=sorted({me.materials[bm.faces[fi].material_index].name for fi in c})
+            print('COV',k,len(c),'cover',round(len(bins)/36,2),'r',round(min(rs),3),round(max(rs),3),'x',round(min(xs),3),round(max(xs),3),mats)
 if cfg.get('dbg_comp'):
     ids=[fi for fi,kk in turn.items() if kk=='f']; cy,cz,R,cx,hw=hub['f']
     for c in sorted(comps(ids),key=len,reverse=True)[:14]:
