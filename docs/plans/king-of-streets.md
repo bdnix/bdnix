@@ -257,15 +257,15 @@ Shown from the side, three-quarter and rear views, close up and at race distance
 
 | ID | Object | Requirements | Status |
 |---|---|---|---|
-| A1 | Level 1: scooter | The weakest bike; the player starts on it | to review (round 1 sent 28 Oct) |
-| A2 | Level 2: 125 cc commuter | Side stand up when ridden | to review. Flag: a trail-style bike, engine size not stated by the source |
-| A3 | Level 3: 135 cc street bike | | to review |
-| A4 | Level 4: 600 cc sport bike | | to review. Flag: the source is a 750 |
-| A5 | Level 5: hyper bike | The best bike | to review |
+| A1 | Level 1: scooter | The weakest bike; the player starts on it | **approved 2 Nov 2026** |
+| A2 | Level 2: 125 cc commuter | Side stand up when ridden | **approved 2 Nov 2026** (a trail-style bike; the owner accepted it) |
+| A3 | Level 3: 135 cc street bike | | **approved 2 Nov 2026** |
+| A4 | Level 4: 600 cc sport bike | | **approved 2 Nov 2026** (the source is a 750; no engine size is stated in the game) |
+| A5 | Level 5: hyper bike | The best bike | **approved 2 Nov 2026** |
 
-Round 1 files, in `work/king-of-streets/models/bikes/` (source, author and licence in [credits](../../work/king-of-streets/credits.md); how each was made in [the pipeline](../../work/king-of-streets/README.md)):
+Round 1 is approved and frozen: `python3 work/king-of-streets/freeze/check.py` fails if any frozen file changes, and runs before every review (in Phase 10 it becomes a repository test). Round 1 files, in `work/king-of-streets/models/bikes/` (source, author and licence in [credits](../../work/king-of-streets/credits.md); how each was made in [the pipeline](../../work/king-of-streets/README.md)):
 
-| ID | Source model | File | Triangles | SHA-256 (not frozen until approved) |
+| ID | Source model | File | Triangles | SHA-256 (frozen 2 Nov 2026; also in `work/king-of-streets/freeze/frozen.json`) |
 |---|---|---|---|---|
 | A1 | Yellow scooter, Chenchanchong | `A1.glb` | 44,999 | `401ba0b25c939c8db51bfe57038d8118775b3f211fe62add15d8ae93b4e29f41` |
 | A2 | Honda NXR Bros 2003, andersonfo | `A2.glb` | 43,769 | `70d0c527fb7aec7342283925538be1feace16dae5a758a5728b768981363ee73` |
@@ -505,8 +505,8 @@ These are proposals. They're fixed in Phase 3 from the phone's real numbers, the
 
 ## Where the work is
 
-- **Done:** PR #103 closed, the `king-of-streets` branch created, this plan written, the phone budgets set. Round 1 (the five bikes) rejected three times (28 to 29 October). Tenth try published at the same link (A1 and A3 front wheels refit; every wheel measured on its final file), with A1 replaced twice (the third model is a yellow Vespa, Yellow scooter by Chenchanchong): <https://claude.ai/artifact/PYX1N4QbxCCNSL91yWGUCs> (first try: <https://claude.ai/artifact/9vjEHVRJ3TTAe9TifuGYaN>).
-- **Phase:** 1, Objects, round 1 (A1 to A5), tenth try. The owner reported the A1 wheel problem three times: before saying a wheel is fixed, run `orbit.mjs` on the final files and look at the wheel from the side, front and above at several angles in the real preview. A2 to A5 front/rear tilts measure within about 3° of straight but the measure is only good to about 3°; ask the owner to say if any wheel looks off. The owner said all bikes look good except A2 (spokes); A1, A3, A4, A5 are unchanged since then. The owner won't check anything until it's right: keep the next message short and plain.
-- **Next:** the owner's reply. When they say "approved" for items, freeze them (date and hash here). Rework what needs it, freeze what's approved (record the date here), then round 2 (the two riders and the helmet).
-- **Waiting on the owner:** round 1, fourth try: approve, or say what's wrong. Calls to make: A2 is a trail-style bike and A4 is a 750 (plan says 600 cc); A1 is yellow and lightly worn (can be new, or another colour); the front brake cable loop turns with the wheel.
-- **Working notes for the next session:** tools live in `work/king-of-streets/pipeline/` (`README.md` there); `build.py` is the current build (turning parts found by shape, `xmax` limits how far from the hub a part can be and still turn, large panels never thinned, `drop_emissive` and `img_fmt: AUTO` for models with emissive maps; `cfg23_a1.json` is the A1 build with `no_turn_boxes`, `never_turn_mats`, `rtol`). The review page for a round is built by `reviews/<round>/build_page.py`. jsDelivr isn't reachable from the container, so a local test maps those requests to the same three.js version from npm. Bike files and the sky go up as `.wav` because artifacts serve no `.glb` or `.hdr`.
+- **Done:** PR #103 closed, the `king-of-streets` branch created, this plan written, the phone budgets set. **Round 1 (the five bikes, A1 to A5) approved and frozen on 2 November 2026**, after ten tries (feedback logged under A above).
+- **Phase:** 1, Objects. Round 1 done; **round 2 next** (13 items: the player's two riders B1, B2, the helmet B3, and each rider on every bike C1 to C10).
+- **Next:** round 2. Find free rider models (a man and a woman, everyday clothes, straight back, full-face helmet with dark visor, no face or hair showing); fit each to the five frozen bikes with fingers closed round the grips, feet on the pegs and the stand up. Before showing it, measure it on the final files and look at it from several angles in the real preview, as `orbit.mjs`, `latcheck.mjs` and `freeze/check.py` do for the bikes.
+- **Waiting on the owner:** nothing.
+- **Working notes for the next session:** tools live in `work/king-of-streets/pipeline/` (`README.md` there); `build.py` is the current build. Rules learned the hard way with the bikes: a wheel or hand is not fixed until it is measured on the final compressed file; test from the front, the side and above, not one view; when a fix is reported not to work, change the method, not the numbers. The review page for a round is built by `reviews/<round>/build_page.py`. jsDelivr isn't reachable from the container, so a local test maps those requests to the same three.js version from npm. Files and the sky go up to artifacts as `.wav` because artifacts serve no `.glb` or `.hdr`. Every output path in a config must not contain text that a `replace()` on a version tag could match (the session folder name did once).

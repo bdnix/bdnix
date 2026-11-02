@@ -1,0 +1,32 @@
+{
+ "A1": {
+  "file": "models/bikes/A1.glb",
+  "sha256": "401ba0b25c939c8db51bfe57038d8118775b3f211fe62add15d8ae93b4e29f41",
+  "bytes": 1432232,
+  "approved": "2026-11-02"
+ },
+ "A2": {
+  "file": "models/bikes/A2.glb",
+  "sha256": "70d0c527fb7aec7342283925538be1feace16dae5a758a5728b768981363ee73",
+  "bytes": 870840,
+  "approved": "2026-11-02"
+ },
+ "A3": {
+  "file": "models/bikes/A3.glb",
+  "sha256": "cf5ff2342434e15e30069257fc40d0af14981f8ddf06e325138258d1ab1176f4",
+  "bytes": 669296,
+  "approved": "2026-11-02"
+ },
+ "A4": {
+  "file": "models/bikes/A4.glb",
+  "sha256": "06656a012fee8fb9af7fd82893767996285125173443ff346d90fa0c46bbf319",
+  "bytes": 539664,
+  "approved": "2026-11-02"
+ },
+ "A5": {
+  "file": "models/bikes/A5.glb",
+  "sha256": "0ac339447f1919023c7cb2a4fdab7eb1c8a05462abd56cdbf7f9941f592392b5",
+  "bytes": 657844,
+  "approved": "2026-11-02"
+ }
+}
