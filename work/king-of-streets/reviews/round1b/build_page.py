@@ -2,10 +2,10 @@
 import html
 items=[
  dict(id='A1',kind='Level 1: scooter',tris=45000,mb=1.43,parts=6,
-  said='"I missed A1. When the wheels turn it comes out of the frame."',
-  found='Two faults of mine in A1\'s front wheel. First, the model\'s front wheel is mounted about 12 degrees off straight, so spinning it about the straight axle made it swing sideways out of the mudguard. Second, a brake cable loop was attached to the wheel, so it turned with it and stuck out past the tyre. My compression step had also moved every wheel\'s turning point to the middle of its mesh instead of the axle.',
-  did=['The front wheel now turns about its own true axle, so the tyre stays centred in the mudguard through the whole turn (strip below, six angles).','The brake cable is fixed to the bike now and no longer turns with the wheel.','Every wheel on all five bikes now has its turning point exactly on the axle, set in the file, so the game can spin it directly.','Nothing about how A1 looks at rest has changed.'],
-  note='The cable still looks a little loose near the wheel, because the model draws it that way. The rear wheel was already true.',extra='A1_spin'),
+  said='"Why is it rotating like this? When does a real scooter\'s wheel rotate like that ever???"',
+  found='You are right, and my last fix was wrong. The front wheel in this model is fitted about 25 degrees off straight (tyre and hub together), so it leaned and swung sideways as it spun, and I had made it spin about that crooked line. A real wheel turns about a straight axle, square to the fork.',
+  did=['I straightened the front wheel about its hub, so the axle is square to the bike. It now sits upright in the mudguard.','From the front, the wheel is now the same thin upright disc at every angle of the turn. From the side it is a true circle and only the hub and tread turn. The strip below shows both views.','I removed the brake cable that lay over the tyre.','The rear wheel was already true (measured under 1 degree).'],
+  note='The brake arm and fork parts sit a little to one side of the straightened wheel, as in the model. Other bikes: A3 to A5 measure within a few degrees of straight, but my measurement is only accurate to about 3 degrees, so tell me if any of them still looks off when it turns.',extra='A1_spin'),
  dict(id='A2',kind='Level 2: 125 cc commuter',tris=43769,mb=0.87,parts=23,
   said='"All bikes look good except A2. When wheels turn the inner spikes don\'t turn."',
   found='The wire spokes were fused into the frame and swingarm in my build, so only the tyre and rim turned and the spokes stayed fixed.',
@@ -32,7 +32,7 @@ def card(it):
     did=''.join(f'<li>{html.escape(d)}</li>' for d in it['did'])
     thumbs=''.join(f'<li><button type="button" class="th" data-big="img/{i}_{k}.jpg" data-cap="{cap}" aria-label="{cap}"><img src="img/{i}_{k}.jpg" alt="{html.escape(it["kind"])}, {cap}" loading="lazy" width="786" height="540"></button></li>' for k,cap in [('side','Side'),('front34','Front three-quarter'),('rear34','Rear three-quarter'),('rear','Rear'),('close','Close up'),('wheelR','Rear wheel at rest'),('wheelR_turned','Same wheel, turned'),('wheelF','Front wheel')])
     thumbs+=f'<li class="phone"><button type="button" class="th" data-big="img/{i}_race.jpg" data-cap="Race distance, phone upright" aria-label="Race distance, phone upright"><img src="img/{i}_race.jpg" alt="{html.escape(it["kind"])} at race distance" loading="lazy" width="590" height="1278"></button></li>'
-    extra_html=(f'<figure class="turnmap"><img src="img/{it["extra"]}.jpg" alt="The front wheel at six angles of its turn" loading="lazy" width="1500" height="167"><figcaption>The front wheel at six angles of one full turn: it stays centred in the mudguard.</figcaption></figure>' if it.get('extra') else '')
+    extra_html=(f'<figure class="turnmap"><img src="img/{it["extra"]}.jpg" alt="The front wheel turning" loading="lazy" width="1800" height="500"><figcaption>Top: the front wheel from the side at six angles of one turn, always inside the mudguard. Bottom: the same wheel from the front at four angles, always the same thin upright disc.</figcaption></figure>' if it.get('extra') else '')
     return f'''<article class="card" id="{i}" data-id="{i}">
 <header class="ch"><span class="idtag">{i}</span><div><h2>{html.escape(it["kind"])}</h2></div><span class="status">reworked, to review</span></header>
 <blockquote class="said"><span class="lab">What this is about</span>{html.escape(it["said"])}</blockquote>
@@ -114,8 +114,8 @@ a{color:var(--accent)}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 <div class="wrap">
-<header class="intro"><span class="eyebrow">King of Streets · Phase 1 · Round 1, seventh try</span><h1>The five bikes, seventh try</h1>
-<p>A1's front wheel turns true now. Every bike's wheels also got their turning point set exactly on the axle, so A2 to A5 look as before but are new files.</p></header>
+<header class="intro"><span class="eyebrow">King of Streets · Phase 1 · Round 1, eighth try</span><h1>The five bikes, eighth try</h1>
+<p>Only A1 changed: its front wheel is straightened and turns about a straight axle. A2 to A5 are as sent last time.</p></header>
 <div class="how"><b>Reply in the chat:</b> "approved", or the IDs that still need work and what is wrong. "Spin it here" loads the real file on your phone: drag to turn the bike and tap "Wheels turning" to see the wheels go round.</div>
 '''+body+'''
 <footer class="credit">Models are credited in work/king-of-streets/credits.md (CC BY 4.0, changed as described). Makers' logos are removed throughout. Nothing here is on the site.</footer>

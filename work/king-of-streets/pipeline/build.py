@@ -262,6 +262,7 @@ if cfg.get('dbg_ax'):
         f=bm.faces[fi]; c=sum((v.co for v in f.verts),Vector())/len(f.verts); r=math.hypot(c.y-cy,c.z-cz)
         H[(int(r*50)/50, int(abs(c.x-cx)*100)/100)]+=1
     print('AXH',sorted(H.items()))
+trash=set()
 if cfg.get('static_small_far'):
     ss=cfg['static_small_far']
     for k in 'fr':
@@ -271,7 +272,9 @@ if cfg.get('static_small_far'):
             far=max(math.hypot(v.y-cy,v.z-cz) for v in vs)
             if len(c)<ss.get('maxfaces',600) and far>ss.get('far',0.24):
                 print('STATIC',k,len(c),round(far,3))
-                for fi in c: del turn[fi]
+                for fi in c:
+                    del turn[fi]
+                    if ss.get('delete'): trash.add(fi)
 if cfg.get('dbg_comp'):
     ids=[fi for fi,kk in turn.items() if kk=='f']; cy,cz,R,cx,hw=hub['f']
     for c in sorted(comps(ids),key=len,reverse=True)[:14]:
@@ -331,6 +334,8 @@ if cfg.get('wire_in_wheel'):
 cnt={k:sum(1 for v in turn.values() if v==k) for k in 'fr'}
 print('TURNING faces',cnt,'of',NF)
 import numpy as _np
+from mathutils import Quaternion
+def _q_slerp(q,w): return Quaternion((1,0,0,0)).slerp(q,w)
 def fit_circle(pts):
     A=_np.c_[2*pts[:,0],2*pts[:,1],_np.ones(len(pts))]; b=(pts**2).sum(1)
     sol=_np.linalg.lstsq(A,b,rcond=None)[0]; return sol[0],sol[1],math.sqrt(sol[2]+sol[0]**2+sol[1]**2)
@@ -383,6 +388,46 @@ def side_planes(k):
     return out
 for k in 'fr':
     sp=side_planes(k); print('SIDEPLANES',k,[(round(math.degrees(math.atan(a)),2),round(math.degrees(math.atan(b)),2),round(sd*1000,1)) for a,b,sd in sp])
+def ring_normal(k,rlo,rhi,pick):
+    """plane through, for each angular sector, the vertex with the max (pick='max') radius inside the band: returns normal and mean radius"""
+    cy,cz,R,cx,hw=hub[k]
+    vs=_np.array([tuple(v.co) for fi,kk in turn.items() if kk==k for v in bm.faces[fi].verts])
+    d=vs-_np.array([cx,cy,cz]); r=_np.hypot(d[:,1],d[:,2]); ang=_np.arctan2(d[:,2],d[:,1])
+    rmax=_np.percentile(r,98.5); sel=(r>=rlo*rmax)&(r<=rhi*rmax)
+    sec=((ang+math.pi)/(2*math.pi)*72).astype(int)%72; pts=[]
+    for sidx in range(72):
+        m=sel&(sec==sidx)
+        if m.sum()==0: continue
+        i=_np.argmax(r[m]) ; pts.append(vs[m][i])
+    P=_np.array(pts); c=P.mean(0); u,sv,vt=_np.linalg.svd(P-c); n=vt[2]
+    if n[0]<0: n=-n
+    return Vector(n),len(P),float(rmax),c
+def tyre_normal(k):
+    n,cnt,Rt,c=ring_normal(k,0.0,1.0,'max'); return n,Rt
+def hub_normal(k):
+    n,cnt,Rt,c=ring_normal(k,0.40,0.78,'max'); return n
+fixd={}
+for k in cfg.get('straighten',[]):
+    nt,Rt=tyre_normal(k); cy,cz,R,cx,hw=hub[k]; c=Vector((cx,cy,cz))
+    q=nt.rotation_difference(Vector((1,0,0)))
+    print('STRAIGHTEN',k,'crown tilt deg',round(math.degrees(math.acos(min(1,nt.x))),2),'about hub',[round(x,4) for x in c])
+    ids={v.index for fi,kk in turn.items() if kk==k for v in bm.faces[fi].verts}
+    bm.verts.ensure_lookup_table()
+    for vi in ids:
+        v=bm.verts[vi]; v.co=c+(q@(v.co-c))
+    nt2,_=tyre_normal(k); print('STRAIGHTEN after',k,'tilt deg',round(math.degrees(math.acos(min(1,nt2.x))),2))
+for k in cfg.get('fix_hub_tilt',[]):
+    nt,Rt=tyre_normal(k); nh=hub_normal(k)
+    print('RINGS',k,'crown normal',[round(x,3) for x in nt],'rim normal',[round(x,3) for x in nh])
+    print('HUBTILT',k,'tyre tilt',round(math.degrees(math.acos(min(1,nt.x))),2),'hub tilt',round(math.degrees(math.acos(min(1,nh.x))),2),'hub vs tyre',round(math.degrees(nh.angle(nt)),2),'Rt',round(Rt,3))
+    q=nh.rotation_difference(nt); cy,cz,R,cx,hw=hub[k]; c=Vector((cx,cy,cz))
+    ids={v.index for fi,kk in turn.items() if kk==k for v in bm.faces[fi].verts}
+    r0=cfg.get('fix_r0',0.74); r1=cfg.get('fix_r1',0.92)
+    for vi in ids:
+        bm.verts.ensure_lookup_table(); v=bm.verts[vi]; d=v.co-c; r=math.hypot(d.y,d.z)/Rt
+        w=1.0 if r<=r0 else (0.0 if r>=r1 else (r1-r)/(r1-r0)); w=w*w*(3-2*w)
+        if w>0: v.co=c+(_q_slerp(q,w)@d)
+    fixd[k]=nt
 def best_axis(k):
     cy,cz,R,cx,hw=hub[k]; acc=Vector(); tot=0
     for fi,kk in turn.items():
@@ -395,7 +440,7 @@ def best_axis(k):
     n=acc.normalized() if tot>0 else Vector((1,0,0))
     print('AXISFIT',k,'tilt deg',round(math.degrees(math.acos(min(1,n.x))),2),'area',round(tot,3),'n',[round(x,4) for x in n])
     return n
-for k in cfg.get('align_axis',[]): axisd[k]=best_axis(k)
+for k in cfg.get('align_axis',[]): axisd[k]=fixd[k] if k in fixd else best_axis(k)
 def piece(sel):
     b2=bm.copy(); b2.faces.ensure_lookup_table()
     dead=[b2.faces[i] for i in range(NF) if not sel(i)]
@@ -403,7 +448,7 @@ def piece(sel):
     return b2
 objs={}
 for nm,k in (('body','b'),('wheel_f','f'),('wheel_r','r')):
-    b2=piece(lambda i,k=k:(turn.get(i,'b')==k))
+    b2=piece(lambda i,k=k:(i not in trash) and (turn.get(i,'b')==k))
     m2=bpy.data.meshes.new(nm); b2.to_mesh(m2); b2.free()
     for mt in me.materials: m2.materials.append(mt)
     o=bpy.data.objects.new(nm,m2); bpy.context.collection.objects.link(o); objs[k]=o
