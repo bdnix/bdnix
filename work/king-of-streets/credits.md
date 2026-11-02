@@ -4,7 +4,7 @@ Models are from Sketchfab, licensed CC BY 4.0, and changed as described in each 
 
 | ID | Model | Author | Source |
 |---|---|---|---|
-| A1 | Retro Vespa Scooter | annaandrei | https://sketchfab.com/3d-models/retro-vespa-scooter-d2841db11a87440b990a595c3a3f46d1 |
+| A1 | Yellow scooter | Chenchanchong | https://sketchfab.com/3d-models/yellow-scooter-eefb518105594dd98b506b39db5dcd94 |
 | A2 | Honda NXR Bros 2003 | andersonfo | https://sketchfab.com/3d-models/honda-nxr-bros-2003-2e88ff65e98e4d0c802242bdeccaf28d |
 | A3 | pulsar 135 ls | EmanuelRestrepoVelez | https://sketchfab.com/3d-models/pulsar-135-ls-36d04d99171e4d59b540c25d8650dbd5 |
 | A4 | Suzuki GSXR 750 | kaleemullah550 | https://sketchfab.com/3d-models/suzuki-gsxr-750-3e05cd872ef0458ca3d6b0770bb03622 |

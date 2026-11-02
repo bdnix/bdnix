@@ -1,11 +1,11 @@
 # Writes index.html for the round 1 review, second try. Run from this folder: python3 build_page.py
 import html
 items=[
- dict(id='A1',kind='Level 1: scooter',tris=44998,mb=0.87,parts=11,
-  said='"I don\'t care what original models have and have not. If you picked a bad original model, then pick again."',
-  found='You are right: the old scooter model itself had the crooked blue and white border, and no amount of fixing on my side was going to remove it. I stopped patching it and replaced the model.',
-  did=['New model: a classic Vespa-style scooter. It is one colour, so there is no border between blue and white at all.','I checked it from every side and close up before showing it. The paint is smooth and the panel edges are clean.','Removed the maker script on the front shield. The stand is not modelled, so it is up.','Tyres and rims turn with the wheels. The engine cover next to the rear wheel stays still (picture below).','Compared with its source model from three cameras, almost every pixel matches.'],
-  note='The finish is lightly worn (faint scratches on the paint). The colour is light blue. If you want it new, or another colour, I can do that. The model has about 45,000 triangles, the new bike budget.'),
+ dict(id='A1',kind='Level 1: scooter',tris=45000,mb=1.43,parts=6,
+  said='"Don\'t select the blue one. It looks like plastic and a toy."',
+  found='Agreed. The blue Vespa had a smooth, uniform shine that read as moulded plastic. I looked for a scooter that reads as real painted metal and rubber.',
+  did=['New model: a classic yellow Vespa with glossy paint that is slightly worn, chrome trim, a leather-look seat, and tyres with real tread.','Removed the Vespa script, the Piaggio badge and the printed licence plate lettering from the paint, bump and shine maps, and the lettering on the tyre sidewalls.','Removed the centre stand, so it is up.','Both wheels turn: tyre, hub and rim. The suspension lever beside the front wheel stays still.'],
+  note='The front brake cable (a thin wire loop beside the front wheel) is fused into the wheel and turns with it. It is thin and only shows close up. The yellow is a colour I picked for realism, not a decision about the paint: tell me if you want a different colour. The body is still glossy, so say if it still looks too clean.'),
  dict(id='A2',kind='Level 2: 125 cc commuter',tris=43769,mb=0.87,parts=21,
   said='(Same cause as A1, found when I checked every bike.)',
   found='A2 had been thinned from 43,769 to 30,000 triangles, which can bend panel borders the same way.',
@@ -114,8 +114,8 @@ a{color:var(--accent)}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 <div class="wrap">
-<header class="intro"><span class="eyebrow">King of Streets · Phase 1 · Round 1, fourth try</span><h1>The five bikes, fourth try</h1>
-<p>A1 is a new model: the old scooter itself had the crooked border, so I replaced it. A2 to A5 are as sent last time.</p></header>
+<header class="intro"><span class="eyebrow">King of Streets · Phase 1 · Round 1, fifth try</span><h1>The five bikes, fifth try</h1>
+<p>A1 is a different scooter again: a yellow Vespa with real paint, chrome and tyre tread. A2 to A5 are as sent last time.</p></header>
 <div class="how"><b>Reply in the chat:</b> "approved", or the IDs that still need work and what is wrong. "Spin it here" loads the real file on your phone: drag to turn the bike and tap "Wheels turning" to see the wheels go round.</div>
 '''+body+'''
 <footer class="credit">Models are credited in work/king-of-streets/credits.md (CC BY 4.0, changed as described). Makers' logos are removed throughout. Nothing here is on the site.</footer>

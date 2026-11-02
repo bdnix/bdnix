@@ -186,6 +186,13 @@ turn={}
 for k in 'fr':
     cy,cz,R,cx,hw=hub[k]; R*=cfg.get('rtol',1.012)
     ids=[fi for fi in allf if all(math.hypot(v.co.y-cy,v.co.z-cz)<=R and abs(v.co.x-cx)<=cfg.get('xmax',0.14) for v in bm.faces[fi].verts)]
+    for nb in cfg.get('no_turn_boxes',[]):
+        if nb.get('wheel',k)!=k: continue
+        b=nb['box']; rm=nb.get('rmax',9)
+        def inbox(fi):
+            f=bm.faces[fi]; c=sum((v.co for v in f.verts),Vector())/len(f.verts)
+            return b[0]<=c.x<=b[1] and b[2]<=c.y<=b[3] and b[4]<=c.z<=b[5] and math.hypot(c.y-cy,c.z-cz)<=rm
+        ids=[fi for fi in ids if not inbox(fi)]
     for c in comps(ids):
         bins=[]; xs=[]; rs=[]
         for fi in c:
