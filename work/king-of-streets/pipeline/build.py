@@ -201,11 +201,32 @@ for k in 'fr':
         xext=max(xs)-min(xs)
         allv=[v.co for fi in c for v in bm.faces[fi].verts]
         dims=sorted([max(v[i] for v in allv)-min(v[i] for v in allv) for i in range(3)])
+        if cfg.get('dbg_spokes') and xext<0.12 and len(c)<400: print('COMP',k,len(c),round(xext,3),[round(x,3) for x in dims],round(min(rs),2),round(max(rs),2))
         spoke=(xext<cfg.get('spoke_x',0.012) and len(c)<cfg.get('spoke_faces',60) and max(rs)>0.5*R and min(rs)<0.5*R and dims[0]<cfg.get('spoke_d0',1.0) and dims[1]<cfg.get('spoke_d1',1.0))
         if sym_ok(bins) or spoke:
             for fi in c:
                 if me.materials[bm.faces[fi].material_index].name in cfg.get('never_turn_mats',[]): continue
                 turn[fi]=k
+for tw in cfg.get('turn_in_wheel',[]):
+    for k in 'fr':
+        cy,cz,R,cx,hw=hub[k]
+        for fi in allf:
+            if fi in turn: continue
+            f=bm.faces[fi]
+            if me.materials[f.material_index].name not in tw['mats']: continue
+            c=sum((v.co for v in f.verts),Vector())/len(f.verts)
+            r=math.hypot(c.y-cy,c.z-cz)
+            if tw.get('rmin',0)<=r<=R*tw.get('rfrac',0.97) and abs(c.x-cx)<=tw['xrel']: turn[fi]=k
+if cfg.get('dbg_zone'):
+    from collections import Counter
+    for k in 'fr':
+        cy,cz,R,cx,hw=hub[k]; cn=Counter(); xs={}
+        for fi in allf:
+            if fi in turn: continue
+            f=bm.faces[fi]; c=sum((v.co for v in f.verts),Vector())/len(f.verts); r=math.hypot(c.y-cy,c.z-cz)
+            if 0.08<=r<=R*0.97 and abs(c.x-cx)<0.07:
+                m=me.materials[f.material_index].name; cn[m]+=1; xs.setdefault(m,[]).append(round(c.x-cx,3))
+        print('ZONE',k,{m:(n,min(xs[m]),max(xs[m])) for m,n in cn.items()})
 cnt={k:sum(1 for v in turn.values() if v==k) for k in 'fr'}
 print('TURNING faces',cnt,'of',NF)
 def piece(sel):

@@ -6,11 +6,11 @@ items=[
   found='Agreed. The blue Vespa had a smooth, uniform shine that read as moulded plastic. I looked for a scooter that reads as real painted metal and rubber.',
   did=['New model: a classic yellow Vespa with glossy paint that is slightly worn, chrome trim, a leather-look seat, and tyres with real tread.','Removed the Vespa script, the Piaggio badge and the printed licence plate lettering from the paint, bump and shine maps, and the lettering on the tyre sidewalls.','Removed the centre stand, so it is up.','Both wheels turn: tyre, hub and rim. The suspension lever beside the front wheel stays still.'],
   note='The front brake cable (a thin wire loop beside the front wheel) is fused into the wheel and turns with it. It is thin and only shows close up. The yellow is a colour I picked for realism, not a decision about the paint: tell me if you want a different colour. The body is still glossy, so say if it still looks too clean.'),
- dict(id='A2',kind='Level 2: 125 cc commuter',tris=43769,mb=0.87,parts=21,
-  said='(Same cause as A1, found when I checked every bike.)',
-  found='A2 had been thinned from 43,769 to 30,000 triangles, which can bend panel borders the same way.',
-  did=['Rebuilt with all 43,769 triangles, nothing thinned.','Last round: swingarm shine reduced, chain kept still, spokes turn with the rim.'],
-  note='The swingarm is still a big flat box because the source modelled it that way. I can swap it for a slimmer shape if it still bothers you. The source does not say 125 cc, and it is a trail bike.'),
+ dict(id='A2',kind='Level 2: 125 cc commuter',tris=43769,mb=0.87,parts=23,
+  said='"All bikes look good except A2. When wheels turn the inner spikes don\'t turn."',
+  found='The wire spokes were fused into the frame and swingarm in my build, so only the tyre and rim turned and the spokes stayed fixed.',
+  did=['Both wheels now turn the spokes with the tyre and rim, front and rear. The turn picture below shows the turning parts coloured; the spokes are inside the colour now.','Compare "Rear wheel at rest" and "Same wheel, turned": the spokes sit in different places.','Nothing else on A2 changed.'],
+  note='The swingarm is still a big flat box because the source modelled it that way. I can swap it for a slimmer shape if it bothers you. The source does not say 125 cc, and it is a trail bike.'),
  dict(id='A3',kind='Level 3: 135 cc street bike',tris=21630,mb=0.67,parts=14,
   said='Unchanged since the last round. It was never thinned, so it was not affected.',
   found='Last round you asked: "Why are chains hanging out on A3?"',
@@ -114,8 +114,8 @@ a{color:var(--accent)}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 <div class="wrap">
-<header class="intro"><span class="eyebrow">King of Streets · Phase 1 · Round 1, fifth try</span><h1>The five bikes, fifth try</h1>
-<p>A1 is a different scooter again: a yellow Vespa with real paint, chrome and tyre tread. A2 to A5 are as sent last time.</p></header>
+<header class="intro"><span class="eyebrow">King of Streets · Phase 1 · Round 1, sixth try</span><h1>The five bikes, sixth try</h1>
+<p>Only A2 changed: its wheel spokes now turn. A1, A3, A4 and A5 are as sent last time.</p></header>
 <div class="how"><b>Reply in the chat:</b> "approved", or the IDs that still need work and what is wrong. "Spin it here" loads the real file on your phone: drag to turn the bike and tap "Wheels turning" to see the wheels go round.</div>
 '''+body+'''
 <footer class="credit">Models are credited in work/king-of-streets/credits.md (CC BY 4.0, changed as described). Makers' logos are removed throughout. Nothing here is on the site.</footer>
