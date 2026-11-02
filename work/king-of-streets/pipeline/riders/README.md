@@ -11,4 +11,20 @@ Scripts written on 2 November 2026 while proving one fit (Claudia on A3). They s
 - `thick.py`, `handlen.py`: finger thickness and hand length of the rider.
 
 What the first proof showed (A3 + Claudia, Renderpeople): with hand scale 1.15, knuckle height 24 mm and palm tilt 0, the hands are at most 1.1 mm inside the grip, nothing is more than 2 mm inside, and the hands touch 315 degrees of the grip, checked from the top, front, underneath and along the axis.
-Not done: the thumb, the seat and thigh clearance (the seat is only about 20 cm wide and the thighs still read as sinking in), feet on the pegs (measured nowhere yet; the woman's shoes are heels), the other four bikes, the man, the helmet, the stand.
+(older note, superseded below) Not done: the thumb, the seat and thigh clearance (the seat is only about 20 cm wide and the thighs still read as sinking in), feet on the pegs (measured nowhere yet; the woman's shoes are heels), the other four bikes, the man, the helmet, the stand.
+
+
+## Update, later on 2 November 2026: the woman (B2) on A3 is fitted and measured
+
+Rider: Sophia (Renderpeople, `dc448c3be0e74f96a55fb475a13433cf`, CC BY). Claudia and Carla were dropped: both wear stiletto heels, which cannot go on a peg and are not everyday riding clothes. Helmet: Motor Helmet (Tom Verbeeck, CC BY), cut from 100,840 to 6,276 triangles (its 64,000-triangle decorative pattern part is dropped). Run with `HAIRISLAND=17 HDZ=-0.06 SEATY=0.98 RIDER=sophia_edit RSCALE=0.0104 SEATZ=-0.24 LEAN=38 HEADUP=26 PHI0=0 TAN=0 KN=0.020 HS=1.1 python fit.py A3 out.glb`, then `checkall.sh out.glb`.
+
+What was found and done:
+- Sophia's skeleton is the Renderpeople one with a name prefix; `fit.py` strips it. Her bind pose is posed (hips swayed, one shoulder higher), so `fit.py` squares the pelvis and the shoulder line first.
+- Her hair is one UV island (17, 1,070 faces), removed. Hair is also painted onto the blouse texture (island 6, 44% of it): `fixtex.py` repaints those pixels as blouse fabric at 2048 px and writes a derived copy in `sophia_edit/`; the source texture is untouched. The blouse is flat white where the hair was, and its upper back has a torn-looking edge between the helmet and the shoulders, visible close up.
+- Fingertips: the last finger bone's direction is taken from the mesh (her relaxed fingers are curled at rest), not from the bone before it.
+- Feet: each sole is placed on its peg by measuring the sole of that foot and moving the foot until the measured sole point lands on the peg top, because the two feet differ at rest.
+- Helmet: scaled to 27 cm tall, visor at eye height, pinned to the head bone; every rider face that is weighted to the head or lies inside the helmet is deleted.
+
+Measured on the exported mesh (not yet on a compressed file): hands at most 1.4 mm inside the grips, none more than 2 mm inside, and in the central 4 cm of each hand none of the rays through the top-and-front 120 degrees of the grip reach bare grip (so the grip does not show between the fingers); seat contact at most 1.2 mm deep; soles 1.2 and 3.4 mm from the peg tops with nothing more than 2 mm inside. Rider 9,861 triangles plus helmet 6,276 = 16,137 (budget 20,000), two materials.
+
+Still not done for round 2: the man; the other four bikes (each needs its own grips, seat and pegs measured: `gripray.py`, `seatmap.py`, and peg boxes by hand); the stand check; the lean is 38 degrees, which is a lot for a commuter bike and is set by the short arms and the seat-to-grip distance on A3; compressing to meshopt and WebP and re-measuring on the final files; recolouring the helmet per rider; the review page.

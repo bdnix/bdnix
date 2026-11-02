@@ -18,7 +18,7 @@ for(const it of items){
     const out={};const c=document.getElementById('c');
     const st=await window.createStage(c,{width:600,height:700,dpr:1,hdrUrl:'/work/king-of-streets/preview/daylight.hdr'});
     await st.load(url);out.stats=st.stats();
-    const T=st.THREE;if(id!=='helmet'){const b0=new T.Box3().setFromObject(st.model);st.model.scale.setScalar(1.75/b0.getSize(new T.Vector3()).y);st.model.updateMatrixWorld(true);}const bb=new T.Box3().setFromObject(st.model);const sz=bb.getSize(new T.Vector3()),ct=bb.getCenter(new T.Vector3());
+    const T=st.THREE;if(id!=='helmet'&&id!=='fit'){const b0=new T.Box3().setFromObject(st.model);st.model.scale.setScalar(1.75/b0.getSize(new T.Vector3()).y);st.model.updateMatrixWorld(true);}const bb=new T.Box3().setFromObject(st.model);const sz=bb.getSize(new T.Vector3()),ct=bb.getCenter(new T.Vector3());
     out.bbox=[sz.x,sz.y,sz.z].map(v=>+v.toFixed(3));
     const d=Math.max(sz.y,sz.x)*1.25/Math.tan(10*Math.PI/180)/1;
     for(const [nm,dir] of [['front',[0,0,1]],['side',[1,0,0]],['back',[0,0,-1]],['q',[0.7,0.2,0.7]]]){
