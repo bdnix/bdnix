@@ -207,6 +207,23 @@ for k in 'fr':
             for fi in c:
                 if me.materials[bm.faces[fi].material_index].name in cfg.get('never_turn_mats',[]): continue
                 turn[fi]=k
+if cfg.get('cell_filter'):
+    cf=cfg['cell_filter']
+    for k in 'fr':
+        if cf.get('wheel',k)!=k: continue
+        cy,cz,R,cx,hw=hub[k]; cells={}; mem={}
+        for fi,kk in list(turn.items()):
+            if kk!=k: continue
+            f=bm.faces[fi]; c=sum((v.co for v in f.verts),Vector())/len(f.verts)
+            r=math.hypot(c.y-cy,c.z-cz); ang=(math.atan2(c.z-cz,c.y-cy)+math.pi)/(2*math.pi)*NB
+            key=(int(r/cf.get('cell_r',0.012)),int((c.x-cx+1)/cf.get('cell_x',0.012)))
+            cells.setdefault(key,set()).add(int(ang)%NB); mem[fi]=key
+        drop=0
+        for fi,key in mem.items():
+            B=cells[key]
+            if len(B)<cf.get('minbins',14) or not sym_ok(B):
+                del turn[fi]; drop+=1
+        print('CELLDROP',k,drop,'of',len(mem))
 for tw in cfg.get('turn_in_wheel',[]):
     for k in 'fr':
         cy,cz,R,cx,hw=hub[k]
@@ -227,8 +244,158 @@ if cfg.get('dbg_zone'):
             if 0.08<=r<=R*0.97 and abs(c.x-cx)<0.07:
                 m=me.materials[f.material_index].name; cn[m]+=1; xs.setdefault(m,[]).append(round(c.x-cx,3))
         print('ZONE',k,{m:(n,min(xs[m]),max(xs[m])) for m,n in cn.items()})
+if cfg.get('dbg_far'):
+    k='f'; cy,cz,R,cx,hw=hub[k]; rows=[]
+    for fi,kk in turn.items():
+        if kk!=k: continue
+        f=bm.faces[fi]; far=max(math.hypot(v.co.y-cy,v.co.z-cz) for v in f.verts)
+        rows.append((far,fi,me.materials[f.material_index].name,[round(x,3) for x in sum((v.co for v in f.verts),Vector())/len(f.verts)]))
+    rows.sort(reverse=True); print('FARR',R,len(rows)); 
+    import collections
+    hist=collections.Counter(int(r[0]*200)/200 for r in rows); print('FARH',sorted(hist.items())[-10:])
+    for r in rows[:6]: print('FAR',r)
+if cfg.get('dbg_ax'):
+    import collections
+    k='f'; cy,cz,R,cx,hw=hub[k]; H=collections.Counter()
+    for fi,kk in turn.items():
+        if kk!=k: continue
+        f=bm.faces[fi]; c=sum((v.co for v in f.verts),Vector())/len(f.verts); r=math.hypot(c.y-cy,c.z-cz)
+        H[(int(r*50)/50, int(abs(c.x-cx)*100)/100)]+=1
+    print('AXH',sorted(H.items()))
+if cfg.get('static_small_far'):
+    ss=cfg['static_small_far']
+    for k in 'fr':
+        cy,cz,R,cx,hw=hub[k]; ids=[fi for fi,kk in turn.items() if kk==k]
+        for c in comps(ids):
+            vs=[v.co for fi in c for v in bm.faces[fi].verts]
+            far=max(math.hypot(v.y-cy,v.z-cz) for v in vs)
+            if len(c)<ss.get('maxfaces',600) and far>ss.get('far',0.24):
+                print('STATIC',k,len(c),round(far,3))
+                for fi in c: del turn[fi]
+if cfg.get('dbg_comp'):
+    ids=[fi for fi,kk in turn.items() if kk=='f']; cy,cz,R,cx,hw=hub['f']
+    for c in sorted(comps(ids),key=len,reverse=True)[:14]:
+        vs=[v.co for fi in c for v in bm.faces[fi].verts]
+        mn=[round(min(v[i] for v in vs),3) for i in range(3)]; mx=[round(max(v[i] for v in vs),3) for i in range(3)]
+        far=max(math.hypot(v.y-cy,v.z-cz) for v in vs)
+        print('FC',len(c),mn,mx,'far',round(far,3))
+if cfg.get('needle_in_wheel'):
+    nw=cfg['needle_in_wheel']; dead=[]
+    for fi,kk in list(turn.items()):
+        f=bm.faces[fi]; es=[e.calc_length() for e in f.edges]; a=max(f.calc_area(),1e-12)
+        if max(es)>nw.get('minlen',0.012) and max(es)**2/a>nw.get('aspect',60): dead.append(fi)
+    print('NEEDLEWHEEL',len(dead),'of',len(turn))
+    if nw.get('delete'):
+        bmesh.ops.delete(bm,geom=[bm.faces[i] for i in dead],context='FACES'); bm.faces.ensure_lookup_table()
+        keep=[i for i in turn if i not in set(dead)]
+        # indices shift after delete: rebuild turn map by position match
+        raise SystemExit('rebuild needed')
+if cfg.get('wire_in_wheel'):
+    wf_=cfg['wire_in_wheel']; delf=[]
+    for k in 'fr':
+        ids=[fi for fi,kk in turn.items() if kk==k]
+        for c in comps(ids):
+            vs=[v.co for fi in c for v in bm.faces[fi].verts]
+            d=sorted([max(v[i] for v in vs)-min(v[i] for v in vs) for i in range(3)])
+            cy,cz,R,cx,hw=hub[k]; far=max(math.hypot(v.y-cy,v.z-cz) for v in vs)
+            if (d[1]<wf_.get('thin',0.02) and d[2]>wf_.get('minlen',0.04)) or (len(c)<wf_.get('small',60) and far>R*wf_.get('beyond',1.0)):
+                delf+=c
+    print('WIREDEL',len(delf),'faces')
+    bmesh.ops.delete(bm,geom=[bm.faces[i] for i in delf],context='FACES')
+    bm.faces.ensure_lookup_table(); NF=len(bm.faces); allf=list(range(NF))
+    # indices changed: rebuild the turn map from scratch with the same rules
+    turn={}
+    for k in 'fr':
+        cy,cz,R,cx,hw=hub[k]; R*=cfg.get('rtol',1.012)
+        ids=[fi for fi in allf if all(math.hypot(v.co.y-cy,v.co.z-cz)<=R and abs(v.co.x-cx)<=cfg.get('xmax',0.14) for v in bm.faces[fi].verts)]
+        for nb in cfg.get('no_turn_boxes',[]):
+            if nb.get('wheel',k)!=k: continue
+            b=nb['box']; rm=nb.get('rmax',9)
+            def inbox(fi):
+                f=bm.faces[fi]; c=sum((v.co for v in f.verts),Vector())/len(f.verts)
+                return b[0]<=c.x<=b[1] and b[2]<=c.y<=b[3] and b[4]<=c.z<=b[5] and math.hypot(c.y-cy,c.z-cz)<=rm
+            ids=[fi for fi in ids if not inbox(fi)]
+        for c in comps(ids):
+            bins=[]; xs=[]; rs=[]
+            for fi in c:
+                for v in bm.faces[fi].verts:
+                    bins.append(int((math.atan2(v.co.z-cz,v.co.y-cy)+math.pi)/(2*math.pi)*NB)%NB); xs.append(v.co.x); rs.append(math.hypot(v.co.y-cy,v.co.z-cz))
+            xext=max(xs)-min(xs)
+            allv=[v.co for fi in c for v in bm.faces[fi].verts]
+            dims=sorted([max(v[i] for v in allv)-min(v[i] for v in allv) for i in range(3)])
+            spoke=(xext<cfg.get('spoke_x',0.012) and len(c)<cfg.get('spoke_faces',60) and max(rs)>0.5*R and min(rs)<0.5*R and dims[0]<cfg.get('spoke_d0',1.0) and dims[1]<cfg.get('spoke_d1',1.0))
+            if sym_ok(bins) or spoke:
+                for fi in c:
+                    if me.materials[bm.faces[fi].material_index].name in cfg.get('never_turn_mats',[]): continue
+                    turn[fi]=k
 cnt={k:sum(1 for v in turn.values() if v==k) for k in 'fr'}
 print('TURNING faces',cnt,'of',NF)
+import numpy as _np
+def fit_circle(pts):
+    A=_np.c_[2*pts[:,0],2*pts[:,1],_np.ones(len(pts))]; b=(pts**2).sum(1)
+    sol=_np.linalg.lstsq(A,b,rcond=None)[0]; return sol[0],sol[1],math.sqrt(sol[2]+sol[0]**2+sol[1]**2)
+def hull_circle(pts):
+    P=sorted(set(map(tuple,_np.round(pts,5))))
+    def cr(o,a,b): return (a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0])
+    lo=[]
+    for p in P:
+        while len(lo)>=2 and cr(lo[-2],lo[-1],p)<=0: lo.pop()
+        lo.append(p)
+    up=[]
+    for p in reversed(P):
+        while len(up)>=2 and cr(up[-2],up[-1],p)<=0: up.pop()
+        up.append(p)
+    H=_np.array(lo[:-1]+up[:-1]); return fit_circle(H),len(H)
+if cfg.get('fit_hub',True):
+    for k in 'fr':
+        cy,cz,R,cx,hw=hub[k]
+        pts=_np.array([[v.co.y,v.co.z] for fi,kk in turn.items() if kk==k for v in bm.faces[fi].verts])
+        (ny,nz,nr),nh=hull_circle(pts)
+        print('HUBFIT',k,'offset mm',round((ny-cy)*1000,1),round((nz-cz)*1000,1),'R',round(R,3),'->',round(nr,3),'hull pts',nh)
+        if cfg.get('apply_fit'): hub[k][0],hub[k][1]=ny,nz
+for k in 'fr':
+    vs=_np.array([tuple(v.co) for fi,kk in turn.items() if kk==k for v in bm.faces[fi].verts])
+    # tyre ring only: points far from the centre
+    cy,cz=hub[k][0],hub[k][1]; rr=_np.hypot(vs[:,1]-cy,vs[:,2]-cz); ring=vs[(rr>0.97*hub[k][2])&(rr<1.12*hub[k][2])]
+    c=ring.mean(0); u,sv,vt=_np.linalg.svd(ring-c); n=vt[2]
+    if n[0]<0: n=-n
+    print('AXIS',k,'n',len(ring),[round(float(x),4) for x in n],'tilt deg',round(math.degrees(math.acos(min(1,abs(n[0])))),2),'centre',[round(float(x),3) for x in c])
+if cfg.get('dbg_out'):
+    from collections import Counter
+    k='f'; cy,cz,R,cx,hw=hub[k]; cn=Counter(); ex={}
+    for fi,kk in turn.items():
+        if kk!=k: continue
+        f=bm.faces[fi]; c=sum((v.co for v in f.verts),Vector())/3; r=math.hypot(c.y-cy,c.z-cz)
+        if r>R*0.99:
+            m=me.materials[f.material_index].name; cn[(m,int(r*100))]+=1; ex.setdefault((m,int(r*100)),[round(c.x,3),round(c.y,3),round(c.z,3)])
+    print('OUT',R,sorted(cn.items()),ex)
+axisd={}
+def side_planes(k):
+    cy,cz,R,cx,hw=hub[k]
+    vs=_np.array([tuple(v.co) for fi,kk in turn.items() if kk==k for v in bm.faces[fi].verts])
+    rr=_np.hypot(vs[:,1]-cy,vs[:,2]-cz); out=[]
+    for sg in (1,-1):
+        m=(rr>0.55*R)&(rr<0.98*R)&(sg*(vs[:,0]-cx)>0.01)
+        P=vs[m]
+        if len(P)<50: continue
+        A=_np.c_[P[:,1]-cy,P[:,2]-cz,_np.ones(len(P))]; sol=_np.linalg.lstsq(A,P[:,0]-cx,rcond=None)[0]
+        res=(A@sol-(P[:,0]-cx)); out.append((sol[0],sol[1],float(_np.std(res))))
+    return out
+for k in 'fr':
+    sp=side_planes(k); print('SIDEPLANES',k,[(round(math.degrees(math.atan(a)),2),round(math.degrees(math.atan(b)),2),round(sd*1000,1)) for a,b,sd in sp])
+def best_axis(k):
+    cy,cz,R,cx,hw=hub[k]; acc=Vector(); tot=0
+    for fi,kk in turn.items():
+        if kk!=k: continue
+        f=bm.faces[fi]; c=sum((v.co for v in f.verts),Vector())/len(f.verts); r=math.hypot(c.y-cy,c.z-cz)
+        if r>0.8*R or r<0.05: continue
+        n=f.normal
+        if abs(n.x)<0.9: continue
+        w=f.calc_area(); acc+= (n if n.x>0 else -n)*w; tot+=w
+    n=acc.normalized() if tot>0 else Vector((1,0,0))
+    print('AXISFIT',k,'tilt deg',round(math.degrees(math.acos(min(1,n.x))),2),'area',round(tot,3),'n',[round(x,4) for x in n])
+    return n
+for k in cfg.get('align_axis',[]): axisd[k]=best_axis(k)
 def piece(sel):
     b2=bm.copy(); b2.faces.ensure_lookup_table()
     dead=[b2.faces[i] for i in range(NF) if not sel(i)]
@@ -242,8 +409,32 @@ for nm,k in (('body','b'),('wheel_f','f'),('wheel_r','r')):
     o=bpy.data.objects.new(nm,m2); bpy.context.collection.objects.link(o); objs[k]=o
 bpy.data.objects.remove(whole)
 for k in 'fr':
-    cy,cz,R,cx,hw=hub[k]; c=Vector((cx,cy,cz)); o=objs[k]
+    cy,cz,R,cx,hw=hub[k]; c=Vector((cx,cy,cz)); o=objs[k]; print('PIVOT',k,[round(x,4) for x in c])
     o.data.transform(Matrix.Translation(-c)); o.location=c
+    if k in axisd:
+        q=Vector((1,0,0)).rotation_difference(axisd[k]); Rm=q.to_matrix().to_4x4()
+        o.data.transform(Rm.inverted())
+        em=bpy.data.objects.new(o.name+'_mount',None); bpy.context.collection.objects.link(em)
+        em.location=c; em.rotation_mode='QUATERNION'; em.rotation_quaternion=q
+        o.parent=em; o.location=(0,0,0)
+    if cfg.get('wheel_clip') and k in cfg['wheel_clip']:
+        wc=cfg['wheel_clip'][k]; bmw=bmesh.new(); bmw.from_mesh(o.data); import collections; H=collections.Counter(); dead=[]
+        for f in bmw.faces:
+            c=sum((v.co for v in f.verts),Vector())/len(f.verts); r=math.hypot(c.y,c.z); ax=abs(c.x)
+            H[(round(int(r*100)/100,2),round(int(ax*100)/100,2))]+=1
+            if r>wc.get('rmax',9) or ax>wc.get('xmax',9): dead.append(f)
+        print('CLIPHIST',k,sorted(H.items())[-40:]) if wc.get('debug') else None
+        if wc.get('debug'):
+            import numpy as _n
+            fr=[]
+            for f in bmw.faces:
+                c=sum((v.co for v in f.verts),Vector())/len(f.verts); fr.append((abs(c.x),math.hypot(c.y,c.z),c.x,c.y,c.z,bmw.faces.index_update() if False else 0))
+            ax=_n.array([a for a,_,_,_,_,_ in fr]); 
+            for q in (50,90,99,99.5,100): print('AXQ',q,round(float(_n.percentile(ax,q)),3))
+            far=sorted(fr,reverse=True)[:12]; print('AXTOP',[(round(a,3),round(r,3),round(y,3),round(z,3)) for a,r,x,y,z,_ in far])
+        print('CLIP',k,len(dead),'of',len(bmw.faces))
+        if dead and not wc.get('debug'): bmesh.ops.delete(bmw,geom=dead,context='FACES'); bmw.to_mesh(o.data)
+        bmw.free()
 def tris(o): return sum(len(p.vertices)-2 for p in o.data.polygons)
 tgt=cfg['tris']
 tot=sum(tris(o) for o in objs.values())

@@ -24,7 +24,7 @@ for(const it of items){
     await st.load(url);
     out.stats=st.stats();
     for(const v of ['side','front34','rear34','rear','close']){st.view(v);st.render();out[v]=c.toDataURL('image/png')}
-    const wr=st.model.getObjectByName('wheel_r').position, wf=st.model.getObjectByName('wheel_f').position;
+    const wp=n=>{const v=new st.THREE.Vector3();st.model.getObjectByName(n).getWorldPosition(v);return v};const wr=wp('wheel_r'), wf=wp('wheel_f');
     st.view({pos:[2.6,wr.y+0.25,wr.z-0.45],look:[0,wr.y,wr.z],fov:17});st.render();out.wheelR=c.toDataURL('image/png');
     st.view({pos:[-2.6,wf.y+0.25,wf.z+0.45],look:[0,wf.y,wf.z],fov:17});st.render();out.wheelF=c.toDataURL('image/png');
     st.spin(0.9);st.view({pos:[2.6,wr.y+0.25,wr.z-0.45],look:[0,wr.y,wr.z],fov:17});st.render();out.wheelR_turned=c.toDataURL('image/png');
