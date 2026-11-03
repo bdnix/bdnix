@@ -294,15 +294,26 @@ Lessons added: a wheel check must measure tilt and orbit against the spin axis o
 
 Round 2 lessons, so they are not repeated: a measurement that is not the one the owner cares about can pass while the picture is wrong (a foot "touching" the seat, a foot resting on a frame tube instead of the peg): look at the close-up of every foot and hand of every fit, not only the numbers; remove every face part (eyes, mouth, jaw, brows) with the head, or they show through the visor; a frame built from "forward" breaks when a grip points at the rider, so build it from the grip's own axis; a solver that is allowed to rest on "any surface below" will; check a scanned model's shoes before fitting (two women wore stiletto heels); a picture can be cropped by the floor: the first helmet renders showed only its top half.
 
+#### Round 2 feedback (2 November 2026): everything rejected
+
+| ID | The owner's points | Cause and fix |
+|---|---|---|
+| B1–B3 | "B1-B3 all wrong. Use bike gears for the riders. The women riders dress is all wrong. The helmets are too basic." | The owner changed the clothing decision: riders now wear riding gear (section 5 updated). The helmet was a plain black shell: choose a more detailed one. |
+| C1 | "C1 is wrong no one ever gets on a scooter like that." | The scooter pose was forced by reaching low grips: hunched, straight legs, wide knees. A scooter rider sits upright with knees together, feet flat on the floorboard. |
+| C2–C10 | "C2 is wrong too the guy's ass is not touching the bike's seat. Same for rest of them too." | My seat check only measured how far the rider sank into the seat, never whether the rider touched it, so a rider hovering above it passed. A seat check must measure the gap between the seat and the buttocks too. |
+| B2, C6–C10 | "Part of the woman's back is missing!!" | Deleting the hair's UV island also deleted the part of the top under it. I saw a ragged edge and did not look at the back closely. |
+
+Lessons: measure contact both ways (not inside and not floating); look at every item from behind and close up before sending; never delete geometry by UV island without drawing what was deleted.
+
 ### B. The player's riders (round 2)
 
 Shown standing and seated, from the front, side and back, wearing the helmet.
 
 | ID | Object | Requirements | Status |
 |---|---|---|---|
-| B1 | Male rider | Everyday clothes, a straight back, no face or hair showing, a smooth finish with no gap where clothes meet | **to review** (review link in Round 2 below; `models/riders/B1.glb`; clothes are a waistcoat and tie) |
+| B1 | Male rider | Riding gear, a straight back, no face or hair showing, a smooth finish with no gap where clothes meet | **decision** (no free, realistic, rigged man in riding gear; two options shown in the second-try review) |
 | B2 | Female rider | As B1. Told apart from B1 at a glance from the game's camera. No ponytail out of the helmet. | **to review** (`models/riders/B2.glb`; the top's upper edge looks torn close up: smooth finish not met) |
-| B3 | Full-face helmet in each rider's colour | Dark visor | **to review** (`models/riders/B3_B1.glb`, `B3_B2.glb`; colours are placeholders) |
+| B3 | Full-face helmet in each rider's colour | Dark visor | **to review** (second try: Alpinestars Supertech R10, Carlito, logos removed; `models/riders/B3_m.glb`, `B3_w.glb`; colours are placeholders) |
 
 ### C. The player's riders on each bike (round 2)
 
@@ -310,8 +321,8 @@ Shown from the side, three-quarter and rear views, with close-ups of each hand a
 
 | ID | Object | Requirements | Status |
 |---|---|---|---|
-| C1–C5 | B1 on A1 to A5 | Fingers closed round the grips: none under the grip or off it, and the grip not coming out between fingers. Feet on the pegs. Stand up. | **to review** (`models/riders/C1.glb` to `C5.glb`) |
-| C6–C10 | B2 on A1 to A5 | As C1–C5 | **to review** (`models/riders/C6.glb` to `C10.glb`) |
+| C1–C5 | B1 on A1 to A5 | Fingers closed round the grips: none under the grip or off it, and the grip not coming out between fingers. Feet on the pegs. Stand up. | **waiting** for the B1 decision |
+| C6–C10 | B2 on A1 to A5 | As C1–C5 | **to review** (second try, seated on the seat; `models/riders/C6.glb` to `C10.glb`) |
 
 ### D. Rivals (round 3)
 
@@ -410,7 +421,7 @@ Build to these, and don't ask about them again. They're the owner's requirements
 | Name | King of Streets / রাস্তার রাজা. The game that inspired it is named only in the credit line on the start screen and in the Credits section of `docs/games.md` (AGENTS.md). |
 | Game | Motorbike racing through Dhaka, fighting rivals with punches, kicks and weapons (a stick, a chain, a nunchaku). Riders can kick or shove CNGs off the road, but not bigger vehicles such as cars, buses or trucks. |
 | Look | Real-looking: realistic motorcycles, riders, cars and traffic, from artist-made models and photo textures. Rejected so far: flat 2D, shapes built in code, cartoon or low-poly models, and graphics that look like a game from the 2000s. |
-| The player's riders | Two: one man, one woman, easy to tell apart. Full-face helmets, no faces, no hair or ponytails out of the helmet, everyday clothes (not riding suits), straight backs, hands closed on the grips. |
+| The player's riders | Two: one man, one woman, easy to tell apart. Full-face helmets, no faces, no hair or ponytails out of the helmet, **riding gear** (changed on 2 November 2026 from "everyday clothes, not riding suits"), straight backs, hands closed on the grips, seated on the seat. Helmets detailed, not plain. |
 | Names | Every character's and bike's name is confirmed in Phase 2. |
 | City | Dhaka: no hills, loads of mosques, flyovers and an expressway. Dhaka buses and painted trucks, not Chinese-looking ones. CNGs with no white rectangle on the back. CNG drivers in their uniform, shirts untucked, standing near parked CNGs. Proper Bangla number plates. Shops that look real. Tiled footpaths. Poles and cables as in Dhaka today. Pedestrians mostly darker-skinned, as Bangladeshi people are. No date palms. |
 | Bikes and career | Five bikes: level 1 the weakest, level 5 the best. The player starts on a scooter, wins races and earns points to buy better bikes. Prices are 1,500 / 4,000 / 10,000 / 22,500, about 15 good races to the top bike. One-off races on any bike too. |
@@ -516,6 +527,7 @@ These are proposals. They're fixed in Phase 3 from the phone's real numbers, the
   - Not found: a woman in everyday clothes better suited to the brief than office wear, or a man in a T-shirt and jeans who is already rigged. If nothing better turns up, say so on B1 and B2; the owner decides.
   - Heels must be replaced by feet on the pegs, and Eric's tie must stay down when seated.
 - **Findings about the frozen bikes (for fitting riders):** each bike is one `body` node plus the two wheels; there are no separate grip, peg, seat or stand parts, so they must be found by looking and measuring. Picking the outermost points near the bars finds the mirrors, not the grips. `pipeline/plain.mjs` writes uncompressed copies of the frozen bikes (no meshopt, no quantisation) for Blender to import, leaving the frozen files untouched. Blender: `pip install bpy numpy pillow scipy` in a virtualenv (bpy 5.2.3 is about 400 MB and took about 25 minutes to download here); it imports the plain copies at the same coordinates as the GLB.
+- **Round 2, second try, sent for review (3 November 2026):** https://claude.ai/artifact/N23dq1VX1s2MzpEvFP7GsE (built by `reviews/round2b/build_page.py`). After the owner rejected everything in the first try, the woman is Racer Girl (Peter_D, CC BY) in a one-piece leather suit, and the helmet the Alpinestars Supertech R10 (Carlito, CC BY, logos painted out, 4,370 triangles). The fitting (`pipeline/riders/fit3.py`, settings per bike in `pipeline/riders/cfg/`) now seats the rider on the seat (buttocks −1.9 to +1.2 mm from its surface), sits her upright with knees together on the scooter, and is measured after compression by `reship.sh`. Compress rider files with `optr2.mjs`: `prune()`/`dedup()`/`weld()` strip the helmet's graphics. Known faults, disclosed on the page: up to 29 mm of the crotch into the scooter's seat cushion, 12 to 17 mm of a shin into the bodywork on A2, A4 and A5, a few fingertip pads up to 3.8 mm into a grip, low shoes. B1 is a decision: no free, realistic, rigged man in riding gear was found; the options are "bike rider 3d" (Atrikumar Das, car-racing suit), "Just man" (vrimen, leather jacket), or the woman's leathers on both. C1–C5 wait for it. The first try's files were removed from `models/riders/` (still in git history).
 - **Round 2 built and sent for review (2 November 2026):** all 13 items (B1 to B3, C1 to C10), https://claude.ai/artifact/PiPVGA2RuENGZzma6EN7w4. The files are in `work/king-of-streets/models/riders/`; nothing is frozen, since nothing is approved. Riders: the man is Eric Rigged 001 (Renderpeople, CC BY), the woman Sophia Animated 003 (Renderpeople, CC BY, top repainted where her hair was painted on it), the helmet Motor Helmet (Tom Verbeeck, CC BY, cut from 100,840 to about 5,500 triangles). Each rider file is the rider and the helmet, posed on one bike (about 16,100 to 17,000 triangles, 2 parts, 0.41 to 0.42 MB), and was measured after compression, put back on the frozen bike, by `pipeline/riders/` (README there).
 - **Measured on those files:** hands at most 1.6 mm inside the grip for her and 2.9 mm for him (one left-hand fingertip point of his is past 2 mm on every bike), no gap between fingers on any of the 20 hands, feet within 3 mm of the peg or floor and none more than 2 mm inside, seat contact at most 5.3 mm, clipping into the rest of the bike at most 11.2 mm (hers on A1 and A2).
 - **Open for the owner (all stated on the review page):** the man's clothes (waistcoat and tie; no realistic rigged man in a T-shirt and jeans exists free: "Mixed Adult Male" has no skeleton, "Black Boy Rigged" is a stylised boy); the woman's top (smooth finish not met); the scooter pose (C1, C6: hunched, grips as low as the seat); helmet colours (placeholders for Phase 2); the dark visor is nearly the same black as the shell.
