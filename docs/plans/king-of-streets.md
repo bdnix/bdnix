@@ -312,7 +312,7 @@ Shown standing and seated, from the front, side and back, wearing the helmet.
 | ID | Object | Requirements | Status |
 |---|---|---|---|
 | B1 | Male rider | Riding gear, a straight back, no face or hair showing, a smooth finish with no gap where clothes meet | **decision** (no free, realistic, rigged man in riding gear; two options shown in the second-try review) |
-| B2 | Female rider | As B1. Told apart from B1 at a glance from the game's camera. No ponytail out of the helmet. | **to review** (`models/riders/B2.glb`; the top's upper edge looks torn close up: smooth finish not met) |
+| B2 | Female rider | As B1. Told apart from B1 at a glance from the game's camera. No ponytail out of the helmet. | **to review** (second try: Racer Girl, Peter_D, in a leather suit; `models/riders/B2.glb`) |
 | B3 | Full-face helmet in each rider's colour | Dark visor | **to review** (second try: Alpinestars Supertech R10, Carlito, logos removed; `models/riders/B3_m.glb`, `B3_w.glb`; colours are placeholders) |
 
 ### C. The player's riders on each bike (round 2)
