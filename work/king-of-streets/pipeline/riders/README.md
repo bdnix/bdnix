@@ -38,3 +38,7 @@ Paths are the scratch paths they were run from (`/tmp/claude-0/work`); set them 
 ## Second try (3 November 2026)
 
 `fit3.py` replaces `fit.py`: Biped skeletons, helmet auto-fit (`HFIT`), hand re-skinning (`RESKIN`), a seat solver that lowers the rider until the buttocks rest on the seat (`SEATT`), and centring. `batch3.sh <bike>` fits the woman with the settings in `cfg/best_<bike>.cfg` (found by `opt3.sh`, scored by `score.py`); `final3b.sh` and `reship.sh` compress with `optr2.mjs` (no prune, dedup or weld, which strip the helmet's graphics), put the file back on the frozen bike and measure it (`measure.py`, `gaps2.py`, `seatgap.py`, `inside.py`), then draw the review pictures (`mkimgs3.py`, `views3.mjs`). `stand3.py` makes the standing figure. `r10clean.py` paints out the helmet's logos and tints the visor; `boots.py` recolours the shoes; `helmexport.py` exports the helmet alone.
+
+## Third try (3 November 2026)
+
+`fit4.py` is `fit3.py` plus the weight-on-seat step (`SQ1`, `SQ2`); `fit6.py` and `stand6.py` add `MALE=1` (the reshape). `batch4.sh`/`final4.sh`/`reship4.sh` run the woman; `batchm.sh`/`finalm.sh`/`reshipm.sh` the man (`RIDER=racerman`, the suit recoloured blue). `air.py` measures how much of the underside lies on the seat; `cut.mjs` draws the cut-away; `collect2.py` gathers every number into `reviews/round2b/metrics.json`. `retex_eric.py` is the businessman recolour that was tried and dropped.
